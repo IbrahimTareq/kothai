@@ -15,7 +15,6 @@ rather than the open web.
 [![qvac](https://img.shields.io/badge/tether-qvac-14E4C2?style=flat-square&logo=tether&logoColor=white&labelColor=1a1a1a)](https://github.com/tetherto/qvac)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square&labelColor=1a1a1a)](LICENSE)
 [![last commit](https://img.shields.io/github/last-commit/IbrahimTareq/kothai?style=flat-square&labelColor=1a1a1a)](https://github.com/IbrahimTareq/kothai/commits/main)
-[![downloads](https://img.shields.io/github/downloads/IbrahimTareq/kothai/total?style=flat-square&labelColor=1a1a1a&color=blueviolet)](https://github.com/IbrahimTareq/kothai/releases)
 
 `no cloud` · `no account` · `no API key` · `runs on a Raspberry Pi`
 
@@ -90,10 +89,6 @@ Then:
 4. Wait for the progress bar to say Ready. Classification and Ask switch themselves on at that point.
 5. Flip the box to Ask and start asking.
 
-Everything the UI does is a plain JSON endpoint, so you can drive the whole
-thing from a script too. There's a worked example in
-[docs/api.md](docs/api.md#a-worked-example).
-
 ## How it works
 
 Everything else follows from one decision: saving happens in two phases.
@@ -110,7 +105,7 @@ doesn't have them fighting over the same weights.
 
 ## If you want to…
 
-| … then read |  |
+| | … then read |
 |---|---|
 | **understand how it works** before changing anything | [Architecture](docs/architecture.md) |
 | **set up a dev environment** and run the tests | [Development](docs/development.md) |
