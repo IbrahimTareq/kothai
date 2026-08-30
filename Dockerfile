@@ -36,6 +36,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store,sharing=locked \
 COPY tsconfig.json vite.config.ts index.html ./
 COPY client ./client
 COPY public ./public
+COPY scripts ./scripts
 RUN pnpm run build         # → /app/dist (index.html + hashed assets + fonts/logos)
 
 # ─────────────────────────── Stage 2: runtime ────────────────────────────────
