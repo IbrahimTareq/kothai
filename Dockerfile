@@ -39,7 +39,10 @@ COPY public ./public
 RUN pnpm run build         # → /app/dist (index.html + hashed assets + fonts/logos)
 
 # ─────────────────────────── Stage 2: runtime ────────────────────────────────
-FROM node:${NODE_VERSION}-bookworm-slim
+# NAMED, and every build of it must pass `--target runtime`. Docker builds the
+# LAST stage when no target is given, and stages 3 and 4 sit below this one — an
+# untargeted `docker build .` silently produces the ONCE image, not this one.
+FROM node:${NODE_VERSION}-bookworm-slim AS runtime
 
 # Runtime libs needed by the QVAC native addons (worker runs on Bare):
 #   libgomp1   — llama.cpp prebuilds (OpenMP)
@@ -181,3 +184,35 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||5173)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 ENTRYPOINT ["node", "docker/entrypoint.js"]
+
+# ─────────────────── Stage 4: ONCE runtime (basecamp/once) ───────────────────
+# The full runtime with the three defaults ONCE requires baked in, because ONCE
+# installs an image by name and offers no way to set arbitrary env vars:
+#   - HTTP on port 80
+#   - a /up healthcheck endpoint (server/router.js, in front of the password gate)
+#   - persistent data under /storage
+#
+# Everything else — the models, the entrypoint, the healthcheck — is inherited
+# unchanged from `runtime`, so this stage is exactly that image with a different
+# set of defaults, not a second build of the app.
+FROM runtime AS runtime-once
+
+# STASH_HOME is the single-root switch that already existed for hosts allowing
+# only one volume (Railway); ONCE's /storage contract is the same shape. Notes,
+# uploads, model weights and qvac.config.json all land underneath it.
+ENV STASH_HOME=/storage
+ENV PORT=80
+
+# uid 1000 binding a privileged port works because Docker sets
+# net.ipv4.ip_unprivileged_port_start=0 inside containers, so the entrypoint's
+# drop from root does not have to be given up for this.
+EXPOSE 80
+
+# ONCE runs /hooks/pre-backup before archiving /storage. Root-owned and 0755:
+# ONCE executes it, the app (uid 1000) never needs to write it.
+COPY --chmod=0755 docker/hooks/ /hooks/
+
+# NOTE: `runtime` declares VOLUME /app/data and /app/models, and a VOLUME cannot
+# be removed by a derived stage. Under ONCE both go unused — real data lives in
+# /storage — so Docker creates two empty anonymous volumes per container. They
+# are inert, just untidy.

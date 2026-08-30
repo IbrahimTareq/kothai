@@ -37,3 +37,11 @@ test('with no password set the JSON content-type rule does not apply either', as
 test('/api/health answers whether or not auth is configured', async () => {
   assert.equal((await fetch(`${BASE}/api/health`)).status, 200)
 })
+
+test('/up answers whether or not auth is configured', async () => {
+  // Body, not just status — see the sibling assertion in auth-route.test.js:
+  // the SPA fallback answers 200 for any unmatched path.
+  const res = await fetch(`${BASE}/up`)
+  assert.equal(res.status, 200)
+  assert.equal((await res.json()).ok, true)
+})

@@ -1,0 +1,65 @@
+#!/usr/bin/env node
+// ONCE (basecamp/once) pre-backup hook: settle the database before ONCE
+// archives /storage.
+//
+// ONCE snapshots the data directory from outside this process, which would
+// otherwise miss two things — batched writes still queued in memory by the
+// enrichment sweeps, and committed rows living in kothai.db-wal rather than
+// kothai.db. POST /api/checkpoint flushes and truncates so the files on disk
+// are complete. See server/routes/checkpoint.js.
+//
+// Node rather than shell: the slim base image ships neither curl nor wget,
+// which is also why the Dockerfile's HEALTHCHECK is a `node -e`.
+//
+// Runs inside the app container, so STASH_PASSWORD is in this environment when
+// the operator set one — the hook authenticates like any other client rather
+// than the endpoint being exempted from the gate for its benefit.
+
+const PORT = process.env.PORT || '80'
+const BASE = `http://127.0.0.1:${PORT}`
+const PASSWORD = process.env.STASH_PASSWORD || null
+
+const fail = (msg) => { console.error(`[pre-backup] ${msg}`); process.exit(1) }
+
+// A backup that silently omits recent notes is worse than one that fails
+// loudly, so every failure below is fatal — with one deliberate exception,
+// handled at the bottom.
+async function main() {
+  const headers = { 'Content-Type': 'application/json' }
+
+  if (PASSWORD) {
+    const login = await fetch(`${BASE}/api/login`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ password: PASSWORD }),
+    })
+    if (!login.ok) fail(`login failed (${login.status}) — is STASH_PASSWORD the password this instance runs with?`)
+    const cookie = login.headers.get('set-cookie')
+    if (!cookie) fail('login returned no session cookie')
+    headers.Cookie = cookie.split(';')[0]
+  }
+
+  const res = await fetch(`${BASE}/api/checkpoint`, { method: 'POST', headers })
+
+  if (res.status === 409) {
+    // An import is mid-flight; checkpointing would commit half of it. Refusing
+    // the backup is right — the next scheduled one will find things settled.
+    const { error } = await res.json().catch(() => ({}))
+    fail(error || 'an import is running')
+  }
+  if (!res.ok) fail(`checkpoint failed (${res.status})`)
+
+  console.log('[pre-backup] database checkpointed — kothai.db is self-contained')
+}
+
+main().catch((err) => {
+  // Nothing is listening. The server is not running, so nothing can be writing
+  // to the database, so whatever ONCE is about to archive is already
+  // consistent. This is the one failure that is not a failure.
+  const code = err?.cause?.code || err?.code
+  if (code === 'ECONNREFUSED') {
+    console.log('[pre-backup] server not running — nothing is writing, snapshot is consistent as-is')
+    process.exit(0)
+  }
+  fail(err?.message || String(err))
+})

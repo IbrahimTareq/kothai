@@ -60,12 +60,17 @@ everything below is open to anyone who can reach the port.
 |---|---|
 | `POST /api/login` | `{ password }` → sets a signed session cookie |
 | `POST /api/logout` | clears it |
-| `GET /api/health` | `{ ok: true }` — **the only route in front of the gate** |
+| `GET /api/health` | `{ ok: true }` — **in front of the gate** |
+| `GET /up` | `{ ok: true }` — the same probe, at the path ONCE requires |
 
-`/api/health` is deliberately outside the gate and deliberately says nothing
-about the install: the container healthcheck carries no credentials, and a 401
-would have every orchestrator mark the container unhealthy and restart-loop it
+These two are deliberately outside the gate and deliberately say nothing about
+the install: a container healthcheck carries no credentials, and a 401 would
+have every orchestrator mark the container unhealthy and restart-loop it
 forever. Anything that reveals state — `/api/status` included — stays behind it.
+
+`/up` is routed explicitly rather than left to the SPA fallback. That fallback
+does answer 200 for any unmatched path, but with an HTML login page rather than
+a health signal, and it stops answering at all if `dist/` is missing.
 
 Session tokens are `<expiry>.<hmac>`, signed with a key derived from the
 password via HKDF. See [security.md](security.md#the-password-gate).
@@ -262,6 +267,27 @@ including WAL, written as a fresh compacted file. No downtime.
 
 Needs free disk equal to the database size, and refuses while an import or
 another backup is running.
+
+### `POST /api/checkpoint`
+
+```jsonc
+→ { "ok": true }
+```
+
+The sibling of `/api/backup`, for the other kind of backup tool: the ones that
+archive the data directory from **outside** the process and cannot ask the app
+to settle first. `docker/hooks/pre-backup` calls this for ONCE; a cron job
+running `restic` or `borg` against `data/` wants it too.
+
+It flushes writes still queued in memory by the enrichment sweeps, then runs
+`PRAGMA wal_checkpoint(TRUNCATE)`. Afterwards `kothai.db` **on its own** is the
+complete database, so a snapshot that catches the three WAL files at slightly
+different moments still restores correctly.
+
+Unlike `/api/backup` it writes no second copy, so it needs no spare disk. It
+returns `409` `import_in_progress` for the same reason a wipe does: flushing
+mid-import would commit half a batch and put those rows beyond the import's own
+rollback.
 
 ### `POST /api/wipe`
 

@@ -70,8 +70,34 @@ test('/api/health answers without a session — the container healthcheck has no
   assert.equal((await res.json()).ok, true)
 })
 
+test('/up answers without a session — ONCE probes it with no credentials', async () => {
+  // ONCE (basecamp/once) requires a /up endpoint returning success, and polls
+  // it to decide whether the app came up.
+  //
+  // Asserting the JSON body, not just the 200: every unmatched path already
+  // returns 200 via the SPA fallback, so a status-only assertion would pass
+  // against the login page and prove nothing. A health probe answered with an
+  // HTML login form is not a health probe — and it would stop being a 200 at
+  // all the moment dist/ is missing.
+  const res = await fetch(`${BASE}/up`)
+  assert.equal(res.status, 200)
+  assert.equal((await res.json()).ok, true)
+})
+
 test('/api/status stays behind the gate — it reports model config and note count', async () => {
   assert.equal((await fetch(`${BASE}/api/status`)).status, 401)
+})
+
+test('/api/checkpoint stays behind the gate — it writes to the database', async () => {
+  // The ONCE pre-backup hook runs inside the container, so it has STASH_PASSWORD
+  // in its environment and logs in like any other client. Leaving this endpoint
+  // open so the hook could skip that would hand an unauthenticated stranger a
+  // repeatable write and disk-flush.
+  const res = await fetch(`${BASE}/api/checkpoint`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  assert.equal(res.status, 401)
 })
 
 test('/api/backup stays behind the gate — it hands over the entire database', async () => {

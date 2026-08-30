@@ -84,6 +84,10 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          # REQUIRED. Without it Docker builds the last stage in the Dockerfile
+          # (runtime-once), and this job would smoke-test and publish that
+          # image as :latest instead of the full one.
+          target: runtime
           platforms: linux/amd64
           load: true
           build-args: NODE_VERSION=${{ steps.ver.outputs.node }}
@@ -145,6 +149,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          target: runtime          # see the note on the smoke-test build above
           platforms: linux/amd64,linux/arm64
           push: true
           build-args: NODE_VERSION=${{ steps.ver.outputs.node }}

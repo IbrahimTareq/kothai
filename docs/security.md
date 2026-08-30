@@ -104,13 +104,21 @@ A restart forgives everyone — the right trade for a single-user app.
 
 </details>
 
-### The one route in front of the gate
+### The routes in front of the gate
 
-`GET /api/health` returns `{ ok: true }` and nothing else. The container
-healthcheck carries no credentials, and a 401 there would have every
-orchestrator mark the container unhealthy and restart-loop it forever. It
-deliberately reveals nothing about the install — `/api/status`, which reports
-model config and note counts, stays behind the gate.
+`GET /api/health` and `GET /up` both return `{ ok: true }` and nothing else.
+They are the same probe under two paths — `/up` is the one
+[ONCE](https://github.com/basecamp/once) requires. A container healthcheck
+carries no credentials, and a 401 there would have every orchestrator mark the
+container unhealthy and restart-loop it forever. Both deliberately reveal
+nothing about the install — `/api/status`, which reports model config and note
+counts, stays behind the gate.
+
+`POST /api/checkpoint` stays **behind** the gate despite also existing for
+backup tooling. ONCE's `pre-backup` hook runs inside the container, so it reads
+`STASH_PASSWORD` from its own environment and logs in like any other client;
+exempting the endpoint to save it that step would hand an unauthenticated
+stranger a repeatable write and disk flush.
 
 ## The SSRF guard
 

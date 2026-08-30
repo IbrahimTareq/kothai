@@ -60,6 +60,40 @@ pnpm install
 pnpm start
 ```
 
+## Running it with ONCE
+
+[ONCE](https://github.com/basecamp/once) is Basecamp's self-hosting installer:
+it installs Docker if the machine doesn't have it, gets a TLS certificate,
+keeps the app updated and runs scheduled backups, all from one dashboard. If
+you are putting Kothai on a VPS, this is the shortest path — it replaces the
+reverse-proxy setup and the upgrade and backup sections below.
+
+```bash
+curl https://get.once.com | sh
+```
+
+Then point it at `ghcr.io/ibrahimtareq/kothai:once` and give it a hostname.
+Budget the same RAM as any other install — ONCE makes setup easier, not the
+models smaller.
+
+The `:once` tag is the full image with the three defaults ONCE requires already
+set (`PORT=80`, `STASH_HOME=/storage`, a `/up` healthcheck), because ONCE
+installs an image by name and has nowhere to put environment variables. It is
+the same build as `:latest` otherwise.
+
+> [!IMPORTANT]
+> ONCE gives Kothai a public hostname, which is exactly the situation the
+> password gate exists for. **Set `STASH_PASSWORD`** — ONCE handles TLS, but it
+> does not put an authentication layer in front of the app, and Kothai's own
+> gate is off until you set one. See [security.md](security.md#the-password-gate).
+
+Kothai ships a `pre-backup` hook, so ONCE's scheduled backups run
+`POST /api/checkpoint` first and archive a database that restores cleanly. See
+[Snapshot backups](#snapshot-backups-restic-borg-once) below for what that
+solves. There is no `post-restore` hook on purpose: with the WAL already
+truncated at backup time, putting the files back is all a restore needs, and a
+hook that deleted `-wal`/`-shm` could throw away committed data.
+
 ## Running lite (remote inference)
 
 The default image runs every model on your own hardware. The **lite** image
@@ -198,6 +232,31 @@ Two things to know:
 To restore, stop the container and put the downloaded file in place of
 `data/kothai.db`, deleting any `kothai.db-wal` and `kothai.db-shm` beside it.
 
+### Snapshot backups (restic, Borg, ONCE)
+
+Tools that archive `data/` from outside the process have a problem neither of
+the routes above has: they cannot ask Kothai to settle first, so a snapshot can
+quietly miss recent work. Two reasons, and neither is visible to the tool:
+
+- the background enrichment sweeps queue writes in memory and commit them in
+  batches, so the newest tags and embeddings may be in no file yet;
+- WAL mode means committed rows can live in `kothai.db-wal`, so `kothai.db` by
+  itself is an older copy of the database.
+
+Call this first and both go away:
+
+```bash
+curl -fX POST -H 'Content-Type: application/json' http://localhost:5173/api/checkpoint
+```
+
+It flushes the queue and truncates the WAL, so `kothai.db` **on its own** is
+complete. Unlike `/api/backup` it writes no second copy, so it needs no spare
+disk — worth wiring into a restic or Borg pre-hook. ONCE users get this
+automatically via the shipped `pre-backup` hook.
+
+It refuses with `409` while an import is running, which should fail your backup
+rather than be ignored: settling mid-import would commit half of one.
+
 If `STASH_PASSWORD` is set, this endpoint is behind it like everything else —
 `curl` needs the session cookie, so the Settings link is the easier route.
 
@@ -226,6 +285,10 @@ Kothai speaks plain HTTP, and **authentication is off unless you set
 `STASH_PASSWORD`** — until you do, anyone who can reach the port can read and
 write everything. Set it before putting Kothai on a public hostname, and put TLS
 in front either way.
+
+> [!TIP]
+> [ONCE](#running-it-with-once) does the TLS half of this for you. You still
+> have to set `STASH_PASSWORD` yourself.
 
 Caddy is the shortest path:
 
