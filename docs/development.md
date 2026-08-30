@@ -231,11 +231,33 @@ passed locally only because contributors have a stale build lying around, which
 CI never does.
 
 [`docker.yml`](../.github/workflows/docker.yml) publishes the multi-arch image
-to GHCR on a `v*` tag, gated on `ci.yml`. It boot-tests the amd64 image on a
-native x86 runner — the check that can't be done on Apple Silicon, where Rosetta
-only emulates SSE4.2 and the AVX2 llama.cpp kernels `SIGILL`. See
-[vps-verification.md](vps-verification.md).
+to GHCR on a `v*` tag, gated on `ci.yml`. Every build passes an explicit
+`--target`, because Docker builds the *last* stage when none is given and the
+Dockerfile ends with `runtime-once` — an untargeted build silently publishes the
+wrong image.
 
 ```bash
 git tag v1.0.2 && git push --tags
 ```
+
+### Verifying an amd64 build
+
+Development happens on Apple Silicon, so the arm64 image is exercised constantly
+and the amd64 one mostly isn't. Native prebuilds fail on an untested CPU in two
+ways quiet enough to miss:
+
+- **Illegal instruction** — a prebuild compiled for a wider SIMD level than the
+  CPU implements dies on load. The project already carries the arm64 version of
+  this workaround (`@qvac/translation-nmtcpp` is built with SVE and `SIGILL`s on
+  Pi and Apple Silicon, so the Dockerfile swaps in a JS stub). The amd64
+  equivalent is a prebuild assuming AVX-512 on a shared vCPU that has only AVX2.
+- **OOM during model load** — the kernel kills the process, Docker restarts it,
+  it downloads the weights again. Presents as a network problem rather than a
+  memory one.
+
+`docker.yml` boot-tests amd64 on a native x86 runner, which covers both for
+released images. To check an unreleased change, `scripts/vps-smoke.sh` runs the
+same checks against any box (`--help` for flags). Use a **Hetzner CX32** (8 GB)
+for the full image — CX22's 4 GB OOMs partway through the model load — and
+deliberately pick a box *without* AVX-512, since nearly all shared vCPUs lack it
+and one that has it proves less.

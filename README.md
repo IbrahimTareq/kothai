@@ -8,7 +8,7 @@ Everything you save gets read and filed by a model running on your own machine.
 Later you ask it questions in plain English, and it answers from your own stuff
 rather than the open web.
 
-[Quick start](#quick-start) · [How it works](#how-it-works) · [Documentation](#documentation) · [Self-hosting](docs/self-hosting.md) · [API](docs/api.md)
+[Quick start](#quick-start) · [How it works](#how-it-works) · [Documentation](#if-you-want-to) · [Self-hosting](docs/self-hosting.md) · [API](docs/api.md)
 
 [![release](https://img.shields.io/github/v/tag/IbrahimTareq/kothai?style=flat-square&label=release&labelColor=1a1a1a&color=blue)](https://github.com/IbrahimTareq/kothai/releases)
 [![image](https://img.shields.io/badge/ghcr.io-kothai-2496ed?style=flat-square&logo=docker&logoColor=white&labelColor=1a1a1a)](https://github.com/IbrahimTareq/kothai/pkgs/container/kothai)
@@ -111,24 +111,18 @@ doesn't have them fighting over the same weights.
 [docs/architecture.md](docs/architecture.md) covers the project layout, the
 queue, how storage works and how retrieval is put together.
 
-## Documentation
+## If you want to…
 
-**Getting started**
-
-- [Development](docs/development.md). Setup, scripts, the test suite, conventions, and recipes for adding a route, an importer or a model.
-- [Self-hosting](docs/self-hosting.md). Docker, configuration, backup and restore, HTTPS, upgrading, troubleshooting.
-- [HTTP API](docs/api.md). Every endpoint, its shape, and its error codes.
-
-**Going deeper**
-
-- [Architecture](docs/architecture.md). Project layout, the two-phase save, the enrich queue, storage decisions, retrieval. Best place to start if you want to contribute.
-- [Models and inference](docs/models.md). The three roles, residency policies, RAM budgets, presets, and how to point Kothai at a remote endpoint.
-- [Security](docs/security.md). Threat model, the password gate, the SSRF guard, and what deliberately isn't protected.
-
-**Reference**
-
-- [Design system](docs/design-system.md). Token rules and the linter that enforces them.
-- [Verifying a build on x86](docs/vps-verification.md). Development happens on Apple Silicon, so amd64 gets checked separately.
+| … then read |  |
+|---|---|
+| **understand how it works** before changing anything | [Architecture](docs/architecture.md) |
+| **set up a dev environment** and run the tests | [Development](docs/development.md) |
+| **add a route, an importer, or a model preset** | [Development → Recipes](docs/development.md#recipes) |
+| **call the API** from a script or another client | [HTTP API](docs/api.md) |
+| **understand the AI layer**: roles, residency, RAM | [Models & inference](docs/models.md) |
+| **run it on your own hardware** | [Self-hosting](docs/self-hosting.md) |
+| **expose it beyond your LAN** | [Security](docs/security.md) |
+| **touch any CSS** | [Design system](docs/design-system.md) |
 
 ## Contributing
 

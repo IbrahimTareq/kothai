@@ -4,7 +4,7 @@ One container, no database server, no account, no API key. Everything —
 including the models — runs on your own hardware.
 
 > Related: [Models & inference](models.md) for the RAM story · [Security](security.md)
-> before exposing it · [all docs](README.md)
+> before exposing it · [all docs](../README.md#if-you-want-to)
 
 ## Before you start
 
@@ -163,11 +163,8 @@ residency you control in **Settings → Model Cores**:
 | **On demand** | Loads when a feature needs it, frees its RAM after a few idle minutes. First use after idle takes a moment. |
 | **Off** | Never downloaded or loaded. Features that need it are disabled. |
 
-| Role | Powers | When off |
-|---|---|---|
-| Language | Classification, tags, Ask | Notes keep instant heuristic titles; Ask is disabled |
-| Embedding | Semantic search, Ask retrieval | Ask falls back to keyword search |
-| Vision | Image captioning | Images are saved but not described |
+The three roles are Language, Embedding and Vision; [models.md](models.md#the-three-roles)
+lists what each one powers and what you lose by turning it off.
 
 The default is embedding always-on (~300 MB, so search is always instant) with
 the language and vision models on demand. Saving works with **everything off**
@@ -259,14 +256,6 @@ rather than be ignored: settling mid-import would commit half of one.
 
 If `STASH_PASSWORD` is set, this endpoint is behind it like everything else —
 `curl` needs the session cookie, so the Settings link is the easier route.
-
-## Verifying a build on x86
-
-Development happens on Apple Silicon, so the amd64 image gets less real-world
-exercise than the arm64 one. `scripts/vps-smoke.sh` boots an image on a VPS and
-checks the things that break quietly on an untested CPU — illegal instructions
-from native prebuilds, and OOM during model load. See
-[docs/vps-verification.md](vps-verification.md).
 
 ## Upgrading
 

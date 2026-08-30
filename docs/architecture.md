@@ -307,26 +307,17 @@ client silently trusts is worse than an honest resync.
 
 ## The inference facade
 
-Everything model-shaped goes through `server/ai/index.js`. It resolves exactly
-one provider at boot via **dynamic** `import()`:
+Everything model-shaped goes through `server/ai/index.js`, which resolves
+exactly one provider at boot — on-device or an OpenAI-compatible endpoint —
+behind a contract both satisfy.
 
-```js
-if (kind === 'remote') return await import('./providers/remote.js')
-return await import('./providers/local.js')
-```
+The one architectural detail worth knowing here is that the provider is loaded
+via **dynamic** `import()`, which is load-bearing rather than stylistic: the
+lite image doesn't install `@qvac/sdk` at all, and a static import would crash
+the process at startup.
 
-That dynamic import is load-bearing, not stylistic. In the lite image
-`@qvac/sdk` isn't installed at all, and a static import here would crash the
-process at startup.
-
-Both providers satisfy the same contract, enforced by
-`test/server/ai/providers/provider-contract.test.js`. Prompt construction and
-result normalisation live in shared pure modules (`ai/prompts.js`,
-`ai/normalise.js`), so a note classified remotely is asked the same question and
-filtered the same way as one classified on-device.
-
-Details of roles, residency and the RAM story are in [Models &
-inference](models.md).
+Roles, residency, the RAM story and the rest of the facade are in [Models &
+inference](models.md#the-provider-facade).
 
 ## The client
 
