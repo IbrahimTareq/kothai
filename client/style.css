@@ -1,0 +1,30 @@
+/* ============================================================================
+   KOTHAI DESIGN SYSTEM
+   A monochrome, restrained language adapted from trybehold.com.
+   Signature: light-weight Geist type, tight negative tracking, near-black
+   surfaces, hierarchy by white opacity (not colour), Geist Mono for labels.
+   Note: Behold ships the licensed "Favorit" typeface; we substitute Geist
+   (SIL OFL) — the closest freely-redistributable neo-grotesque.
+
+   The stylesheets are grouped on disk by layer — foundation/ (tokens and the
+   element baseline), components/ (reusable pieces), views/ (one file per
+   screen) — but the order below is a cascade contract, not a reflection of
+   those groups. Several component rules are deliberately authored to land
+   after the views that host them. Regroup the files freely; reorder these
+   imports only with a reason.
+   ============================================================================ */
+
+@import "./styles/foundation/tokens.css";
+@import "./styles/foundation/base.css";
+@import "./styles/components/primitives.css";
+@import "./styles/views/shell.css";
+@import "./styles/views/core.css";
+@import "./styles/views/gallery.css";
+@import "./styles/views/settings.css";
+@import "./styles/components/card.css";
+@import "./styles/components/tweaks.css";
+@import "./styles/components/capture.css";
+@import "./styles/views/expanded.css";
+@import "./styles/views/spaces.css";
+@import "./styles/views/mindmap.css";
+@import "./styles/foundation/responsive.css";

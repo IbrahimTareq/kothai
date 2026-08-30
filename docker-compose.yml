@@ -1,0 +1,54 @@
+# Kothai — one container, everything on-device.
+#   docker compose up -d     then open http://localhost:5173
+# Full guide: docs/self-hosting.md
+services:
+  kothai:
+    image: ghcr.io/ibrahimtareq/kothai:latest
+    # Prefer building from this checkout instead of pulling the published image?
+    # Uncomment the line below and run `docker compose up -d --build`.
+    # build: .
+    container_name: kothai
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      # Your notes, uploads and settings. THIS is the directory to back up.
+      - ./data:/app/data
+      # Model weights, 1.3-3.4 GB. Re-downloadable — no need to back up.
+      - ./models:/app/models
+    # Everything below is optional; the values shown are the built-in defaults.
+    # environment:
+    #   PORT: "5173"
+    #   # Require a password before anything is served. Unset = no auth, which
+    #   # is the default and fine on a LAN or tailnet. Set it before putting
+    #   # Kothai on a public hostname.
+    #   STASH_PASSWORD: "choose-something-long"
+    #   # STASH_HOME sets one root that the three paths below derive from —
+    #   # use it on hosts that allow only a single volume.
+    #   STASH_HOME: /app
+    #   STASH_DATA_DIR: /app/data
+    #   STASH_MODELS_DIR: /app/models
+    #   STASH_CONFIG_PATH: /app/qvac.config.json
+
+  # Lite: ~250 MB, no model weights, no models volume. Inference goes to an
+  # OpenAI-compatible endpoint you run (Ollama, llama.cpp server) or pay for.
+  # Comment out the `kothai` service above and uncomment this one to use it.
+  # kothai-lite:
+  #   image: ghcr.io/ibrahimtareq/kothai:lite
+  #   container_name: kothai
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5173:5173"
+  #   volumes:
+  #     - ./data:/app/data
+  #   environment:
+  #     STASH_AI_PROVIDER: remote
+  #     STASH_AI_BASE_URL: http://ollama:11434/v1
+  #     # STASH_AI_API_KEY: sk-...   # not needed for Ollama or llama.cpp
+  #   # Model NAMES are picked in Settings, not here.
+
+# The healthcheck is baked into the image and reports liveness, so the container
+# is "healthy" while models are still downloading in the background.
+#
+# No memory limit is set on purpose: a cap low enough to be meaningful would
+# OOM the model loader. Budget 8 GB of RAM — 4 GB works if you skip images.

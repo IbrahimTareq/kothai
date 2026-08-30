@@ -1,0 +1,111 @@
+/* spaces.css — spaces, collections, add-to-space popover
+   Part of the Kothai design system. Loaded via style.css. */
+/* ---- Spaces landing ---- */
+.spaces-view { display: flex; flex-direction: column; height: 100%; overflow: hidden; padding: calc(var(--topbar-h) + var(--space-22)) var(--space-28) 0; }
+.spaces-scroll { flex: 1; overflow-y: auto; padding-bottom: var(--space-22); }
+.spaces-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-18); }
+.spaces-title { font-size:var(--text-xl); letter-spacing: -0.02em; margin: 0; }
+.space-form { display: flex; gap: var(--space-8); margin-bottom: var(--space-18); flex-wrap: wrap; }
+.space-form-name, .space-form-tags { background: var(--panel); border: 1px solid var(--line); color: var(--ink); border-radius: var(--radius-md); padding: var(--space-10) var(--space-12); font-size:var(--text-sm); }
+.space-form-name { min-width: 200px; }
+.space-form-tags { flex: 1; min-width: 220px; }
+.space-form-go { background: var(--ink); color: var(--bg); border: none; border-radius: var(--radius-md); padding: var(--space-10) var(--space-16); cursor: pointer; font-size:var(--text-sm); }
+.spaces-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-14); }
+/* The card itself is the shared .tile (components.css). All that is left here
+   is scale: these run about half again as wide as an Ask citation, so the name
+   and the count each step up one size rather than reading as small print on a
+   large card. The cover also gets a little more room to breathe. */
+.space-card .tile-cap { padding: var(--space-10) var(--space-12) var(--space-12); }
+.space-card .tile-title { font-size: var(--text-sm); }
+.space-card .tile-meta { font-size: var(--text-xs); }
+
+/* ---- Add-to-space popover (grid card) ---- */
+.card-act-plus { font-size:var(--text-base); line-height: 1; }
+.coll-pop-backdrop { position: fixed; inset: 0; z-index:var(--z-backdrop); }
+.coll-pop { position: absolute; bottom: 40px; right: 6px; z-index:var(--z-popover); width: 190px; max-height: 240px; overflow-y: auto; background: var(--surface-popover); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-6); box-shadow: var(--shadow-popover); }
+.coll-pop-h { font-size:var(--text-xs); letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.6; padding: var(--space-4) var(--space-6) var(--space-6); }
+.coll-pop-empty { font-size:var(--text-xs); opacity: 0.6; padding: var(--space-4) var(--space-6); }
+.coll-pop-row { display: flex; align-items: center; gap: var(--space-8); width: 100%; background: none; border: none; color: var(--ink); border-radius: var(--radius-md); padding: var(--space-8) var(--space-6); cursor: pointer; font-size:var(--text-sm); text-align: left; }
+.coll-pop-row:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.coll-pop-check { width: 12px; display: inline-flex; justify-content: center; opacity: 0.85; }
+.coll-pop-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.coll-pop-smart { opacity: 0.6; display: inline-flex; }
+
+/* ---- Collection detail ---- */
+.collection-view { display: flex; flex-direction: column; height: 100%; padding-top: var(--topbar-h); }
+/* Header in two tiers. Tier 1 is identity only — what this space is called and
+   how big it is; the rail is the way back to Spaces. Tier 2 is one bar: the
+   rules that fill the space on the left, the controls that view it on the
+   right. Gutters are --space-28 to match .gal-scroll, so the title, the
+   hairline and the first card in the board all share one left edge. */
+.coll-head { position: relative; display: flex; flex-direction: column; gap: var(--space-10); padding: var(--space-16) var(--space-28) var(--space-12); }
+.coll-head::after { content: ''; position: absolute; left: var(--space-28); right: var(--space-28); bottom: 0; border-bottom: 1px solid var(--line); }
+.coll-head-top { display: flex; align-items: center; gap: var(--space-12); }
+.coll-title { min-width: 0; display: flex; align-items: center; gap: var(--space-8); }
+.coll-name { min-width: 0; font-size:var(--text-xl); letter-spacing: -0.02em; margin: 0; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* faint at rest, legible once you are anywhere near the name */
+.coll-rename { flex: none; display: grid; place-items: center; width: var(--control-sm); height: var(--control-sm); padding: 0; background: transparent; border: 0; color: var(--ink-faint); border-radius: var(--radius); cursor: pointer; transition: var(--dur-fast); }
+.coll-title:hover .coll-rename { color: var(--ink-mute); }
+.coll-rename:hover { color: var(--ink); background: var(--panel-2); }
+.coll-count { flex: none; font-size:var(--text-xs); color: var(--ink-faint); white-space: nowrap; }
+.coll-name-input { flex: 1; min-width: 0; font-size:var(--text-xl); background: var(--panel); border: 1px solid var(--line); color: var(--ink); border-radius: var(--radius-md); padding: var(--space-4) var(--space-10); margin: 0; }
+
+/* tier 2 */
+.coll-bar { display: flex; align-items: center; gap: var(--space-16); }
+.coll-rule { flex: 1; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-6); }
+.coll-tools { flex: none; display: flex; align-items: center; gap: var(--space-8); }
+.coll-tools-sep { width: 1px; height: 18px; background: var(--line); }
+/* Delete is the quietest thing on the bar until you reach for it, and it arms
+   before it fires — one click on a bare icon should not lose a space. */
+.coll-del { display: grid; place-items: center; height: var(--control-md); min-width: var(--control-md); padding: 0; background: transparent; border: 0; border-radius: var(--radius-md); color: var(--ink-faint); font: inherit; font-size:var(--text-xs); cursor: pointer; transition: var(--dur-fast); }
+.coll-del:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.coll-del.armed { padding: 0 var(--space-12); color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
+.coll-smart { position: relative; display: inline-flex; flex: none; color: var(--ink-mute); cursor: help; }
+.coll-smart:hover, .coll-smart:focus-visible { color: var(--ink); outline: none; }
+.coll-smart-pop { position: absolute; top: calc(100% + 8px); left: 0; z-index:var(--z-popover-nested); width: 216px; display: flex; flex-direction: column; gap: var(--space-4); background: var(--surface-popover); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-10) var(--space-12); box-shadow: var(--shadow-popover); font-size:var(--text-xs); line-height: 1.45; color: var(--ink-dim); opacity: 0; visibility: hidden; transform: translateY(-3px); transition: opacity var(--dur-fast) ease, transform var(--dur-fast) ease, visibility var(--dur-fast); pointer-events: none; }
+.coll-smart-pop b { color: var(--ink); font-size:var(--text-xs); font-weight: 600; }
+.coll-smart:hover .coll-smart-pop, .coll-smart:focus-visible .coll-smart-pop { opacity: 1; visibility: visible; transform: translateY(0); }
+.coll-tag { gap: var(--space-6); }
+.coll-tag-x { color: var(--ink-faint); }
+.coll-tag:hover .coll-tag-x { color: var(--danger); }
+/* dashed, like the expanded sidebar's "add to space" — a slot, not a value */
+.coll-addtag { color: var(--ink-mute); border-style: dashed; }
+.coll-addtag.on { background: var(--panel); color: var(--ink); border-color: var(--line-hover); }
+
+/* Rule builder — turns "add a rule tag" into a contextual pick from the vault:
+   each row is a real tag with its live item-count (the rule's reach). */
+.coll-ruleadd { position: relative; display: inline-flex; }
+.rulepop { position: absolute; top: calc(100% + 6px); left: 0; z-index:var(--z-popover); width: 244px; display: flex; flex-direction: column; gap: var(--space-8); background: var(--surface-popover); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-10); box-shadow: var(--shadow-popover); }
+.rulepop-hint { margin: 0; font-size:var(--text-xs); line-height: 1.45; color: var(--ink-dim); }
+.rulepop-input { width: 100%; box-sizing: border-box; background: transparent; border: 1px solid var(--line); color: var(--ink); border-radius: var(--radius-md); padding: var(--space-6) var(--space-10); font-size:var(--text-xs); }
+.rulepop-input:focus { outline: none; border-color: var(--ink-dim); }
+.rulepop-list { display: flex; flex-direction: column; gap: var(--space-2); max-height: 210px; overflow-y: auto; }
+.rulepop-item { display: flex; align-items: center; justify-content: space-between; gap: var(--space-10); background: transparent; border: 0; color: var(--ink); font: inherit; font-size:var(--text-sm); text-align: left; padding: var(--space-8) var(--space-8); border-radius: var(--radius); cursor: pointer; }
+.rulepop-item:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.rulepop-tag { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rulepop-count { flex: none; font-size:var(--text-xs); color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.rulepop-new .rulepop-tag { color: var(--ink-dim); }
+.rulepop-empty { margin: 0; padding: var(--space-4) var(--space-8); font-size:var(--text-xs); color: var(--ink-dim); }
+
+.menu-backdrop { position: fixed; inset: 0; z-index:var(--z-backdrop); }
+
+/* ---- Expanded sidebar: Spaces membership ----
+   The list is the item's memberships only — every row is a space it is in, on
+   the same quiet surface as the tag chips above it. The row itself is inert;
+   only its cross removes. Everything else lives behind the add button's menu. */
+.exp-colls { display: flex; flex-direction: column; gap: var(--space-6); }
+.exp-coll { display: flex; align-items: center; gap: var(--space-8); background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-dim); border-radius: var(--radius-md); padding: var(--space-8) var(--space-10); font-size:var(--text-sm); text-align: left; }
+.exp-coll-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.exp-coll-x { display: flex; padding: 0; border: 0; background: transparent; color: var(--ink-faint); cursor: pointer; transition: var(--dur-fast); }
+.exp-coll-x:hover { color: var(--danger); }
+
+/* add button + its menu of the spaces this item is not in yet. The menu opens
+   upward: Spaces is the last section, and .exp-side-scroll would otherwise have
+   to scroll to reveal it. */
+.exp-coll-add { position: relative; }
+.exp-coll-plus { display: flex; align-items: center; justify-content: center; gap: var(--space-6); width: 100%; padding: var(--space-8) var(--space-10); border: 1px dashed var(--line); border-radius: var(--radius-md); background: transparent; color: var(--ink-mute); font: inherit; font-size:var(--text-sm); cursor: pointer; transition: var(--dur-fast); }
+.exp-coll-plus:hover, .exp-coll-plus.open { border-color: var(--ink-faint); color: var(--ink); }
+.exp-coll-menu { position: absolute; left: 0; right: 0; bottom: calc(100% + var(--space-6)); z-index: var(--z-sticky); display: flex; flex-direction: column; gap: var(--space-2); max-height: 216px; overflow-y: auto; padding: var(--space-6); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg-raise); box-shadow: 0 12px 32px rgba(0,0,0,.35); }
+.exp-coll-opt { display: flex; align-items: center; gap: var(--space-8); width: 100%; padding: var(--space-8); border: 0; border-radius: var(--radius); background: transparent; color: var(--ink-dim); font: inherit; font-size:var(--text-sm); text-align: left; cursor: pointer; }
+.exp-coll-opt:hover { background: var(--panel-2); color: var(--ink); }
+.exp-coll-menu-empty { display: block; padding: var(--space-8); font-size:var(--text-xs); }

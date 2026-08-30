@@ -1,0 +1,179 @@
+/* card.css — item card, toast, fab, scrollbars
+   Part of the Kothai design system. Loaded via style.css. */
+/* ─────────────────────────── item card ───────────────────────────────────── */
+.item-card.openable{cursor:pointer}
+/* chromeless by default — media bleeds edge to edge, cards float on the bg */
+.item-card{position:relative;background:transparent;border:0;border-radius:var(--radius-lg);
+  padding:0;display:flex;flex-direction:column;gap:var(--space-8);transition:transform var(--dur-fast);outline:none}
+.item-card:hover,.item-card:focus-visible{transform:translateY(-3px)}
+/* text-only cards (note/code) keep a faint surface so they read on the dark bg */
+.item-card.type-note,.item-card.type-code{background:var(--panel);border:1px solid var(--line);padding:var(--space-14)}
+.item-card.type-note:hover,.item-card.type-note:focus-visible,
+.item-card.type-code:hover,.item-card.type-code:focus-visible{border-color:var(--line-hover);
+  background:var(--panel-2)}
+.card-cap{display:flex;flex-direction:column;gap:var(--space-4);padding:0 var(--space-2)}
+.card-del{position:absolute;top:8px;right:8px;z-index:var(--z-content);width:26px;height:26px;
+  display:grid;place-items:center;border:0;border-radius:var(--radius);
+  background:rgba(0,0,0,.5);backdrop-filter:blur(4px);color:#fff;cursor:pointer;  /* token-lint-ignore: control floats over user imagery, not over a themed surface */
+  opacity:0;transition:var(--dur-fast)}
+.item-card:hover .card-del,.card-del:focus-visible{opacity:1}
+.card-del:hover{color:var(--danger);background:rgba(0,0,0,.72)}  /* token-lint-ignore: control floats over user imagery, not over a themed surface */
+/* tile source brand badge — always visible, top-left */
+.card-src{position:absolute;top:8px;left:8px;z-index:var(--z-content);width:26px;height:26px;
+  display:grid;place-items:center;border-radius:var(--radius);
+  background:rgba(0,0,0,.5);backdrop-filter:blur(4px);color:#fff;pointer-events:none}  /* token-lint-ignore: control floats over user imagery, not over a themed surface */
+/* tile actions — expand + release, always visible in the bottom-right corner */
+.card-actions{position:absolute;bottom:8px;right:8px;z-index:var(--z-content);display:flex;gap:var(--space-6)}
+.card-act{width:26px;height:26px;display:grid;place-items:center;border:0;
+  border-radius:var(--radius);background:rgba(0,0,0,.5);backdrop-filter:blur(4px);  /* token-lint-ignore: control floats over user imagery, not over a themed surface */
+  color:#fff;cursor:pointer;transition:var(--dur-fast)}  /* token-lint-ignore: white glyph on a dark scrim over imagery, both themes */
+.card-act:hover{background:rgba(0,0,0,.72)}  /* token-lint-ignore: control floats over user imagery, not over a themed surface */
+.card-act.del:hover{color:var(--danger)}
+.card-content{display:flex;flex-direction:column;gap:var(--space-10)}
+.card-title{font-size:var(--text-xs);font-weight:var(--fw-medium);line-height:1.35;
+  letter-spacing:var(--tracking-tight);color:var(--ink);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-title.sm{font-size:var(--text-xs)}
+.card-host{display:flex;align-items:center;gap:var(--space-6);font-family:var(--font-mono);
+  font-size:var(--text-xs);letter-spacing:var(--tracking-mono);color:var(--ink-dim)}
+.card-host svg{color:var(--ink-dim)}
+.card-favi{width:34px;height:34px;border-radius:var(--radius);display:grid;place-items:center;
+  background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+  font-family:var(--font-mono);font-weight:var(--fw-medium);font-size:var(--text-base)}
+.card-body{font-size:var(--text-sm);line-height:1.55;letter-spacing:var(--tracking-tight);
+  color:var(--ink);white-space:pre-wrap}
+.card-sub{font-size:var(--text-xs);color:var(--ink-faint)}
+
+/* ── link tile ────────────────────────────────────────────────────────────
+   Headline-led links (article, Reddit post, repo — everything but the
+   media-first platforms, see isMediaFirst) render title first:
+   source mark, title set large and bottom-anchored, source name in the mono
+   micro-label, then the preview image bled to the card's edges. Same
+   panel-and-hairline shell the note/code cards use — monochrome throughout;
+   the source is named by its mark and its label, not by a colour. */
+.item-card.linktile{background:var(--panel);border:1px solid var(--line);
+  padding:var(--space-14);overflow:hidden}
+.item-card.linktile:hover,.item-card.linktile:focus-visible{background:var(--panel-2);
+  border-color:var(--line-hover)}
+/* light mode: --line is a dark hairline against the pale bg — see the note/code
+   rule below, which drops it for the same reason. */
+:root[data-theme="light"] .item-card.linktile{border-color:transparent}
+:root[data-theme="light"] .item-card.linktile:hover,
+:root[data-theme="light"] .item-card.linktile:focus-visible{border-color:rgba(0,0,0,.14)}  /* token-lint-ignore: explicit light-theme focus ring for link tiles */
+.lt-body{display:flex;flex-direction:column;gap:var(--space-20);min-height:126px}
+.lt-mark{color:var(--ink-mute);display:block;line-height:0}
+/* bottom-anchored, so tiles with one-line and four-line titles still line their
+   headlines up against the same edge */
+.lt-cap{margin-top:auto;display:flex;flex-direction:column;gap:var(--space-10)}
+.lt-title{font-size:var(--text-md);font-weight:var(--fw-normal);
+  line-height:var(--leading-snug);letter-spacing:var(--tracking-tighter);
+  color:var(--ink);display:-webkit-box;-webkit-line-clamp:4;
+  -webkit-box-orient:vertical;overflow:hidden}
+.lt-label{font-family:var(--font-mono);font-size:var(--text-2xs);
+  letter-spacing:var(--tracking-label);text-transform:uppercase;
+  color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* On a tile with no preview image .lt-body is the last child, so .card-actions
+   — absolutely positioned into the bottom-right corner — lands on the label's
+   own line and squeezes it to an ellipsis in a narrow column. This clears a
+   strip for the buttons to sit in, giving the label the full width. Tiles that
+   do have a .lt-shot need none of it: the buttons sit over the image. */
+.lt-body:last-child .lt-cap{padding-bottom:var(--space-24)}
+/* negative margins bleed the preview past the card's padding to its own edges;
+   the card clips the bottom corners for it (.linktile has overflow:hidden) */
+.lt-shot{margin:var(--space-14) -14px -14px;border-top:1px solid var(--line-2);background:var(--panel-2)}
+.lt-shot img{display:block;width:100%;height:auto}
+
+/* image / video thumb */
+.img-thumb{position:relative;border-radius:var(--radius-lg);overflow:hidden;display:grid;
+  place-items:center;color:var(--ink-mute);border:1px solid var(--line-2)}
+.img-scan{position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 1px,transparent 1px 4px);
+  mix-blend-mode:overlay}
+.img-thumb.vid .play-btn{position:absolute;width:46px;height:46px;border-radius:var(--radius-circle);
+  background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.5);display:grid;place-items:center;  /* token-lint-ignore: badge floats over user imagery, not over a themed surface */
+  color:#fff;backdrop-filter:blur(2px)}  /* token-lint-ignore: white glyph on a dark scrim over imagery, both themes */
+
+/* code */
+.code-head{display:flex;align-items:center;gap:var(--space-6);padding-bottom:var(--space-2)}
+.code-dot{width:7px;height:7px;border-radius:var(--radius-circle);background:var(--line);border:1px solid var(--line)}
+.code-lang{margin-left:auto;font-family:var(--font-mono);font-size:var(--text-3xs);
+  letter-spacing:var(--tracking-label);color:var(--ink-dim);text-transform:uppercase}
+.code-block{margin:0;font-family:var(--font-mono);font-size:var(--text-xs);line-height:1.6;
+  color:rgba(255,255,255,.82);background:#050505;border:1px solid var(--line);  /* token-lint-ignore: code blocks keep a dark surface in both themes, like an editor */
+  border-radius:var(--radius);padding:var(--space-12) var(--space-12);overflow-x:auto;white-space:pre;
+  scrollbar-width:thin}
+.type-code .card-content{gap:var(--space-6)}
+
+/* empty */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-14);
+  height:100%;color:var(--ink-faint)}
+.empty svg{opacity:.5}
+.empty p{font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:var(--tracking-mono);margin:0}
+
+/* floating capture (gallery) */
+.fab{position:absolute;bottom:28px;right:30px;z-index:var(--z-float);display:flex;align-items:center;gap:var(--space-10);
+  background:var(--accent);border:0;border-radius:var(--radius-full);padding:var(--space-14) var(--space-28) var(--space-14) var(--space-20);
+  color:var(--on-accent);cursor:pointer;box-shadow:0 22px 50px -14px rgba(0,0,0,.85);
+  transition:var(--dur-fast);font-size:var(--text-base);font-weight:600;letter-spacing:var(--tracking-tight)}
+.fab:hover{transform:translateY(-2px);background:var(--accent-hover);box-shadow:0 26px 58px -14px rgba(0,0,0,.9)}
+/* light mode: --line renders as a dark hairline against the pale bg — drop it on item tiles */
+:root[data-theme="light"] .card-favi,
+:root[data-theme="light"] .item-card.type-note,
+:root[data-theme="light"] .item-card.type-code{border-color:transparent}
+.fab .fab-ico{position:relative;display:grid;place-items:center;margin:-1px 0;width:20px;height:20px}
+
+/* ── capture confirmation ─────────────────────────────────────────────────
+   The button answers its own click instead of a toast doing it elsewhere.
+   Icon and label are each two children stacked in one grid cell, so the
+   pill's width is fixed by the wider of the pair and nothing reflows while
+   they cross-fade. `.saved` runs the whole sequence; dropping it reverses
+   every transition on its own, which is the "switch back" half. */
+.fab .fab-ico > svg{grid-area:1/1;transition:opacity var(--dur-fast) ease,transform var(--dur-slow) var(--ease-out)}
+.fab .fab-ico > svg:nth-child(2){opacity:0;transform:scale(.4) rotate(-25deg)}
+.fab.saved .fab-ico > svg:nth-child(1){opacity:0;transform:scale(.4) rotate(90deg)}
+.fab.saved .fab-ico > svg:nth-child(2){opacity:1;transform:none}
+/* the tick draws itself rather than appearing — one continuous path, swept
+   by dash offset (path length ≈ 20 for the 'check' glyph in icons.tsx) */
+.fab .fab-ico > svg:nth-child(2) path{stroke-dasharray:21;stroke-dashoffset:21}
+.fab.saved .fab-ico > svg:nth-child(2) path{animation:fab-draw var(--dur-slow) var(--ease-in-out) var(--delay-sm) forwards}
+@keyframes fab-draw{to{stroke-dashoffset:0}}
+.fab .fab-label{display:grid;overflow:hidden;text-align:left}
+.fab .fab-label > span{grid-area:1/1;white-space:nowrap;
+  transition:opacity var(--dur-fast) ease,transform var(--dur-slow) var(--ease-out)}
+.fab .fab-label > span:nth-child(2){opacity:0;transform:translateY(9px)}
+.fab.saved .fab-label > span:nth-child(1){opacity:0;transform:translateY(-9px)}
+.fab.saved .fab-label > span:nth-child(2){opacity:1;transform:none}
+/* a single pop, plus a ring that expands out of the pill's own edge */
+.fab.saved{animation:fab-pop var(--dur-slower) var(--ease-out)}
+@keyframes fab-pop{0%{transform:scale(1)}36%{transform:scale(1.06)}100%{transform:scale(1)}}
+.fab::after{content:'';position:absolute;inset:0;border-radius:inherit;
+  border:1px solid var(--accent);opacity:0;pointer-events:none}
+.fab.saved::after{animation:fab-ring .62s ease-out}
+@keyframes fab-ring{from{opacity:.5;transform:scale(1)}to{opacity:0;transform:scale(1.28)}}
+/* Reduced motion keeps the state change (that's the information) and drops
+   only the movement — matching how .main's entrance animation is handled. */
+@media (prefers-reduced-motion:reduce){
+  .fab.saved,.fab.saved::after{animation:none}
+  .fab .fab-ico > svg,.fab .fab-label > span{transition:opacity var(--dur-fast) ease}
+  .fab .fab-ico > svg:nth-child(2),.fab.saved .fab-ico > svg:nth-child(1),
+  .fab .fab-label > span:nth-child(2),.fab.saved .fab-label > span:nth-child(1){transform:none}
+  .fab .fab-ico > svg:nth-child(2) path,
+  .fab.saved .fab-ico > svg:nth-child(2) path{stroke-dasharray:none;stroke-dashoffset:0;animation:none}
+}
+
+/* scrollbars */
+*::-webkit-scrollbar{width:9px;height:9px}
+*::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:var(--radius-full);  /* token-lint-ignore: scrollbar track, paired with the light-theme rule below */
+  border:2px solid transparent;background-clip:content-box}
+*::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.2);background-clip:content-box}  /* token-lint-ignore: scrollbar thumb, paired with the light-theme rule below */
+/* light mode: the thumb above is white-on-transparent, invisible against a pale track */
+:root[data-theme="light"] *::-webkit-scrollbar-thumb{background:rgba(0,0,0,.14);background-clip:content-box}  /* token-lint-ignore: scrollbar thumb hover, paired with the light-theme rule below */
+:root[data-theme="light"] *::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.28);background-clip:content-box}  /* token-lint-ignore: explicit light-theme scrollbar thumb */
+
+/* Placeholder card for a not-yet-loaded slot in the windowed board. */
+.card-skeleton{border-radius:var(--radius-lg);
+  background:linear-gradient(100deg,
+    color-mix(in srgb, var(--ink) 4%, transparent) 40%,
+    color-mix(in srgb, var(--ink) 9%, transparent) 50%,
+    color-mix(in srgb, var(--ink) 4%, transparent) 60%);
+  background-size:200% 100%;animation:skeleton-sheen 1.4s ease infinite}
+@keyframes skeleton-sheen{to{background-position:-200% 0}}

@@ -1,0 +1,45 @@
+/* gallery.css — gallery / everything board
+   Part of the Kothai design system. Loaded via style.css. */
+/* ─────────────────────────── gallery ─────────────────────────────────────── */
+.gallery-view{height:100%;display:flex;flex-direction:column;overflow:hidden;padding-top:var(--topbar-h)}
+.gal-head{position:relative;display:flex;align-items:center;padding:var(--space-20) var(--space-28) 0}
+
+/* controls row: filter pills (left) + grid density toggle (right) */
+.gal-controls{display:flex;align-items:center;justify-content:space-between;gap:var(--space-16);padding:var(--space-14) var(--space-28) var(--space-6)}
+.gal-filters-spacer{flex:1}
+
+/* Everything-page filter bar: single-select type + source pills */
+.gal-filters{display:flex;align-items:center;gap:var(--space-8);flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
+.gal-filters::-webkit-scrollbar{display:none}
+.fc-count{font-family:var(--font-mono);font-size:var(--text-2xs);color:var(--ink-faint)}
+.filter-chip:hover .fc-count{color:var(--ink-mute)}
+.filter-chip.on .fc-count{color:var(--on-accent);opacity:.55}
+.fc-dot{width:7px;height:7px;border-radius:var(--radius-circle);flex-shrink:0}
+.fc-ico{display:inline-flex;flex-shrink:0;color:currentColor}
+.fc-ico svg{display:block}
+.filter-sep{flex-shrink:0;width:1px;height:18px;background:var(--line);margin:0 var(--space-4)}
+.gal-title{display:flex;align-items:center;gap:var(--space-14)}
+.gal-title .gt-icon{width:38px;height:38px;display:grid;place-items:center;
+  border-radius:var(--radius-lg);background:var(--panel-2);color:var(--ink);
+  border:1px solid var(--line)}
+.gal-title h2{margin:0;font-size:var(--text-2xl);font-weight:var(--fw-heading);
+  letter-spacing:var(--tracking-heading)}
+/* full-width borderless search; faint underline brightens on focus for affordance */
+.search-box{display:flex;align-items:center;gap:var(--space-10);width:100%;background:transparent;
+  border:0;border-bottom:1px solid var(--line-2);border-radius:0;padding:var(--space-8) var(--space-2);
+  color:var(--ink-dim);transition:var(--dur-fast)}
+.search-box.focus{border-bottom-color:var(--line-focus);color:var(--ink)}
+.search-box input{flex:1;width:100%;background:transparent;border:0;outline:none;color:var(--ink);
+  font-family:var(--font-mono);font-size:var(--text-sm);letter-spacing:var(--tracking-mono)}
+.search-box input::placeholder{color:var(--ink-faint)}
+.gal-scroll{flex:1;overflow-y:auto;padding:var(--space-20) var(--space-28) var(--space-40)}
+/* board (windowed masonry) — every cell is absolutely positioned from
+   coordinates computed in lib/masonry.ts, which also owns the column count and
+   its breakpoints. There is deliberately NO CSS grid here: the old version was
+   a grid of 8px implicit rows that only worked because a layout effect wrote
+   `grid-row-end: span N` onto each cell, and any board rendered without that
+   effect stacked all of its cards on top of each other. The element's inline
+   height is the full packed height, so the scrollbar stays honest even though
+   only the visible cards are mounted. */
+.board{position:relative}
+.masonry-cell{position:absolute;top:0;left:0;min-width:0;will-change:transform}

@@ -1,0 +1,314 @@
+/* core.css — CORE view — console, thread, cited cards
+   Part of the Kothai design system. Loaded via style.css. */
+/* CORE view */
+.core{height:100%;display:flex;flex-direction:column;align-items:center;
+  padding:calc(var(--topbar-h) + clamp(var(--space-40),8vh,96px)) var(--space-24) var(--space-28);overflow-y:auto}
+/* once a question is asked: pin the composer and let the thread scroll under
+   it, dropping the landing headline. */
+.core.has-thread{justify-content:flex-start;overflow:hidden;
+  padding-top:calc(var(--topbar-h) + var(--space-20));padding-bottom:var(--space-20)}
+.core.has-thread .console{flex:1;min-height:0;display:flex;flex-direction:column;margin-top:0}
+.core.has-thread .mode-toggle{align-self:flex-end;margin:0 0 var(--space-12)}
+.core.has-thread .thread{flex:1;min-height:0;overflow-y:auto;width:100%;margin-top:0;
+  padding:var(--space-2) var(--space-4) var(--space-6) 0}
+.core.has-thread .input-shell{flex-shrink:0;margin-top:var(--space-14)}
+.core-prompt{text-align:center;max-width:600px;flex-shrink:0;margin-bottom:var(--space-24)}
+.core-prompt h1{font-size:var(--text-display-fluid)}
+.core-prompt h1 em{font-style:normal;color:var(--ink)}
+.core-prompt p{margin:var(--space-10) 0 0;color:var(--ink-mute);font-size:var(--text-sm);
+  line-height:var(--leading-normal)}
+
+/* console / the one chat box */
+.console{width:min(680px,100%);margin-top:var(--space-8);flex-shrink:0}
+.mode-toggle{display:flex;gap:var(--space-2);background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius-full);padding:var(--space-4);width:max-content;margin:0 auto var(--space-14)}
+.mode-toggle button{display:flex;align-items:center;gap:var(--space-8);border:0;background:transparent;
+  color:var(--ink-mute);font-size:var(--text-sm);font-weight:var(--fw-medium);
+  letter-spacing:var(--tracking-tight);padding:var(--space-8) var(--space-16);border-radius:var(--radius-full);
+  cursor:pointer;transition:var(--dur-fast)}
+.mode-toggle button.on{background:var(--accent);color:var(--on-accent)}
+.mode-toggle button:not(.on):hover{color:var(--ink)}
+
+.input-shell{position:relative;display:flex;align-items:flex-end;gap:var(--space-10);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-xl);
+  padding:var(--space-12) var(--space-12) var(--space-12) var(--space-18);transition:border-color var(--dur-mid), background var(--dur-mid)}
+.input-shell.focus{border-color:var(--line-focus);background:var(--panel-2)}
+.input-shell textarea{flex:1;background:transparent;border:0;outline:none;resize:none;
+  color:var(--ink);font-family:var(--font-sans);font-size:var(--text-md);
+  letter-spacing:var(--tracking-tight);line-height:var(--leading-normal);
+  max-height:200px;padding:var(--space-6) 0}
+.input-shell textarea::placeholder{color:var(--ink-faint)}
+.detect-chip{display:flex;align-items:center;gap:var(--space-6);font-family:var(--font-mono);
+  font-size:var(--text-2xs);letter-spacing:var(--tracking-mono);color:var(--ink);
+  background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);
+  padding:var(--space-6) var(--space-10);white-space:nowrap;align-self:center;animation:chip-in var(--dur-mid) ease}
+@keyframes chip-in{from{opacity:0;transform:scale(.9)}to{opacity:1}}
+.send-btn{width:40px;height:40px;flex-shrink:0;display:grid;place-items:center;border:0;
+  border-radius:var(--radius-lg);background:var(--accent);color:var(--on-accent);cursor:pointer;
+  transition:var(--dur-fast)}
+.send-btn:disabled{background:var(--panel-2);color:var(--ink-faint);cursor:default}
+.send-btn:not(:disabled):hover{transform:translateY(-1px);background:var(--accent-hover)}
+
+/* recent strip */
+.recent{width:min(680px,100%);margin-top:var(--space-32)}
+.recent-h{display:flex;align-items:center;gap:var(--space-12);font-family:var(--font-mono);
+  font-size:var(--text-2xs);letter-spacing:var(--tracking-label);color:var(--ink-faint);
+  text-transform:uppercase;margin-bottom:var(--space-14)}
+.recent-h::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* saved chat history (ask mode, empty thread) */
+.chat-list{display:flex;flex-direction:column;gap:var(--space-8)}
+.chat-row{display:flex;align-items:center;gap:var(--space-12);width:100%;text-align:left;cursor:pointer;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
+  padding:var(--space-12) var(--space-14);color:var(--ink);transition:var(--dur-fast)}
+.chat-row:hover{border-color:var(--line-hover);background:var(--panel-2)}
+.chat-row>svg{color:var(--ink-dim);flex-shrink:0}
+.chat-title{flex:1;min-width:0;font-size:var(--text-sm);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.chat-meta{font-size:var(--text-3xs);letter-spacing:var(--tracking-mono);flex-shrink:0}
+.chat-row .card-del{opacity:0;display:grid;place-items:center}
+.chat-row:hover .card-del{opacity:1}
+
+/* ask thread */
+.thread{width:min(720px,100%);margin-top:var(--space-24);display:flex;flex-direction:column;
+  gap:var(--space-24);padding-bottom:var(--space-10)}
+.msg-user{align-self:flex-end;max-width:80%;background:var(--panel-3);
+  border:1px solid var(--line);color:var(--ink);padding:var(--space-12) var(--space-16);
+  border-radius:var(--radius-xl) var(--radius-xl) var(--radius-sm) var(--radius-xl);font-size:var(--text-sm);
+  letter-spacing:var(--tracking-tight);line-height:var(--leading-normal)}
+.msg-ai{display:flex}
+.msg-ai .ai-body{flex:1;min-width:0}
+.ai-lead{font-size:var(--text-md);line-height:1.6;letter-spacing:var(--tracking-tight);
+  color:var(--ink)}
+.ai-lead .q{color:var(--ink)}
+/* Answer body blocks (see lib/markdown.ts). The gap between them is the same
+   0.7em everywhere so a list reads as part of the paragraph that introduces
+   it, and the first/last block sit flush with the message box. */
+.ai-lead>*{margin:.7em 0}
+.ai-lead>*:first-child{margin-top:0}
+.ai-lead>*:last-child{margin-bottom:0}
+.ai-lead .ai-h{font-weight:var(--fw-medium);letter-spacing:var(--tracking-tighter);
+  color:var(--ink)}
+.ai-lead .ai-list{padding-left:1.2em}
+.ai-lead .ai-list li{margin:.25em 0}
+.ai-lead .ai-list li::marker{color:var(--ink-mute)}
+.ai-lead .ai-code{font-family:var(--font-mono);font-size:.88em;
+  letter-spacing:var(--tracking-mono);background:var(--panel-2);
+  border:1px solid var(--line-2);border-radius:var(--radius-sm);padding:var(--space-2) var(--space-6)}
+.ai-lead .ai-pre{overflow-x:auto;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius);padding:var(--space-12) var(--space-14)}
+.ai-lead .ai-pre code{font-family:var(--font-mono);font-size:var(--text-xs);
+  letter-spacing:var(--tracking-mono);line-height:var(--leading-normal);
+  white-space:pre;color:var(--ink-dim)}
+.cited-list{display:flex;flex-direction:column;gap:var(--space-6);margin-top:var(--space-14)}
+
+/* inline [n] citation chip */
+.cite-ref{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 var(--space-4);
+  margin:0 var(--space-2);border-radius:var(--radius-sm);font-size:var(--text-2xs);cursor:pointer;
+  vertical-align:text-bottom;background:var(--panel-2);border:1px solid var(--line);
+  color:var(--ink);transition:var(--dur-fast)}
+.cite-ref:hover{background:var(--panel-3)}
+
+/* ── citation tiles ────────────────────────────────────────────────────────
+   The shape is the shared .tile primitive in components.css — the Spaces
+   landing draws the same one. Only the grid it sits in belongs to Ask: three
+   up in a 13px column of prose, narrow enough that a six-source answer stays
+   one glance rather than a page of scrolling. */
+.preview-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));
+  gap:var(--space-8);margin-top:var(--space-16)}
+/* collapsible "also considered" evidence */
+.also{margin-top:var(--space-16)}
+.also-toggle{display:flex;align-items:center;gap:var(--space-8);padding:0;border:0;background:none;cursor:pointer;
+  font-size:var(--text-3xs);letter-spacing:var(--tracking-label);text-transform:uppercase;
+  color:var(--ink-faint);transition:color var(--dur-fast)}
+.also-toggle:hover{color:var(--ink-dim)}
+.also-caret{flex-shrink:0;width:0;height:0;border-style:solid;
+  border-width:4px 0 4px 6px;border-color:transparent transparent transparent var(--ink);
+  transition:transform var(--dur-fast) ease}
+.also-caret.open{transform:rotate(90deg)}
+.also-count{opacity:.65}
+.also .cited-list{margin-top:var(--space-12)}
+.thinking{display:flex;gap:var(--space-6);align-items:center;height:20px}
+.thinking span:not(.warming){width:6px;height:6px;border-radius:var(--radius-circle);background:var(--ink-mute);
+  animation:think 1.1s ease-in-out infinite}
+.thinking span:nth-child(2){animation-delay:.18s}
+.thinking span:nth-child(3){animation-delay:.36s}
+@keyframes think{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
+
+/* cited card */
+.cited{display:flex;align-items:center;gap:var(--space-10);width:100%;text-align:left;cursor:pointer;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);
+  padding:var(--space-8) var(--space-10);color:var(--ink);transition:var(--dur-fast)}
+.cited:hover{border-color:var(--line-hover);background:var(--panel-2)}
+.cited-icon{width:26px;height:26px;flex-shrink:0;display:grid;place-items:center;
+  border-radius:var(--radius-sm);background:var(--panel-2);color:var(--ink-dim)}
+.cited:hover .cited-icon{color:var(--ink)}
+.cited-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--space-4)}
+.cited-summary{font-size:var(--text-sm);line-height:1.35;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.cited-meta{font-family:var(--font-mono);font-size:var(--text-2xs);letter-spacing:var(--tracking-mono);
+  color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cited-go{color:var(--ink-faint);flex-shrink:0}
+.cited:hover .cited-go{color:var(--ink)}
+
+.thinking .warming { margin-left: var(--space-10); font-size:var(--text-xs); color: var(--ink-dim); letter-spacing: 0.05em; }
+
+/* Ask disabled (language model off) */
+.ask-off {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-12) var(--space-14);
+  margin-bottom: var(--space-10);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--ink-dim);
+  font-size:var(--text-sm);
+}
+.ask-off .mono { letter-spacing: 0.08em; font-size:var(--text-xs); }
+
+/* ────────────────────── ask surface (ai-sdk chatbot language) ──────────────
+   Ported from chatbot.ai-sdk.dev: 13px body text at 1.65 with neutral (not
+   Behold-tight) tracking, a 16px composer with the controls on their own row,
+   a 16px user bubble with the bottom-right corner tucked to 10px, and soft
+   one-pixel shadows instead of hard hairlines. Everything is scoped to .core
+   because .input-shell / .attach-btn are shared with the capture modal, which
+   keeps the app's own language. */
+
+/* composer: textarea claims the first row, controls wrap onto the row below */
+.core .input-shell{display:flex;flex-wrap:wrap;align-items:center;gap:0;
+  background:var(--chat-surface);border:1px solid var(--line-2);
+  border-radius:var(--radius-2xl);padding:0 var(--space-8) var(--space-8);
+  box-shadow:var(--shadow-composer);
+  transition:box-shadow var(--dur-slow) ease, border-color var(--dur-mid) ease, background var(--dur-mid) ease}
+.core .input-shell.focus{background:var(--chat-surface);border-color:var(--line);
+  box-shadow:var(--shadow-composer-focus)}
+.core .input-shell textarea{flex:1 0 100%;width:100%;
+  font-size:var(--text-chat);letter-spacing:normal;line-height:1.625;
+  min-height:96px;max-height:192px;padding:var(--space-14) var(--space-8) var(--space-6)}
+.core .input-shell .attach-preview{margin:var(--space-12) var(--space-8) 0}
+.core .attach-btn,.core .send-btn{width:28px;height:28px;flex-shrink:0;
+  border-radius:var(--radius-full);transition:var(--dur-fast)}
+.core .attach-btn svg,.core .send-btn svg{width:16px;height:16px}
+.core .attach-btn{border:0;background:transparent;color:var(--ink-mute)}
+.core .attach-btn:hover{color:var(--ink);background:var(--panel-2)}
+.core .send-btn{margin-left:auto}
+.core .send-btn:not(:disabled):hover{transform:none;background:var(--accent);opacity:.85}
+
+/* user turn */
+.core .msg-user{align-self:flex-end;width:fit-content;max-width:min(80%,56ch);
+  background:linear-gradient(to bottom right,var(--chat-bubble-from),var(--chat-bubble-to));
+  border:1px solid var(--line-2);color:var(--ink);padding:var(--space-8) var(--space-14);
+  border-radius:var(--radius-2xl) var(--radius-2xl) var(--radius-lg) var(--radius-2xl);
+  box-shadow:var(--shadow-card);
+  font-size:var(--text-chat);letter-spacing:normal;line-height:var(--leading-chat)}
+
+/* assistant turn: same measure, no bubble */
+.core .ai-lead{font-size:var(--text-chat);letter-spacing:normal;
+  line-height:var(--leading-chat)}
+
+/* rows pick up the reference's card shadow instead of a hairline */
+.core .chat-row{border-color:var(--line-2);border-radius:var(--radius-xl);
+  box-shadow:var(--shadow-card)}
+.core .chat-row:hover{border-color:var(--line);
+  background:var(--panel-2);box-shadow:var(--shadow-float)}
+.core .chat-title{font-size:var(--text-chat);letter-spacing:normal}
+/* Evidence under an answer stays flat — the shadowed, floating treatment reads
+   as another composer or bubble, and there are up to a dozen of these in a row. */
+.core .cited{border-color:var(--line-2);border-radius:var(--radius-md);box-shadow:none}
+.core .cited:hover{border-color:var(--line);background:var(--panel-2);box-shadow:none}
+.core .cited-summary{font-size:var(--text-xs);letter-spacing:var(--tracking-tight)}
+.core .ask-off{border-color:var(--line-2);border-radius:var(--radius-xl);
+  box-shadow:var(--shadow-card);font-size:var(--text-chat);letter-spacing:normal}
+
+/* ── thread furniture: clock stamps, copy, stop, jump-to-latest ───────────── */
+/* The thread needs a positioning context for the floating pill, and the pill
+   has to sit over the thread's bottom edge rather than in the flow above the
+   composer — in flow, showing it would shove the composer down. */
+.core.has-thread .thread-wrap{position:relative;flex:1;min-height:0;display:flex;width:100%}
+
+.core .msg-user-row{display:flex;flex-direction:column;align-items:flex-end;gap:var(--space-6)}
+.core .msg-time{font-size:var(--text-3xs);letter-spacing:var(--tracking-mono);color:var(--ink-faint)}
+
+/* Footer under a settled answer. It keeps its height whether or not the copy
+   button is showing, so revealing it on hover never nudges the thread. */
+.core .msg-foot{display:flex;align-items:center;gap:var(--space-12);margin-top:var(--space-12);min-height:20px}
+.core .msg-copy{display:flex;align-items:center;gap:var(--space-6);border:0;background:none;padding:0;
+  cursor:pointer;font-size:var(--text-xs);letter-spacing:var(--tracking-tight);color:var(--ink-faint);
+  opacity:0;transition:opacity var(--dur-fast), color var(--dur-fast)}
+.core .msg-ai:hover .msg-copy,.core .msg-copy:focus-visible{opacity:1}
+.core .msg-copy:hover{color:var(--ink)}
+.core .msg-copy.done{opacity:1;color:var(--ok)}
+.core .msg-copy.failed{opacity:1;color:var(--danger)}
+.core .msg-stopped{display:flex;align-items:center;gap:var(--space-12);color:var(--ink-faint);
+  font-size:var(--text-xs);letter-spacing:var(--tracking-tight)}
+.core .msg-stopped-tag{font-size:var(--text-3xs);letter-spacing:var(--tracking-label);color:var(--ink-faint)}
+
+/* Streaming caret — a block that sits at the end of the answer while tokens
+   are still arriving, so a pause reads as "still writing" rather than "done". */
+.core .ai-lead.streaming>*:last-child::after{content:"";display:inline-block;
+  width:.5em;height:1em;margin-left:var(--space-2);vertical-align:text-bottom;
+  background:var(--ink-mute);animation:caret 1s steps(2,start) infinite}
+@keyframes caret{0%,50%{opacity:1}50.01%,100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){
+  .core .ai-lead.streaming>*:last-child::after{animation:none;opacity:.6}
+}
+/* Nothing hovers on a touch screen — the button would otherwise be unreachable. */
+@media (hover:none){.core .msg-copy{opacity:1}}
+
+/* Stop shares the send button's slot: same size, same weight, so the primary
+   control stays in one place for the whole round trip. */
+.core .send-btn.stop{background:var(--accent);color:var(--on-accent)}
+.core .send-btn.stop:hover{opacity:.85}
+
+.core .jump-latest{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);
+  display:flex;align-items:center;gap:var(--space-6);z-index:var(--z-content);
+  padding:var(--space-6) var(--space-14) var(--space-6) var(--space-10);border-radius:var(--radius-full);cursor:pointer;
+  background:var(--bg-raise);border:1px solid var(--line);color:var(--ink-dim);
+  font-size:var(--text-xs);letter-spacing:var(--tracking-tight);
+  box-shadow:var(--shadow-float);transition:color var(--dur-fast), border-color var(--dur-fast)}
+.core .jump-latest:hover{color:var(--ink);border-color:var(--ink-faint)}
+
+/* The delete control is a real button now, so it must shed .card-del's
+   absolute placement (card.css pins that to a tile's top-right corner). */
+.core .chat-row .card-del{position:static;width:24px;height:24px;border:0;padding:0;
+  background:none;color:var(--ink-faint);opacity:0;display:grid;place-items:center;
+  border-radius:var(--radius);cursor:pointer;transition:var(--dur-fast)}
+.core .chat-row:hover .card-del,.core .chat-row .card-del:focus-visible{opacity:1}
+.core .chat-row .card-del:hover{color:var(--danger);background:var(--panel-2)}
+@media (hover:none){.core .chat-row .card-del{opacity:1}}
+
+/* ── saved-conversation rows ──────────────────────────────────────────────── */
+.chat-row.active{border-color:var(--ink-faint);background:var(--panel-2)}
+/* renaming / delete-confirm states share the row's box so nothing jumps */
+.chat-row.renaming,.chat-row.confirming{cursor:default}
+.chat-rename{flex:1;min-width:0;background:transparent;border:0;outline:none;
+  color:var(--ink);font-family:inherit;font-size:var(--text-sm);
+  letter-spacing:var(--tracking-tight)}
+.chat-confirm{flex-shrink:0;border:1px solid var(--line);border-radius:var(--radius);
+  background:var(--panel-2);color:var(--ink-dim);cursor:pointer;padding:var(--space-4) var(--space-10);
+  font-size:var(--text-xs);letter-spacing:var(--tracking-tight);transition:var(--dur-fast)}
+.chat-confirm:hover{color:var(--ink);border-color:var(--ink-faint)}
+.chat-confirm.danger:hover{color:var(--danger);border-color:var(--danger)}
+
+/* Load more sits under the list rather than paging it: the count says how much
+   is left, so it's clear whether pressing again is worth it. */
+.core .chat-more{display:flex;align-items:center;justify-content:center;gap:var(--space-8);
+  width:100%;margin-top:var(--space-8);padding:var(--space-10) var(--space-12);cursor:pointer;
+  border:1px solid var(--line-2);border-radius:var(--radius-lg);
+  background:transparent;color:var(--ink-dim);font-size:var(--text-xs);
+  letter-spacing:var(--tracking-tight);transition:var(--dur-fast)}
+.core .chat-more:hover{color:var(--ink);border-color:var(--line);background:var(--panel)}
+.core .chat-more .mono{font-size:var(--text-2xs);letter-spacing:var(--tracking-mono)}
+
+/* ── mode transition ──────────────────────────────────────────────────────── */
+/* Asking the first question swaps the whole screen. Easing the two halves
+   across makes it read as one view rearranging rather than two views cutting. */
+.core .core-prompt{animation:mode-in var(--dur-slow) var(--ease-out)}
+.core.has-thread .thread-wrap{animation:mode-in var(--dur-slow) var(--ease-out)}
+.core.has-thread .mode-toggle{animation:mode-in var(--dur-slow) var(--ease-out)}
+@keyframes mode-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .core .core-prompt,.core.has-thread .thread-wrap,
+  .core.has-thread .mode-toggle{animation:none}
+}

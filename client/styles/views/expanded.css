@@ -1,0 +1,166 @@
+/* expanded.css — expanded item overlay
+   Part of the Kothai design system. Loaded via style.css. */
+/* ============================================================
+   Expanded item view — full-screen overlay (main stage + sidebar)
+   ============================================================ */
+.exp-overlay{position:fixed;inset:0;z-index:var(--z-modal);display:flex;align-items:center;justify-content:center;
+  padding:var(--space-20);background:rgba(0,0,0,.66);backdrop-filter:blur(6px);animation:exp-fade var(--dur-fast) ease}  /* token-lint-ignore: modal scrim, deliberately heavier than --overlay */
+@keyframes exp-fade{from{opacity:0}to{opacity:1}}
+.exp-shell{position:relative;display:flex;width:min(1320px,100%);height:min(820px,100%);
+  background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-xl);overflow:hidden;
+  box-shadow:0 30px 90px rgba(0,0,0,.55)}
+/* phones only — see the 820px block below */
+.exp-close-m{display:none}
+.exp-main{flex:1;position:relative;display:flex;align-items:center;justify-content:center;
+  overflow:auto;padding:var(--space-24);background:var(--panel-2)}
+
+/* structured card (github / generic web fallback) */
+.exp-card{width:min(460px,100%);display:flex;flex-direction:column;gap:var(--space-22);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);padding:var(--space-36) var(--space-36)}
+.exp-card-logo{display:flex;justify-content:center;color:var(--ink)}
+.exp-card-logo.lg{width:56px;height:56px;margin:0 auto;align-items:center;border-radius:var(--radius);
+  background:var(--panel-2);font-size:var(--text-2xl);font-weight:var(--fw-medium)}
+.exp-field{display:flex;flex-direction:column;gap:var(--space-6)}
+.exp-field-label{font-family:var(--font-mono);font-size:var(--text-2xs);letter-spacing:var(--tracking-mono);
+  text-transform:uppercase;color:var(--ink-faint)}
+.exp-field-val{font-size:var(--text-sm);line-height:1.55;color:var(--ink-dim)}
+.exp-field-val.big{font-size:var(--text-2xl);color:var(--ink);letter-spacing:var(--tracking-tight)}
+.exp-card-cta{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-8);margin-top:var(--space-4);padding:var(--space-14) 0 var(--space-2);
+  border-top:1px solid var(--line);color:var(--ink);font-family:var(--font-mono);font-size:var(--text-xs);
+  letter-spacing:var(--tracking-mono);text-transform:uppercase;text-decoration:none;transition:var(--dur-fast)}
+.exp-card-cta:hover{color:var(--ink-dim)}
+
+/* reddit post */
+.exp-card.reddit{padding:0;overflow:hidden}
+.exp-reddit-head{display:flex;justify-content:center;padding:var(--space-36);background:#ff4500;color:#fff}  /* token-lint-ignore: Reddit brand orange — a third-party brand colour, not ours */
+.exp-reddit-body{display:flex;flex-direction:column;gap:var(--space-18);padding:var(--space-28) var(--space-36) var(--space-32)}
+.exp-reddit-tag{color:#ff4500;font-weight:var(--fw-bold);font-size:var(--text-md)}  /* token-lint-ignore: Reddit brand orange — a third-party brand colour, not ours */
+.exp-reddit-text{font-size:var(--text-2xl);line-height:1.4;color:var(--ink);letter-spacing:var(--tracking-tight)}
+
+/* vertical media / reel */
+.exp-media{display:flex;align-items:center;justify-content:center;height:100%;cursor:pointer}
+.exp-media-frame{position:relative;width:auto;height:100%;aspect-ratio:9/16;max-width:100%;
+  border-radius:var(--radius-lg);overflow:hidden;background:#000}  /* token-lint-ignore: video letterbox — must stay black in both themes */
+.exp-media-frame img{width:100%;height:100%;object-fit:cover;display:block}
+.exp-media-badge{position:absolute;top:10px;right:10px;width:28px;height:28px;display:grid;place-items:center;
+  border-radius:var(--radius);background:rgba(0,0,0,.5);backdrop-filter:blur(4px);color:#fff}  /* token-lint-ignore: control floats over media, not over a themed surface */
+.exp-play{position:absolute;inset:0;margin:auto;width:66px;height:66px;border-radius:var(--radius-circle);color:#fff;  /* token-lint-ignore: white glyph on a dark scrim over media, both themes */
+  background:rgba(0,0,0,.42);backdrop-filter:blur(4px);display:grid;place-items:center}  /* token-lint-ignore: control floats over media, not over a themed surface */
+
+/* article stage — hero, masthead, headline, standfirst, way in.
+   `margin:auto` rather than the parent's align-items does the centring: an
+   auto margin still centres a flex item that is taller than the stage, where
+   align-items:center would clip its top out of the scroll range. */
+.exp-article{width:min(620px,100%);margin:auto;display:flex;flex-direction:column;
+  align-items:center;text-align:center;gap:var(--space-20)}
+.exp-article-hero{display:block;width:100%;max-height:340px;object-fit:cover;cursor:pointer;
+  border-radius:var(--radius-lg);border:1px solid var(--line)}
+.exp-article-src{display:inline-flex;align-items:center;gap:var(--space-8);color:var(--ink-mute);
+  font-size:var(--text-xs);letter-spacing:var(--tracking-mono);text-transform:uppercase}
+.exp-article-title{margin:0;font-size:var(--text-3xl);font-weight:var(--fw-heading);
+  line-height:var(--leading-tight);letter-spacing:var(--tracking-tighter);color:var(--ink)}
+.exp-article-lede{margin:0;max-width:52ch;font-size:var(--text-base);line-height:var(--leading-normal);
+  letter-spacing:var(--tracking-tight);color:var(--ink-dim)}
+.exp-article-cta{display:inline-flex;align-items:center;gap:var(--space-10);margin-top:var(--space-4);
+  padding:var(--space-12) var(--space-24);border-radius:var(--radius-full);background:var(--accent);color:var(--on-accent);
+  font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:var(--tracking-label);
+  text-transform:uppercase;text-decoration:none;transition:var(--dur-fast)}
+.exp-article-cta:hover{opacity:.85}
+
+/* image / code / note stages */
+.exp-img{display:flex;align-items:center;justify-content:center;width:100%;height:100%}
+.exp-img img{max-width:100%;max-height:100%;object-fit:contain;border-radius:var(--radius-lg)}
+.exp-img-ph{display:grid;place-items:center;width:min(420px,100%);aspect-ratio:4/3;
+  border-radius:var(--radius-lg);color:var(--ink-mute)}
+.exp-code{width:min(720px,100%)}
+.exp-note-panel{width:min(560px,100%);white-space:pre-wrap;font-size:var(--text-2xl);line-height:1.5;
+  color:var(--ink);letter-spacing:var(--tracking-tight)}
+
+/* right sidebar */
+.exp-side{width:302px;flex-shrink:0;display:flex;flex-direction:column;
+  border-left:1px solid var(--line);background:var(--bg)}
+.exp-side-scroll{flex:1;overflow-y:auto;padding:var(--space-28) var(--space-24)}
+.exp-title{margin:0;font-size:var(--text-xl);font-weight:var(--fw-heading);line-height:1.25;
+  letter-spacing:var(--tracking-tighter);color:var(--ink)}
+.exp-meta{margin-top:var(--space-10);display:flex;align-items:center;gap:var(--space-10);flex-wrap:wrap;
+  font-family:var(--font-mono);font-size:var(--text-xs);color:var(--ink-faint)}
+.exp-src{display:inline-flex;align-items:center;gap:var(--space-6);color:var(--ink-mute)}
+/* the source is the way out to the original — the sidebar has no separate CTA */
+a.exp-src{text-decoration:none;transition:var(--dur-fast)}
+a.exp-src:hover{color:var(--ink);text-decoration:underline;text-underline-offset:2px}
+.exp-sec{margin-top:var(--space-28)}
+.exp-sec-h{display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-12);font-family:var(--font-mono);
+  font-size:var(--text-2xs);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--ink-faint)}
+.exp-sec-n{display:grid;place-items:center;min-width:15px;height:15px;padding:0 var(--space-4);border-radius:var(--radius-full);
+  background:var(--panel-2);color:var(--ink-mute);font-size:var(--text-2xs)}
+.exp-tags{display:flex;flex-wrap:wrap;gap:var(--space-8)}
+.exp-addtag{display:inline-flex;align-items:center;padding:var(--space-6) var(--space-12);border:0;border-radius:var(--radius-full);
+  background:var(--accent);color:var(--on-accent);font-size:var(--text-xs);cursor:pointer;transition:var(--dur-fast)}
+.exp-addtag:hover{opacity:.85}
+.exp-tag{display:inline-flex;align-items:center;gap:var(--space-6);padding:var(--space-6) var(--space-12);border:1px solid var(--line);
+  border-radius:var(--radius-full);background:var(--panel-2);color:var(--ink-dim);font-size:var(--text-xs);
+  cursor:pointer;transition:var(--dur-fast)}
+.exp-tag:hover{border-color:var(--danger);color:var(--ink)}
+.exp-tag-x{color:var(--ink-faint);font-size:var(--text-sm);line-height:1}
+.exp-tag:hover .exp-tag-x{color:var(--danger)}
+.exp-tag-input{width:96px;padding:var(--space-6) var(--space-12);border:1px solid var(--ink-faint);border-radius:var(--radius-full);
+  background:transparent;color:var(--ink);font-size:var(--text-xs);outline:none}
+.exp-note{width:100%;min-height:92px;resize:vertical;padding:var(--space-12) var(--space-12);border:1px solid var(--line);
+  border-radius:var(--radius);background:var(--panel-2);color:var(--ink);font-family:inherit;
+  font-size:var(--text-sm);line-height:1.5;outline:none;transition:var(--dur-fast)}
+.exp-note:focus{border-color:var(--ink-faint)}
+.exp-note::placeholder{color:var(--ink-faint)}
+.exp-side-actions{display:flex;align-items:center;justify-content:center;gap:var(--space-22);padding:var(--space-16);
+  border-top:1px solid var(--line)}
+.exp-side-actions button{position:relative;width:34px;height:34px;display:grid;place-items:center;border:0;border-radius:var(--radius);
+  background:transparent;color:var(--ink-mute);cursor:pointer;transition:var(--dur-fast)}
+.exp-side-actions button:hover{background:var(--panel-2);color:var(--ink)}
+.exp-side-actions button.del:hover{color:var(--danger)}
+/* hover label, same chip as the rail's — above the row rather than beside it,
+   since these sit on the sidebar's bottom edge */
+.exp-tip{position:absolute;left:50%;bottom:calc(100% + var(--space-8));transform:translateX(-50%) translateY(4px);
+  background:var(--bg-raise);border:1px solid var(--line);color:var(--ink);font-size:var(--text-xs);
+  font-family:var(--font-mono);letter-spacing:var(--tracking-mono);padding:var(--space-6) var(--space-10);
+  border-radius:var(--radius);white-space:nowrap;opacity:0;pointer-events:none;
+  transition:var(--dur-fast);z-index:var(--z-sticky)}
+.exp-side-actions button:hover .exp-tip{opacity:1;transform:translateX(-50%) translateY(0)}
+.exp-side-actions button:disabled{cursor:default}
+
+@media (max-width:820px){
+  .exp-overlay{padding:0}
+  .exp-shell{flex-direction:column;width:100%;height:100%;border-radius:0}
+  .exp-side{width:100%;border-left:0;border-top:1px solid var(--line)}
+  .exp-media-frame{height:auto;width:min(280px,70%)}
+  /* the shell goes full-bleed here, so there's no scrim left to tap and no
+     keyboard to press Escape on — this is the only way out */
+  .exp-close-m{display:grid;position:absolute;top:14px;right:14px;z-index:var(--z-sticky);
+    width:32px;height:32px;place-items:center;border:0;border-radius:var(--radius);
+    background:var(--panel);backdrop-filter:blur(4px);color:var(--ink-mute);cursor:pointer}
+  .exp-close-m:active{color:var(--ink);background:var(--panel-2)}
+}
+
+/* carousel deck — multi-image (Instagram sidecar) posts.
+   The stage takes its aspect from the first slide (see Carousel.tsx); slides are
+   absolutely stacked and transformed, so only the active one occupies layout. */
+.carousel{display:flex;flex-direction:column;align-items:center;gap:var(--space-14);
+  width:100%;height:100%;justify-content:center}
+/* Every slide is absolutely positioned, so the stage has no intrinsic size —
+   it takes a definite height (the column minus the dots row and its gap) and
+   derives its width from the active slide's aspect ratio, the same way
+   .exp-media-frame does. */
+.carousel-stage{position:relative;height:calc(100% - 30px);max-width:100%;
+  touch-action:pan-y;cursor:grab;user-select:none}
+.carousel-stage.dragging{cursor:grabbing}
+.carousel-slide{position:absolute;inset:0;border-radius:var(--radius-lg);overflow:hidden;background:#000;  /* token-lint-ignore: carousel letterbox — must stay black in both themes */
+  box-shadow:0 18px 50px rgba(0,0,0,.45);transition:transform var(--dur-slow) var(--ease-entrance),opacity var(--dur-slow) ease}
+.carousel-stage.dragging .carousel-slide{transition:none}
+.carousel-slide img{width:100%;height:100%;object-fit:cover;display:block;-webkit-user-drag:none}
+.carousel-dots{display:flex;align-items:center;gap:var(--space-8);height:16px}
+.carousel-dot{width:7px;height:7px;padding:0;border:0;border-radius:var(--radius-full);
+  background:var(--ink-faint);cursor:pointer;transition:var(--dur-mid)}
+.carousel-dot:hover{background:var(--ink-dim)}
+.carousel-dot.on{width:22px;background:var(--ink)}
+
+@media (max-width:820px){
+  .carousel-stage{height:auto;width:min(280px,74%)}
+}

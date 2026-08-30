@@ -1,0 +1,142 @@
+/* components.css — shared primitives
+   Part of the Kothai design system. Loaded via style.css, before the per-view
+   sheets so those can still override.
+
+   .btn is the canonical button. New code should use .btn plus a modifier and
+   nothing else. The legacy per-view names (.row-btn, .spaces-new-btn, …) are
+   grouped into these rules rather than redefining them, so a change here
+   reaches every button in the app — that is the whole point of the file. */
+
+/* ── button ───────────────────────────────────────────────────────────────── */
+.btn,
+.row-btn,
+.spaces-new-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:var(--space-8);
+  padding:var(--space-8) var(--space-14);
+  border:1px solid var(--line);border-radius:var(--radius-md);
+  background:var(--panel-2);color:var(--ink);
+  font-family:inherit;font-size:var(--text-sm);letter-spacing:var(--tracking-tight);
+  text-decoration:none;white-space:nowrap;cursor:pointer;
+  transition:var(--dur-fast);
+}
+.btn:hover:not(:disabled):not([aria-disabled="true"]),
+.row-btn:hover:not(:disabled):not([aria-disabled="true"]),
+.spaces-new-btn:hover{border-color:var(--line-hover)}
+.btn:focus-visible,
+.row-btn:focus-visible,
+.spaces-new-btn:focus-visible{border-color:var(--ink)}
+.btn:disabled,
+.row-btn:disabled{color:var(--ink-faint);cursor:default}
+
+/* filled — the primary action. Follows a custom --accent tint. */
+.btn--solid{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.btn--solid:hover:not(:disabled){background:var(--accent-hover)}
+
+/* ghost — chrome that should recede until touched */
+.btn--ghost{background:transparent;border-color:transparent;color:var(--ink-mute)}
+.btn--ghost:hover:not(:disabled){color:var(--ink);background:var(--panel-2)}
+
+/* icon-only — square, glyph centred */
+.btn--icon,
+.coll-act{
+  display:grid;place-items:center;gap:0;padding:0;
+  width:var(--control-md);height:var(--control-md);flex-shrink:0;
+}
+.coll-act:hover{color:var(--ink);border-color:var(--line-hover)}
+
+.btn--danger{color:var(--danger)}
+.btn--danger:hover:not(:disabled){border-color:var(--danger)}
+
+/* ── segmented control ────────────────────────────────────────────────────
+   One control for every "pick one of these" that sits on a toolbar: a
+   --control-md trough holding pills. The space header used to run two of these
+   side by side — the view switch as flush segments split by hairlines, the
+   density steps as padded pills in a taller trough — which read as two design
+   systems on one bar. This is the surviving one; .residency-btn keeps its own
+   box but shares the selected treatment so a custom tint reaches it. */
+/* ── chip ──────────────────────────────────────────────────────────────────
+   The pill that says "this is one of a set you can pick or drop": Everything's
+   type/source filters and a space's rule tags. They were two components with
+   two heights (32 and 28) and two type sizes, sitting on bars that otherwise
+   agree, so they are one primitive now with two callers. Toolbar-tall, like
+   every other box on a control bar. */
+.chip{display:inline-flex;align-items:center;gap:var(--space-8);flex-shrink:0;
+  height:var(--control-md);box-sizing:border-box;padding:0 var(--space-14);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-full);
+  color:var(--ink-dim);font:inherit;font-size:var(--text-sm);letter-spacing:var(--tracking-tight);
+  white-space:nowrap;cursor:pointer;transition:var(--dur-fast)}
+.chip:hover{color:var(--ink);border-color:var(--line-hover)}
+.chip.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+
+.seg,
+.view-toggle{display:inline-flex;align-items:center;flex-shrink:0;gap:var(--space-2);
+  height:var(--control-md);box-sizing:border-box;padding:var(--space-4);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md)}
+.seg-btn,
+.view-toggle button{display:grid;place-items:center;height:100%;border:0;background:transparent;
+  color:var(--ink-mute);font:inherit;font-size:var(--text-xs);line-height:1;
+  border-radius:var(--radius);cursor:pointer;transition:var(--dur-fast)}
+.seg-btn{padding:0 var(--space-10)}
+.view-toggle button{width:28px}
+.seg-btn:not(.on):hover,
+.view-toggle button:not(.on):hover{color:var(--ink)}
+.seg-btn.on,
+.view-toggle button.on,
+.residency-btn.active{background:var(--accent);color:var(--on-accent)}
+
+/* ── tile ──────────────────────────────────────────────────────────────────
+   The flat picture-and-caption tile, shared by the Ask thread's citations and
+   the Spaces landing. Both are showing the same thing — a cover, a name, a
+   line of small print — so they are one primitive with two callers rather
+   than two sheets that drift apart. (Saved *items* were already shared: both
+   Everything and a space render them through ItemCard.)
+
+   Deliberately flat: one hairline on one surface, no card shadow and no frame
+   inside a frame. .tile-media is a fixed ratio, which is what keeps a row of
+   tiles aligned however unlike their contents are, and it holds itself open
+   with a plain field when there is no picture. */
+.tile{display:flex;flex-direction:column;overflow:hidden;cursor:pointer;text-align:left;
+  background:var(--panel);border:1px solid var(--line-2);border-radius:var(--radius-md);
+  color:inherit;padding:0;
+  transition:background var(--dur-fast) ease,border-color var(--dur-fast) ease}
+.tile:hover,.tile:focus-visible{background:var(--panel-2);border-color:var(--line);outline:none}
+
+.tile-media{position:relative;aspect-ratio:16/10;overflow:hidden;
+  display:grid;place-items:center;color:var(--ink-faint);
+  background:var(--panel-2) center/cover no-repeat}
+/* Absolute, not merely height:100% — the percentage cannot resolve against a
+   height that aspect-ratio is still deriving, so the image falls back to its
+   natural height and the box clips its top strip instead of cropping to the
+   middle. That is what made so many video thumbnails a band of nothing. */
+.tile-media img{position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;display:block}
+
+/* A mark in the media's corner: the Ask tile's citation number, the Spaces
+   card's smart-space badge. One dark scrim for both, so it stays legible over
+   a photograph, a flat field or an excerpt, in either theme. */
+.tile-plate{position:absolute;top:var(--space-6);left:var(--space-6);z-index:var(--z-content);
+  min-width:18px;height:18px;padding:0 var(--space-4);display:grid;place-items:center;
+  border-radius:var(--radius-sm);background:rgba(0,0,0,.55);color:#fff;  /* token-lint-ignore: corner mark floats over user imagery, not over a themed surface */
+  font-family:var(--font-mono);font-size:var(--text-2xs);letter-spacing:normal}
+.tile-plate.right{left:auto;right:var(--space-6)}
+.tile-play{position:absolute;right:var(--space-8);bottom:var(--space-8);
+  width:22px;height:22px;display:grid;place-items:center;
+  border-radius:var(--radius-full);background:var(--overlay);color:var(--color-white)}
+
+/* A text save has no picture, so the slot carries the text itself; the top
+   padding is the room the corner mark needs in the same corner. */
+.tile-media.quote{display:block;padding:var(--space-28) var(--space-12) var(--space-10)}
+/* -webkit-box shrink-wraps to its content, which left a one-line excerpt
+   floating in the middle of the slot instead of starting at the margin. */
+.tile-excerpt{width:100%;font-size:var(--text-xs);line-height:var(--leading-normal);
+  letter-spacing:var(--tracking-tight);color:var(--ink-dim);white-space:pre-wrap;
+  display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+
+.tile-cap{flex:1;display:flex;flex-direction:column;gap:var(--space-4);
+  padding:var(--space-8) var(--space-10) var(--space-10)}
+.tile-title{font-size:var(--text-xs);line-height:1.35;color:var(--ink);
+  letter-spacing:var(--tracking-tight);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tile-meta{font-family:var(--font-mono);font-size:var(--text-2xs);
+  letter-spacing:var(--tracking-mono);color:var(--ink-faint);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

@@ -1,0 +1,58 @@
+name: CI
+
+# Runs on its own for every push/PR to main, and is called by docker.yml so a
+# release cannot publish an image whose tests fail.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Before setup-node, so `cache: pnpm` can find the binary it keys on.
+      # Version comes from package.json's "packageManager" — same pin the
+      # Dockerfile's corepack uses.
+      - uses: pnpm/action-setup@v4
+
+      # Read from .nvmrc so local, CI and the Dockerfile cannot drift apart.
+      # They already had: contributors on Node 24 while CI and the image ran 22,
+      # which hid a mock.module() misuse that only fails on 22.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # @qvac/sdk ships large native prebuilds, so this is the slow step —
+      # the pnpm store cache above keeps it to roughly a minute on repeat runs.
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # .nvmrc governs Node everywhere, but `FROM` cannot read a file, so the
+      # Dockerfile carries a default for plain `docker build .`. Assert the two
+      # agree — an unnoticed split between local, CI and the image is what hid a
+      # broken suite for over a week.
+      - name: Node pins agree
+        run: |
+          want=$(tr -d ' \n' < .nvmrc)
+          got=$(sed -n 's/^ARG NODE_VERSION=\(.*\)$/\1/p' Dockerfile)
+          echo ".nvmrc=$want  Dockerfile ARG=$got"
+          [ "$want" = "$got" ] || { echo "::error::.nvmrc ($want) and Dockerfile ARG NODE_VERSION ($got) disagree"; exit 1; }
+
+      # Build BEFORE the tests. server/http.js serves static assets out of
+      # ./dist, and the auth-gate tests drive a real listening server to check
+      # the login page can fetch its font — with no dist that 404s. It passed
+      # locally only because contributors have a dist lying around from an
+      # earlier build, which CI never has.
+      # `build` also runs the design-token lint and tsc --noEmit, so there is
+      # no separate typecheck step.
+      - name: Build
+        run: pnpm run build
+
+      - name: Unit tests
+        run: pnpm test

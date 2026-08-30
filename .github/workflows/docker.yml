@@ -1,0 +1,231 @@
+name: Build & publish Docker image
+
+# Builds the multi-arch (linux/amd64 + linux/arm64) image and publishes it to
+# GHCR (GitHub Container Registry) — no Docker Hub account or secrets needed,
+# it authenticates with the built-in GITHUB_TOKEN. Unit tests and typecheck
+# run first (via ci.yml) and gate the publish.
+#
+# The amd64 image is boot-tested on the native x86 runner first — this is the
+# check we cannot do on Apple Silicon, where Rosetta only emulates SSE4.2 and
+# the AVX2 llama.cpp kernels SIGILL. The smoke test also asserts the server
+# runs unprivileged and the healthcheck goes green.
+#
+# Trigger: push a version tag (e.g. `git tag v1.0.2 && git push --tags`),
+# or run manually from the Actions tab with an explicit version.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Image version (no leading v), e.g. 1.0.1'
+        required: true
+
+env:
+  GHCR_IMAGE: ghcr.io/ibrahimtareq/kothai
+
+jobs:
+  # A release must not publish code whose tests fail.
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest        # native amd64 — real AVX2/FMA
+    permissions:
+      contents: read
+      packages: write             # push to GHCR with GITHUB_TOKEN, no new secret
+    steps:
+      # The ubuntu-latest runner ships ~14 GB free on /. This image is far
+      # bigger mid-build: @qvac's native prebuilds are ~7.6 GB, npm ci runs in
+      # both the client and runtime stages, the amd64 image is loaded into the
+      # daemon (load: true), and cache-to mode=max exports every layer — which
+      # together overflow the disk (the build fails with "No space left on
+      # device", so hard the runner can't even flush its own logs). Reclaim the
+      # ~25 GB of preinstalled toolchains this build never touches, up front.
+      - name: Free up runner disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+                      /usr/local/lib/android /opt/hostedtoolcache/CodeQL \
+                      /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
+          sudo docker image prune --all --force || true
+          df -h /
+
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            V="${{ github.event.inputs.version }}"
+          else
+            V="${GITHUB_REF_NAME#v}"   # strip the leading v from the tag
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          # .nvmrc is the single source of truth for Node; the Dockerfile takes
+          # it as a build arg so the image cannot drift from CI and local dev.
+          echo "node=$(tr -d ' \n' < .nvmrc)" >> "$GITHUB_OUTPUT"
+          echo "Building $GHCR_IMAGE:$V on Node $(tr -d ' \n' < .nvmrc)"
+
+      - uses: docker/setup-qemu-action@v3      # arm64 emulation for the cross build
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Stage 1: build amd64 locally and boot-test it on real x86 ──────────
+      - name: Build amd64 image for smoke test
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          build-args: NODE_VERSION=${{ steps.ver.outputs.node }}
+          tags: ${{ env.GHCR_IMAGE }}:smoketest-amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke-test amd64 (worker must load a model without SIGILL)
+        run: |
+          docker run -d --name kothai -p 5173:5173 -e PORT=5173 "$GHCR_IMAGE:smoketest-amd64"
+          # A fresh install now waits for the first-run model picker before it
+          # downloads anything (POST /api/setup), so it would sit at
+          # state=idle forever. Kick the default selection off ourselves —
+          # without this the loop below always times out.
+          echo "Waiting for the server to accept connections…"
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:5173/api/status >/dev/null && break
+            sleep 2
+          done
+          curl -sf -X POST http://localhost:5173/api/setup \
+               -H 'content-type: application/json' -d '{}' \
+            || { echo "::error::/api/setup failed"; docker logs kothai | tail -40; docker rm -f kothai; exit 1; }
+          echo "Waiting for QVAC worker to load the embedding model on native x86…"
+          for i in $(seq 1 60); do
+            if ! docker ps --filter name=kothai --format '{{.Status}}' | grep -q Up; then
+              echo "::error::container exited unexpectedly"; docker logs kothai; exit 1
+            fi
+            st=$(curl -s http://localhost:5173/api/status || echo '{}')
+            state=$(echo "$st" | python3 -c "import json,sys;print(json.load(sys.stdin).get('state','?'))" 2>/dev/null || echo '?')
+            msg=$(echo "$st" | python3 -c "import json,sys;print(json.load(sys.stdin).get('message',''))" 2>/dev/null || echo '')
+            echo "[$i] state=$state — $msg"
+            case "$state" in
+              ready)
+                echo "✅ models loaded on amd64 — no SIGILL"
+                # Read PID 1's real uid, NOT `docker exec id -u` — exec starts a
+                # new process as the image's configured user (root here), so it
+                # reports 0 no matter what the server dropped to.
+                uid=$(docker exec kothai sh -c "awk '/^Uid:/{print \$2}' /proc/1/status")
+                if [ "$uid" = "0" ]; then
+                  echo "::error::server is running as root (uid 0)"; docker rm -f kothai; exit 1
+                fi
+                echo "✅ server runs unprivileged (uid $uid)"
+                health=$(docker inspect -f '{{.State.Health.Status}}' kothai)
+                if [ "$health" != "healthy" ]; then
+                  echo "::error::healthcheck reports '$health', expected 'healthy'"
+                  docker logs kothai | tail -40; docker rm -f kothai; exit 1
+                fi
+                echo "✅ healthcheck reports healthy"
+                docker rm -f kothai; exit 0 ;;
+              error) echo "::error::model load failed: $msg"; docker logs kothai | tail -40; docker rm -f kothai; exit 1 ;;
+            esac
+            sleep 5
+          done
+          echo "::error::timed out before models reached ready"; docker logs kothai | tail -40
+          docker rm -f kothai; exit 1
+
+      # ── Stage 2: build both arches and push as one manifest ───────────────
+      - name: Build & push multi-arch manifest
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: NODE_VERSION=${{ steps.ver.outputs.node }}
+          tags: |
+            ${{ env.GHCR_IMAGE }}:${{ steps.ver.outputs.version }}
+            ${{ env.GHCR_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        run: |
+          echo "### Published \`$GHCR_IMAGE:${{ steps.ver.outputs.version }}\` (amd64 + arm64) :rocket:" >> "$GITHUB_STEP_SUMMARY"
+          echo "amd64 smoke test passed on native x86 (no SIGILL, unprivileged, healthy)." >> "$GITHUB_STEP_SUMMARY"
+
+  # The lite image: no @qvac/sdk, so none of the disk pressure the full build
+  # fights, and no native kernels — which is precisely what the full build's
+  # amd64 boot smoke test exists to guard. A healthcheck probe is enough here.
+  build-lite:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            V="${{ github.event.inputs.version }}"
+          else
+            V="${GITHUB_REF_NAME#v}"   # strip the leading v from the tag
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "node=$(tr -d ' \n' < .nvmrc)" >> "$GITHUB_OUTPUT"
+          echo "Building $GHCR_IMAGE:lite-$V on Node $(tr -d ' \n' < .nvmrc)"
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build lite (amd64) and smoke test
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runtime-lite
+          platforms: linux/amd64
+          load: true
+          build-args: NODE_VERSION=${{ steps.ver.outputs.node }}
+          tags: kothai-lite:smoke
+          cache-from: type=gha,scope=lite
+          cache-to: type=gha,mode=max,scope=lite
+
+      - name: Smoke test — must serve without an inference endpoint
+        run: |
+          docker run -d --name lite -p 5173:5173 kothai-lite:smoke
+          for i in $(seq 1 30); do
+            if curl -fs localhost:5173/api/status > /tmp/status.json; then break; fi
+            sleep 2
+          done
+          cat /tmp/status.json
+          grep -q '"kind":"remote"' /tmp/status.json
+          docker rm -f lite
+
+      - name: Build and push lite (multi-arch)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runtime-lite
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: NODE_VERSION=${{ steps.ver.outputs.node }}
+          tags: |
+            ${{ env.GHCR_IMAGE }}:lite
+            ${{ env.GHCR_IMAGE }}:lite-${{ steps.ver.outputs.version }}
+          cache-from: type=gha,scope=lite
+          cache-to: type=gha,mode=max,scope=lite

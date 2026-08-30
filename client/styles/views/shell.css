@@ -1,0 +1,46 @@
+/* shell.css — app shell, topbar/nav, rail, main scaffold
+   Part of the Kothai design system. Loaded via style.css. */
+/* ─────────────────────────── shell ───────────────────────────────────────── */
+#root{position:relative;z-index:var(--z-raised);height:100%}
+.app{position:relative;height:100%}
+
+/* header overlays the content so it scrolls beneath the frosted glass */
+.topbar{position:absolute;top:0;left:0;right:0;z-index:var(--z-topbar);
+  display:flex;align-items:center;justify-content:flex-end;
+  padding:0 var(--space-28);height:var(--topbar-h);
+  background:color-mix(in srgb, var(--bg) 60%, transparent);
+  -webkit-backdrop-filter:blur(14px) saturate(140%);
+  backdrop-filter:blur(14px) saturate(140%);}
+.body{display:grid;grid-template-columns:var(--rail) 1fr;height:100%;min-height:0}
+
+/* ─────────────────────────── rail ────────────────────────────────────────── */
+.rail{display:flex;flex-direction:column;
+  align-items:center;padding:calc(var(--topbar-h) + var(--space-12)) 0 var(--space-16);gap:var(--space-4);background:transparent}
+.rail-btn{position:relative;width:46px;height:46px;display:grid;place-items:center;
+  border:0;background:transparent;color:var(--ink-mute);border-radius:var(--radius-lg);
+  cursor:pointer;transition:color var(--dur-fast), background var(--dur-fast)}
+.rail-btn:hover{color:var(--ink);background:var(--panel-2)}
+.rail-btn.active{color:var(--ink);background:var(--panel-2)}
+.rail-btn.active::before{content:"";position:absolute;left:-16px;top:50%;
+  transform:translateY(-50%);width:2px;height:20px;border-radius:var(--radius-xs);background:var(--ink)}
+.rail-btn .count{position:absolute;top:5px;right:5px;font-family:var(--font-mono);
+  font-size:var(--text-3xs);color:var(--ink-faint);line-height:1}
+.rail-btn.active .count{color:var(--ink)}
+.rail-tip{position:absolute;left:56px;top:50%;transform:translateY(-50%) translateX(-6px);
+  background:var(--bg-raise);border:1px solid var(--line);color:var(--ink);font-size:var(--text-xs);
+  font-family:var(--font-mono);letter-spacing:var(--tracking-mono);padding:var(--space-6) var(--space-10);
+  border-radius:var(--radius);white-space:nowrap;opacity:0;pointer-events:none;
+  transition:var(--dur-fast);z-index:var(--z-backdrop)}
+.rail-btn:hover .rail-tip{opacity:1;transform:translateY(-50%) translateX(0)}
+.rail-spacer{flex:1}
+/* two stacked clusters — destinations on top, theme/settings below — with a
+   hairline between them */
+.rail-group{display:flex;flex-direction:column;align-items:center;gap:var(--space-4)}
+.rail-group + .rail-group{border-top:1px solid var(--line);padding-top:var(--space-8);margin-top:var(--space-8)}
+
+/* ─────────────────────────── main ────────────────────────────────────────── */
+.main{min-width:0;min-height:0;overflow:hidden;position:relative;
+  animation:view-in var(--dur-mid) var(--ease-out)}
+/* subtle fade + soft rise on every view swap (keyed off nav in App.tsx) */
+@keyframes view-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.main{animation:none}}

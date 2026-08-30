@@ -1,0 +1,12 @@
+node_modules/
+dist/
+/data/
+models/
+qvac.config.json
+*.log
+.claude
+.superpowers/
+.DS_Store
+
+.worktrees/
+/docs/superpowers/

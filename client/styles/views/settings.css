@@ -1,0 +1,298 @@
+/* settings.css — settings view
+   Part of the Kothai design system. Loaded via style.css. */
+/* ─────────────────────────── settings ────────────────────────────────────── */
+.settings-view{padding:calc(var(--topbar-h) + var(--space-22)) var(--space-32) var(--space-28);max-width:760px;width:100%;margin:0 auto;
+  overflow-y:auto;height:100%}
+/* title aligns with content: drop gal-head's own horizontal padding here */
+.settings-view .gal-head{padding-left:0;padding-right:0}
+.settings-loading{font-family:var(--font-mono);color:var(--ink-faint);font-size:var(--text-xs);
+  letter-spacing:var(--tracking-mono);padding:var(--space-32) 0}
+.settings-progress{display:flex;align-items:center;gap:var(--space-14);margin-top:var(--space-14);padding:var(--space-12) var(--space-14);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg)}
+.settings-progress-track{flex:1;height:5px;border-radius:var(--radius-full);
+  background:var(--panel-2);overflow:hidden}
+.settings-progress-bar{height:100%;border-radius:var(--radius-full);background:var(--accent);
+  transition:width var(--dur-slower) ease}
+.settings-progress-msg{font-family:var(--font-mono);font-size:var(--text-2xs);
+  letter-spacing:var(--tracking-mono);color:var(--ink-dim);flex-shrink:0;max-width:46%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.model-dl{color:var(--ink)}
+/* modular settings group — one reusable block, drop in a new group to extend */
+.settings-group{margin-top:var(--space-22)}
+.settings-group:first-child{margin-top:var(--space-16)}
+.settings-group-sub{font-size:var(--text-sm);color:var(--ink-dim);line-height:1.55;
+  letter-spacing:var(--tracking-tight);margin:var(--space-8) 0 var(--space-2)}
+/* collapsible model role — header shows role + purpose + selected model */
+.role-acc{margin-top:var(--space-10);background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius-lg);overflow:hidden}
+.role-acc.open{background:var(--panel-2)}
+.role-acc-head{display:flex;align-items:center;gap:var(--space-12);width:100%;text-align:left;cursor:pointer;
+  background:transparent;border:0;padding:var(--space-12) var(--space-14);color:var(--ink);transition:var(--dur-fast)}
+.role-acc-head:hover{background:var(--panel-2)}
+.role-acc-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--space-4)}
+.role-acc-title{font-size:var(--text-2xs);letter-spacing:var(--tracking-mono);color:var(--ink-dim)}
+.role-acc-sub{font-size:var(--text-xs);color:var(--ink-faint);line-height:1.4}
+.role-acc-current{font-size:var(--text-2xs);color:var(--ink);flex-shrink:0;text-align:right;
+  letter-spacing:var(--tracking-mono);max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.role-acc-chev{flex-shrink:0;display:grid;place-items:center;color:var(--ink-faint);
+  transition:transform var(--dur-fast) ease}
+.role-acc.open .role-acc-chev{transform:rotate(180deg);color:var(--ink-dim)}
+.model-list{display:flex;flex-direction:column;gap:var(--space-6);padding:var(--space-2) var(--space-10) var(--space-12)}
+.model-row{display:flex;align-items:center;gap:var(--space-12);width:100%;text-align:left;cursor:pointer;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
+  padding:var(--space-10) var(--space-12);color:var(--ink);transition:var(--dur-fast)}
+.model-row:hover:not(:disabled){border-color:var(--line-hover);background:var(--panel-2)}
+.model-row:disabled{cursor:wait;opacity:.6}
+.model-row.active{border-color:var(--line-focus);background:var(--panel-2)}
+.model-radio{width:16px;height:16px;flex-shrink:0;border-radius:var(--radius-circle);
+  border:1.5px solid var(--line);display:grid;place-items:center}
+.model-row.active .model-radio{border-color:var(--accent)}
+.model-radio-dot{width:8px;height:8px;border-radius:var(--radius-circle);background:var(--accent)}
+.model-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--space-4)}
+.model-name{font-size:var(--text-sm);display:flex;align-items:center;gap:var(--space-8);flex-wrap:wrap}
+.model-desc{font-size:var(--text-xs);color:var(--ink-dim);line-height:1.45}
+.model-size{font-family:var(--font-mono);font-size:var(--text-2xs);color:var(--ink-faint);flex-shrink:0}
+
+/* ─────────────────────────── first-run onboarding ─────────────────────────── */
+/* brief splash while the first /api/status poll resolves */
+.app-splash{display:grid;place-items:center;height:100%}
+.app-splash .mono{font-family:var(--font-mono);font-size:var(--text-xs);color:var(--ink-faint);
+  letter-spacing:var(--tracking-mono)}
+/* full-screen picker shown before any model has downloaded */
+.onboarding{height:100%;width:100%;overflow-y:auto;display:flex;align-items:flex-start;
+  justify-content:center;padding:60px var(--space-24)}
+.onboarding-card{width:100%;max-width:620px;margin:auto 0}
+.onboarding-head{text-align:center;margin-bottom:var(--space-28)}
+.onboarding-mark{display:inline-grid;place-items:center;width:44px;height:44px;margin-bottom:var(--space-14);
+  border:1px solid var(--line);border-radius:var(--radius-lg);color:var(--ink-dim);background:var(--panel)}
+.onboarding-head h1{font-size:var(--text-2xl);letter-spacing:var(--tracking-heading);margin:0 0 var(--space-10)}
+.onboarding-lede{font-size:var(--text-sm);color:var(--ink-dim);line-height:1.6;
+  letter-spacing:var(--tracking-tight);max-width:44ch;margin:0 auto}
+.onboarding-err{margin-bottom:var(--space-14);padding:var(--space-10) var(--space-14);border:1px solid var(--line);
+  border-radius:var(--radius-lg);background:var(--panel);color:var(--ink);font-family:var(--font-mono);
+  font-size:var(--text-2xs);letter-spacing:var(--tracking-mono)}
+.onboarding-picker{display:flex;flex-direction:column}
+.onboarding-foot{display:flex;align-items:center;justify-content:space-between;gap:var(--space-16);margin-top:var(--space-22)}
+.onboarding-size{font-family:var(--font-mono);font-size:var(--text-2xs);color:var(--ink-faint);
+  letter-spacing:var(--tracking-mono)}
+.onboarding-start{margin-left:auto;padding:var(--space-12) var(--space-20);cursor:pointer;background:var(--ink);
+  color:var(--bg);border:0;border-radius:var(--radius-lg);font-size:var(--text-sm);
+  letter-spacing:var(--tracking-tight);transition:var(--dur-fast)}
+.onboarding-start:hover{opacity:.86}
+.onboarding-progress{display:flex;flex-direction:column;gap:var(--space-14);align-items:center;
+  padding:var(--space-36) 0 var(--space-10)}
+.onboarding-progress .settings-progress-track{width:100%;max-width:360px}
+.onboarding-progress .settings-progress-msg{max-width:100%;text-align:center}
+
+/* Residency segmented control (Off / On demand / Always) */
+.residency { padding: var(--space-10) var(--space-12) var(--space-4); }
+.residency-seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden; }
+.residency-btn {
+  padding: var(--space-6) var(--space-14);
+  font-size:var(--text-xs);
+  letter-spacing: 0.06em;
+  background: none;
+  border: none;
+  border-right: 1px solid var(--line);
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+.residency-btn:last-child { border-right: none; }
+.residency-btn:disabled { opacity: 0.5; cursor: default; }
+.residency-desc { margin-top: var(--space-8); font-size:var(--text-xs); color: var(--ink-dim); }
+
+/* Backlog enrich banner */
+.backlog-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-10) var(--space-14);
+  margin-bottom: var(--space-10);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  font-size:var(--text-sm);
+}
+.backlog-actions { display: flex; gap: var(--space-8); }
+.backlog-go { background: var(--ink); color: var(--bg); border: none; border-radius: var(--radius); padding: var(--space-6) var(--space-12); cursor: pointer; }
+.backlog-later { background: none; border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-6) var(--space-12); color: var(--ink-dim); cursor: pointer; }
+
+/* Settings row list — one bordered card, each row an action: title and
+   explanation on the left, its control on the right. Confirmation steps and
+   result messages expand full-width beneath the row that owns them, so the
+   card never reflows into a different shape. */
+.settings-rows {
+  margin-top: var(--space-12);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  overflow: hidden;
+}
+.settings-row { padding: var(--space-16) var(--space-18); transition: background var(--dur-fast); }
+.settings-row + .settings-row { border-top: 1px solid var(--line); }
+.settings-row-head { display: flex; align-items: center; gap: var(--space-22); }
+.settings-row-main { flex: 1; min-width: 0; }
+.settings-row-title {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+  color: var(--ink);
+  letter-spacing: var(--tracking-tight);
+}
+.settings-row-desc {
+  margin-top: var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--ink-dim);
+  line-height: 1.55;
+  letter-spacing: var(--tracking-tight);
+}
+.settings-row-desc b { color: var(--ink); font-weight: var(--fw-medium); }
+.settings-row-action { flex-shrink: 0; }
+.settings-row-extra { margin-top: var(--space-12); }
+/* The erase row keeps the quiet card border; only its own control is red, so
+   the destructive action reads as one row rather than restyling the list. */
+.settings-row[data-danger] .settings-row-title { color: var(--danger); }
+
+/* The one control shape every row uses — link, button, or file-picker label. */
+.row-btn.danger { color: var(--danger); }
+.row-btn.danger:hover { border-color: var(--danger); }
+
+/* Import: the whole row is the drop target, the button is the picker. */
+.settings-row[data-drag] { background: var(--panel-2); }
+.settings-row[data-drag] .row-btn { border-color: var(--ink-faint); }
+/* Children of the row would otherwise fire their own dragenter/dragleave as
+   the pointer crosses them. dragDepth in Settings.tsx already tolerates that,
+   but ignoring pointer events on the inner content is cheaper and steadier. */
+.settings-row[data-drag] .settings-row-head { pointer-events: none; }
+.import-pick { position: relative; }
+.import-pick[aria-disabled="true"] { cursor: wait; opacity: .6; }
+.import-pick input[type="file"] { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+/* Narrow screens: the control drops under the text rather than squeezing it. */
+@media (max-width: 560px) {
+  .settings-row-head { flex-direction: column; align-items: stretch; gap: var(--space-12); }
+  .settings-row-action .row-btn { width: 100%; }
+}
+
+.import-result {
+  margin-top: var(--space-10);
+  padding: var(--space-10) var(--space-14);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.import-warnings { margin: var(--space-6) 0 0; padding-left: var(--space-18); color: var(--ink-dim); font-size: var(--text-xs); line-height: 1.5; }
+.import-warnings li { margin-top: var(--space-2); }
+.import-error {
+  margin-top: var(--space-10);
+  padding: var(--space-10) var(--space-14);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  color: var(--danger);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+/* Onboarding skip link */
+.onboarding-skip {
+  display: block;
+  margin: var(--space-14) auto 0;
+  background: none;
+  border: none;
+  color: var(--ink-dim);
+  font-size:var(--text-xs);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.onboarding-skip:hover { color: var(--ink); }
+
+/* Danger zone (irreversible content wipe) — the confirm step that expands
+   inside the erase row once it's armed. */
+.danger-confirm {
+  padding: var(--space-14) var(--space-16);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+.danger-confirm > label {
+  display: block;
+  margin-bottom: var(--space-10);
+  color: var(--ink-dim);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-tight);
+}
+.danger-confirm > label b { color: var(--ink); font-weight: var(--fw-medium); }
+.danger-confirm-row { display: flex; flex-wrap: wrap; gap: var(--space-8); }
+.danger-input {
+  flex: 1 1 140px;
+  min-width: 0;
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-mono);
+}
+.danger-input:focus { outline: none; border-color: var(--danger); }
+.danger-input::placeholder { color: var(--ink-faint); }
+.danger-go {
+  padding: var(--space-8) var(--space-14);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  background: var(--danger);
+  color: var(--bg);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-tight);
+  cursor: pointer;
+  transition: var(--dur-fast);
+}
+.danger-go:disabled { background: none; color: var(--ink-faint); border-color: var(--line); cursor: default; }
+.danger-cancel {
+  padding: var(--space-8) var(--space-14);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--ink-dim);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-tight);
+  cursor: pointer;
+}
+.danger-cancel:hover:not(:disabled) { color: var(--ink); border-color: var(--ink-faint); }
+
+.remote-model { padding: 0.75rem 0; }
+.remote-model-input {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-size:var(--text-sm);
+}
+.remote-model-input:disabled { opacity: 0.5; }
+.remote-model-desc { margin-top: 0.4rem; font-size:var(--text-xs); color: var(--ink-dim); }
+
+/* Re-tag everything — the same arm/confirm shape as the danger zone, but in
+   the neutral palette: this rebuilds derived metadata rather than destroying
+   anything, so it should not read as an erase button. */
+.retag-go {
+  padding: var(--space-8) var(--space-14);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: var(--bg);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-tight);
+  cursor: pointer;
+  transition: var(--dur-fast);
+}
+.retag-go:disabled { background: none; color: var(--ink-faint); border-color: var(--line); cursor: default; }
+/* Layout is shared with .danger-confirm; only the accent differs. */
+.danger-confirm.retag-confirm { border-color: var(--line); }

@@ -1,0 +1,58 @@
+/* responsive.css — responsive / small screens
+   Part of the Kothai design system. Loaded via style.css. */
+/* ─────────────────────── responsive / small screens ──────────────────────── */
+/* The board's own column counts (thinned on tablet, pinned to two on phones)
+   live in lib/masonry.ts's columnCount — the layout is computed, not CSS grid,
+   so those breakpoints can't be expressed here. test/masonry-window.test.ts
+   pins them against the widths below. */
+
+/* phone: collapse the utility rail, wrap the nav, and reclaim horizontal
+   padding. */
+@media (max-width:640px){
+  /* the rail holds the destinations plus theme + settings — float it as a
+     bottom-left cluster so the content grid can use the full viewport width */
+  .body{grid-template-columns:1fr}
+  .rail{position:fixed;left:0;bottom:0;right:auto;top:auto;flex-direction:row;
+    width:auto;padding:var(--space-8) var(--space-10);gap:var(--space-6);z-index:var(--z-docked)}
+  .rail-spacer{display:none}
+  .rail-tip{display:none}
+  .exp-tip{display:none}
+  /* laid out sideways down here, so the group divider turns vertical too */
+  .rail-group{flex-direction:row;gap:var(--space-6)}
+  .rail-group + .rail-group{border-top:0;border-left:1px solid var(--line);
+    padding-top:0;margin-top:0;padding-left:var(--space-8);margin-left:var(--space-8)}
+  /* the desktop active marker hangs off the button's left edge — in a row it
+     reads as a stray divider, and the filled pill already marks the tab */
+  .rail-btn.active::before{display:none}
+
+  .topbar{padding:0 var(--space-14)}
+
+  /* trim the generous desktop gutters */
+  .core{padding-left:var(--space-16);padding-right:var(--space-16);padding-bottom:80px}
+  /* .core.has-thread's own padding-bottom outranks the rule above on
+     specificity, so the pinned composer has to clear the floated rail here or
+     the theme/settings buttons sit on top of the textarea. */
+  .core.has-thread{padding-bottom:72px}
+  .gal-head{padding:var(--space-16) var(--space-14) 0}
+  .gal-controls{padding:var(--space-12) var(--space-14) var(--space-6)}
+  .gal-scroll{padding:var(--space-16) var(--space-14) 96px}
+  .spaces-view{padding:calc(var(--topbar-h) + var(--space-16)) var(--space-14) 0}
+  .spaces-scroll{padding-bottom:96px}
+  .coll-head{padding:var(--space-14) var(--space-14) var(--space-12)}
+  /* the rule chips wrap at this width, so give them the row and drop the
+     tools onto their own line rather than floating beside a stack of chips */
+  .coll-bar{flex-wrap:wrap;gap:var(--space-10)}
+  .coll-rule{flex:1 1 100%}
+  .coll-tools{margin-left:auto}
+  .coll-head::after{left:var(--space-14);right:var(--space-14)}
+  .mm-bar{padding-left:var(--space-14);padding-right:var(--space-14)}
+
+  /* density toggle is meaningless this narrow — columnCount pins to two */
+  .view-toggle{display:none}
+  /* Two up rather than one: a full-width 16:10 tile turns a six-source answer
+     into a page of scrolling. At this width the meta line wraps instead of
+     truncating — a second line of small print costs less than a lost date. */
+  .preview-list{grid-template-columns:repeat(2,1fr)}
+  .tile-meta{white-space:normal}
+  .spaces-grid{grid-template-columns:repeat(2,1fr)}
+}

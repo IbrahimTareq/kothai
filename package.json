@@ -1,0 +1,58 @@
+{
+  "name": "kothai",
+  "version": "1.0.1",
+  "description": "Kothai every thought, picture, link or file",
+  "main": "server/index.js",
+  "type": "module",
+  "packageManager": "pnpm@10.15.1",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n server,vite -c blue,magenta \"node server/index.js\" \"vite\"",
+    "build": "node scripts/lint-tokens.mjs && tsc --noEmit && vite build",
+    "start": "npm run build && node server/index.js",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/lint-tokens.mjs && node --experimental-test-module-mocks --test 'test/**/*.test.js' 'test/**/*.test.ts'",
+    "lint:tokens": "node scripts/lint-tokens.mjs"
+  },
+  "license": "AGPL-3.0-or-later",
+  "homepage": "https://github.com/IbrahimTareq/kothai#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IbrahimTareq/kothai.git"
+  },
+  "bugs": {
+    "url": "https://github.com/IbrahimTareq/kothai/issues"
+  },
+  "dependencies": {
+    "@extractus/oembed-extractor": "^6.0.0",
+    "@mozilla/readability": "^0.6.0",
+    "@qvac/sdk": "^0.12.0",
+    "@xyflow/react": "^12.11.3",
+    "d3-hierarchy": "^3.1.2",
+    "linkedom": "^0.18.13",
+    "require-asset": "^1.2.2",
+    "youtube-transcript": "^1.3.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ],
+    "overrides": {
+      "@qvac/onnx": "0.15.0"
+    }
+  },
+  "devDependencies": {
+    "@types/d3-hierarchy": "^3.1.7",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  }
+}

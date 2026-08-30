@@ -1,0 +1,52 @@
+/* base.css — fonts, reset, base elements, background
+   Part of the Kothai design system. Loaded via style.css. */
+/* ─────────────────────────── fonts (self-hosted, offline) ─────────────────── */
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-weight: 300 700;              /* variable file covers the full range */
+  font-display: swap;
+  src: url("/vendor/fonts/Geist-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url("/vendor/fonts/GeistMono-latin.woff2") format("woff2");
+}
+/* ─────────────────────────── base / reset ─────────────────────────────────── */
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font-sans);
+  font-weight:var(--fw-normal);
+  font-size:var(--text-base);
+  letter-spacing:var(--tracking-normal);  /* body sits neutral; only headings track tight */
+  line-height:var(--leading-normal);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  overflow:hidden;
+}
+
+/* Headings: semibold, lightly tightened — the Ask landing headline's treatment,
+   adopted app-wide. */
+h1,h2,h3,h4{font-weight:var(--fw-heading);letter-spacing:var(--tracking-heading);
+  line-height:var(--leading-tight);margin:0}
+
+.mono{font-family:var(--font-mono);letter-spacing:var(--tracking-mono)}
+.dim{color:var(--ink-dim)}
+button{font-family:inherit;letter-spacing:inherit}
+a{color:inherit}
+::selection{background:rgba(255,255,255,.16);color:#fff}  /* token-lint-ignore: selection colours pair with the theme-specific ::selection rule in tokens.css */
+
+/* Background: Behold is flat & imagery-led; for an app we keep a single,
+   near-invisible top vignette for depth. No scanlines / grid / glow. */
+#bg-fx{position:fixed;inset:0;z-index:var(--z-base);pointer-events:none}
+#bg-fx::before{content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(140% 90% at 50% -20%, rgba(255,255,255,.035), transparent 60%),
+    radial-gradient(100% 100% at 50% 120%, rgba(0,0,0,.5), transparent 60%);
+}

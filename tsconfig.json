@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noEmit": true,
+
+    // Enabled so pure lib modules (e.g. lib/pager.ts) can use explicit .ts
+    // specifiers on sibling imports — the only way node's native TS
+    // type-stripping (used by `npm test`) resolves a relative import with no
+    // build step in between. Safe because noEmit is already true: tsc never
+    // emits these paths into real output, Vite (which understands .ts
+    // specifiers natively) owns the actual bundle.
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true
+  },
+  "include": ["client"]
+}

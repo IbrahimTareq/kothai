@@ -1,0 +1,44 @@
+/* capture.css — image attach + global quick-capture modal
+   Part of the Kothai design system. Loaded via style.css. */
+/* ── image attach + captured images ──────────────────────────────────────── */
+.input-shell .attach-preview{position:relative;flex-shrink:0;width:42px;height:42px;
+  border-radius:var(--radius);overflow:hidden;align-self:center;border:1px solid var(--line)}
+.input-shell .attach-preview img{width:100%;height:100%;object-fit:cover;display:block}
+.input-shell .attach-x{position:absolute;top:-6px;right:-6px;width:18px;height:18px;
+  border-radius:var(--radius-circle);border:0;cursor:pointer;background:var(--ink);color:var(--on-accent);
+  font-size:var(--text-2xs);line-height:1;display:grid;place-items:center}
+.attach-btn{width:40px;height:40px;flex-shrink:0;display:grid;place-items:center;
+  border:1px solid var(--line);border-radius:var(--radius-lg);background:transparent;
+  color:var(--ink-dim);cursor:pointer;transition:var(--dur-fast)}
+.attach-btn:hover{color:var(--ink);border-color:var(--line-focus)}
+.img-thumb.real{cursor:zoom-in;background-color:#050505;background-clip:padding-box;display:block;height:auto}  /* token-lint-ignore: letterbox behind a user photo — must not follow the theme */
+.img-thumb.real img{position:static;display:block;width:100%;height:auto}
+
+/* fetched link/video metadata thumbnails (cached locally in /uploads) */
+.link-thumb{position:relative;border-radius:var(--radius-lg);overflow:hidden;background:#050505}  /* token-lint-ignore: letterbox behind a fetched thumbnail — must not follow the theme */
+.link-thumb img{display:block;width:100%;height:auto}
+.vid-thumb-img{display:block;width:100%;height:auto}
+.msg-img{display:block;max-width:220px;border-radius:var(--radius);margin-bottom:var(--space-8);border:1px solid var(--line)}
+/* global quick-capture modal (FAB target) */
+.cap-overlay{position:fixed;inset:0;z-index:var(--z-overlay);display:flex;align-items:center;justify-content:center;
+  padding:var(--space-24);background:rgba(0,0,0,.82);backdrop-filter:blur(6px);animation:exp-fade var(--dur-fast) ease}  /* token-lint-ignore: modal scrim, deliberately heavier than --overlay */
+.cap-modal{position:relative;width:min(680px,100%);display:flex;flex-direction:column;align-items:center;gap:var(--space-22);
+  animation:cap-in var(--dur-mid) var(--ease-out)}
+@keyframes cap-in{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+/* exit: replay in reverse before unmount (driven by the `closing` class) */
+.cap-overlay.closing{animation:cap-fade-out var(--dur-fast) ease forwards}
+.cap-overlay.closing .cap-modal{animation:cap-out var(--dur-fast) ease forwards}
+@keyframes cap-fade-out{from{opacity:1}to{opacity:0}}
+@keyframes cap-out{from{opacity:1;transform:none}to{opacity:0;transform:translateY(10px) scale(.985)}}
+/* Elevated, opaque field so it reads clearly against the dark scrim in both themes */
+.cap-modal .input-shell{width:100%;background:#1e1e21;border-color:rgba(255,255,255,.18);  /* token-lint-ignore: capture modal surface has its own explicit dark/light pair below */
+  box-shadow:0 28px 64px -22px rgba(0,0,0,.75)}
+.cap-modal .input-shell.focus{background:#232327;border-color:rgba(255,255,255,.34)}  /* token-lint-ignore: capture modal focus surface, paired with the light rule below */
+:root[data-theme="light"] .cap-modal .input-shell{background:#ffffff;border-color:rgba(0,0,0,.16);  /* token-lint-ignore: explicit light-theme surface for the capture modal */
+  box-shadow:0 28px 64px -22px rgba(0,0,0,.5)}
+:root[data-theme="light"] .cap-modal .input-shell.focus{background:#ffffff;border-color:rgba(0,0,0,.34)}  /* token-lint-ignore: explicit light-theme focus surface for the capture modal */
+/* Save failure, shown under the (still filled) input rather than as a toast —
+   the modal stays open on failure, so the message belongs next to the retry. */
+.cap-error{align-self:flex-start;margin-top:-10px;font-size:var(--text-xs);
+  letter-spacing:var(--tracking-mono);color:var(--danger)}
+@media (max-width:720px){ .cap-overlay{padding:var(--space-16)} }
