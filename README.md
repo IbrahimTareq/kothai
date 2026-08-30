@@ -12,7 +12,7 @@ rather than the open web.
 
 [![release](https://img.shields.io/github/v/tag/IbrahimTareq/kothai?style=flat-square&label=release&labelColor=1a1a1a&color=blue)](https://github.com/IbrahimTareq/kothai/releases)
 [![image](https://img.shields.io/badge/ghcr.io-kothai-2496ed?style=flat-square&logo=docker&logoColor=white&labelColor=1a1a1a)](https://github.com/IbrahimTareq/kothai/pkgs/container/kothai)
-[![node](https://img.shields.io/badge/node-22%2B-5fa04e?style=flat-square&logo=nodedotjs&logoColor=white&labelColor=1a1a1a)](.nvmrc)
+[![qvac](https://img.shields.io/badge/tether-qvac-14E4C2?style=flat-square&logo=tether&logoColor=white&labelColor=1a1a1a)](https://github.com/tetherto/qvac)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square&labelColor=1a1a1a)](LICENSE)
 [![last commit](https://img.shields.io/github/last-commit/IbrahimTareq/kothai?style=flat-square&labelColor=1a1a1a)](https://github.com/IbrahimTareq/kothai/commits/main)
 [![downloads](https://img.shields.io/github/downloads/IbrahimTareq/kothai/total?style=flat-square&labelColor=1a1a1a&color=blueviolet)](https://github.com/IbrahimTareq/kothai/releases)
@@ -107,9 +107,6 @@ Keeping the two apart is what makes the rest work. The UI never waits on a
 model. A model that's slow, still downloading or switched off leaves you with
 the phase-one version rather than an error. And pasting twenty links at once
 doesn't have them fighting over the same weights.
-
-[docs/architecture.md](docs/architecture.md) covers the project layout, the
-queue, how storage works and how retrieval is put together.
 
 ## If you want to…
 
