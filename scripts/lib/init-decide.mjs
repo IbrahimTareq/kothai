@@ -1,0 +1,34 @@
+/* init-decide — pure setup decisions.
+ *
+ * Given what the machine looks like and what the user answered, work out which
+ * image to run, what belongs in .env, and what to warn about. Deliberately free
+ * of I/O so every branch is unit testable: the wizard's job is to stop people
+ * downloading 3+ GB of weights onto hardware that cannot execute them, and that
+ * guarantee is only worth as much as its test coverage.
+ */
+
+export const GB = 1024 ** 3
+
+// Local inference needs roughly 1.5 GB resident at the default residency, so
+// 2 GB is the floor and 4 GB is where it stops being uncomfortable.
+export const MIN_MEM_LOCAL = 2 * GB
+export const WARN_MEM_LOCAL = 4 * GB
+// Full image (~2 GB) plus the default weight trio (~3.3 GB), with headroom.
+export const MIN_DISK_FULL = 6 * GB
+export const MIN_DISK_ANY = 1 * GB
+
+const gb = (bytes) => `${Math.round((bytes / GB) * 10) / 10} GB`
+
+// Can this machine run models on-device at all? Two hard gates, both of which
+// otherwise fail *after* a multi-gigabyte download: an x86 CPU without AVX2
+// SIGILLs in the llama.cpp kernels, and too little memory gets OOM-killed
+// mid-load.
+export function capability(probe) {
+  if (probe.arch === 'x86_64' && probe.avx2 === false) {
+    return { canRunLocal: false, reason: 'this CPU has no AVX2, which the on-device model kernels require' }
+  }
+  if (probe.memBytes < MIN_MEM_LOCAL) {
+    return { canRunLocal: false, reason: `only ${gb(probe.memBytes)} is available to Docker, and on-device models need at least ${gb(MIN_MEM_LOCAL)}` }
+  }
+  return { canRunLocal: true, reason: null }
+}
