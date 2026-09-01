@@ -10,7 +10,7 @@
  * Run: node scripts/init.mjs [--dry-run] [--lite]
  */
 import { createInterface } from 'node:readline/promises'
-import { writeFileSync, existsSync, readFileSync, appendFileSync, chmodSync } from 'node:fs'
+import { writeFileSync, existsSync, readFileSync, appendFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { probe } from './lib/init-probe.mjs'
@@ -77,14 +77,17 @@ async function main() {
   if (existsSync('.env') && !(await ask('\n.env exists. Overwrite? (y/n)', 'n')).toLowerCase().startsWith('y')) {
     fail('Left .env alone. Nothing was changed.')
   }
-  writeFileSync('.env', envText)
-  chmodSync('.env', 0o600)
+  writeFileSync('.env', envText, { mode: 0o600 })
   if (d.writeCompose) writeFileSync('docker-compose.yml', COMPOSE(d.image, port))
   if (existsSync('.gitignore') && !readFileSync('.gitignore', 'utf8').includes('.env')) appendFileSync('.gitignore', '\n.env\n')
 
   rl.close()
   console.log('\n  Starting…')
-  execFileSync('docker', ['compose', 'up', '-d'], { stdio: 'inherit' })
+  try {
+    execFileSync('docker', ['compose', 'up', '-d'], { stdio: 'inherit' })
+  } catch {
+    fail('`docker compose up -d` failed — see the output above.')
+  }
   await waitHealthy(port)
 
   console.log(`\n  Ready — http://localhost:${port}`)
