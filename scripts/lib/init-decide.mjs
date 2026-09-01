@@ -75,7 +75,7 @@ export function decide(probe, answers, flags = {}) {
     effective.ai = 'external'
     warnings.push(`On-device models are unavailable: ${cap.reason}. Configured for an external endpoint instead.`)
   }
-  if (cap.canRunLocal && probe.memBytes < WARN_MEM_LOCAL) {
+  if (image === 'latest' && probe.memBytes < WARN_MEM_LOCAL) {
     warnings.push(`Only ${Math.round((probe.memBytes / GB) * 10) / 10} GB is available to Docker. On-device models will work but may be slow; pick the lighter presets when the app asks.`)
   }
   if (probe.diskBytes < MIN_DISK_FULL) {

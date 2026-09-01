@@ -113,3 +113,9 @@ test('an incapable machine asked for local inference is redirected to remote, wi
   assert.equal(d.env.STASH_AI_PROVIDER, 'remote')
   assert.match(d.warnings.join(' '), /AVX2/)
 })
+
+test('low memory does not warn about slowness when disk already forced lite', () => {
+  const d = decide(probe({ memBytes: 3 * GB, diskBytes: 2 * GB }), answers(), {})
+  assert.equal(d.image, 'lite')
+  assert.equal(d.warnings.some((w) => w.includes('may be slow')), false)
+})
