@@ -32,3 +32,14 @@ export function capability(probe) {
   }
   return { canRunLocal: true, reason: null }
 }
+
+// Rules in order: disk first because it is a physical limit no answer can
+// argue with, then capability. Note that a capable machine gets `latest` even
+// when the user picks an external endpoint today — the full image runs fine in
+// remote mode (server/ai/index.js only imports the local provider when the
+// provider is not `remote`), so this keeps the door open at no cost.
+export function chooseImage(probe, answers, flags = {}) {
+  if (flags.lite) return 'lite'
+  if (probe.diskBytes < MIN_DISK_FULL) return 'lite'
+  return capability(probe).canRunLocal ? 'latest' : 'lite'
+}
