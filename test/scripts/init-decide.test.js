@@ -3,7 +3,7 @@
 // no Docker; every input is a plain object shaped like a real probe result.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { GB, capability, chooseImage } from '../../scripts/lib/init-decide.mjs'
+import { GB, capability, chooseImage, buildEnv } from '../../scripts/lib/init-decide.mjs'
 
 const probe = (over = {}) => ({
   arch: 'arm64', avx2: null, memBytes: 8 * GB, diskBytes: 40 * GB,
@@ -51,4 +51,34 @@ test('disk is checked before capability — a capable machine with no room still
 
 test('--lite forces lite', () => {
   assert.equal(chooseImage(probe(), answers(), { lite: true }), 'lite')
+})
+
+test('local inference on the full image writes only the provider', () => {
+  assert.deepEqual(buildEnv(answers({ ai: 'local' }), 'latest'), { STASH_AI_PROVIDER: 'local' })
+})
+
+test('an external endpoint writes the base url', () => {
+  const env = buildEnv(answers({ ai: 'external', baseUrl: 'http://ollama:11434/v1' }), 'latest')
+  assert.equal(env.STASH_AI_PROVIDER, 'remote')
+  assert.equal(env.STASH_AI_BASE_URL, 'http://ollama:11434/v1')
+})
+
+test('an api key is written when given and the key is absent when not', () => {
+  const withKey = buildEnv(answers({ ai: 'external', baseUrl: 'https://x/v1', apiKey: 'sk-abc' }), 'latest')
+  assert.equal(withKey.STASH_AI_API_KEY, 'sk-abc')
+  const without = buildEnv(answers({ ai: 'external', baseUrl: 'https://x/v1' }), 'latest')
+  assert.equal('STASH_AI_API_KEY' in without, false)
+})
+
+test('the lite image is always remote — it cannot run models at all', () => {
+  assert.equal(buildEnv(answers({ ai: 'none' }), 'lite').STASH_AI_PROVIDER, 'remote')
+})
+
+test('no AI on the full image stays local, so models can be switched on later in the web app', () => {
+  assert.deepEqual(buildEnv(answers({ ai: 'none' }), 'latest'), { STASH_AI_PROVIDER: 'local' })
+})
+
+test('a password is written when set and omitted when null', () => {
+  assert.equal(buildEnv(answers({ password: 'hunter2hunter2' }), 'latest').STASH_PASSWORD, 'hunter2hunter2')
+  assert.equal('STASH_PASSWORD' in buildEnv(answers(), 'latest'), false)
 })

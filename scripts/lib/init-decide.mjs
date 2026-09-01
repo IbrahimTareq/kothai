@@ -43,3 +43,20 @@ export function chooseImage(probe, answers, flags = {}) {
   if (probe.diskBytes < MIN_DISK_FULL) return 'lite'
   return capability(probe).canRunLocal ? 'latest' : 'lite'
 }
+
+// Only the keys the answers actually imply — an .env full of empty values is
+// harder to read than a short one. Credentials live here and nowhere else:
+// docs/security.md guarantees the endpoint URL and key are never written to
+// SQLite, so they cannot leak through a backup or an export.
+export function buildEnv(answers, image) {
+  const env = {}
+  // The lite image has no @qvac/sdk installed, so `local` would crash on boot.
+  env.STASH_AI_PROVIDER = image === 'lite' || answers.ai === 'external' ? 'remote' : 'local'
+  if (answers.ai === 'external') {
+    if (answers.baseUrl) env.STASH_AI_BASE_URL = answers.baseUrl
+    if (answers.apiKey) env.STASH_AI_API_KEY = answers.apiKey
+  }
+  if (answers.password) env.STASH_PASSWORD = answers.password
+  if (answers.port !== 5173) env.PORT = String(answers.port)
+  return env
+}
