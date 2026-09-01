@@ -55,7 +55,14 @@ when you're trying to find something which is the problem this is built around.
 
 ## Quick start
 
-**Docker.** The easy path, and what runs well on a Pi:
+**Docker.** The easy path, and what runs well on a Pi. The wizard checks your
+hardware, asks three questions, and starts everything:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/IbrahimTareq/kothai/main/scripts/init.mjs && node init.mjs
+```
+
+Prefer to do it by hand? The compose file below is what the wizard would write:
 
 ```bash
 curl -O https://raw.githubusercontent.com/IbrahimTareq/kothai/main/docker-compose.yml
