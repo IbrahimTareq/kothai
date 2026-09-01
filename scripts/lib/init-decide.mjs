@@ -60,3 +60,36 @@ export function buildEnv(answers, image) {
   if (answers.port !== 5173) env.PORT = String(answers.port)
   return env
 }
+
+// The one entry point the shell calls. Everything it returns is data: the shell
+// decides how to print it and what to write, this decides what is true.
+export function decide(probe, answers, flags = {}) {
+  const warnings = []
+  const cap = capability(probe)
+  const image = chooseImage(probe, answers, flags)
+
+  // Asking for local on a machine that cannot is not an error worth aborting
+  // for — silently degrade to remote and say exactly why.
+  const effective = { ...answers }
+  if (answers.ai === 'local' && !cap.canRunLocal) {
+    effective.ai = 'external'
+    warnings.push(`On-device models are unavailable: ${cap.reason}. Configured for an external endpoint instead.`)
+  }
+  if (cap.canRunLocal && probe.memBytes < WARN_MEM_LOCAL) {
+    warnings.push(`Only ${Math.round((probe.memBytes / GB) * 10) / 10} GB is available to Docker. On-device models will work but may be slow; pick the lighter presets when the app asks.`)
+  }
+  if (probe.diskBytes < MIN_DISK_FULL) {
+    warnings.push(`Less than ${Math.round(MIN_DISK_FULL / GB)} GB free, so the lite image was chosen — it ships no model weights.`)
+  }
+  if (probe.existingCompose) {
+    warnings.push('docker-compose.yml already exists and was left untouched; only .env was written.')
+  }
+
+  return {
+    image,
+    env: buildEnv(effective, image),
+    warnings,
+    mode: probe.existingDb ? 'update' : 'scaffold',
+    writeCompose: !probe.existingCompose,
+  }
+}

@@ -3,7 +3,7 @@
 // no Docker; every input is a plain object shaped like a real probe result.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { GB, capability, chooseImage, buildEnv } from '../../scripts/lib/init-decide.mjs'
+import { GB, capability, chooseImage, buildEnv, decide } from '../../scripts/lib/init-decide.mjs'
 
 const probe = (over = {}) => ({
   arch: 'arm64', avx2: null, memBytes: 8 * GB, diskBytes: 40 * GB,
@@ -81,4 +81,35 @@ test('no AI on the full image stays local, so models can be switched on later in
 test('a password is written when set and omitted when null', () => {
   assert.equal(buildEnv(answers({ password: 'hunter2hunter2' }), 'latest').STASH_PASSWORD, 'hunter2hunter2')
   assert.equal('STASH_PASSWORD' in buildEnv(answers(), 'latest'), false)
+})
+
+test('a fresh machine scaffolds a compose file', () => {
+  const d = decide(probe(), answers(), {})
+  assert.equal(d.mode, 'scaffold')
+  assert.equal(d.writeCompose, true)
+  assert.equal(d.image, 'latest')
+})
+
+test('an existing database switches to update mode and never scaffolds', () => {
+  const d = decide(probe({ existingDb: true, existingCompose: true }), answers(), {})
+  assert.equal(d.mode, 'update')
+  assert.equal(d.writeCompose, false)
+})
+
+test('an existing compose file is left alone even on a fresh install, and says so', () => {
+  const d = decide(probe({ existingCompose: true }), answers(), {})
+  assert.equal(d.writeCompose, false)
+  assert.match(d.warnings.join(' '), /docker-compose\.yml already exists/)
+})
+
+test('low but workable memory warns without blocking', () => {
+  const d = decide(probe({ memBytes: 3 * GB }), answers(), {})
+  assert.equal(d.image, 'latest')
+  assert.match(d.warnings.join(' '), /3 GB/)
+})
+
+test('an incapable machine asked for local inference is redirected to remote, with the reason', () => {
+  const d = decide(probe({ arch: 'x86_64', avx2: false }), answers({ ai: 'local' }), {})
+  assert.equal(d.env.STASH_AI_PROVIDER, 'remote')
+  assert.match(d.warnings.join(' '), /AVX2/)
 })
