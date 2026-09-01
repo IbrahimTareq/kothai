@@ -40,3 +40,41 @@ export function parseDockerStatsUsed(text) {
   }
   return total
 }
+
+const run = (cmd, args) => {
+  try {
+    return execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+  } catch {
+    return null
+  }
+}
+
+function cpuFlagText() {
+  if (existsSync('/proc/cpuinfo')) return readFileSync('/proc/cpuinfo', 'utf8')
+  return run('sysctl', ['-n', 'machdep.cpu.leaf7_features']) ?? ''
+}
+
+export function probe(dir = process.cwd(), port = 5173) {
+  const a = arch() === 'arm64' ? 'arm64' : 'x86_64'
+  const info = run('docker', ['info', '--format', '{{json .}}'])
+  const memTotal = info ? parseDockerMemTotal(info) : null
+  const used = parseDockerStatsUsed(run('docker', ['stats', '--no-stream', '--format', '{{.MemUsage}}']) ?? '')
+  let diskBytes = 0
+  try {
+    const fs = statfsSync(dir)
+    diskBytes = fs.bavail * fs.bsize
+  } catch { diskBytes = 0 }
+
+  return {
+    arch: a,
+    // The question is meaningless on arm64, where NEON is guaranteed.
+    avx2: a === 'arm64' ? null : parseAvx2(cpuFlagText()),
+    memBytes: memTotal === null ? 0 : Math.max(0, memTotal - used),
+    diskBytes,
+    dockerOk: info !== null,
+    composeV2: run('docker', ['compose', 'version']) !== null,
+    existingDb: existsSync(`${dir}/data/kothai.db`),
+    existingCompose: existsSync(`${dir}/docker-compose.yml`),
+    portFree: run('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN']) === null,
+  }
+}
