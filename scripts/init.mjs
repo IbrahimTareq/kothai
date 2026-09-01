@@ -74,12 +74,19 @@ async function main() {
     return rl.close()
   }
 
-  if (existsSync('.env') && !(await ask('\n.env exists. Overwrite? (y/n)', 'n')).toLowerCase().startsWith('y')) {
-    fail('Left .env alone. Nothing was changed.')
+  let skipWrite = false
+  if (existsSync('.env')) {
+    const overwrite = (await ask('\n.env exists. Overwrite? (y/n)', 'n')).toLowerCase().startsWith('y')
+    skipWrite = !overwrite
   }
-  writeFileSync('.env', envText, { mode: 0o600 })
-  if (d.writeCompose) writeFileSync('docker-compose.yml', COMPOSE(d.image, port))
-  if (existsSync('.gitignore') && !readFileSync('.gitignore', 'utf8').includes('.env')) appendFileSync('.gitignore', '\n.env\n')
+
+  if (skipWrite) {
+    console.log('\n  Keeping existing .env. Starting with your current configuration…')
+  } else {
+    writeFileSync('.env', envText, { mode: 0o600 })
+    if (d.writeCompose) writeFileSync('docker-compose.yml', COMPOSE(d.image, port))
+    if (existsSync('.gitignore') && !readFileSync('.gitignore', 'utf8').includes('.env')) appendFileSync('.gitignore', '\n.env\n')
+  }
 
   rl.close()
   console.log('\n  Starting…')
