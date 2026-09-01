@@ -10,3 +10,7 @@ qvac.config.json
 
 .worktrees/
 /docs/superpowers/
+
+# Tailscale sidecar (docker-compose.tailscale.yml)
+/tailscale/
+.env
