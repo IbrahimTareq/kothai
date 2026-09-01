@@ -37,6 +37,10 @@ test('a capable machine gets the full image', () => {
   assert.equal(chooseImage(probe(), answers()), 'latest')
 })
 
+// Verified 2026-09-02 against ghcr.io/ibrahimtareq/kothai:latest: ran the real
+// image with STASH_AI_PROVIDER=remote, curled /api/health (`{"ok":true}`), and
+// grepped the logs for "Bare worker started" — count was 0, so @qvac/sdk (and
+// its native prebuilds) is never imported in remote mode. The rule holds.
 test('a capable machine choosing an external endpoint still gets the full image, so local costs nothing later', () => {
   assert.equal(chooseImage(probe(), answers({ ai: 'external' })), 'latest')
 })
