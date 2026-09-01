@@ -26,7 +26,7 @@ const COMPOSE = (image, port) => `services:
     container_name: kothai
     restart: unless-stopped
     ports:
-      - "${port}:5173"
+      - "${port}:${port}"
     volumes:
       - ./data:/app/data${image === 'lite' ? '' : '\n      - ./models:/app/models'}
     env_file: .env
