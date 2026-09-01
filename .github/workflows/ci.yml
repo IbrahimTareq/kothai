@@ -12,6 +12,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # This job gates every release build, so a hang here blocks the whole
+    # pipeline. A caller using `uses:` cannot impose a timeout, so it is set
+    # here. The suite runs in ~4s; 15 minutes is pure headroom.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 

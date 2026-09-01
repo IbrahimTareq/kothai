@@ -22,6 +22,13 @@ on:
         description: 'Image version (no leading v), e.g. 1.0.1'
         required: true
 
+# Re-tagging or re-dispatching supersedes any run still in flight for the same
+# ref, so a stuck attempt never keeps a slot warm alongside its replacement.
+# Grouping on the ref means two DIFFERENT tags never cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   GHCR_IMAGE: ghcr.io/ibrahimtareq/kothai
 
@@ -33,6 +40,10 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest        # native amd64 — real AVX2/FMA
+    # Two multi-arch builds plus a boot test. GitHub's default is 6 HOURS; a
+    # hung QEMU build or a wedged container would otherwise sit there all day
+    # before anyone noticed it was stuck rather than slow.
+    timeout-minutes: 45
     permissions:
       contents: read
       packages: write             # push to GHCR with GITHUB_TOKEN, no new secret
@@ -96,6 +107,10 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Smoke-test amd64 (worker must load a model without SIGILL)
+        # The poll loop below self-limits to 90 x 5s, but that only bounds the
+        # loop — a hang in `docker run` or a wedged curl is outside it. This is
+        # the hard stop for the whole step.
+        timeout-minutes: 12
         run: |
           docker run -d --name kothai -p 5173:5173 -e PORT=5173 "$GHCR_IMAGE:smoketest-amd64"
           # A fresh install now waits for the first-run model picker before it
@@ -110,18 +125,33 @@ jobs:
           curl -sf -X POST http://localhost:5173/api/setup \
                -H 'content-type: application/json' -d '{}' \
             || { echo "::error::/api/setup failed"; docker logs kothai | tail -40; docker rm -f kothai; exit 1; }
+          # /api/status returns { roles: {...}, aggregate: {...} } — there is NO
+          # top-level `state` key, and there never was (see client/types.ts).
+          # An earlier version of this loop read `.state` off the root, got the
+          # '?' fallback on every poll, and therefore timed out on every run
+          # regardless of how healthy the container was. Read the two fields
+          # that actually exist, and print both so a future failure is
+          # diagnosable from the log alone.
+          #
+          # Success is asserted on the EMBED role, not the aggregate: embed is
+          # the only role with an `always` residency by default, so `ready`
+          # there means weights are genuinely resident in RAM and the llama.cpp
+          # kernels executed. `aggregate: ready` merely means nothing is
+          # currently loading, which is also true when every role sits idle.
           echo "Waiting for QVAC worker to load the embedding model on native x86…"
-          for i in $(seq 1 60); do
+          for i in $(seq 1 90); do
             if ! docker ps --filter name=kothai --format '{{.Status}}' | grep -q Up; then
               echo "::error::container exited unexpectedly"; docker logs kothai; exit 1
             fi
             st=$(curl -s http://localhost:5173/api/status || echo '{}')
-            state=$(echo "$st" | python3 -c "import json,sys;print(json.load(sys.stdin).get('state','?'))" 2>/dev/null || echo '?')
-            msg=$(echo "$st" | python3 -c "import json,sys;print(json.load(sys.stdin).get('message',''))" 2>/dev/null || echo '')
-            echo "[$i] state=$state — $msg"
-            case "$state" in
+            snap=$(echo "$st" | python3 -c "import json,sys;d=json.load(sys.stdin);a=d.get('aggregate',{});print(a.get('state','?'),d.get('roles',{}).get('embed',{}).get('state','?'),'|',a.get('message',''))" 2>/dev/null || echo '? ? | ')
+            agg=$(echo "$snap" | awk '{print $1}')
+            embed=$(echo "$snap" | awk '{print $2}')
+            msg=${snap#*| }
+            echo "[$i] aggregate=$agg embed=$embed — $msg"
+            case "$embed" in
               ready)
-                echo "✅ models loaded on amd64 — no SIGILL"
+                echo "✅ embedding model resident on amd64 — no SIGILL"
                 # Read PID 1's real uid, NOT `docker exec id -u` — exec starts a
                 # new process as the image's configured user (root here), so it
                 # reports 0 no matter what the server dropped to.
@@ -137,8 +167,13 @@ jobs:
                 fi
                 echo "✅ healthcheck reports healthy"
                 docker rm -f kothai; exit 0 ;;
-              error) echo "::error::model load failed: $msg"; docker logs kothai | tail -40; docker rm -f kothai; exit 1 ;;
+              error) echo "::error::embedding model failed to load: $msg"; docker logs kothai | tail -40; docker rm -f kothai; exit 1 ;;
             esac
+            # An `always` role that errors also surfaces on the aggregate; fail
+            # fast on it rather than waiting out the remaining polls.
+            if [ "$agg" = "error" ]; then
+              echo "::error::aggregate reports error: $msg"; docker logs kothai | tail -40; docker rm -f kothai; exit 1
+            fi
             sleep 5
           done
           echo "::error::timed out before models reached ready"; docker logs kothai | tail -40
@@ -170,6 +205,9 @@ jobs:
   build-lite:
     needs: test
     runs-on: ubuntu-latest
+    # No native deps and no weights to fetch, so this is far cheaper than the
+    # full build and a much tighter ceiling is still generous.
+    timeout-minutes: 25
     permissions:
       contents: read
       packages: write
