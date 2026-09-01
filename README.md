@@ -59,7 +59,7 @@ when you're trying to find something which is the problem this is built around.
 hardware, asks three questions, and starts everything:
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/IbrahimTareq/kothai/main/scripts/init.mjs && node init.mjs
+curl -fsSL https://github.com/IbrahimTareq/kothai/archive/refs/heads/main.tar.gz | tar xz --strip=1 kothai-main/scripts && node scripts/init.mjs
 ```
 
 Prefer to do it by hand? The compose file below is what the wizard would write:

@@ -21,7 +21,7 @@ including the models — runs on your own hardware.
 The wizard checks your hardware, asks three questions, and starts everything:
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/IbrahimTareq/kothai/main/scripts/init.mjs && node init.mjs
+curl -fsSL https://github.com/IbrahimTareq/kothai/archive/refs/heads/main.tar.gz | tar xz --strip=1 kothai-main/scripts && node scripts/init.mjs
 ```
 
 It picks the right image for your machine — including telling you *before* any
