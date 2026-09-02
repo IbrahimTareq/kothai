@@ -415,14 +415,18 @@ async function runImport(req, res) {
       // one still sees whatever the first one just added — no double-write.
       const known = new Set(space.itemIds || [])
       const removedHere = new Set(space.removedIds || [])
-      let changed = false
+      const toAdd = []
       for (const id of members) {
         if (known.has(id) || removedHere.has(id)) continue
-        await collections.addItem(space.id, id)
-        known.add(id)
-        changed = true
+        toAdd.push(id)
+        known.add(id) // keep the local view current: two IG names can resolve to the same Space within one run
       }
-      if (changed) touchedSpaceIds.add(space.id)
+      // One row write for the whole Space instead of one per membership —
+      // see collections.addItems for what that was costing.
+      if (toAdd.length) {
+        await collections.addItems(space.id, toAdd)
+        touchedSpaceIds.add(space.id)
+      }
     }
     touchedCollections = touchedSpaceIds.size
   }

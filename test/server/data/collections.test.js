@@ -144,3 +144,42 @@ test('create() with a backfilled smart rule returns covers directly, not just co
   assert.equal(c.covers.length, 2)
   assert.deepEqual(new Set(c.covers.map((n) => n.id)), new Set([n1.id, n2.id]))
 })
+
+// --- addItems: the batched form used by bulk import ------------------------
+
+test('addItems: same semantics as addItem in a loop — dedup, order, removedIds cleared', async () => {
+  collections._reset()
+  const batched = await collections.create({ name: 'Batched' })
+  await collections.addItems(batched.id, ['n1', 'n2', 'n3'])
+
+  const looped = await collections.create({ name: 'Looped' })
+  for (const id of ['n1', 'n2', 'n3']) await collections.addItem(looped.id, id)
+
+  assert.deepEqual(collections.get(batched.id).itemIds, collections.get(looped.id).itemIds)
+  assert.deepEqual(collections.get(batched.id).itemIds, ['n3', 'n2', 'n1']) // newest-first, as unshift gives
+})
+
+test('addItems: an id already present is not duplicated, and a hand-removed id is un-removed', async () => {
+  collections._reset()
+  const c = await collections.create({ name: 'Reads' })
+  await collections.addItems(c.id, ['n1', 'n2'])
+  await collections.removeItem(c.id, 'n1')
+  assert.deepEqual(collections.get(c.id).removedIds, ['n1'])
+
+  await collections.addItems(c.id, ['n1', 'n2', 'n2'])
+  const got = collections.get(c.id)
+  assert.deepEqual(got.itemIds.slice().sort(), ['n1', 'n2'], 'no duplicates from a repeated id')
+  assert.deepEqual(got.removedIds, [], 'attach() clears removedIds, same as addItem')
+})
+
+test('addItems: an unknown collection id returns null rather than throwing', async () => {
+  collections._reset()
+  assert.equal(await collections.addItems('nope', ['n1']), null)
+})
+
+test('addItems: an empty batch is a no-op', async () => {
+  collections._reset()
+  const c = await collections.create({ name: 'Reads' })
+  await collections.addItems(c.id, [])
+  assert.deepEqual(collections.get(c.id).itemIds, [])
+})

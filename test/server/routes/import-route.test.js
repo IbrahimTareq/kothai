@@ -80,6 +80,28 @@ async function fakeAddItem(id, itemId) {
   s.removedIds = s.removedIds.filter((x) => x !== itemId)
   return { ...s }
 }
+// Mirrors the real addItems(): identical attach() semantics per id, ONE row
+// write for the batch. addItemCalls still records one entry per membership, so
+// the "no write-per-membership storm" assertions keep measuring what they were
+// written to measure — that a redundant membership costs nothing at all.
+// rowWrites counts the actual persistence calls, which is the thing batching
+// changed: a fake that collapsed both into one counter would hide a regression
+// back to per-membership writes.
+let rowWrites
+async function fakeAddItems(id, itemIds) {
+  const s = spaces.find((x) => x.id === id)
+  if (!s) return null
+  let changed = false
+  for (const itemId of itemIds) {
+    addItemCalls.push({ id, itemId })
+    const before = s.itemIds.length + s.removedIds.length
+    if (!s.itemIds.includes(itemId)) s.itemIds.unshift(itemId)
+    s.removedIds = s.removedIds.filter((x) => x !== itemId)
+    if (s.itemIds.length + s.removedIds.length !== before) changed = true
+  }
+  if (changed) rowWrites++
+  return { ...s }
+}
 
 // ---- fake enrich queue ---------------------------------------------------
 let queueEnrichCalls
@@ -99,6 +121,7 @@ function reset() {
   addNoteCalls = []
   removeManyCalls = []
   addItemCalls = []
+  rowWrites = 0
   queueEnrichCalls = []
   importerOverride = null
 }
@@ -124,6 +147,7 @@ mock.module('../../../server/data/collections.js', {
     all: () => fakeSpacesAll(),
     create: (input) => fakeCreateSpace(input),
     addItem: (id, itemId) => fakeAddItem(id, itemId),
+    addItems: (id, itemIds) => fakeAddItems(id, itemIds),
   },
 })
 mock.module('../../../server/ai/enrich.js', {
@@ -1030,4 +1054,50 @@ test('tiktok: an Instagram export dropped on the TikTok source is refused by nam
   assert.equal(res.body.code, 'import_source_mismatch')
   assert.match(res.body.error, /TikTok/)
   assert.equal(notes.length, 0)
+})
+
+test('bulk: filing many memberships into one Space costs ONE row write, not one per member', async () => {
+  reset()
+  // 50 posts, all in the same IG collection — the shape that used to cost 50
+  // separate updateRow calls (each re-serialising a growing itemIds blob) plus
+  // 50 full copies of the note store via withCovers().
+  const rows = Array.from({ length: 50 }, (_, i) => post('natgeo', `CODE${i}`))
+  const hrefs = rows.map((_, i) => ({ href: `https://www.instagram.com/p/CODE${i}/` }))
+  const res = fakeRes()
+  await handleImport(fakeReq({
+    source: 'instagram',
+    files: [
+      { name: 'saved_posts.json', data: b64(savedPostsPayload(rows)) },
+      { name: 'saved_collections.json', data: b64({ saved_saved_collections: [{ title: 'Recipes', list: hrefs }] }) },
+    ],
+  }), res)
+
+  assert.equal(res.body.imported, 50)
+  assert.equal(res.body.collections, 1)
+  assert.equal(addItemCalls.length, 50, 'all 50 memberships were filed')
+  assert.equal(rowWrites, 1, 'but persisted in a single write')
+  assert.equal(spaces.find((s) => s.name === 'Recipes').itemIds.length, 50)
+})
+
+test('bulk: a no-op re-import writes the Space row zero times', async () => {
+  reset()
+  const rows = Array.from({ length: 10 }, (_, i) => post('natgeo', `CODE${i}`))
+  const hrefs = rows.map((_, i) => ({ href: `https://www.instagram.com/p/CODE${i}/` }))
+  const payload = {
+    source: 'instagram',
+    files: [
+      { name: 'saved_posts.json', data: b64(savedPostsPayload(rows)) },
+      { name: 'saved_collections.json', data: b64({ saved_saved_collections: [{ title: 'Recipes', list: hrefs }] }) },
+    ],
+  }
+  await handleImport(fakeReq(payload), fakeRes())
+  assert.equal(rowWrites, 1)
+
+  rowWrites = 0
+  addItemCalls = []
+  const again = fakeRes()
+  await handleImport(fakeReq(payload), again)
+  assert.equal(again.body.skipped, 10)
+  assert.equal(addItemCalls.length, 0, 'nothing to file')
+  assert.equal(rowWrites, 0, 'and so nothing written')
 })
