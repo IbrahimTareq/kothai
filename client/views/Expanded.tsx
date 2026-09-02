@@ -9,6 +9,7 @@ import { Carousel } from '../components/Carousel'
 import { relTime, imgGradient } from '../util/format'
 import { isMediaFirst, sourceGlyph, sourceLabel, githubParts } from '../domain/source'
 import { lockAxis, shouldDismiss, navDirection, type Axis } from '../layout/swipe'
+import { scrollEdges, edgeClassY } from '../layout/overflow'
 import type { Collection, UIItem } from '../types'
 
 function openUrl(url?: string | null) {
@@ -198,6 +199,34 @@ export function ExpandedView({ item, onClose, onDelete, onUpdate, onRetag, colle
   // whole overlay on every pixel of movement for no one's benefit.
   const gesture = useRef<{ axis: Axis; startX: number; startY: number } | null>(null)
 
+  // The main panel is the one place in this view that's often taller than
+  // its box — an article's hero/headline/standfirst stack is the clearest
+  // case, but a long code block or Reddit post do it too. .exp-main already
+  // scrolls (overflow:auto); this is only the affordance that says so. Same
+  // fade-mask module and the same reasoning as the Everything filter bar and
+  // a space's rule strip: a box that scrolls with no sign of it reads as
+  // content that's simply missing, not as more to reveal.
+  const mainRef = useRef<HTMLDivElement>(null)
+  const [mainEdges, setMainEdges] = useState({ left: false, right: false })
+  useEffect(() => {
+    const el = mainRef.current
+    if (!el) return
+    // A swipe to the neighbouring item swaps MainPanel's content but leaves
+    // this same scrollable div in place, so without this its old scroll
+    // position would carry over onto content it was never scrolled against —
+    // the new item could open already "scrolled" partway down.
+    el.scrollTop = 0
+    const read = () => setMainEdges(scrollEdges(el.scrollTop, el.scrollHeight, el.clientHeight))
+    read()
+    el.addEventListener('scroll', read, { passive: true })
+    // Catches content that changes height after mount without a scroll event
+    // of its own — most commonly an image finishing its load and growing the
+    // article stage taller than it measured at first paint.
+    const ro = new ResizeObserver(read)
+    ro.observe(el)
+    return () => { el.removeEventListener('scroll', read); ro.disconnect() }
+  }, [item.id])
+
   const inSpaces = collections.filter((c) => c.itemIds.includes(item.id))
   const openSpaces = collections.filter((c) => !c.itemIds.includes(item.id))
 
@@ -317,7 +346,7 @@ export function ExpandedView({ item, onClose, onDelete, onUpdate, onRetag, colle
         {/* The gesture area. Pointer handlers live here (not on .exp-shell or
             .exp-overlay) so .exp-side's own vertical scroll — the tags/notes/
             spaces form — is never in competition with them. */}
-        <div className="exp-main"
+        <div className={'exp-main' + edgeClassY(mainEdges)} ref={mainRef}
           onPointerDown={onGestureStart}
           onPointerMove={onGestureMove}
           onPointerUp={onGestureEnd}

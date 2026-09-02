@@ -1,7 +1,7 @@
 // Unit tests for the scroll-edge maths behind the filter bar's fade hints.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { scrollEdges, edgeClass } from '../../client/layout/overflow.ts'
+import { scrollEdges, edgeClass, edgeClassY } from '../../client/layout/overflow.ts'
 
 test('a strip that fits gets no hint on either side', () => {
   assert.deepEqual(scrollEdges(0, 347, 347), { left: false, right: false })
@@ -34,4 +34,11 @@ test('edgeClass maps the edges onto the stylesheet hooks', () => {
   assert.equal(edgeClass({ left: false, right: true }), ' fade-r')
   assert.equal(edgeClass({ left: true, right: false }), ' fade-l')
   assert.equal(edgeClass({ left: true, right: true }), ' fade-l fade-r')
+})
+
+test('edgeClassY maps the same edges onto the vertical stylesheet hooks', () => {
+  assert.equal(edgeClassY({ left: false, right: false }), '')
+  assert.equal(edgeClassY({ left: false, right: true }), ' fade-b')
+  assert.equal(edgeClassY({ left: true, right: false }), ' fade-t')
+  assert.equal(edgeClassY({ left: true, right: true }), ' fade-t fade-b')
 })

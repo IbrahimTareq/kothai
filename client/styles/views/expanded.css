@@ -19,6 +19,20 @@
 .exp-close-m{display:none}
 .exp-main{flex:1;position:relative;display:flex;align-items:center;justify-content:center;
   overflow:auto;padding:var(--space-24);background:var(--panel-2)}
+/* Scroll affordance for whichever edge still has content past it — same
+   alpha-ramp mask as the Everything filter bar and a space's rule strip
+   (see layout/overflow.ts's edgeClassY), read top-to-bottom instead of
+   side-to-side. Mask stops are alpha, not colour, so these follow no theme
+   and need no token. */
+.exp-main.fade-b{
+  -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - var(--space-40)),transparent);  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
+  mask-image:linear-gradient(to bottom,#000 calc(100% - var(--space-40)),transparent)}  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
+.exp-main.fade-t{
+  -webkit-mask-image:linear-gradient(to top,#000 calc(100% - var(--space-40)),transparent);  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
+  mask-image:linear-gradient(to top,#000 calc(100% - var(--space-40)),transparent)}  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
+.exp-main.fade-t.fade-b{
+  -webkit-mask-image:linear-gradient(to bottom,transparent,#000 var(--space-40),#000 calc(100% - var(--space-40)),transparent);  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
+  mask-image:linear-gradient(to bottom,transparent,#000 var(--space-40),#000 calc(100% - var(--space-40)),transparent)}  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
 
 /* structured card (github / generic web fallback) */
 .exp-card{width:min(460px,100%);display:flex;flex-direction:column;gap:var(--space-22);

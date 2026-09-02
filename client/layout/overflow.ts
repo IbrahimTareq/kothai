@@ -25,3 +25,14 @@ export function scrollEdges(scrollLeft: number, scrollWidth: number, clientWidth
 export function edgeClass({ left, right }: Edges): string {
   return (left ? ' fade-l' : '') + (right ? ' fade-r' : '')
 }
+
+// Same edges, read along the vertical axis instead — e.g. the expanded item
+// view's main panel, which scrolls top-to-bottom rather than side-to-side.
+// scrollEdges itself doesn't care which axis its three numbers came from
+// (scrollTop/scrollHeight/clientHeight work exactly like scrollLeft/
+// scrollWidth/clientWidth), so callers reuse it directly and only need a
+// different name for the class it produces: `left` is "more above",
+// `right` is "more below".
+export function edgeClassY({ left, right }: Edges): string {
+  return (left ? ' fade-t' : '') + (right ? ' fade-b' : '')
+}
