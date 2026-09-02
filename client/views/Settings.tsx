@@ -343,11 +343,12 @@ export function SettingsView({ vault, theme, setTheme }: {
               </div>
             </SettingsGroup>
 
-            {/* Lives here rather than in the chrome because on phones the top
-                of every screen is now given back to content — see the tab bar
-                in foundation/responsive.css. The desktop rail keeps its own
-                theme button; both read the same state, so they stay in step. */}
-            <SettingsGroup label="APPEARANCE">
+            {/* Phone-only, and hidden above --bp-md by settings.css: this
+                exists because the phone tab bar has no room for a theme
+                switch and the topbar it used to sit in was given back to
+                content. The desktop rail still carries its own button, so
+                showing this there would be two controls for one setting. */}
+            <SettingsGroup label="APPEARANCE" className="settings-appearance">
               <div className="settings-rows">
                 <SettingsRow title="Theme"
                   desc={<>Light or dark. Remembered on this device, not in your vault, so each device you open Kothai on keeps its own.</>}

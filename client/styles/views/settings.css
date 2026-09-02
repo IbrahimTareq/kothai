@@ -166,6 +166,12 @@
 .import-pick { position: relative; }
 .import-pick[aria-disabled="true"] { cursor: wait; opacity: .6; }
 .import-pick input[type="file"] { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+/* The theme switch is a phone affordance only — above the tab-bar breakpoint
+   the rail carries its own, and two controls for one setting is one too many.
+   Paired with --bp-md in tokens.css; custom properties cannot be read inside a
+   media condition, so the width is written out. */
+@media (min-width: 641px) { .settings-appearance { display: none; } }
+
 /* Narrow screens: the control drops under the text rather than squeezing it,
    and fills the row it now has to itself. */
 @media (max-width: 560px) {

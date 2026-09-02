@@ -5,9 +5,11 @@ import type { HTMLAttributes, ReactNode } from 'react'
 
 // Reusable settings block: a mono label + optional sub-line, hosting any content.
 // Drop a new <SettingsGroup label="…">…</SettingsGroup> to add a section.
-export function SettingsGroup({ label, sub, children }: { label: string; sub?: ReactNode; children: ReactNode }) {
+export function SettingsGroup({ label, sub, className, children }: {
+  label: string; sub?: ReactNode; className?: string; children: ReactNode
+}) {
   return (
-    <section className="settings-group">
+    <section className={'settings-group' + (className ? ' ' + className : '')}>
       <div className="recent-h">{label}</div>
       {sub && <div className="settings-group-sub">{sub}</div>}
       {children}
