@@ -4,6 +4,7 @@ import { PASSWORD } from './config.js'
 import { authGate } from './routes/auth.js'
 import { handleSave, handleNotes, handleNotesDelta, handleGetNote, handleNoteSlides, handleUpdateNote, handleDeleteNote, handleRetagNote } from './routes/notes.js'
 import { handleImport } from './routes/import.js'
+import { handleAvailabilityScan, handleAvailabilityRemove } from './routes/availability.js'
 import { handleExport } from './routes/export.js'
 import { handleBackup } from './routes/backup.js'
 import { handleCheckpoint } from './routes/checkpoint.js'
@@ -58,6 +59,8 @@ async function handleRequest(req, res) {
     if (req.method === 'GET' && p === '/api/backup') return await handleBackup(req, res)
     if (req.method === 'POST' && p === '/api/checkpoint') return await handleCheckpoint(res)
     if (req.method === 'POST' && p === '/api/wipe') return await handleWipe(req, res)
+    if (req.method === 'POST' && p === '/api/availability/scan') return await handleAvailabilityScan(req, res)
+    if (req.method === 'POST' && p === '/api/availability/remove') return await handleAvailabilityRemove(req, res)
     if (req.method === 'GET' && p === '/api/enrich/backlog') return handleBacklog(res)
     if (req.method === 'POST' && p === '/api/enrich/backlog') return handleEnrichBacklog(res)
     if (req.method === 'POST' && p === '/api/enrich/prioritize') return await handlePrioritize(req, res)

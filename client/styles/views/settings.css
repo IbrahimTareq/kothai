@@ -323,3 +323,8 @@
 .retag-go:disabled { background: none; color: var(--ink-faint); border-color: var(--line); cursor: default; }
 /* Layout is shared with .danger-confirm; only the accent differs. */
 .danger-confirm.retag-confirm { border-color: var(--line); }
+
+/* The remove button sits under the scan result rather than in the row's action
+   slot: it only exists once a scan has found something, and it is destructive,
+   so it belongs with the count that justifies it. */
+.avail-actions{margin-top:var(--space-10)}

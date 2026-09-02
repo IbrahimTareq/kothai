@@ -25,6 +25,7 @@ export interface ServerNote {
   mindNote?: string
   pending?: boolean
   metaFetched?: boolean
+  unavailable?: boolean
   siteTitle?: string | null
   siteDesc?: string | null
   siteName?: string | null
@@ -52,6 +53,9 @@ export interface UIItem {
    *  pending — so this is what separates "content is on its way" from "this
    *  is all the content there will be". See isAwaitingContent in Cards.tsx. */
   metaFetched?: boolean
+  /** The link was checked and its content is gone. A reversible mark, never a
+   *  deletion — see server/routes/availability.js. */
+  unavailable?: boolean
   url?: string | null
   host?: string
   title?: string

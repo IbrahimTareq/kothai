@@ -14,6 +14,7 @@ import { Icon } from '../components/icons'
 import { RoleAccordion, RemoteModelField, ROLE_META, fmtGB, type Role } from '../components/ModelPicker'
 import { SettingsGroup, SettingsRow } from '../components/SettingsRow'
 import { ImportSection } from '../components/ImportSection'
+import { AvailabilityRow } from '../components/AvailabilityRow'
 import { API } from '../data/api'
 import type { Residency, SettingsResponse, VaultStatus } from '../types'
 
@@ -264,6 +265,8 @@ export function SettingsView({ vault, theme, setTheme }: {
                 <SettingsRow title="Backup"
                   desc={<>A snapshot of the database itself, exactly as stored, safe to download while Kothai is running. Images you pasted or dropped live outside the database, so keep a copy of <code>data/uploads</code> alongside it.</>}
                   action={<a className="row-btn" href="/api/backup" download>Download backup</a>} />
+
+                <AvailabilityRow />
 
                 <SettingsRow title="Re-tag everything"
                   desc={<>Re-run the language model over every saved note, so titles, summaries and tags are rebuilt from everything a note carries now. Worth doing after a big import or after switching language models. Tags you've edited by hand are kept, and it runs in the background.</>}

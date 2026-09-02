@@ -52,7 +52,15 @@ export async function get(url, accept) {
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     headers: { 'User-Agent': UA, Accept: accept },
   })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  if (!res.ok) {
+    // The status rides on the error, not only in the message: availability
+    // checking has to tell a definite "this is gone" (400/404/410) from a
+    // "try later" (429/5xx), and parsing that back out of a string would
+    // break the moment this message is reworded.
+    const err = new Error(`HTTP ${res.status}`)
+    err.status = res.status
+    throw err
+  }
   return res
 }
 
