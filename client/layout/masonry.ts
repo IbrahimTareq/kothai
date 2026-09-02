@@ -19,14 +19,43 @@ export const OVERSCAN = 800
 
 export interface Box { id: string; col: number; top: number; height: number }
 
-// Mirrors the column rules in styles/foundation/responsive.css. Kept in sync by the
-// tests in test/masonry-window.test.ts — this is the one place the CSS
-// breakpoints are duplicated, and the layout is wrong if they drift.
+// Gutter between cards, both axes. Lives here rather than in Board.tsx because
+// columnCount needs it to know how many columns actually fit.
+export const GAP = 14
+
+// Narrowest a card may get before it stops being worth looking at. grid8 IS a
+// request for dense cards, so it earns a tighter floor than the other two.
+//
+// These are chosen to sit clear of a threshold, not merely to be round. The
+// board is narrower than (viewport - rail - gutters) by whatever the
+// scroller's scrollbar takes — 0 with macOS overlay scrollbars, ~9-17px
+// everywhere else — so a value on a boundary makes the column count depend on
+// the platform. At 160, grid4 on a 641px window fell either side of the
+// 3-column threshold; at 130, grid8 on a 1280px window fell either side of 8.
+// Both clear their nearest threshold with room on each side now.
+const MIN_COL: Record<ViewMode, number> = { grid4: 150, grid6: 150, grid8: 125 }
+
+// Columns for a board `width` px wide — the width of the BOARD element, which
+// is what the caller in Board.tsx measures and passes.
+//
+// This used to read `if (width <= 640) return 2`, documented as mirroring the
+// `@media (max-width:640px)` rule in foundation/responsive.css. It did not:
+// that rule keys off the VIEWPORT, while the argument is the board, which is
+// the viewport minus the rail and the page gutters — about 130px less. So the
+// "phone" branch really fired up to a 770px viewport, and an iPad in portrait
+// got a two-column board of 315px cards next to the desktop sidebar. It then
+// jumped straight to four columns at 771px, with no three-column step
+// anywhere in the app.
+//
+// The fix is to stop mirroring a viewport breakpoint at all. Board width is
+// the honest quantity — it is the room the cards actually have — so ask how
+// many columns fit at this density's minimum and let the count fall out of
+// that. `base` still caps it, so a density choice is never exceeded, and the
+// floor of 2 keeps a phone from ever collapsing to a single column.
 export function columnCount(width: number, view: ViewMode): number {
   const base = view === 'grid8' ? 8 : view === 'grid6' ? 6 : 4
-  if (width <= 640) return 2               // phone: pinned to two columns
-  if (width <= 900) return Math.min(base, view === 'grid8' ? 5 : 4) // tablet: thin the dense grids
-  return Math.max(1, base)
+  const fits = Math.floor((width + GAP) / (MIN_COL[view] + GAP))
+  return Math.max(2, Math.min(base, fits))
 }
 
 // Width of one column, clamped. An unmeasured board (width 0, before the

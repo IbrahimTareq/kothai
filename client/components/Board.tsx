@@ -3,11 +3,9 @@
 // other way gets no layout at all (see test/board-layout.test.ts).
 import { useLayoutEffect, useRef, useState, useEffect, useMemo } from 'react'
 import type { UIItem, ViewMode } from '../types'
-import { columnCount, packColumns, visibleBoxes, columnWidth, clampScrollTop, HeightBook } from '../layout/masonry'
+import { columnCount, packColumns, visibleBoxes, columnWidth, clampScrollTop, HeightBook, GAP } from '../layout/masonry'
 import { isPlaceholder } from '../data/pager'
 import type { Slot } from '../data/pager'
-
-const GAP = 14
 
 // Windowed masonry board.
 //

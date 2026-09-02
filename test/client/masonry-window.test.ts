@@ -6,28 +6,116 @@
 // number of mounted cards stays constant no matter how large the library is.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { columnCount, packColumns, visibleBoxes, columnWidth, clampScrollTop, HeightBook, OVERSCAN } from '../../client/layout/masonry.ts'
+import { columnCount, packColumns, visibleBoxes, columnWidth, clampScrollTop, HeightBook, OVERSCAN, GAP } from '../../client/layout/masonry.ts'
 
-// --- columnCount: mirrors the CSS breakpoints in styles/foundation/responsive.css ---
+// --- columnCount ---------------------------------------------------------
+//
+// columnCount takes the BOARD's width, not the viewport's. Every test below
+// goes through boardWidth() rather than passing a bare number, because
+// conflating the two is the bug these tests exist to prevent: the function
+// used to branch on `width <= 640` while claiming to mirror the
+// `@media (max-width:640px)` rule in foundation/responsive.css. The board is
+// ~130px narrower than the viewport, so that branch really fired up to a
+// 770px viewport and an iPad in portrait got a phone's two-column board.
 
-test('columnCount matches the stylesheet at desktop width', () => {
-  assert.equal(columnCount(1400, 'grid4'), 4)
-  assert.equal(columnCount(1400, 'grid6'), 6)
-  assert.equal(columnCount(1400, 'grid8'), 8)
+// Viewport width -> board width, mirroring the chrome around .board:
+// above the phone breakpoint the rail (--rail) and .gal-scroll's --space-28
+// gutters eat into it; below it there is no rail and the gutters are
+// --space-14. Update this when either of those changes.
+//
+// `scrollbar` is the width .gal-scroll's own scrollbar takes out of
+// clientWidth: 0 with macOS overlay scrollbars, ~9-17px everywhere else.
+// Every assertion below runs across that whole band, because a column count
+// that flips depending on the platform's scrollbar is a bug — that is how a
+// 641px window measured 502px in the browser while the arithmetic said 511.
+const RAIL = 74
+const SCROLLBARS = [0, 9, 17]
+const boardWidth = (viewport: number, scrollbar = 0) =>
+  (viewport <= 640 ? viewport - 14 * 2 : viewport - RAIL - 28 * 2) - scrollbar
+
+// Every column count this viewport can produce across the scrollbar band.
+const countsAt = (viewport: number, view: 'grid4' | 'grid6' | 'grid8') =>
+  SCROLLBARS.map((sb) => columnCount(boardWidth(viewport, sb), view))
+
+// The width one card actually gets, for the assertions about legibility.
+const cardWidth = (viewport: number, view: 'grid4' | 'grid6' | 'grid8') => {
+  const b = boardWidth(viewport)
+  return columnWidth(b, columnCount(b, view), GAP)
+}
+
+const VIEWS = ['grid4', 'grid6', 'grid8'] as const
+
+test('columnCount honours the chosen density at desktop widths', () => {
+  for (const viewport of [1280, 1440, 1920]) {
+    assert.deepEqual(countsAt(viewport, 'grid4'), [4, 4, 4], `grid4 @ ${viewport}`)
+    assert.deepEqual(countsAt(viewport, 'grid6'), [6, 6, 6], `grid6 @ ${viewport}`)
+    assert.deepEqual(countsAt(viewport, 'grid8'), [8, 8, 8], `grid8 @ ${viewport}`)
+  }
 })
 
-test('columnCount thins the densest grids on tablet (<=900px)', () => {
-  assert.equal(columnCount(900, 'grid8'), 5)
-  assert.equal(columnCount(900, 'grid6'), 4)
-  assert.equal(columnCount(900, 'grid4'), 4, 'grid4 is untouched at this breakpoint')
+test('columnCount gives every grid two columns on a phone', () => {
+  for (const viewport of [320, 375, 414]) {
+    for (const v of VIEWS) assert.deepEqual(countsAt(viewport, v), [2, 2, 2], `${v} @ ${viewport}`)
+  }
 })
 
-test('columnCount pins every grid to two columns on phones (<=640px)', () => {
-  for (const v of ['grid4', 'grid6', 'grid8'] as const) assert.equal(columnCount(640, v), 2)
+// The regression this rewrite exists for. At these viewports the old function
+// returned 2 — a phone board (315px cards at 768) sitting next to the desktop
+// sidebar, because it was comparing a board width against a viewport
+// breakpoint.
+test('columnCount does not put a phone board on a tablet', () => {
+  for (const viewport of [641, 700, 744, 768]) {
+    for (const v of VIEWS) {
+      for (const n of countsAt(viewport, v)) {
+        assert.ok(n >= 3, `${v} @ ${viewport} got ${n} columns, expected 3+`)
+      }
+    }
+  }
 })
 
-test('columnCount never returns less than one column, even at absurd widths', () => {
-  assert.ok(columnCount(0, 'grid8') >= 1)
+// The counts this file pins — phones at 2, tablets at 3+, desktop at the
+// chosen density — are asserted across the whole scrollbar band above, so
+// none of them can be decided by the platform. Between those, some viewport
+// will always sit on a threshold (the function is continuous), so the general
+// invariant is only that a scrollbar never causes a CLIFF: 17px of chrome may
+// cost a column, never two.
+test('a scrollbar never moves the column count by more than one', () => {
+  for (let viewport = 320; viewport <= 1920; viewport++) {
+    for (const v of VIEWS) {
+      const counts = countsAt(viewport, v)
+      assert.ok(Math.max(...counts) - Math.min(...counts) <= 1,
+        `${v} @ ${viewport} gave ${counts.join('/')} across scrollbar widths ${SCROLLBARS.join('/')}`)
+    }
+  }
+})
+
+test('columnCount never leaves a card narrower than its density allows', () => {
+  // grid8 opts into dense cards; grid4 should stay comfortable everywhere.
+  for (const viewport of [320, 375, 414, 540, 640, 641, 700, 768, 820, 900, 1024, 1280, 1920]) {
+    assert.ok(cardWidth(viewport, 'grid4') >= 130, `grid4 @ ${viewport} -> ${cardWidth(viewport, 'grid4')}px`)
+    assert.ok(cardWidth(viewport, 'grid8') >= 125, `grid8 @ ${viewport} -> ${cardWidth(viewport, 'grid8')}px`)
+  }
+})
+
+test('columnCount steps by one, so no width doubles the column count', () => {
+  for (const v of VIEWS) {
+    let prev = columnCount(boardWidth(320), v)
+    for (let viewport = 321; viewport <= 1920; viewport++) {
+      const next = columnCount(boardWidth(viewport), v)
+      // The board itself jumps ~100px narrower at 641 when the rail appears,
+      // so only compare where the chrome is continuous.
+      if (viewport !== 641) {
+        assert.ok(Math.abs(next - prev) <= 1,
+          `${v} jumped ${prev} -> ${next} at viewport ${viewport}`)
+      }
+      prev = next
+    }
+  }
+})
+
+test('columnCount never returns less than two columns, even at absurd widths', () => {
+  assert.equal(columnCount(0, 'grid8'), 2)
+  assert.equal(columnCount(-500, 'grid4'), 2)
 })
 
 // --- packColumns: shortest-column masonry packing, no DOM ---------------
