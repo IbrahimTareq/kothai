@@ -8,9 +8,26 @@
 .gal-controls{display:flex;align-items:center;justify-content:space-between;gap:var(--space-16);padding:var(--space-14) var(--space-28) var(--space-6)}
 .gal-filters-spacer{flex:1}
 
-/* Everything-page filter bar: single-select type + source pills */
+/* Everything-page filter bar: single-select type + source pills.
+   The strip scrolls sideways — eleven chips measure ~1360px against a ~350px
+   phone — and the scrollbar is hidden, so the only thing that said so was a
+   chip clipped mid-word at the edge. That reads as a layout bug, not as an
+   invitation to swipe. Whichever edge still has chips beyond it is faded
+   instead; Gallery.tsx owns WHEN (see layout/overflow.ts), this owns what it
+   looks like. */
 .gal-filters{display:flex;align-items:center;gap:var(--space-8);flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
 .gal-filters::-webkit-scrollbar{display:none}
+/* Mask stops are alpha, not colour — the black end is "keep", the transparent
+   end is "fade out" — so these follow no theme and need no token. */
+.gal-filters.fade-r{
+  -webkit-mask-image:linear-gradient(to right,#000 calc(100% - var(--space-32)),transparent);  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
+  mask-image:linear-gradient(to right,#000 calc(100% - var(--space-32)),transparent)}  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
+.gal-filters.fade-l{
+  -webkit-mask-image:linear-gradient(to left,#000 calc(100% - var(--space-32)),transparent);  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
+  mask-image:linear-gradient(to left,#000 calc(100% - var(--space-32)),transparent)}  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
+.gal-filters.fade-l.fade-r{
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 var(--space-32),#000 calc(100% - var(--space-32)),transparent);  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
+  mask-image:linear-gradient(to right,transparent,#000 var(--space-32),#000 calc(100% - var(--space-32)),transparent)}  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
 .fc-count{font-family:var(--font-mono);font-size:var(--text-2xs);color:var(--ink-faint)}
 .filter-chip:hover .fc-count{color:var(--ink-mute)}
 .filter-chip.on .fc-count{color:var(--on-accent);opacity:.55}

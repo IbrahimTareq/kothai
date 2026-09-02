@@ -17,7 +17,11 @@ import { ImportSection } from '../components/ImportSection'
 import { API } from '../data/api'
 import type { Residency, SettingsResponse, VaultStatus } from '../types'
 
-export function SettingsView({ vault }: { vault: VaultStatus }) {
+export function SettingsView({ vault, theme, setTheme }: {
+  vault: VaultStatus
+  theme: 'dark' | 'light'
+  setTheme: (t: 'dark' | 'light') => void
+}) {
   const [cfg, setCfg] = useState<SettingsResponse | null>(null)
   const [busyRole, setBusyRole] = useState<Role | null>(null)
   const [pendingRole, setPendingRole] = useState<Role | null>(null) // role currently downloading
@@ -336,6 +340,25 @@ export function SettingsView({ vault }: { vault: VaultStatus }) {
                     </div>
                   )}
                 </SettingsRow>
+              </div>
+            </SettingsGroup>
+
+            {/* Lives here rather than in the chrome because on phones the top
+                of every screen is now given back to content — see the tab bar
+                in foundation/responsive.css. The desktop rail keeps its own
+                theme button; both read the same state, so they stay in step. */}
+            <SettingsGroup label="APPEARANCE">
+              <div className="settings-rows">
+                <SettingsRow title="Theme"
+                  desc={<>Light or dark. Remembered on this device, not in your vault, so each device you open Kothai on keeps its own.</>}
+                  action={
+                    <div className="seg" role="group" aria-label="Theme">
+                      <button className={'seg-btn' + (theme === 'light' ? ' on' : '')}
+                        aria-pressed={theme === 'light'} onClick={() => setTheme('light')}>Light</button>
+                      <button className={'seg-btn' + (theme === 'dark' ? ' on' : '')}
+                        aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')}>Dark</button>
+                    </div>
+                  } />
               </div>
             </SettingsGroup>
           </div>}

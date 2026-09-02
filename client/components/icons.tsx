@@ -1,4 +1,12 @@
 // Icon set (minimal line glyphs) + the category registry.
+//
+// Four glyphs are Lucide's (https://lucide.dev, ISC): layout-dashboard,
+// message-square-text, playing-cards-fan and plus. Their path data is inlined
+// rather than pulled from lucide-react so the whole set stays one <Icon
+// name="…"> component with no second icon system beside it — Lucide's own SVG
+// attributes (24x24, no fill, currentColor stroke, round caps and joins) are
+// already exactly what `p` below sets, so they drop straight in and take the
+// app's lighter default stroke weight.
 import type { ReactElement, SVGProps } from 'react'
 import type { Category, UIType } from '../types'
 
@@ -21,7 +29,8 @@ export function Icon({ name, size = 18, stroke = 1.6 }: IconProps): ReactElement
   }
   switch (name) {
     case 'core': return (<svg {...p}><circle cx="12" cy="12" r="7" /><path d="M12 5a7 9 0 0 0 0 14M12 5a7 9 0 0 1 0 14M5 12h14" /></svg>)
-    case 'all': return (<svg {...p}><circle cx="6" cy="6" r="2.4" /><circle cx="18" cy="6" r="2.4" /><circle cx="6" cy="18" r="2.4" /><circle cx="18" cy="18" r="2.4" /></svg>)
+    // lucide: layout-dashboard
+    case 'all': return (<svg {...p}><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>)
     case 'link': return (<svg {...p}><path d="M9.5 14.5l5-5" /><path d="M8 11l-2 2a3.5 3.5 0 0 0 5 5l2-2" /><path d="M16 13l2-2a3.5 3.5 0 0 0-5-5l-2 2" /></svg>)
     case 'image': return (<svg {...p}><rect x="3.5" y="4.5" width="17" height="15" rx="2" /><circle cx="9" cy="10" r="1.6" /><path d="M5 18l4.5-4.5 3 3L17 12l3 3" /></svg>)
     case 'video': return (<svg {...p}><rect x="3.5" y="5.5" width="17" height="13" rx="2.5" /><path d="M10.5 9.5l4 2.5-4 2.5z" fill="currentColor" stroke="none" /></svg>)
@@ -29,13 +38,15 @@ export function Icon({ name, size = 18, stroke = 1.6 }: IconProps): ReactElement
     case 'code': return (<svg {...p}><path d="M9 8l-4 4 4 4M15 8l4 4-4 4" /></svg>)
     // open book — the source mark on a link tile that has no platform behind it
     case 'article': return (<svg {...p}><path d="M12 7.2C10.4 6.1 8.4 5.5 6 5.5H3.5v12H6c2.4 0 4.4.6 6 1.7 1.6-1.1 3.6-1.7 6-1.7h2.5v-12H18c-2.4 0-4.4.6-6 1.7z" /><path d="M12 7.2v12" /></svg>)
-    case 'ask': return (<svg {...p}><path d="M5 18l-1.5 3 3.2-1.4A8.5 7.5 0 1 0 4 13.5" /><circle cx="9" cy="13" r=".9" fill="currentColor" stroke="none" /><circle cx="12.5" cy="13" r=".9" fill="currentColor" stroke="none" /><circle cx="16" cy="13" r=".9" fill="currentColor" stroke="none" /></svg>)
+    // lucide: message-square-text
+    case 'ask': return (<svg {...p}><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" /><path d="M7 11h10" /><path d="M7 15h6" /><path d="M7 7h8" /></svg>)
     // grid density selectors — filled square-grid, denser left→right (4 / 6 / 8)
     case 'grid4': return (<svg {...p}><rect x="4.0" y="4.0" width="6.4" height="6.4" rx="1.6" fill="currentColor" stroke="none" /><rect x="13.6" y="4.0" width="6.4" height="6.4" rx="1.6" fill="currentColor" stroke="none" /><rect x="4.0" y="13.6" width="6.4" height="6.4" rx="1.6" fill="currentColor" stroke="none" /><rect x="13.6" y="13.6" width="6.4" height="6.4" rx="1.6" fill="currentColor" stroke="none" /></svg>)
     case 'grid6': return (<svg {...p}><rect x="4.0" y="4.0" width="4.0" height="4.0" rx="1.0" fill="currentColor" stroke="none" /><rect x="10.0" y="4.0" width="4.0" height="4.0" rx="1.0" fill="currentColor" stroke="none" /><rect x="16.0" y="4.0" width="4.0" height="4.0" rx="1.0" fill="currentColor" stroke="none" /><rect x="4.0" y="10.0" width="4.0" height="4.0" rx="1.0" fill="currentColor" stroke="none" /><rect x="10.0" y="10.0" width="4.0" height="4.0" rx="1.0" fill="currentColor" stroke="none" /><rect x="16.0" y="10.0" width="4.0" height="4.0" rx="1.0" fill="currentColor" stroke="none" /><rect x="4.0" y="16.0" width="4.0" height="4.0" rx="1.0" fill="currentColor" stroke="none" /><rect x="10.0" y="16.0" width="4.0" height="4.0" rx="1.0" fill="currentColor" stroke="none" /><rect x="16.0" y="16.0" width="4.0" height="4.0" rx="1.0" fill="currentColor" stroke="none" /></svg>)
     case 'grid8': return (<svg {...p}><rect x="4.1" y="4.1" width="2.9" height="2.9" rx="0.7" fill="currentColor" stroke="none" /><rect x="8.4" y="4.1" width="2.9" height="2.9" rx="0.7" fill="currentColor" stroke="none" /><rect x="12.7" y="4.1" width="2.9" height="2.9" rx="0.7" fill="currentColor" stroke="none" /><rect x="17.0" y="4.1" width="2.9" height="2.9" rx="0.7" fill="currentColor" stroke="none" /><rect x="4.1" y="8.4" width="2.9" height="2.9" rx="0.7" fill="currentColor" stroke="none" /><rect x="8.4" y="8.4" width="2.9" height="2.9" rx="0.7" fill="currentColor" stroke="none" /><rect x="12.7" y="8.4" width="2.9" height="2.9" rx="0.7" fill="currentColor" stroke="none" /><rect x="17.0" y="8.4" width="2.9" height="2.9" rx="0.7" fill="currentColor" stroke="none" /><rect x="4.1" y="12.7" width="2.9" height="2.9" rx="0.7" fill="currentColor" stroke="none" /><rect x="8.4" y="12.7" width="2.9" height="2.9" rx="0.7" fill="currentColor" stroke="none" /><rect x="12.7" y="12.7" width="2.9" height="2.9" rx="0.7" fill="currentColor" stroke="none" /><rect x="17.0" y="12.7" width="2.9" height="2.9" rx="0.7" fill="currentColor" stroke="none" /><rect x="4.1" y="17.0" width="2.9" height="2.9" rx="0.7" fill="currentColor" stroke="none" /><rect x="8.4" y="17.0" width="2.9" height="2.9" rx="0.7" fill="currentColor" stroke="none" /><rect x="12.7" y="17.0" width="2.9" height="2.9" rx="0.7" fill="currentColor" stroke="none" /><rect x="17.0" y="17.0" width="2.9" height="2.9" rx="0.7" fill="currentColor" stroke="none" /></svg>)
     case 'send': return (<svg {...p}><path d="M4 12l16-7-7 16-2.5-6.5L4 12z" /></svg>)
-    case 'plus': return (<svg {...p}><path d="M12 5v14M5 12h14" /></svg>)
+    // lucide: plus
+    case 'plus': return (<svg {...p}><path d="M5 12h14" /><path d="M12 5v14" /></svg>)
     // single stroke on purpose — the capture button draws it with a
     // dash-offset sweep, which needs one continuous path (see card.css)
     case 'check': return (<svg {...p}><path d="M5 12.5l4.5 4.5L19 8" /></svg>)
@@ -47,6 +58,11 @@ export function Icon({ name, size = 18, stroke = 1.6 }: IconProps): ReactElement
     case 'copy': return (<svg {...p}><rect x="8" y="8" width="11" height="11" rx="2" /><path d="M5 15V6a1 1 0 0 1 1-1h9" /></svg>)
     case 'search': return (<svg {...p}><circle cx="11" cy="11" r="6" /><path d="M20 20l-4-4" /></svg>)
     case 'spark': return (<svg {...p}><path d="M12 4l1.6 5.4L19 11l-5.4 1.6L12 18l-1.6-5.4L5 11l5.4-1.6z" /></svg>)
+    // The Spaces destination. Deliberately NOT the same glyph as 'spark' above:
+    // that one is the smart-space marker, shown at 11px on a tile corner and on
+    // rule-driven rows, where it means "fills itself" rather than "spaces".
+    // lucide: playing-cards-fan
+    case 'spaces': return (<svg {...p}><path d="M12.65 7.65a2 2 0 012.629-1.046l5.51 2.374a2 2 0 011.046 2.628l-3.957 9.184a2 2 0 01-2.628 1.046l-5.51-2.374a2 2 0 01-1.046-2.628z" /><path d="M18 7.777V4a2 2 0 00-2-2h-6a2 2 0 00-2 2v10a2 2 0 001.137 1.805" /><path d="m8 4.389-4.364.809a2 2 0 00-1.602 2.33l1.822 9.833a2 2 0 002.331 1.602l2.542-.47" /></svg>)
     case 'trash': return (<svg {...p}><path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13" /></svg>)
     case 'retag': return (<svg {...p}><path d="M4 12a8 8 0 0 1 13.66-5.66L20 8M20 4v4h-4" /><path d="M20 12a8 8 0 0 1-13.66 5.66L4 16M4 20v-4h4" /></svg>)
     case 'expand': return (<svg {...p}><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" /></svg>)

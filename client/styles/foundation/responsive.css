@@ -1,43 +1,141 @@
 /* responsive.css — responsive / small screens
    Part of the Kothai design system. Loaded via style.css. */
 /* ─────────────────────── responsive / small screens ──────────────────────── */
-/* The board's own column counts (thinned on tablet, pinned to two on phones)
-   live in lib/masonry.ts's columnCount — the layout is computed, not CSS grid,
-   so those breakpoints can't be expressed here. test/masonry-window.test.ts
-   pins them against the widths below. */
+/* The board's own column count lives in layout/masonry.ts's columnCount — the
+   layout is computed, not CSS grid, so it can't be expressed here. It does NOT
+   key off the breakpoint below: it takes the board's width and asks how many
+   columns fit at the chosen density, which is why there is no column rule in
+   this file to keep in sync. test/masonry-window.test.ts converts viewport
+   widths to board widths (rail + gutters) and asserts against those, so a
+   change to the chrome here is caught there. */
 
-/* phone: collapse the utility rail, wrap the nav, and reclaim horizontal
-   padding. */
+/* phone: turn the rail into a bottom tab bar, move the utility pair up into
+   the (otherwise empty) topbar, and reclaim horizontal padding. */
 @media (max-width:640px){
-  /* the rail holds the destinations plus theme + settings — float it as a
-     bottom-left cluster so the content grid can use the full viewport width */
   .body{grid-template-columns:1fr}
-  .rail{position:fixed;left:0;bottom:0;right:auto;top:auto;flex-direction:row;
-    width:auto;padding:var(--space-8) var(--space-10);gap:var(--space-6);z-index:var(--z-docked)}
-  .rail-spacer{display:none}
-  .rail-tip{display:none}
-  .exp-tip{display:none}
-  /* laid out sideways down here, so the group divider turns vertical too */
-  .rail-group{flex-direction:row;gap:var(--space-6)}
-  .rail-group + .rail-group{border-top:0;border-left:1px solid var(--line);
-    padding-top:0;margin-top:0;padding-left:var(--space-8);margin-left:var(--space-8)}
-  /* the desktop active marker hangs off the button's left edge — in a row it
-     reads as a stray divider, and the filled pill already marks the tab */
-  .rail-btn.active::before{display:none}
 
-  .topbar{padding:0 var(--space-14)}
+  /* The rail becomes a floating pill, inset from all three edges, with the
+     capture button as a matching circle beside it — the two together are the
+     bottom cluster. It stops short of the right edge by exactly the circle
+     plus its gap, so the board reads as passing UNDER both.
+     (`right` rather than a width: the pill takes whatever is left, so the
+     three tabs stay even whatever the screen.) */
+  .rail{position:fixed;left:var(--space-14);top:auto;
+    right:calc(var(--space-14) + var(--navbar-pill) + var(--space-12));
+    bottom:calc(var(--space-12) + env(safe-area-inset-bottom, 0px));  /* token-lint-ignore: env() needs a length literal as its fallback — 0px cannot be a --space-* token */
+    flex-direction:row;align-items:center;
+    width:auto;height:var(--navbar-pill);padding:var(--space-4);
+    border-radius:var(--radius-full);
+    /* Above --z-topbar, not at --z-docked: .rail creates a stacking context,
+       so the utility group below is trapped inside it and would otherwise sit
+       under the topbar it is meant to occupy. */
+    gap:0;z-index:calc(var(--z-topbar) + 1)}
+  /* The surface is a pseudo-element, not the bar itself, because
+     backdrop-filter makes an element the containing block for its
+     position:fixed descendants — with the blur on .rail, the utility group
+     below anchored `top:0` to the bar instead of to the viewport and stayed
+     down here in the tab row. */
+  .rail::before{content:"";position:absolute;inset:0;z-index:-1;
+    border-radius:inherit;border:1px solid var(--line-2);
+    background:color-mix(in srgb, var(--bg-raise) 92%, transparent);
+    box-shadow:0 10px 34px -10px rgba(0,0,0,.7);  /* token-lint-ignore: elevation shadow, deliberately black in both themes */
+    -webkit-backdrop-filter:blur(18px) saturate(140%);
+    backdrop-filter:blur(18px) saturate(140%)}
+  .rail-spacer{display:none}
+  .exp-tip{display:none}
+
+  /* Destinations own the bar and split it evenly. The explicit height is
+     what .rail-btn's own `height:100%` resolves against — .rail centres its
+     children, so without it the group is only as tall as its content and the
+     tabs collapsed to 38px, back under the touch floor. */
+  .rail-group{flex-direction:row;gap:0;flex:1;justify-content:space-around;height:100%}
+
+  /* Only the theme switch is left in the second group, and on a phone it lives
+     at the bottom of Settings instead — a tab bar holds places you go. */
+  .rail-group + .rail-group{display:none}
+
+  /* Nothing sits in the topbar now, so stop reserving a 44px band for it and
+     give the height back to content. What remains is the device's own top
+     inset (0 in a normal browser tab) plus a hair, which keeps the frosted
+     strip that content scrolls under. Every view derives its top padding from
+     this token, so they all follow. */
+  :root{--topbar-h:calc(env(safe-area-inset-top, 0px) + var(--space-8))}
+
+  /* Icons only, splitting the pill evenly. The old bar was 46px icons whose
+     active tab was marked by nothing but a 5.5%-opacity fill; here the active
+     one sits on its own lighter pill inside the bar, which carries that on
+     its own without a label. */
+  .rail-btn{flex:1;min-width:0;max-width:none;width:auto;height:100%;
+    flex-direction:column;justify-content:center;gap:0;
+    border-radius:var(--radius-full);color:var(--ink-dim)}
+  .rail-btn:hover{background:transparent;color:var(--ink)}
+  /* The fill belongs to the slider below, not to the button — otherwise the
+     old tab's pill would vanish and the new one appear while the slider was
+     still travelling between them. The button only changes colour, which the
+     base rule already crossfades. */
+  .rail-btn.active{background:transparent;color:var(--ink)}
+
+  /* The active marker: one pill that slides, rather than a fill that jumps
+     from tab to tab. --tab (0-based, set in App.tsx) is the only input; the
+     four tabs are flex:1 inside the group, so each is exactly a quarter of it
+     and one tab's travel is one marker width. Holds its last position and
+     fades out where no destination is current. */
+  .rail-tabs{--tab-count:4;position:relative}
+  .rail-tabs::before{content:"";position:absolute;top:0;left:0;
+    width:calc(100% / var(--tab-count));height:100%;  /* token-lint-ignore: --tab-count is this component's own tab count, declared two lines up — a local, not a design token */
+    border-radius:var(--radius-full);background:var(--panel-3);opacity:0;
+    transform:translateX(calc(var(--tab, 0) * 100%));
+    transition:transform var(--dur-mid) var(--ease-out),
+      opacity var(--dur-fast) ease}
+  .rail-tabs.has-active::before{opacity:1}
+  /* Hidden from sight but kept in the accessibility tree — the label is the
+     button's only accessible name, so display:none would leave every tab
+     announcing nothing at all. */
+  .rail-tip{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+    border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;
+    background:transparent}
+  .rail-btn:hover .rail-tip{transform:none}
+  /* the sliding pill marks the active tab now — the desktop edge marker would
+     only read as a stray line on top of it */
+  .rail-btn.active::before{display:none}
+  @media (prefers-reduced-motion:reduce){
+    .rail-tabs::before{transition:none}
+  }
+
 
   /* trim the generous desktop gutters */
-  .core{padding-left:var(--space-16);padding-right:var(--space-16);padding-bottom:80px}
+  .core{padding-left:var(--space-16);padding-right:var(--space-16);
+    padding-bottom:calc(var(--navbar-h) + var(--space-16))}
   /* .core.has-thread's own padding-bottom outranks the rule above on
-     specificity, so the pinned composer has to clear the floated rail here or
-     the theme/settings buttons sit on top of the textarea. */
-  .core.has-thread{padding-bottom:72px}
+     specificity, so the pinned composer has to clear the tab bar here too. */
+  .core.has-thread{padding-bottom:calc(var(--navbar-h) + var(--space-16))}
   .gal-head{padding:var(--space-16) var(--space-14) 0}
   .gal-controls{padding:var(--space-12) var(--space-14) var(--space-6)}
-  .gal-scroll{padding:var(--space-16) var(--space-14) 96px}
+  /* clears the tab bar AND the FAB parked above it, so the last row of cards
+     can still be read and tapped */
+  .gal-scroll{padding:var(--space-16) var(--space-14) calc(var(--navbar-h) + var(--space-40))}
   .spaces-view{padding:calc(var(--topbar-h) + var(--space-16)) var(--space-14) 0}
-  .spaces-scroll{padding-bottom:96px}
+  .spaces-scroll{padding-bottom:calc(var(--navbar-h) + var(--space-24))}
+  /* .settings-view is its own scroller and had only the desktop --space-28
+     bottom padding, so its last row ("Erase all data") sat under the bar */
+  .settings-view{padding:calc(var(--topbar-h) + var(--space-16)) var(--space-14)
+    calc(var(--navbar-h) + var(--space-24))}
+
+  /* The capture button is the cluster's right-hand circle: same height as the
+     pill, level with it, one gap away. It is rendered at app level rather
+     than by the gallery, so it is on every page. Previously it overlapped the
+     floated rail cluster and lost the z-index race to it, so the left third
+     of "Capture" silently opened Settings instead — the two no longer share
+     any pixels. */
+  .fab{position:fixed;left:auto;right:var(--space-14);
+    bottom:calc(var(--space-12) + env(safe-area-inset-bottom, 0px));  /* token-lint-ignore: env() needs a length literal as its fallback — 0px cannot be a --space-* token */
+    width:var(--navbar-pill);height:var(--navbar-pill);
+    justify-content:center;gap:0;padding:0;
+    border-radius:var(--radius-circle);
+    z-index:calc(var(--z-topbar) + 1)}
+  /* a circle has no room for the word — the icon's plus/check swap still
+     carries the "Added" confirmation on its own */
+  .fab .fab-label{display:none}
   .coll-head{padding:var(--space-14) var(--space-14) var(--space-12)}
   /* the rule chips wrap at this width, so give them the row and drop the
      tools onto their own line rather than floating beside a stack of chips */
@@ -55,4 +153,86 @@
   .preview-list{grid-template-columns:repeat(2,1fr)}
   .tile-meta{white-space:normal}
   .spaces-grid{grid-template-columns:repeat(2,1fr)}
+}
+
+/* ─────────────────────── touch: pointer targets ──────────────────────────
+   Scoped to (hover:none) rather than to a width. A phone, a tablet in
+   landscape and a touchscreen laptop all need these; a narrow desktop window
+   does not, and would only lose density for nothing. 44px is the floor in
+   Apple's HIG (Material asks 48dp) — every control below was under it, most
+   of them at 24-32px.
+
+   Two techniques, chosen per control: grow the box where there is room, and
+   where a mark has to stay visually small because sizing it up would swamp
+   what it sits on, leave the box alone and let an ::after pad carry the hit
+   area out to 44. The target grows, the design does not. */
+@media (hover:none){
+  /* Reaches .chip (the Everything filter bar), .seg / .view-toggle,
+     .btn--icon, .coll-act, .coll-del and the mindmap bar in one move —
+     they are all sized from these two. */
+  :root{--control-sm:40px;--control-md:44px}
+
+  /* The board's per-card cluster was three 26px buttons 6px apart on a 162px
+     card: under half the floor, and an unconfirmed delete sitting right
+     beside the button you actually want. On touch it collapses to Expand
+     alone at full size. Nothing is lost — Release and Add to space are both
+     in the expanded view that Expand opens, where they are deliberate rather
+     than one fat-finger away. Expand has to stay: a card body click opens the
+     source URL for links and videos and does nothing at all for an image,
+     note or code card, so this button is the only way into those. */
+  .card-act.add,.card-act.del{display:none}
+  .card-act{width:44px;height:44px;border-radius:var(--radius-md)}
+  .card-act svg{width:16px;height:16px}
+
+  /* the input, not its wrapper, carries the tap — nothing focuses it from
+     the surrounding box, so a 20px-tall input was the whole target */
+  .search-box{padding-top:0;padding-bottom:0}
+  .search-box input{align-self:stretch;min-height:var(--control-md)}
+
+  /* Ask: composer buttons, and the rename/delete pair on a chat history row */
+  .core .attach-btn,.core .send-btn{width:44px;height:44px}
+  .core .chat-row .card-del{width:var(--control-md);height:var(--control-md)}
+
+  /* The canonical buttons size to their content, so they had no floor at all:
+     Settings' own rows ("Download export", "Erase all data…") measured 36-39px.
+     One rule covers .btn and both legacy names — see components/primitives.css.
+     .btn--icon pins its own width/height, which this does not fight. */
+  .btn,.row-btn,.spaces-new-btn,
+  .retag-go,.danger-go,.danger-cancel,
+  .danger-input{min-height:var(--control-md)}
+
+  /* A segmented control is a border-box trough with pills inset by --space-4,
+     so its buttons come out 10px shorter than the trough: 8px of padding plus
+     the 1px hairline top and bottom. At --control-md the pill you actually tap
+     was 36px. Grow the trough by exactly that, so the pill — not the box
+     around it — is the thing that reaches 44. */
+  .seg,.view-toggle{height:calc(var(--control-md) + var(--space-10))}
+
+  /* Expanded view */
+  .exp-close-m{width:44px;height:44px}
+  .exp-side-actions button{width:44px;height:44px}
+  .exp-tag,.exp-addtag{min-height:var(--control-md)}
+  .exp-coll-plus{min-height:var(--control-md)}
+
+  /* ── hit pads: box unchanged, target extended ── */
+  /* an 11px cross on a space row */
+  .exp-coll-x{position:relative}
+  .exp-coll-x::after{content:"";position:absolute;top:50%;left:50%;
+    transform:translate(-50%,-50%);width:44px;height:44px}
+  /* the source link is 18px of inline text — pad it out rather than grow it,
+     so the meta line it sits on keeps its height */
+  a.exp-src{position:relative}
+  a.exp-src::after{content:"";position:absolute;top:50%;left:0;
+    transform:translateY(-50%);width:100%;height:44px}
+
+  /* Carousel dots cannot all reach 44 wide: eight of them would already fill
+     a 375px screen, and overlapping pads would make which-dot-did-I-hit
+     ambiguous. So widen the gap and give each pad exactly one pitch — dot
+     plus gap — which tiles the whole row edge to edge with no dead space and
+     no overlap, and take the full 44 vertically. Swiping the deck is the
+     primary gesture; the dots are the fallback. */
+  .carousel-dots{gap:var(--space-16)}
+  .carousel-dot{position:relative}
+  .carousel-dot::after{content:"";position:absolute;top:50%;left:50%;
+    transform:translate(-50%,-50%);width:calc(100% + var(--space-16));height:44px}
 }

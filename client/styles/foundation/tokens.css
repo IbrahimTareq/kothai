@@ -203,6 +203,13 @@
 
   --rail:74px;
   --topbar-h:44px;
+  /* Phone tab bar (see foundation/responsive.css). Unused above --bp-md.
+     --navbar-pill is the floating bar's own height, which the capture button
+     matches so the two read as one cluster; --navbar-h is the space the
+     cluster occupies in total, including the gap above and below it and
+     whatever the device reserves for a home indicator (0 where nothing is). */
+  --navbar-pill:60px;
+  --navbar-h:calc(var(--navbar-pill) + 24px + env(safe-area-inset-bottom, 0px));
 }
 
 /* ── Light theme: override the neutral tokens; everything built on the tokens

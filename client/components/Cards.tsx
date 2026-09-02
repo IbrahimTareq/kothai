@@ -174,9 +174,9 @@ export function ItemCard({ item, onDelete, onExpand, collections, onAddTo, onRem
       {brand && !headline && <span className="card-src" title={brand}><Icon name={brand} size={13} /></span>}
       <div className="card-actions">
         {canCollect && (
-          <button className="card-act" title="Add to space" onClick={(e) => { e.stopPropagation(); setPopOpen((v) => !v) }}><span className="card-act-plus">＋</span></button>
+          <button className="card-act add" title="Add to space" onClick={(e) => { e.stopPropagation(); setPopOpen((v) => !v) }}><span className="card-act-plus">＋</span></button>
         )}
-        <button className="card-act" title="Expand" onClick={(e) => { e.stopPropagation(); onExpand?.(item) }}><Icon name="expand" size={13} /></button>
+        <button className="card-act expand" title="Expand" onClick={(e) => { e.stopPropagation(); onExpand?.(item) }}><Icon name="expand" size={13} /></button>
         <button className="card-act del" title="Release" onClick={(e) => { e.stopPropagation(); onDelete(item.id) }}><Icon name="trash" size={13} /></button>
       </div>
       {canCollect && popOpen && (

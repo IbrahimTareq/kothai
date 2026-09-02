@@ -1,11 +1,12 @@
 // Gallery.tsx — the Everything grid: search box, type/source filter chips,
 // column toggle, item board, and capture FAB.
-import { useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { Icon, CAT } from '../components/icons'
 import { ItemCard } from '../components/Cards'
 import { WindowedBoard } from '../components/Board'
 import type { Collection, UIItem, UIType, ViewMode } from '../types'
 import type { Slot } from '../data/pager'
+import { scrollEdges, edgeClass } from '../layout/overflow'
 
 interface GalleryViewProps {
   nav: string
@@ -16,8 +17,6 @@ interface GalleryViewProps {
   searchFocus: boolean
   setSearchFocus: (b: boolean) => void
   deleteItem: (id: string) => void
-  onCapture: () => void
-  captured: boolean
   slots: Slot[]
   total: number
   ready: boolean
@@ -38,10 +37,31 @@ const VIEW_CAT: Record<string, { label: string; glyph: string }> = {
   spaces: { label: 'Spaces', glyph: 'spark' },
 }
 
-export function GalleryView({ nav, view, setView, search, setSearch, searchFocus, setSearchFocus, deleteItem, onCapture, captured, slots, total, ready, onWindow, galFilter, setGalFilter, typeChips, sourceChips, onExpand, collections, addToCollection, removeFromCollection }: GalleryViewProps) {
+export function GalleryView({ nav, view, setView, search, setSearch, searchFocus, setSearchFocus, deleteItem, slots, total, ready, onWindow, galFilter, setGalFilter, typeChips, sourceChips, onExpand, collections, addToCollection, removeFromCollection }: GalleryViewProps) {
   const cat = CAT[nav as UIType] || VIEW_CAT[nav] || { label: nav, glyph: 'all' }
 
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // The filter strip scrolls sideways (11 chips against ~350px on a phone),
+  // and did so with no sign that it could: the only hint was a chip clipped
+  // mid-word at the edge, which reads as a layout bug rather than an
+  // invitation. Fade whichever edge still has chips beyond it.
+  const filtersRef = useRef<HTMLDivElement>(null)
+  const [edges, setEdges] = useState({ left: false, right: false })
+  const chipCount = typeChips.length + sourceChips.length
+  useEffect(() => {
+    const el = filtersRef.current
+    if (!el) return setEdges({ left: false, right: false })
+    const read = () => setEdges(scrollEdges(el.scrollLeft, el.scrollWidth, el.clientWidth))
+    read()
+    el.addEventListener('scroll', read, { passive: true })
+    // Catches the container being resized; a change to the chips themselves
+    // comes through chipCount below, since that leaves the container's own
+    // box alone.
+    const ro = new ResizeObserver(read)
+    ro.observe(el)
+    return () => { el.removeEventListener('scroll', read); ro.disconnect() }
+  }, [chipCount, nav])
 
   return (
     <div className="gallery-view">
@@ -55,7 +75,7 @@ export function GalleryView({ nav, view, setView, search, setSearch, searchFocus
 
       <div className="gal-controls">
         {nav === 'all' && (typeChips.length > 0 || sourceChips.length > 0)
-          ? <div className="gal-filters">
+          ? <div className={'gal-filters' + edgeClass(edges)} ref={filtersRef}>
               <button className={'chip filter-chip' + (galFilter === 'all' ? ' on' : '')} onClick={() => setGalFilter('all')}>All</button>
               {typeChips.map((c) => (
                 <button key={c.key} className={'chip filter-chip' + (galFilter === c.key ? ' on' : '')} onClick={() => setGalFilter(c.key)}>
@@ -86,22 +106,6 @@ export function GalleryView({ nav, view, setView, search, setSearch, searchFocus
                 <ItemCard item={it} onDelete={deleteItem} onExpand={onExpand} collections={collections} onAddTo={addToCollection} onRemoveFrom={removeFromCollection} />
               )} />}
       </div>
-
-      {/* Confirmation lives in the button itself rather than a toast: the
-          click happened here, so this is where the answer belongs — and the
-          new card is already animating into the board behind it. Both icon
-          and label are rendered at once and cross-faded so the pill never
-          resizes mid-transition; `saved` drives the whole sequence. */}
-      <button className={'fab' + (captured ? ' saved' : '')} onClick={onCapture}>
-        <span className="fab-ico">
-          <Icon name="plus" size={20} stroke={2} />
-          <Icon name="check" size={20} stroke={2.2} />
-        </span>
-        <span className="fab-label">
-          <span>Capture</span>
-          <span>Added</span>
-        </span>
-      </button>
     </div>
   )
 }

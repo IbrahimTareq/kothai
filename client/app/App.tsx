@@ -492,6 +492,18 @@ export default function App() {
     setTimeout(() => taRef.current && taRef.current.focus(), 60)
   }
 
+  // Which destination the phone tab bar's sliding marker sits under. -1 on
+  // Settings and on the filtered boards (/type/<t>, /space/<id>), where none
+  // of the three is current — there the marker fades out rather than parking
+  // under a tab that isn't the one you're on. Order matches the buttons below.
+  const TAB_NAV = ['all', 'core', 'spaces', 'settings']
+  const tabIndex = TAB_NAV.indexOf(nav)
+  // Held so the marker fades out WHERE IT IS. Feeding the bar a 0 whenever no
+  // tab is current made it slide back to the first tab on its way out, which
+  // is a second piece of motion saying nothing.
+  const lastTab = useRef(0)
+  if (tabIndex >= 0) lastTab.current = tabIndex
+
   // filter chips for the Everything nav — only types/sources actually present
   // in the (search-filtered) set, with live counts straight from the server.
   const typeChips = CATEGORIES
@@ -513,8 +525,11 @@ export default function App() {
       <div className="body">
         <nav className="rail">
           <div className="rail-spacer"></div>
-          {/* destinations sit above the utility pair, split off by the group rule */}
-          <div className="rail-group">
+          {/* destinations sit above the utility pair, split off by the group rule.
+              On phones the active marker is a single pill that slides between
+              them (see foundation/responsive.css), driven by --tab. */}
+          <div className={'rail-group rail-tabs' + (tabIndex >= 0 ? ' has-active' : '')}
+            style={{ '--tab': lastTab.current } as React.CSSProperties}>
             <button className={'rail-btn' + (nav === 'all' ? ' active' : '')} onClick={() => { navigate('all'); setSearch('') }}>
               <Icon name="all" size={20} /><span className="rail-tip">Everything</span>
             </button>
@@ -522,15 +537,20 @@ export default function App() {
               <Icon name="ask" size={20} /><span className="rail-tip">Ask</span>
             </button>
             <button className={'rail-btn' + (nav === 'spaces' ? ' active' : '')} onClick={() => { navigate('spaces'); setSearch('') }}>
-              <Icon name="spark" size={20} /><span className="rail-tip">Spaces</span>
+              <Icon name="spaces" size={20} /><span className="rail-tip">Spaces</span>
+            </button>
+            {/* Settings is a page like the three above it, so it rides the same
+                marker. On phones it is the bar's fourth tab; on the desktop
+                rail it is the last of the destinations, above the divider. */}
+            <button className={'rail-btn' + (nav === 'settings' ? ' active' : '')} onClick={toggleSettings}>
+              <Icon name="settings" size={21} /><span className="rail-tip">Settings</span>
             </button>
           </div>
+          {/* Appearance, not a destination. Hidden on phones, where the theme
+              switch lives at the bottom of Settings instead. */}
           <div className="rail-group">
             <button className="rail-btn" onClick={() => setTheme((v) => v === 'dark' ? 'light' : 'dark')}>
               <Icon name="theme" size={20} /><span className="rail-tip">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
-            </button>
-            <button className={'rail-btn' + (nav === 'settings' ? ' active' : '')} onClick={toggleSettings}>
-              <Icon name="settings" size={21} /><span className="rail-tip">Settings</span>
             </button>
           </div>
         </nav>
@@ -539,14 +559,33 @@ export default function App() {
           {nav === 'core'
             ? <CoreView {...{ focus, onFocus, onBlur, onKey, text, setText, submit: sendQuestion, taRef, coreRef, thread, jumpTo, pendingImg, onImageFile, clearImg, chatList, openChat, newChat, deleteChat, renameChat, chatId, chatTotal, loadMoreChats, llmOff, busy: asking, stop: stopAsk, warming: llmWarming }} />
             : nav === 'settings'
-            ? <SettingsView vault={vault} />
+            ? <SettingsView vault={vault} theme={theme} setTheme={setTheme} />
             : nav === 'spaces'
             ? <SpacesView {...{ collections, createCollection, navigate }} />
             : nav.startsWith('space:')
             ? <CollectionView {...{ collection: collections.find((c) => c.id === nav.slice(6)) || null, view, setView, deleteItem, onExpand: openExpanded, collections, addToCollection, removeFromCollection, renameCollection, editCollectionTags, deleteCollection, navigate, notesRef: spaceNotesRef }} />
-            : <GalleryView {...{ nav, view, setView, search, setSearch, searchFocus, setSearchFocus, deleteItem, slots: notes.slots, total: notes.total, ready: notes.ready, onWindow: notes.ensure, galFilter, setGalFilter, typeChips, sourceChips, onExpand: openExpanded, collections, addToCollection, removeFromCollection, onCapture: () => setCaptureOpen(true), captured }} />}
+            : <GalleryView {...{ nav, view, setView, search, setSearch, searchFocus, setSearchFocus, deleteItem, slots: notes.slots, total: notes.total, ready: notes.ready, onWindow: notes.ensure, galFilter, setGalFilter, typeChips, sourceChips, onExpand: openExpanded, collections, addToCollection, removeFromCollection }} />}
         </main>
       </div>
+
+      {/* Capture is a global action, so the button is app-level rather than the
+          gallery's: on phones it is the right-hand circle of the bottom
+          cluster (see foundation/responsive.css) and has to be there on every
+          page, not only Everything.
+          Confirmation lives in the button itself rather than a toast: the
+          click happened here, so this is where the answer belongs. Both icon
+          and label are rendered at once and cross-faded so the pill never
+          resizes mid-transition; `saved` drives the whole sequence. */}
+      <button className={'fab' + (captured ? ' saved' : '')} onClick={() => setCaptureOpen(true)}>
+        <span className="fab-ico">
+          <Icon name="plus" size={20} stroke={2} />
+          <Icon name="check" size={20} stroke={2.2} />
+        </span>
+        <span className="fab-label">
+          <span>Capture</span>
+          <span>Added</span>
+        </span>
+      </button>
 
       {expanded && <ExpandedView item={expanded} onClose={closeExpanded} onDelete={deleteItem} onUpdate={updateItem} onRetag={retagItem} collections={collections} onAddTo={addToCollection} onRemoveFrom={removeFromCollection} />}
 
