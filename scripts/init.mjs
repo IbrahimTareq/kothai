@@ -20,6 +20,18 @@ const flags = { dryRun: process.argv.includes('--dry-run'), lite: process.argv.i
 const rl = createInterface({ input: process.stdin, output: process.stdout })
 const ask = async (q, def) => (await rl.question(`${q}${def ? ` [${def}]` : ''} `)).trim() || def || ''
 
+// A numbered menu instead of free text — less to get wrong than typing an
+// exact word. Blank or unrecognized input silently falls back to the
+// default, matching ask()'s behavior.
+const askChoice = async (question, options, defaultIndex) => {
+  console.log(question)
+  options.forEach((o, i) => console.log(`  ${i + 1}) ${o.label}`))
+  const raw = await rl.question(`Choice [${defaultIndex + 1}]: `)
+  const n = parseInt(raw.trim(), 10)
+  const i = Number.isInteger(n) && n >= 1 && n <= options.length ? n - 1 : defaultIndex
+  return options[i].value
+}
+
 const COMPOSE = (image, port) => `services:
   kothai:
     image: ghcr.io/ibrahimtareq/kothai:${image}
@@ -43,9 +55,11 @@ async function main() {
   console.log(`  On-device models: ${cap.canRunLocal ? 'supported' : `unavailable — ${cap.reason}`}\n`)
   if (p.existingDb) console.log('  Existing install detected. Your data and models will not be touched.\n')
 
-  const def = cap.canRunLocal ? 'local' : 'external'
-  const aiRaw = await ask('Where should AI run? (local / external / none)', def)
-  const ai = ['local', 'external', 'none'].includes(aiRaw) ? aiRaw : def
+  const ai = await askChoice('Where should AI run?', [
+    { label: 'local', value: 'local' },
+    { label: 'external', value: 'external' },
+    { label: 'none', value: 'none' },
+  ], cap.canRunLocal ? 0 : 1)
 
   let baseUrl = null, apiKey = null
   if (ai === 'external') {
@@ -53,7 +67,10 @@ async function main() {
     apiKey = (await ask('  API key (blank for Ollama or llama.cpp)', '')) || null
   }
 
-  const wantPw = (await ask('Set a password? (y/n)', 'y')).toLowerCase().startsWith('y')
+  const wantPw = await askChoice('Set a password?', [
+    { label: 'yes', value: true },
+    { label: 'no', value: false },
+  ], 0)
   const password = wantPw ? randomBytes(24).toString('base64url') : null
 
   let port = 5173
@@ -76,7 +93,11 @@ async function main() {
 
   let skipWrite = false
   if (existsSync('.env')) {
-    const overwrite = (await ask('\n.env exists. Overwrite? (y/n)', 'n')).toLowerCase().startsWith('y')
+    console.log()
+    const overwrite = await askChoice('.env exists. Overwrite?', [
+      { label: 'yes', value: true },
+      { label: 'no', value: false },
+    ], 1)
     skipWrite = !overwrite
   }
 
