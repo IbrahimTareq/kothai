@@ -33,6 +33,78 @@ export function queueEnrich(noteId, job) {
   return queueJob(() => enrichNote(noteId, job))
 }
 
+// ---- fast metadata lane ---------------------------------------------------
+// Cheap, network-bound work — oEmbed/OpenGraph: a caption, an author, a
+// thumbnail — split OUT of enrichChain, which is strictly serial because the
+// local model can only run one pass at a time.
+//
+// Welded together (which is how this worked) a ~300ms metadata fetch waits
+// behind someone else's multi-second vision+classify pass, so a 197-item
+// import leaves every tile blank for the best part of an hour: measured at
+// 5-25s per note, ~50 minutes for a real export. Split, the grid fills with
+// real captions and thumbnails in a minute or two and the model work carries
+// on behind it. This is the usual fast-path/slow-path split — the expensive
+// pass still runs, it just stops gating what the user can see.
+//
+// Bounded concurrency rather than firing all of them at once: these are
+// outbound requests to a handful of hosts, and 197 simultaneous fetches is how
+// you earn a rate-limit. Deliberately NOT used for Instagram, which has its
+// own queue on a >=2.5s throttle for exactly that reason (see queueIgMeta).
+const META_CONCURRENCY = 4
+let metaActive = 0
+const metaQueue = []
+
+export function queueLinkMeta(noteId, url) {
+  if (!noteId || !url || isInstagramPost(url)) return
+  metaQueue.push({ noteId, url })
+  pumpMeta()
+}
+
+// Read by tests and by anything wanting to know the lane is drained.
+export function metaLaneDepth() {
+  return metaQueue.length + metaActive
+}
+
+function pumpMeta() {
+  while (metaActive < META_CONCURRENCY && metaQueue.length) {
+    const job = metaQueue.shift()
+    metaActive++
+    runMetaJob(job).catch(() => {}).finally(() => { metaActive--; pumpMeta() })
+  }
+}
+
+async function runMetaJob({ noteId, url }) {
+  let m
+  try {
+    m = await fetchLinkMeta(url, noteId)
+  } catch (e) {
+    // Leave the note untouched and metaFetched unset: enrichNote's own fetch
+    // still runs later, so a failure here costs nothing but a retry.
+    console.error('[enrich] fast meta fetch failed:', e.message)
+    return
+  }
+  if (!m) return
+  const existing = store.allNotes().find((n) => n.id === noteId)
+  if (!existing) return // deleted (or rolled back) while the fetch was in flight
+  const patch = { metaFetched: true }
+  for (const k of ['siteTitle', 'siteDesc', 'siteName', 'thumb', 'article']) {
+    if (m[k]) patch[k] = m[k]
+  }
+  // The provisional title is the whole point of this lane: the card renders
+  // `title`, not siteTitle, so without this the tile keeps the importer's
+  // placeholder ("TikTok video") until classify eventually runs. Gated on
+  // `pending` so it can only ever replace an importer placeholder — a note the
+  // user has touched is not pending, and classify overwrites this with a
+  // cleaner title when it gets there anyway.
+  if (existing.pending && m.siteTitle) patch.title = m.siteTitle
+  if (m.author && !existing.account) patch.account = m.author
+  try {
+    await store.updateNote(noteId, patch)
+  } catch (e) {
+    console.error('[enrich] fast meta write failed:', e.message)
+  }
+}
+
 // Describes a note's downloaded thumbnail with the vision model, so
 // classify/embed get a second, independent signal beyond whatever the creator
 // chose to caption — often just hashtags. Runs for ANY note carrying a thumb,
@@ -474,6 +546,21 @@ async function enrichNote(id, { absPath, text, isUrl, hasImage }) {
   if (url && !hasImage) {
     if (isIgUrl) {
       if (!existing?.metaFetched || !(existing?.siteTitle || existing?.siteDesc)) queueIgMeta(id, url)
+    } else if (existing?.metaFetched && (existing.siteTitle || existing.siteDesc || existing.thumb)) {
+      // The fast lane above already fetched this note's metadata. Reuse it
+      // rather than paying for a second identical request — and reuse it as a
+      // linkMeta OBJECT, not by skipping the step, because richText below
+      // feeds siteTitle/siteDesc/article to classify and embed. Skipping
+      // outright would quietly downgrade every fast-lane note's classification
+      // to URL-only.
+      linkMeta = {
+        siteTitle: existing.siteTitle ?? null,
+        siteDesc: existing.siteDesc ?? null,
+        siteName: existing.siteName ?? null,
+        thumb: existing.thumb ?? null,
+        article: existing.article ?? null,
+        author: null, // account was already resolved by the fast lane
+      }
     } else {
       try {
         linkMeta = await fetchLinkMeta(url, id)

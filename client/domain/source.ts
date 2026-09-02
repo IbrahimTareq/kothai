@@ -86,3 +86,20 @@ export function platformBucket(item: UIItem): { key: string; label: string } {
   const found = SOURCES.find((s) => s.test(item))
   return found ? { key: found.key, label: found.label } : { key: 'other', label: 'Other' }
 }
+
+// Whether a tile has content still on its way, and so should render as loading
+// rather than as a finished tile whose picture happens to be a gradient.
+//
+// `pending` alone is NOT the test, and using it was wrong: it only says the
+// model pass hasn't run, and a note whose link simply has no picture stays
+// pending with no thumbnail forever. Against a real library that lit up a whole
+// screen of permanently shimmering tiles — a worse lie than the placeholder it
+// replaced, since a skeleton promises something is coming.
+//
+// `metaFetched` is the honest signal: it records that the metadata fetch has
+// been ATTEMPTED. Un-attempted means a caption and picture genuinely may still
+// arrive — exactly the window right after a bulk import, and it closes within a
+// minute or two once the metadata lane reaches the note.
+export function isAwaitingContent(it: Pick<UIItem, 'pending' | 'metaFetched' | 'thumb' | 'img'>): boolean {
+  return !!it.pending && !it.metaFetched && !it.thumb && !it.img
+}

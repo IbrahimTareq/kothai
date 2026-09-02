@@ -25,6 +25,7 @@ export function mapNote(n: ServerNote): UIItem {
     summary: n.summary,
     mindNote: n.mindNote || '',
     pending: !!n.pending,
+    metaFetched: !!n.metaFetched,
   }
   switch (type) {
     case 'link':

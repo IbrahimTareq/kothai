@@ -4,11 +4,46 @@ import { Fragment, useState } from 'react'
 import type { ReactElement } from 'react'
 import { Icon, CAT } from './icons'
 import { relTime, imgGradient } from '../util/format'
-import { isMediaFirst, sourceGlyph, sourceLabel } from '../domain/source'
+import { isMediaFirst, isAwaitingContent, sourceGlyph, sourceLabel } from '../domain/source'
 import type { Collection, UIItem } from '../types'
 
 // Deterministic placeholder height so gradient tiles stagger like real media.
 function phHeight(seed: number) { return 150 + (Math.abs(seed) % 4) * 40 }
+
+// UIItem.seed is declared in types.ts but NOTHING populates it — not the API,
+// not the client mapper — so every `seed ?? 1` fell back to the same 1, giving
+// every placeholder tile in a grid the identical hue and the identical height.
+// The note id is stable, unique and always present, so it is what the
+// placeholder varies on; a real `seed` still wins if one ever starts arriving.
+function tileSeed(it: UIItem): number {
+  if (typeof it.seed === 'number') return it.seed
+  let h = 0
+  for (let i = 0; i < it.id.length; i++) h = (h * 31 + it.id.charCodeAt(i)) | 0
+  return Math.abs(h)
+}
+
+// A tile whose content hasn't landed yet. An imported note EXISTS the moment
+// the import returns, but its caption and thumbnail are fetched afterwards —
+// so without this each one renders as a FINISHED tile whose content happens to
+// be a coloured rectangle and the importer's placeholder title. At import
+// scale that reads as a wall of broken tiles rather than as work in progress.
+//
+// Reuses .card-skeleton — the sheen the windowed board already uses for slots
+// it hasn't fetched. Same idea, one step along: this slot's row exists, its
+// content doesn't. One loading language rather than two.
+function LoadingCard({ item, overlay }: { item: UIItem; overlay?: ReactElement }): ReactElement {
+  return (
+    <Fragment>
+      {/* Height comes from the same phHeight the gradient placeholders use, so
+          a tile does not resize when its picture arrives. */}
+      <div className="card-skeleton tile-load-media" style={{ height: phHeight(tileSeed(item)) }}>{overlay}</div>
+      <div className="card-cap">
+        <div className="card-skeleton tile-load-bar" aria-hidden="true"></div>
+        <div className="card-skeleton tile-load-bar short" aria-hidden="true"></div>
+      </div>
+    </Fragment>
+  )
+}
 
 function ImageThumb({ item, overlay }: { item: UIItem; overlay?: ReactElement }) {
   if (item.img) {
@@ -21,7 +56,7 @@ function ImageThumb({ item, overlay }: { item: UIItem; overlay?: ReactElement })
     )
   }
   return (
-    <div className="img-thumb" style={{ background: imgGradient(item.seed ?? 1), height: phHeight(item.seed ?? 1) }}>
+    <div className="img-thumb" style={{ background: imgGradient(tileSeed(item)), height: phHeight(tileSeed(item)) }}>
       <div className="img-scan"></div>
       <Icon name="image" size={22} />
       {overlay}
@@ -32,6 +67,7 @@ function ImageThumb({ item, overlay }: { item: UIItem; overlay?: ReactElement })
 // The picture-led card, kept for links whose content IS the picture (Instagram
 // posts, TikTok). Unchanged from the card every link used to get.
 function MediaLinkCard({ item, overlay }: { item: UIItem; overlay?: ReactElement }): ReactElement {
+  if (isAwaitingContent(item)) return <LoadingCard item={item} overlay={overlay} />
   return (
     <Fragment>
       {item.thumb
@@ -95,9 +131,16 @@ function CardInner({ item, overlay }: { item: UIItem; overlay?: ReactElement }):
         </Fragment>
       )
     case 'video':
+      if (isAwaitingContent(it)) return <LoadingCard item={it} overlay={overlay} />
       return (
         <Fragment>
-          <div className={'img-thumb vid' + (it.thumb ? ' real' : '')} style={it.thumb ? undefined : { background: imgGradient((it.title || 'v').length * 5), height: 150 }}>
+          {/* Seeded from the note's own seed, not its title's LENGTH. Every
+              un-enriched TikTok note carries the identical placeholder title
+              ("TikTok video"), so a length seed gave a whole import the same
+              hue at the same height — the clone wall this loading state
+              exists to prevent, which would otherwise return the moment a
+              note finishes enriching without a thumbnail. See tileSeed. */}
+          <div className={'img-thumb vid' + (it.thumb ? ' real' : '')} style={it.thumb ? undefined : { background: imgGradient(tileSeed(it)), height: phHeight(tileSeed(it)) }}>
             {it.thumb && <img className="vid-thumb-img" src={it.thumb} alt="" loading="lazy" />}
             <div className="img-scan"></div>
             <div className="play-btn"><Icon name="play" size={20} /></div>

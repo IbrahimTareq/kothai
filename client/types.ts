@@ -47,6 +47,11 @@ export interface UIItem {
   summary?: string
   mindNote?: string
   pending: boolean
+  /** Whether link metadata has been ATTEMPTED. `pending` only says the model
+   *  pass hasn't run — a note can be permanently thumbnail-less and still
+   *  pending — so this is what separates "content is on its way" from "this
+   *  is all the content there will be". See isAwaitingContent in Cards.tsx. */
+  metaFetched?: boolean
   url?: string | null
   host?: string
   title?: string
