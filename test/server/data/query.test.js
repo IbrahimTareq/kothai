@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { applyFilters, facetsOf, pageOf, sourceKey, matchesQ } from '../../../server/data/query.js'
+import { applyFilters, facetsOf, pageOf, sortNotes, sourceKey, matchesQ } from '../../../server/data/query.js'
 
 const N = (o) => ({ id: o.id, type: 'link', tags: [], url: null, content: '', title: '', ...o })
 const LIB = [
@@ -153,4 +153,84 @@ test('facetsOf: type/source counts describe the default view, so they exclude th
   assert.equal(f.types.video, 1)
   assert.equal(f.sources.tiktok, 1)
   assert.equal(f.unavailable, 1, 'but the hidden ones are still counted, or the chip could never appear')
+})
+
+// --- board ordering ----------------------------------------------------------
+// Two dates per note, and they are not the same: createdAt is when it was saved
+// originally (an import keeps the export's date), importedAt is when it reached
+// this library. Before sortNotes there was no sort at all — notes came back in
+// insertion order, which put a bulk import's OLDEST items at the top.
+
+const dated = (id, createdAt, importedAt) => ({ id, createdAt, importedAt })
+
+test('sortNotes: added puts the newest arrival first, whatever it was saved on', () => {
+  const notes = [
+    dated('old-save-new-import', '2024-01-01T00:00:00Z', '2026-09-02T00:00:00Z'),
+    dated('new-save-old-import', '2026-08-01T00:00:00Z', '2026-01-01T00:00:00Z'),
+  ]
+  assert.deepEqual(sortNotes(notes, 'added').map((n) => n.id), ['old-save-new-import', 'new-save-old-import'])
+})
+
+test('sortNotes: saved puts the original timeline back', () => {
+  const notes = [
+    dated('old-save-new-import', '2024-01-01T00:00:00Z', '2026-09-02T00:00:00Z'),
+    dated('new-save-old-import', '2026-08-01T00:00:00Z', '2026-01-01T00:00:00Z'),
+  ]
+  assert.deepEqual(sortNotes(notes, 'saved').map((n) => n.id), ['new-save-old-import', 'old-save-new-import'])
+})
+
+test('sortNotes: a batch stamped per-row to the millisecond still ties, and falls back to the saved date', () => {
+  // Real libraries carry these: the import route used to stamp each row with
+  // its own new Date(), so an "arrival" differs by a millisecond across a batch
+  // that landed as one event. Compared exactly, the tie-break never fires and
+  // the batch keeps its export-file order — which is how December 2024 ended up
+  // at the top of a library imported in September 2026.
+  const notes = [
+    dated('oldest', '2024-12-15T00:00:00Z', '2026-09-02T10:00:00.900Z'),
+    dated('newest', '2025-08-09T00:00:00Z', '2026-09-02T10:00:00.100Z'),
+    dated('middle', '2025-02-11T00:00:00Z', '2026-09-02T10:00:00.500Z'),
+  ]
+  assert.deepEqual(sortNotes(notes, 'added').map((n) => n.id), ['newest', 'middle', 'oldest'])
+})
+
+test('sortNotes: arrivals a real distance apart are still ordered by arrival', () => {
+  // The bucket must not flatten genuinely different arrivals into one.
+  const notes = [
+    dated('yesterday', '2026-01-01T00:00:00Z', '2026-09-02T10:00:00Z'),
+    dated('today', '2020-01-01T00:00:00Z', '2026-09-03T10:00:00Z'),
+  ]
+  assert.deepEqual(sortNotes(notes, 'added').map((n) => n.id), ['today', 'yesterday'])
+})
+
+test('sortNotes: one import batch shares an importedAt, so ties fall back to the saved date', () => {
+  // The whole point: without the tie-break a batch keeps the export file's
+  // order, which is what put December 2024 at the top of the board.
+  const batch = '2026-09-02T00:00:00Z'
+  const notes = [
+    dated('oldest', '2024-12-15T00:00:00Z', batch),
+    dated('newest', '2025-08-09T00:00:00Z', batch),
+    dated('middle', '2025-02-11T00:00:00Z', batch),
+  ]
+  assert.deepEqual(sortNotes(notes, 'added').map((n) => n.id), ['newest', 'middle', 'oldest'])
+})
+
+test('sortNotes: a note with no importedAt falls back to its saved date', () => {
+  const notes = [
+    dated('imported', '2020-01-01T00:00:00Z', '2026-09-02T00:00:00Z'),
+    dated('hand-saved', '2026-09-03T00:00:00Z', undefined),
+  ]
+  assert.deepEqual(sortNotes(notes, 'added').map((n) => n.id), ['hand-saved', 'imported'])
+})
+
+test('sortNotes: an unknown or missing sort is the default, and never throws on bad dates', () => {
+  const notes = [dated('a', 'not a date', undefined), dated('b', '2026-01-01T00:00:00Z', undefined)]
+  assert.deepEqual(sortNotes(notes, 'nonsense').map((n) => n.id), ['b', 'a'])
+  assert.deepEqual(sortNotes(notes, undefined).map((n) => n.id), ['b', 'a'])
+})
+
+test('sortNotes: never reorders the caller array — it belongs to the note store', () => {
+  const notes = [dated('a', '2024-01-01T00:00:00Z'), dated('b', '2026-01-01T00:00:00Z')]
+  const before = notes.map((n) => n.id)
+  sortNotes(notes, 'saved')
+  assert.deepEqual(notes.map((n) => n.id), before)
 })

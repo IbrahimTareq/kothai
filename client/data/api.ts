@@ -77,7 +77,7 @@ interface SettingsPatch {
 export const API = {
   // paged/filtered/faceted fetch for the Everything board — see
   // server/routes/notes.js's handleNotes for the query contract.
-  async page(params: { offset: number; limit?: number; type?: string; source?: string; q?: string; collection?: string; unavailable?: boolean }): Promise<{
+  async page(params: { offset: number; limit?: number; type?: string; source?: string; q?: string; collection?: string; unavailable?: boolean; sort?: string }): Promise<{
     notes: UIItem[]; total: number; offset: number
     facets: { types: Record<string, number>; sources: Record<string, number>; unavailable?: number }
     pendingTotal: number; rev: number; bootId: string
@@ -90,6 +90,7 @@ export const API = {
     if (params.q) qs.set('q', params.q)
     if (params.collection) qs.set('collection', params.collection)
     if (params.unavailable) qs.set('unavailable', '1')
+    if (params.sort) qs.set('sort', params.sort)
     const d = await _json<{
       notes: ServerNote[]; total: number; offset: number
       facets: { types: Record<string, number>; sources: Record<string, number>; unavailable?: number }

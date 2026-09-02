@@ -248,6 +248,7 @@ async function runImport(req, res) {
     if (c && !urlIndex.has(c)) urlIndex.set(c, n.id)
   }
 
+  const batchImportedAt = new Date().toISOString()
   const imported = [] // [{ id, url }] added THIS run, in order — url is kept alongside id so enrich can be queued after the fact without re-deriving it
   let skipped = 0
   let failed = 0
@@ -260,7 +261,12 @@ async function runImport(req, res) {
       // disk I/O, so a mid-loop failure can only be a logic bug, not a
       // partial disk write; caught per-item so one bad row can't sink the
       // whole import.
-      note = await store.addNote(importer.deriveNote(item), { persist: false })
+      // One arrival stamp for the whole run, overriding deriveNote's per-item
+      // `new Date()`. An import is a single event, and stamping each row
+      // separately made "recently added" sort by millisecond — i.e. by the
+      // order the export file happened to list things — which is how a
+      // library's OLDEST imported items ended up at the top of the board.
+      note = await store.addNote({ ...importer.deriveNote(item), importedAt: batchImportedAt }, { persist: false })
     } catch (e) {
       console.error('[import] failed to add note for', item.url, '-', e.message)
       failed++

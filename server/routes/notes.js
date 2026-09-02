@@ -60,8 +60,9 @@ export function handleNotes(res, url) {
     unavailable: p.get('unavailable') === '1' ? 'only' : 'hide',
   })
   const offset = Math.max(0, parseInt(p.get('offset') || '0', 10) || 0)
+  const sorted = query.sortNotes(matching, p.get('sort') || undefined)
   json(res, 200, {
-    notes: query.pageOf(matching, offset, parseInt(p.get('limit') || '120', 10)),
+    notes: query.pageOf(sorted, offset, parseInt(p.get('limit') || '120', 10)),
     total: matching.length,
     offset,
     facets: query.facetsOf(facetBase),

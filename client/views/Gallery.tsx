@@ -25,6 +25,8 @@ interface GalleryViewProps {
    *  Empty means "All". */
   galFilter: string[]
   setGalFilter: (v: string[]) => void
+  galSort: 'added' | 'saved'
+  setGalSort: (v: 'added' | 'saved') => void
   typeChips: { key: string; label: string; glyph: string; count: number }[]
   sourceChips: { key: string; label: string; dot: string; glyph?: string; count: number }[]
   unavailableCount: number
@@ -40,7 +42,7 @@ const VIEW_CAT: Record<string, { label: string; glyph: string }> = {
   spaces: { label: 'Spaces', glyph: 'spark' },
 }
 
-export function GalleryView({ nav, view, setView, search, setSearch, searchFocus, setSearchFocus, deleteItem, slots, total, ready, onWindow, galFilter, setGalFilter, typeChips, sourceChips, unavailableCount, onExpand, collections, addToCollection, removeFromCollection }: GalleryViewProps) {
+export function GalleryView({ nav, view, setView, search, setSearch, searchFocus, setSearchFocus, deleteItem, slots, total, ready, onWindow, galFilter, setGalFilter, galSort, setGalSort, typeChips, sourceChips, unavailableCount, onExpand, collections, addToCollection, removeFromCollection }: GalleryViewProps) {
   const cat = CAT[nav as UIType] || VIEW_CAT[nav] || { label: nav, glyph: 'all' }
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -115,6 +117,22 @@ export function GalleryView({ nav, view, setView, search, setSearch, searchFocus
               </>}
             </div>
           : <span className="gal-filters-spacer" />}
+        {/* Sort sits with the density toggle, not with the chips: both answer
+            "how is this board presented", where a chip answers "what is on
+            it". They share the .seg primitive and its height, so the two read
+            as one cluster opposite the filters.
+
+            Unlike the density toggle, this stays visible on a phone — which
+            column count you get matters less there than what order you are
+            reading in. */}
+        <div className="seg gal-sort" role="group" aria-label="Sort order">
+          <button className={'seg-btn' + (galSort === 'added' ? ' on' : '')}
+            aria-pressed={galSort === 'added'} title="Newest in your library first"
+            onClick={() => setGalSort('added')}>Added</button>
+          <button className={'seg-btn' + (galSort === 'saved' ? ' on' : '')}
+            aria-pressed={galSort === 'saved'} title="By the date you originally saved it"
+            onClick={() => setGalSort('saved')}>Saved</button>
+        </div>
         <div className="view-toggle">
           <button className={view === 'grid4' ? 'on' : ''} onClick={() => setView('grid4')} title="4 columns"><Icon name="grid4" size={16} /></button>
           <button className={view === 'grid6' ? 'on' : ''} onClick={() => setView('grid6')} title="6 columns"><Icon name="grid6" size={16} /></button>

@@ -19,7 +19,7 @@ export interface NotesPage {
   rev?: number; bootId?: string
 }
 export interface NotesDelta { notes: UIItem[]; deleted: string[]; pendingTotal: number }
-export interface PagerQuery { type?: string; source?: string; q?: string; collection?: string; unavailable?: boolean }
+export interface PagerQuery { type?: string; source?: string; q?: string; collection?: string; unavailable?: boolean; sort?: string }
 
 // Client mirror of the server-side filter, for deciding whether an
 // optimistically saved note belongs in the current view. `type` here is the

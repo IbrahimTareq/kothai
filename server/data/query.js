@@ -93,6 +93,50 @@ export function facetsOf(notes) {
   return { types, sources, unavailable }
 }
 
+// Board ordering. Two dates exist per note and they are NOT the same thing:
+// `createdAt` is when you saved the thing originally (an importer sets it from
+// the export, so an imported reel keeps its 2024 date), and `importedAt` is
+// when it arrived in this library.
+//
+//   'added' (default) — newest arrival first
+//   'saved'           — the original timeline
+//
+// Before this the board had no sort at all: notes came back in INSERTION order
+// (`ORDER BY seq DESC`), which happens to look right for hand-saved notes and
+// is meaningless for a bulk import, where 197 rows land in one second in
+// whatever order the export file listed them. That is why the top of an
+// imported library was its OLDEST items, each captioned "8 months ago".
+//
+// Imports share one `importedAt` across the whole batch, so 'added' ties are
+// broken by `createdAt` — within one arrival, newest-saved first — otherwise a
+// batch would fall back to that same meaningless file order.
+const SORTS = new Set(['added', 'saved'])
+
+function timeOf(v) {
+  const t = Date.parse(v || '')
+  return Number.isFinite(t) ? t : 0
+}
+
+export function sortNotes(notes, sort) {
+  const mode = SORTS.has(sort) ? sort : 'added'
+  // Copied, never sorted in place: this array belongs to the note store, and
+  // reordering it would quietly reorder every other reader's view too.
+  const out = notes.slice()
+  if (mode === 'saved') {
+    out.sort((a, b) => timeOf(b.createdAt) - timeOf(a.createdAt))
+    return out
+  }
+  // Arrival is bucketed to the minute before comparing. Sub-minute precision
+  // within one import is noise — the batch arrived as a single event — and
+  // comparing it exactly means the tie-break below never fires, so a batch
+  // keeps whatever order its export file listed. Libraries imported before the
+  // route stamped one time per run still carry per-row millisecond stamps, so
+  // this is what makes THEIR ordering sane too, not just future imports.
+  const arrival = (n) => Math.floor((timeOf(n.importedAt) || timeOf(n.createdAt)) / 60000)
+  out.sort((a, b) => (arrival(b) - arrival(a)) || (timeOf(b.createdAt) - timeOf(a.createdAt)))
+  return out
+}
+
 export function pageOf(notes, offset, limit) {
   const off = Math.max(0, Math.floor(offset) || 0)
   return notes.slice(off, off + Math.max(1, Math.min(500, Math.floor(limit) || 120)))

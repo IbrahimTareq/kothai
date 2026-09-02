@@ -54,6 +54,9 @@ export default function App() {
   // Everything-page filters, multi-select. Chip keys are mixed (types, sources
   // and the 'unavailable' state) and split apart below; an empty set is "All".
   const [galFilter, setGalFilter] = useState<string[]>([])
+  // Board order. 'added' = newest arrival first (the default), 'saved' = the
+  // original timeline the items were saved on. See server/data/query.js.
+  const [galSort, setGalSort] = useState<'added' | 'saved'>('added')
   // Drives the capture button's "Added" state after a successful save.
   const [captured, setCaptured] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>(() =>
@@ -107,7 +110,7 @@ export default function App() {
   const navType = nav !== 'all' && !nav.startsWith('space:') && CAT[nav as UIType] ? (nav === 'note' ? 'text' : nav) : undefined
   const galleryActive = !(nav === 'core' || nav === 'settings' || nav === 'spaces') && !nav.startsWith('space:')
   const notes = useNotes(
-    { type: navType ?? chipType, source: chipSource, q: search, unavailable: chipUnavailable },
+    { type: navType ?? chipType, source: chipSource, q: search, unavailable: chipUnavailable, sort: galSort },
     galleryActive,
   )
   // Keep the open detail modal in sync with background completions (e.g.
@@ -605,7 +608,7 @@ export default function App() {
             ? <SpacesView {...{ collections, createCollection, navigate }} />
             : nav.startsWith('space:')
             ? <CollectionView {...{ collection: collections.find((c) => c.id === nav.slice(6)) || null, view, setView, deleteItem, onExpand: openExpanded, collections, addToCollection, removeFromCollection, renameCollection, editCollectionTags, deleteCollection, navigate, notesRef: spaceNotesRef }} />
-            : <GalleryView {...{ nav, view, setView, search, setSearch, searchFocus, setSearchFocus, deleteItem, slots: notes.slots, total: notes.total, ready: notes.ready, onWindow: notes.ensure, galFilter, setGalFilter, typeChips, sourceChips, unavailableCount, onExpand: openExpanded, collections, addToCollection, removeFromCollection }} />}
+            : <GalleryView {...{ nav, view, setView, search, setSearch, searchFocus, setSearchFocus, deleteItem, slots: notes.slots, total: notes.total, ready: notes.ready, onWindow: notes.ensure, galFilter, setGalFilter, galSort, setGalSort, typeChips, sourceChips, unavailableCount, onExpand: openExpanded, collections, addToCollection, removeFromCollection }} />}
         </main>
       </div>
 
