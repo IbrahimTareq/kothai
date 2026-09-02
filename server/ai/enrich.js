@@ -556,6 +556,11 @@ async function enrichNote(id, { absPath, text, isUrl, hasImage }) {
     for (const k of ['siteTitle', 'siteDesc', 'siteName', 'thumb', 'article']) {
       if (linkMeta[k]) patch[k] = linkMeta[k]
     }
+    // `author` → `account` (different names, so not part of the loop above).
+    // Only when the note has none: an importer that already knows the handle
+    // (Instagram reads it straight from the export) and a handle the user has
+    // edited by hand both outrank a provider's display name.
+    if (linkMeta.author && !existing?.account) patch.account = linkMeta.author
   }
   if (isUrl) applyLinkMeta()
 
@@ -573,7 +578,11 @@ async function enrichNote(id, { absPath, text, isUrl, hasImage }) {
       meta.tags = await tagvocab.canonicalize(meta.tags)
       // Deterministic — never routed through the LLM/junk-filter/canonicalize,
       // since a handle is an identity, not a concept those steps should judge.
-      meta.tags = tags.withAccountTag(meta.tags, existing?.account)
+      // patch.account first: applyLinkMeta may have just learned the handle
+      // in THIS run (see above), and reading only `existing` would tag the
+      // note on the next sweep instead of now — or never, since a later run
+      // sees classify already done.
+      meta.tags = tags.withAccountTag(meta.tags, patch.account ?? existing?.account)
       if (hasImage) meta.type = 'image' // an attached image is always an image note
       // The LLM may upgrade plain text to link/video (e.g. "check out
       // www.foo.com") — make sure the card has a URL to open, or demote it

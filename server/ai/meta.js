@@ -667,7 +667,7 @@ export async function fetchLinkMeta(rawUrl, noteId) {
     if (reddit) return reddit
     // else: fall through to oEmbed + OpenGraph, which is what still works.
   }
-  const meta = { siteTitle: null, siteDesc: null, siteName: null, thumb: null, article: null }
+  const meta = { siteTitle: null, siteDesc: null, siteName: null, thumb: null, article: null, author: null }
   let thumbUrl = null
 
   let oembedDesc = null
@@ -677,6 +677,15 @@ export async function fetchLinkMeta(rawUrl, noteId) {
       const d = await (await get(endpoint, 'application/json')).json()
       meta.siteTitle = d.title || null
       meta.siteName = d.provider_name || null
+      // Kept as its own field, not only folded into oembedDesc below. The
+      // creator handle is an IDENTITY: enrich promotes it to the note's
+      // `account`, which drives the account tag and lets a library be
+      // filtered by creator. Instagram gets this from its export; every other
+      // platform can only learn it here. TikTok in particular carries the
+      // handle in NEITHER its export nor the URL it redirects to (that
+      // redirect lands on a literal "@/"), so without this a TikTok note has
+      // no author anywhere, forever.
+      meta.author = typeof d.author_name === 'string' && d.author_name.trim() ? d.author_name.trim() : null
       oembedDesc = d.author_name ? `by ${d.author_name}` : null
       thumbUrl = d.thumbnail_url || null
     } catch {
