@@ -51,11 +51,13 @@ export function handleNotes(res, url) {
   const collection = collectionId ? new Set(collections.get(collectionId)?.itemIds || []) : undefined
   // Facets ignore type/source: chips only render on the Everything nav and
   // count within the search-filtered set regardless of the active chip.
-  const facetBase = query.applyFilters(all, { q: p.get('q') || undefined, collection })
+  // 'all' so the counts below can see the unavailable notes they need to count;
+  // the board itself hides them (see applyFilters).
+  const facetBase = query.applyFilters(all, { q: p.get('q') || undefined, collection, unavailable: 'all' })
   const matching = query.applyFilters(facetBase, {
     type: p.get('type') || undefined,
     source: p.get('source') || undefined,
-    unavailable: p.get('unavailable') === '1' || undefined,
+    unavailable: p.get('unavailable') === '1' ? 'only' : 'hide',
   })
   const offset = Math.max(0, parseInt(p.get('offset') || '0', 10) || 0)
   json(res, 200, {

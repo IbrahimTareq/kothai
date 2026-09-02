@@ -59,8 +59,9 @@ test('applyFilters: unavailable narrows to marked notes only', () => {
     { id: 'c', type: 'link', url: 'https://www.instagram.com/p/X/', unavailable: true },
   ]
   assert.deepEqual(applyFilters(notes, { unavailable: true }).map((n) => n.id), ['a', 'c'])
-  assert.equal(applyFilters(notes, {}).length, 3, 'omitting it must not filter anything')
-  assert.equal(applyFilters(notes, { unavailable: false }).length, 3)
+  // Omitting it is not "no filter" — the default is to hide the dead ones.
+  assert.deepEqual(applyFilters(notes, {}).map((n) => n.id), ['b'])
+  assert.deepEqual(applyFilters(notes, { unavailable: 'all' }).map((n) => n.id), ['a', 'b', 'c'])
 })
 
 test('applyFilters: unavailable composes with type rather than replacing it', () => {
@@ -78,7 +79,10 @@ test('facetsOf: counts unavailable alongside types and sources', () => {
     { type: 'link', unavailable: true },
   ])
   assert.equal(f.unavailable, 2)
-  assert.equal(f.types.video, 2)
+  // The dead video is not counted under its type: the type chips describe the
+  // default view, which does not include it.
+  assert.equal(f.types.video, 1)
+  assert.equal(f.types.link, undefined)
 })
 
 // --- multi-select facets ----------------------------------------------------
@@ -124,4 +128,29 @@ test('applyFilters: an empty list is not a filter', () => {
   assert.equal(applyFilters(notes, { type: '' }).length, 2)
   assert.equal(applyFilters(notes, { type: [] }).length, 2)
   assert.equal(applyFilters(notes, { type: ',, ,' }).length, 2, 'a list of blanks is still no filter')
+})
+
+// --- unavailable is hidden by default ----------------------------------------
+
+test('applyFilters: unavailable notes are out of an ordinary view unless asked for', () => {
+  const notes = [
+    { id: 'a', type: 'video' },
+    { id: 'b', type: 'video', unavailable: true },
+  ]
+  assert.deepEqual(applyFilters(notes, {}).map((n) => n.id), ['a'], 'hidden by default')
+  assert.deepEqual(applyFilters(notes, { type: 'video' }).map((n) => n.id), ['a'], 'and under any other filter')
+  assert.deepEqual(applyFilters(notes, { unavailable: 'only' }).map((n) => n.id), ['b'])
+  assert.deepEqual(applyFilters(notes, { unavailable: true }).map((n) => n.id), ['b'], 'true still means only')
+  assert.deepEqual(applyFilters(notes, { unavailable: 'all' }).map((n) => n.id), ['a', 'b'], 'all skips the filter entirely')
+})
+
+test('facetsOf: type/source counts describe the default view, so they exclude the hidden ones', () => {
+  // Otherwise a "TikTok 2" chip opens a board of 1 and the gap reads as a bug.
+  const f = facetsOf([
+    { type: 'video', url: 'https://www.tiktok.com/video/1' },
+    { type: 'video', url: 'https://www.tiktok.com/video/2', unavailable: true },
+  ])
+  assert.equal(f.types.video, 1)
+  assert.equal(f.sources.tiktok, 1)
+  assert.equal(f.unavailable, 1, 'but the hidden ones are still counted, or the chip could never appear')
 })

@@ -261,11 +261,15 @@ test('matchesLocal: facets AND together', () => {
   assert.equal(matchesLocal(tt, { source: 'tiktok', type: 'text' }), false)
 })
 
-test('matchesLocal: unavailable combines with the rest', () => {
+test('matchesLocal: unavailable combines with the rest, and is hidden by default', () => {
   const dead = { id: 'a', type: 'video', unavailable: true, pending: false, ts: 0, tags: [] } as UIItem
   const live = { id: 'b', type: 'video', pending: false, ts: 0, tags: [] } as UIItem
   assert.equal(matchesLocal(dead, { unavailable: true, type: 'video' }), true)
   assert.equal(matchesLocal(live, { unavailable: true, type: 'video' }), false)
+  // The default direction: a dead note stays out of an ordinary view.
+  assert.equal(matchesLocal(dead, { type: 'video' }), false)
+  assert.equal(matchesLocal(dead, {}), false)
+  assert.equal(matchesLocal(live, {}), true)
 })
 
 test('matchesLocal: an empty selection filters nothing', () => {

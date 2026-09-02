@@ -56,23 +56,39 @@ export function applyFilters(notes, { type, source, q, collection, unavailable }
   if (types.length) out = out.filter((n) => types.includes(n.type))
   const sources = toList(source)
   if (sources.length) out = out.filter((n) => sources.includes(sourceKey(n)))
+  // Three states, not a boolean, because "don't filter on this at all" is a
+  // real case: the facet base has to still SEE unavailable notes or the chip
+  // that reveals them would always read 0.
+  //
+  //   'hide' (default) — a dead link is not something to meet in the middle of
+  //                      an ordinary browse, so it is out unless asked for
+  //   'only'           — what the Unavailable chip selects
+  //   'all'            — no availability filtering; used for counting
+  //
   // Cuts ACROSS type and source rather than being one of them: a dead link can
-  // be a video or a post, from any platform. It is a state of the note, not a
-  // kind of note, which is why it is its own parameter.
-  if (unavailable) out = out.filter((n) => !!n.unavailable)
+  // be a video or a post from any platform. It is a state of the note, not a
+  // kind of note.
+  const avail = unavailable === true ? 'only' : (unavailable || 'hide')
+  if (avail === 'only') out = out.filter((n) => !!n.unavailable)
+  else if (avail !== 'all') out = out.filter((n) => !n.unavailable)
   if (q && q.trim()) out = out.filter((n) => matchesQ(n, q.trim()))
   return out
 }
 
+// Counts describe what a chip would actually SHOW you. Since the board hides
+// unavailable notes by default, the type and source counts are taken over the
+// available ones only — otherwise "TikTok 198" would open a board of 177 and
+// the difference would look like a bug. `unavailable` is the odd one out and is
+// counted over everything, because it is the count of what is being hidden.
 export function facetsOf(notes) {
   const types = {}
   const sources = {}
   let unavailable = 0
   for (const n of notes) {
+    if (n.unavailable) { unavailable++; continue }
     types[n.type] = (types[n.type] || 0) + 1
     const s = sourceKey(n)
     if (s) sources[s] = (sources[s] || 0) + 1
-    if (n.unavailable) unavailable++
   }
   return { types, sources, unavailable }
 }

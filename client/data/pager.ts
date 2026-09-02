@@ -39,7 +39,9 @@ export function matchesLocal(item: UIItem, query: PagerQuery): boolean {
   // selected types, and from ANY of the selected sources.
   const types = (query.type || '').split(',').filter(Boolean)
   if (types.length && !types.includes(serverType)) return false
-  if (query.unavailable && !item.unavailable) return false
+  // Mirrors applyFilters' default: a dead link stays out of an ordinary view
+  // and only appears when explicitly asked for.
+  if (query.unavailable ? !item.unavailable : item.unavailable) return false
   const sources = (query.source || '').split(',').filter(Boolean)
   if (sources.length && !sources.some((k) => SOURCE_BY_KEY[k]?.test(item))) return false
   if (query.q && query.q.trim()) {
