@@ -47,3 +47,36 @@ test('pageOf slices with clamped offset/limit', () => {
   assert.deepEqual(pageOf(LIB, 99, 10), [])
   assert.equal(pageOf(LIB, 0, 9999).length, 5, 'limit capped is fine when list is short')
 })
+
+// --- the unavailable filter ------------------------------------------------
+// Cuts across type and source rather than being one of them: a dead link can be
+// a video or a post from any platform, so it is a state of the note.
+
+test('applyFilters: unavailable narrows to marked notes only', () => {
+  const notes = [
+    { id: 'a', type: 'video', url: 'https://www.tiktok.com/video/1', unavailable: true },
+    { id: 'b', type: 'video', url: 'https://www.tiktok.com/video/2' },
+    { id: 'c', type: 'link', url: 'https://www.instagram.com/p/X/', unavailable: true },
+  ]
+  assert.deepEqual(applyFilters(notes, { unavailable: true }).map((n) => n.id), ['a', 'c'])
+  assert.equal(applyFilters(notes, {}).length, 3, 'omitting it must not filter anything')
+  assert.equal(applyFilters(notes, { unavailable: false }).length, 3)
+})
+
+test('applyFilters: unavailable composes with type rather than replacing it', () => {
+  const notes = [
+    { id: 'a', type: 'video', unavailable: true },
+    { id: 'b', type: 'link', unavailable: true },
+  ]
+  assert.deepEqual(applyFilters(notes, { unavailable: true, type: 'video' }).map((n) => n.id), ['a'])
+})
+
+test('facetsOf: counts unavailable alongside types and sources', () => {
+  const f = facetsOf([
+    { type: 'video', unavailable: true },
+    { type: 'video' },
+    { type: 'link', unavailable: true },
+  ])
+  assert.equal(f.unavailable, 2)
+  assert.equal(f.types.video, 2)
+})

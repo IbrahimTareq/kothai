@@ -88,12 +88,16 @@ export default function App() {
 
   // nav → server query for the Everything board: the chip filter narrows by
   // type or source, a direct type-nav (e.g. /image) filters server-side too.
-  const chipSource = SOURCE_BY_KEY[galFilter] ? galFilter : undefined
-  const chipType = !chipSource && galFilter !== 'all' ? (galFilter === 'note' ? 'text' : galFilter) : undefined
+  // "unavailable" is a STATE chip, not a type or source one: a dead link can be
+  // any type from any platform, so it is its own parameter rather than another
+  // value of galFilter's type/source split.
+  const chipUnavailable = galFilter === 'unavailable' || undefined
+  const chipSource = !chipUnavailable && SOURCE_BY_KEY[galFilter] ? galFilter : undefined
+  const chipType = !chipUnavailable && !chipSource && galFilter !== 'all' ? (galFilter === 'note' ? 'text' : galFilter) : undefined
   const navType = nav !== 'all' && !nav.startsWith('space:') && CAT[nav as UIType] ? (nav === 'note' ? 'text' : nav) : undefined
   const galleryActive = !(nav === 'core' || nav === 'settings' || nav === 'spaces') && !nav.startsWith('space:')
   const notes = useNotes(
-    { type: navType ?? chipType, source: chipSource, q: search },
+    { type: navType ?? chipType, source: chipSource, q: search, unavailable: chipUnavailable },
     galleryActive,
   )
   // Keep the open detail modal in sync with background completions (e.g.
@@ -536,6 +540,9 @@ export default function App() {
   const sourceChips = SOURCES
     .map((s) => ({ key: s.key, label: s.label, dot: s.dot, glyph: s.glyph, count: notes.facets.sources[s.key] || 0 }))
     .filter((c) => c.count > 0)
+  // Only offered once a check has actually found something — a permanent
+  // "Unavailable 0" chip is a filter for an empty set.
+  const unavailableCount = notes.facets.unavailable || 0
 
   // Hold the app behind the first-run gate: a brief splash until we know the
   // configured state, then the model picker on a fresh install.
@@ -588,7 +595,7 @@ export default function App() {
             ? <SpacesView {...{ collections, createCollection, navigate }} />
             : nav.startsWith('space:')
             ? <CollectionView {...{ collection: collections.find((c) => c.id === nav.slice(6)) || null, view, setView, deleteItem, onExpand: openExpanded, collections, addToCollection, removeFromCollection, renameCollection, editCollectionTags, deleteCollection, navigate, notesRef: spaceNotesRef }} />
-            : <GalleryView {...{ nav, view, setView, search, setSearch, searchFocus, setSearchFocus, deleteItem, slots: notes.slots, total: notes.total, ready: notes.ready, onWindow: notes.ensure, galFilter, setGalFilter, typeChips, sourceChips, onExpand: openExpanded, collections, addToCollection, removeFromCollection }} />}
+            : <GalleryView {...{ nav, view, setView, search, setSearch, searchFocus, setSearchFocus, deleteItem, slots: notes.slots, total: notes.total, ready: notes.ready, onWindow: notes.ensure, galFilter, setGalFilter, typeChips, sourceChips, unavailableCount, onExpand: openExpanded, collections, addToCollection, removeFromCollection }} />}
         </main>
       </div>
 

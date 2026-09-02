@@ -12,7 +12,7 @@ const SEARCH_DEBOUNCE_MS = 150
 export interface NoteSource {
   slots: Slot[]
   total: number
-  facets: { types: Record<string, number>; sources: Record<string, number> }
+  facets: { types: Record<string, number>; sources: Record<string, number>; unavailable?: number }
   ready: boolean
   ensure: (firstIndex: number, lastIndex: number) => void
   insertLocal: (item: UIItem) => void

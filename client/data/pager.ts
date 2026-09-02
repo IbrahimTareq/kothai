@@ -13,13 +13,13 @@ export function isPlaceholder(s: Slot): s is Placeholder {
   return (s as Placeholder).ph === true
 }
 
-export interface Facets { types: Record<string, number>; sources: Record<string, number> }
+export interface Facets { types: Record<string, number>; sources: Record<string, number>; unavailable?: number }
 export interface NotesPage {
   notes: UIItem[]; total: number; offset: number; facets: Facets; pendingTotal: number
   rev?: number; bootId?: string
 }
 export interface NotesDelta { notes: UIItem[]; deleted: string[]; pendingTotal: number }
-export interface PagerQuery { type?: string; source?: string; q?: string; collection?: string }
+export interface PagerQuery { type?: string; source?: string; q?: string; collection?: string; unavailable?: boolean }
 
 // Client mirror of the server-side filter, for deciding whether an
 // optimistically saved note belongs in the current view. `type` here is the
@@ -36,6 +36,7 @@ export function matchesLocal(item: UIItem, query: PagerQuery): boolean {
   if (query.collection) return false
   const serverType = item.type === 'note' ? 'text' : item.type
   if (query.type && serverType !== query.type) return false
+  if (query.unavailable && !item.unavailable) return false
   if (query.source && !(SOURCE_BY_KEY[query.source]?.test(item))) return false
   if (query.q && query.q.trim()) {
     const hay = [item.text, item.title, item.note, item.name, item.host, (item.tags || []).join(' ')]

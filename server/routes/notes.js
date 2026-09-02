@@ -52,7 +52,11 @@ export function handleNotes(res, url) {
   // Facets ignore type/source: chips only render on the Everything nav and
   // count within the search-filtered set regardless of the active chip.
   const facetBase = query.applyFilters(all, { q: p.get('q') || undefined, collection })
-  const matching = query.applyFilters(facetBase, { type: p.get('type') || undefined, source: p.get('source') || undefined })
+  const matching = query.applyFilters(facetBase, {
+    type: p.get('type') || undefined,
+    source: p.get('source') || undefined,
+    unavailable: p.get('unavailable') === '1' || undefined,
+  })
   const offset = Math.max(0, parseInt(p.get('offset') || '0', 10) || 0)
   json(res, 200, {
     notes: query.pageOf(matching, offset, parseInt(p.get('limit') || '120', 10)),

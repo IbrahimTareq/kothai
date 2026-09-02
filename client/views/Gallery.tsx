@@ -25,6 +25,7 @@ interface GalleryViewProps {
   setGalFilter: (v: string) => void
   typeChips: { key: string; label: string; glyph: string; count: number }[]
   sourceChips: { key: string; label: string; dot: string; glyph?: string; count: number }[]
+  unavailableCount: number
   onExpand: (item: UIItem) => void
   collections: Collection[]
   addToCollection: (cid: string, itemId: string) => void
@@ -37,7 +38,7 @@ const VIEW_CAT: Record<string, { label: string; glyph: string }> = {
   spaces: { label: 'Spaces', glyph: 'spark' },
 }
 
-export function GalleryView({ nav, view, setView, search, setSearch, searchFocus, setSearchFocus, deleteItem, slots, total, ready, onWindow, galFilter, setGalFilter, typeChips, sourceChips, onExpand, collections, addToCollection, removeFromCollection }: GalleryViewProps) {
+export function GalleryView({ nav, view, setView, search, setSearch, searchFocus, setSearchFocus, deleteItem, slots, total, ready, onWindow, galFilter, setGalFilter, typeChips, sourceChips, unavailableCount, onExpand, collections, addToCollection, removeFromCollection }: GalleryViewProps) {
   const cat = CAT[nav as UIType] || VIEW_CAT[nav] || { label: nav, glyph: 'all' }
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -48,7 +49,7 @@ export function GalleryView({ nav, view, setView, search, setSearch, searchFocus
   // invitation. Fade whichever edge still has chips beyond it.
   const filtersRef = useRef<HTMLDivElement>(null)
   const [edges, setEdges] = useState({ left: false, right: false })
-  const chipCount = typeChips.length + sourceChips.length
+  const chipCount = typeChips.length + sourceChips.length + (unavailableCount > 0 ? 1 : 0)
   useEffect(() => {
     const el = filtersRef.current
     if (!el) return setEdges({ left: false, right: false })
@@ -74,7 +75,7 @@ export function GalleryView({ nav, view, setView, search, setSearch, searchFocus
       </header>
 
       <div className="gal-controls">
-        {nav === 'all' && (typeChips.length > 0 || sourceChips.length > 0)
+        {nav === 'all' && (typeChips.length > 0 || sourceChips.length > 0 || unavailableCount > 0)
           ? <div className={'gal-filters' + edgeClass(edges)} ref={filtersRef}>
               <button className={'chip filter-chip' + (galFilter === 'all' ? ' on' : '')} onClick={() => setGalFilter('all')}>All</button>
               {typeChips.map((c) => (
@@ -89,6 +90,17 @@ export function GalleryView({ nav, view, setView, search, setSearch, searchFocus
                   {c.label}<span className="fc-count">{c.count}</span>
                 </button>
               ))}
+              {/* Last, and only once a check has found something: this is a
+                  state the library is in, not a kind of thing in it, and an
+                  "Unavailable 0" chip would be a filter for an empty set. */}
+              {unavailableCount > 0 && <>
+                <span className="filter-sep" />
+                <button className={'chip filter-chip' + (galFilter === 'unavailable' ? ' on' : '')}
+                  title="Saved links whose content no longer exists"
+                  onClick={() => setGalFilter(galFilter === 'unavailable' ? 'all' : 'unavailable')}>
+                  <span className="fc-ico"><Icon name="trash" size={13} /></span>Unavailable<span className="fc-count">{unavailableCount}</span>
+                </button>
+              </>}
             </div>
           : <span className="gal-filters-spacer" />}
         <div className="view-toggle">

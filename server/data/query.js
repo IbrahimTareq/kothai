@@ -38,11 +38,15 @@ export function matchesQ(n, q) {
 
 // Narrow `notes` (already in canonical order) by any of: server type, source
 // key, substring query, membership id-set. Absent params skip their filter.
-export function applyFilters(notes, { type, source, q, collection } = {}) {
+export function applyFilters(notes, { type, source, q, collection, unavailable } = {}) {
   let out = notes
   if (collection) out = out.filter((n) => collection.has(n.id))
   if (type) out = out.filter((n) => n.type === type)
   if (source) out = out.filter((n) => sourceKey(n) === source)
+  // Cuts ACROSS type and source rather than being one of them: a dead link can
+  // be a video or a post, from any platform. It is a state of the note, not a
+  // kind of note, which is why it is its own parameter.
+  if (unavailable) out = out.filter((n) => !!n.unavailable)
   if (q && q.trim()) out = out.filter((n) => matchesQ(n, q.trim()))
   return out
 }
@@ -50,12 +54,14 @@ export function applyFilters(notes, { type, source, q, collection } = {}) {
 export function facetsOf(notes) {
   const types = {}
   const sources = {}
+  let unavailable = 0
   for (const n of notes) {
     types[n.type] = (types[n.type] || 0) + 1
     const s = sourceKey(n)
     if (s) sources[s] = (sources[s] || 0) + 1
+    if (n.unavailable) unavailable++
   }
-  return { types, sources }
+  return { types, sources, unavailable }
 }
 
 export function pageOf(notes, offset, limit) {
