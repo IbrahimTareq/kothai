@@ -8,6 +8,7 @@ import { Icon } from '../components/icons'
 import { Carousel } from '../components/Carousel'
 import { relTime, imgGradient } from '../util/format'
 import { isMediaFirst, sourceGlyph, sourceLabel, githubParts } from '../domain/source'
+import { lockAxis, shouldDismiss, navDirection, type Axis } from '../layout/swipe'
 import type { Collection, UIItem } from '../types'
 
 function openUrl(url?: string | null) {
@@ -167,9 +168,15 @@ interface ExpandedProps {
   collections: Collection[]
   onAddTo: (cid: string, itemId: string) => void
   onRemoveFrom: (cid: string, itemId: string) => void
+  // Touch-only (see the pointerType guard below): swipe left/right on the
+  // main panel to step to the neighbouring item on whatever board this was
+  // opened from. -1 = previous, 1 = next. The caller decides whether a
+  // neighbour actually exists — asking for one that doesn't just springs
+  // the drag back, same as not clearing the commit distance at all.
+  onNav?: (dir: -1 | 1) => void
 }
 
-export function ExpandedView({ item, onClose, onDelete, onUpdate, onRetag, collections, onAddTo, onRemoveFrom }: ExpandedProps) {
+export function ExpandedView({ item, onClose, onDelete, onUpdate, onRetag, collections, onAddTo, onRemoveFrom, onNav }: ExpandedProps) {
   const [tags, setTags] = useState<string[]>(item.tags || [])
   const [note, setNote] = useState<string>(item.mindNote || '')
   const [adding, setAdding] = useState(false)
@@ -178,11 +185,91 @@ export function ExpandedView({ item, onClose, onDelete, onUpdate, onRetag, colle
   const pickRef = useRef<HTMLDivElement>(null)
   const brand = sourceGlyph(item)
 
+  // ---- touch gestures on the main panel: swipe down to dismiss, swipe
+  // left/right to step to the neighbouring item -----------------------------
+  // dragY drives the shell's live-follow transform while a dismiss drag is in
+  // progress; `dragging` toggles the CSS transition off during that follow
+  // and back on for the spring-back, the same technique Carousel.tsx uses for
+  // its own drag state (see .carousel-stage.dragging in expanded.css).
+  const [dragY, setDragY] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  // Ref, not state: written on every pointermove, and only ever read inside
+  // the handlers themselves — turning it into state would re-render the
+  // whole overlay on every pixel of movement for no one's benefit.
+  const gesture = useRef<{ axis: Axis; startX: number; startY: number } | null>(null)
+
   const inSpaces = collections.filter((c) => c.itemIds.includes(item.id))
   const openSpaces = collections.filter((c) => !c.itemIds.includes(item.id))
 
   // reset local editing state when a different item is opened
-  useEffect(() => { setTags(item.tags || []); setNote(item.mindNote || ''); setAdding(false); setDraft(''); setPicking(false) }, [item.id, item.tags, item.mindNote])
+  useEffect(() => {
+    setTags(item.tags || []); setNote(item.mindNote || ''); setAdding(false); setDraft(''); setPicking(false)
+    // A nav swipe already resets these itself before the item changes, but a
+    // deep link or a jump from an Ask citation opens a different item without
+    // going through that path — this is the backstop that guarantees no
+    // leftover drag offset survives into a freshly opened item either way.
+    gesture.current = null; setDragging(false); setDragY(0)
+  }, [item.id, item.tags, item.mindNote])
+
+  // Only ever attaches on a touch pointer (see the guard in onGestureStart),
+  // so a mouse drag — text selection inside a note or a code block, most
+  // obviously — is completely untouched on desktop.
+  //
+  // Deliberately skipped when .exp-main's own content scrolls (a tall code
+  // block, a long article): rather than fighting the browser's native touch
+  // scroll with `touch-action` and a scroll-position check (the standard but
+  // fiddlier way to do this), an item whose content overflows just keeps
+  // scrolling exactly as it did before this existed. After the height/
+  // containment fixes above this is the rare case, not the common one — most
+  // panels now fit inside .exp-main's fixed share of the screen with room to
+  // spare, so gestures are live almost everywhere that matters.
+  const onGestureStart = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== 'touch') return
+    if (e.currentTarget.scrollHeight > e.currentTarget.clientHeight + 1) return
+    // Let the carousel deck own its own horizontal drag entirely — both it
+    // and this handler claim the horizontal axis, and both are listening on
+    // overlapping DOM, so only one of them may pick up a given gesture.
+    if ((e.target as HTMLElement).closest('.carousel-stage')) return
+    gesture.current = { axis: 'none', startX: e.clientX, startY: e.clientY }
+  }
+  const onGestureMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const g = gesture.current
+    if (!g) return
+    const dx = e.clientX - g.startX
+    const dy = e.clientY - g.startY
+    g.axis = lockAxis(g.axis, dx, dy)
+    // Only a downward drag gets a live follow — dragging up has nothing to
+    // reveal, so it is left inert rather than snapping in the wrong direction.
+    if (g.axis === 'vertical' && dy > 0) {
+      if (!dragging) setDragging(true)
+      setDragY(dy)
+    }
+  }
+  const onGestureEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    const g = gesture.current
+    gesture.current = null
+    if (!g) return
+    const dx = e.clientX - g.startX
+    const dy = e.clientY - g.startY
+    if (g.axis === 'vertical') {
+      setDragging(false)
+      if (shouldDismiss(dy)) { onClose(); return }
+      setDragY(0)
+      return
+    }
+    if (g.axis === 'horizontal') {
+      const dir = navDirection(dx)
+      if (dir !== 0) onNav?.(dir)
+    }
+  }
+  // A cancelled gesture (an incoming call, the OS swipe-back gesture taking
+  // over) gets exactly the spring-back treatment — never a dismiss or a nav,
+  // since the browser is telling us it didn't complete.
+  const onGestureCancel = () => {
+    gesture.current = null
+    setDragging(false)
+    setDragY(0)
+  }
 
   // Esc closes the space picker first, then the overlay
   useEffect(() => {
@@ -216,11 +303,26 @@ export function ExpandedView({ item, onClose, onDelete, onUpdate, onRetag, colle
   // brand glyph + label, shared by the linked and unlinked forms below
   const srcInner = <>{brand ? <Icon name={brand} size={12} /> : <Icon name="external" size={12} />}{sourceLabel(item)}</>
 
+  // Follows the drag 1:1 and fades toward (never quite reaching) transparent,
+  // so the board underneath is visibly there before the release decides
+  // whether the gesture actually commits.
+  const shellStyle: React.CSSProperties | undefined = dragY
+    ? { transform: `translateY(${dragY}px)`, opacity: Math.max(0.35, 1 - dragY / 600) }
+    : undefined
+
   return (
     <div className="exp-overlay" onClick={onClose}>
-      <div className="exp-shell" onClick={(e) => e.stopPropagation()}>
+      <div className={'exp-shell' + (dragging ? ' dragging' : '')} style={shellStyle} onClick={(e) => e.stopPropagation()}>
         <button className="exp-close-m" aria-label="Close" onClick={onClose}><Icon name="close" size={16} /></button>
-        <div className="exp-main"><MainPanel item={item} /></div>
+        {/* The gesture area. Pointer handlers live here (not on .exp-shell or
+            .exp-overlay) so .exp-side's own vertical scroll — the tags/notes/
+            spaces form — is never in competition with them. */}
+        <div className="exp-main"
+          onPointerDown={onGestureStart}
+          onPointerMove={onGestureMove}
+          onPointerUp={onGestureEnd}
+          onPointerCancel={onGestureCancel}
+        ><MainPanel item={item} /></div>
 
         <aside className="exp-side">
           <div className="exp-side-scroll">

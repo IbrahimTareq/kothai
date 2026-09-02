@@ -436,6 +436,26 @@ export default function App() {
       history.replaceState(null, '', routeToPath(nextNav))
     })
   }
+  // Swipe-navigate between items inside the expanded overlay, on whatever
+  // board it was opened from. Only ever steps into an already-loaded
+  // neighbour — never fetches, never skips over an unloaded placeholder to
+  // find one further out. The windowed board loads a whole page (120 items)
+  // at once, so a visible item's immediate neighbour is almost always in the
+  // same page and this just works; the rare miss (right at a page boundary)
+  // is a no-op, not a wrong answer — skipping ahead to the next LOADED item
+  // regardless of distance would silently jump the reader past everything in
+  // between, which is worse than the swipe doing nothing.
+  const navExpanded = (dir: -1 | 1) => {
+    if (!expanded) return
+    const slots = nav.startsWith('space:') ? (spaceNotesRef.current?.slots ?? []) : notes.slots
+    const idx = slots.findIndex((s) => !isPlaceholder(s) && s.id === expanded.id)
+    if (idx < 0) return
+    const neighbor = slots[idx + dir]
+    if (!neighbor || isPlaceholder(neighbor)) return
+    setExpanded(neighbor)
+    const path = routeToPath(nav, neighbor.id)
+    if (location.pathname !== path) history.replaceState(null, '', path)
+  }
   // Settings acts as a toggle: opening remembers where we were, closing returns there.
   const toggleSettings = () => {
     navigate(nav === 'settings' ? beforeSettings.current : 'settings')
@@ -591,7 +611,7 @@ export default function App() {
         </span>
       </button>
 
-      {expanded && <ExpandedView item={expanded} onClose={closeExpanded} onDelete={deleteItem} onUpdate={updateItem} onRetag={retagItem} collections={collections} onAddTo={addToCollection} onRemoveFrom={removeFromCollection} />}
+      {expanded && <ExpandedView item={expanded} onClose={closeExpanded} onDelete={deleteItem} onUpdate={updateItem} onRetag={retagItem} collections={collections} onAddTo={addToCollection} onRemoveFrom={removeFromCollection} onNav={navExpanded} />}
 
       {captureOpen && <CaptureModal onClose={() => setCaptureOpen(false)} onSave={saveCapture} />}
 
