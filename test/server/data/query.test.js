@@ -80,3 +80,48 @@ test('facetsOf: counts unavailable alongside types and sources', () => {
   assert.equal(f.unavailable, 2)
   assert.equal(f.types.video, 2)
 })
+
+// --- multi-select facets ----------------------------------------------------
+// OR within a facet, AND across them. ANDing within a facet would always be
+// empty (nothing is both a video and a note), which is why lists widen.
+
+test('applyFilters: several types widen the set rather than narrowing it to nothing', () => {
+  const notes = [{ id: 'a', type: 'video' }, { id: 'b', type: 'link' }, { id: 'c', type: 'text' }]
+  assert.deepEqual(applyFilters(notes, { type: 'video,link' }).map((n) => n.id), ['a', 'b'])
+  assert.deepEqual(applyFilters(notes, { type: ['video', 'text'] }).map((n) => n.id), ['a', 'c'])
+})
+
+test('applyFilters: several sources widen the same way', () => {
+  const notes = [
+    { id: 'a', url: 'https://www.tiktok.com/video/1' },
+    { id: 'b', url: 'https://www.instagram.com/p/X/' },
+    { id: 'c', url: 'https://example.com/thing' },
+  ]
+  const got = applyFilters(notes, { source: 'tiktok,igposts' }).map((n) => n.id)
+  assert.ok(got.includes('a'), 'tiktok item kept')
+  assert.ok(!got.includes('c'), 'unrelated item dropped')
+})
+
+test('applyFilters: facets AND together — type narrows a multi-source selection', () => {
+  const notes = [
+    { id: 'a', type: 'video', url: 'https://www.tiktok.com/video/1' },
+    { id: 'b', type: 'link', url: 'https://www.tiktok.com/video/2' },
+  ]
+  assert.deepEqual(applyFilters(notes, { source: 'tiktok', type: 'video' }).map((n) => n.id), ['a'])
+})
+
+test('applyFilters: unavailable combines with the others instead of replacing them', () => {
+  const notes = [
+    { id: 'a', type: 'video', url: 'https://www.tiktok.com/video/1', unavailable: true },
+    { id: 'b', type: 'video', url: 'https://www.tiktok.com/video/2' },
+    { id: 'c', type: 'link', url: 'https://www.tiktok.com/video/3', unavailable: true },
+  ]
+  assert.deepEqual(applyFilters(notes, { unavailable: true, type: 'video' }).map((n) => n.id), ['a'])
+})
+
+test('applyFilters: an empty list is not a filter', () => {
+  const notes = [{ id: 'a', type: 'video' }, { id: 'b', type: 'link' }]
+  assert.equal(applyFilters(notes, { type: '' }).length, 2)
+  assert.equal(applyFilters(notes, { type: [] }).length, 2)
+  assert.equal(applyFilters(notes, { type: ',, ,' }).length, 2, 'a list of blanks is still no filter')
+})

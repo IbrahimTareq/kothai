@@ -21,8 +21,10 @@ interface GalleryViewProps {
   total: number
   ready: boolean
   onWindow: (first: number, last: number) => void
-  galFilter: string
-  setGalFilter: (v: string) => void
+  /** Selected chip keys — types, sources and 'unavailable' mixed together.
+   *  Empty means "All". */
+  galFilter: string[]
+  setGalFilter: (v: string[]) => void
   typeChips: { key: string; label: string; glyph: string; count: number }[]
   sourceChips: { key: string; label: string; dot: string; glyph?: string; count: number }[]
   unavailableCount: number
@@ -42,6 +44,12 @@ export function GalleryView({ nav, view, setView, search, setSearch, searchFocus
   const cat = CAT[nav as UIType] || VIEW_CAT[nav] || { label: nav, glyph: 'all' }
 
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Chips are multi-select: each one toggles, and "All" is simply the empty
+  // selection rather than a chip of its own that has to be deselected.
+  const on = (key: string) => galFilter.includes(key)
+  const toggle = (key: string) =>
+    setGalFilter(on(key) ? galFilter.filter((k) => k !== key) : [...galFilter, key])
 
   // The filter strip scrolls sideways (11 chips against ~350px on a phone),
   // and did so with no sign that it could: the only hint was a chip clipped
@@ -77,15 +85,18 @@ export function GalleryView({ nav, view, setView, search, setSearch, searchFocus
       <div className="gal-controls">
         {nav === 'all' && (typeChips.length > 0 || sourceChips.length > 0 || unavailableCount > 0)
           ? <div className={'gal-filters' + edgeClass(edges)} ref={filtersRef}>
-              <button className={'chip filter-chip' + (galFilter === 'all' ? ' on' : '')} onClick={() => setGalFilter('all')}>All</button>
+              <button className={'chip filter-chip' + (galFilter.length === 0 ? ' on' : '')}
+                onClick={() => setGalFilter([])}>All</button>
               {typeChips.map((c) => (
-                <button key={c.key} className={'chip filter-chip' + (galFilter === c.key ? ' on' : '')} onClick={() => setGalFilter(c.key)}>
+                <button key={c.key} className={'chip filter-chip' + (on(c.key) ? ' on' : '')}
+                  aria-pressed={on(c.key)} onClick={() => toggle(c.key)}>
                   <span className="fc-ico"><Icon name={c.glyph} size={13} /></span>{c.label}<span className="fc-count">{c.count}</span>
                 </button>
               ))}
               {sourceChips.length > 0 && <span className="filter-sep" />}
               {sourceChips.map((c) => (
-                <button key={c.key} className={'chip filter-chip' + (galFilter === c.key ? ' on' : '')} onClick={() => setGalFilter(c.key)}>
+                <button key={c.key} className={'chip filter-chip' + (on(c.key) ? ' on' : '')}
+                  aria-pressed={on(c.key)} onClick={() => toggle(c.key)}>
                   {c.glyph ? <span className="fc-ico"><Icon name={c.glyph} size={13} /></span> : <span className="fc-dot" style={{ background: c.dot }} />}
                   {c.label}<span className="fc-count">{c.count}</span>
                 </button>
@@ -95,9 +106,10 @@ export function GalleryView({ nav, view, setView, search, setSearch, searchFocus
                   "Unavailable 0" chip would be a filter for an empty set. */}
               {unavailableCount > 0 && <>
                 <span className="filter-sep" />
-                <button className={'chip filter-chip' + (galFilter === 'unavailable' ? ' on' : '')}
+                <button className={'chip filter-chip' + (on('unavailable') ? ' on' : '')}
+                  aria-pressed={on('unavailable')}
                   title="Saved links whose content no longer exists"
-                  onClick={() => setGalFilter(galFilter === 'unavailable' ? 'all' : 'unavailable')}>
+                  onClick={() => toggle('unavailable')}>
                   <span className="fc-ico"><Icon name="trash" size={13} /></span>Unavailable<span className="fc-count">{unavailableCount}</span>
                 </button>
               </>}

@@ -233,3 +233,43 @@ test('matchesLocal never optimistically matches a collection-scoped query', () =
   assert.ok(!matchesLocal(it, { collection: 'c1' }))
   assert.ok(!matchesLocal(it, { collection: 'c1', type: 'video' })) // even if every other clause matches
 })
+
+// --- multi-select filters ----------------------------------------------------
+// matchesLocal mirrors the server's applyFilters so an optimistically saved note
+// lands in (or stays out of) the current view without a round trip. When the
+// filters became multi-select, a mirror still comparing one value would have
+// silently dropped every optimistic note from any multi-chip view.
+
+test('matchesLocal: a note matches if it is ANY of the selected types', () => {
+  const vid = { id: 'a', type: 'video', pending: false, ts: 0, tags: [] } as UIItem
+  const note = { id: 'b', type: 'note', pending: false, ts: 0, tags: [] } as UIItem
+  assert.equal(matchesLocal(vid, { type: 'video,text' }), true)
+  assert.equal(matchesLocal(note, { type: 'video,text' }), true, 'note maps to the server type "text"')
+  assert.equal(matchesLocal(vid, { type: 'link,text' }), false)
+})
+
+test('matchesLocal: a note matches if it is from ANY of the selected sources', () => {
+  const tt = { id: 'a', type: 'video', host: 'www.tiktok.com', url: 'https://www.tiktok.com/video/1', pending: false, ts: 0, tags: [] } as UIItem
+  assert.equal(matchesLocal(tt, { source: 'tiktok' }), true)
+  assert.equal(matchesLocal(tt, { source: 'reels,tiktok' }), true)
+  assert.equal(matchesLocal(tt, { source: 'reels' }), false)
+})
+
+test('matchesLocal: facets AND together', () => {
+  const tt = { id: 'a', type: 'video', host: 'www.tiktok.com', url: 'https://www.tiktok.com/video/1', pending: false, ts: 0, tags: [] } as UIItem
+  assert.equal(matchesLocal(tt, { source: 'tiktok', type: 'video' }), true)
+  assert.equal(matchesLocal(tt, { source: 'tiktok', type: 'text' }), false)
+})
+
+test('matchesLocal: unavailable combines with the rest', () => {
+  const dead = { id: 'a', type: 'video', unavailable: true, pending: false, ts: 0, tags: [] } as UIItem
+  const live = { id: 'b', type: 'video', pending: false, ts: 0, tags: [] } as UIItem
+  assert.equal(matchesLocal(dead, { unavailable: true, type: 'video' }), true)
+  assert.equal(matchesLocal(live, { unavailable: true, type: 'video' }), false)
+})
+
+test('matchesLocal: an empty selection filters nothing', () => {
+  const vid = { id: 'a', type: 'video', pending: false, ts: 0, tags: [] } as UIItem
+  assert.equal(matchesLocal(vid, {}), true)
+  assert.equal(matchesLocal(vid, { type: '' }), true)
+})

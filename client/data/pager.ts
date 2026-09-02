@@ -35,9 +35,13 @@ export function matchesLocal(item: UIItem, query: PagerQuery): boolean {
   // locally via removeLocal, so this only affects the addition path).
   if (query.collection) return false
   const serverType = item.type === 'note' ? 'text' : item.type
-  if (query.type && serverType !== query.type) return false
+  // Mirrors applyFilters' OR-within-a-facet: a note matches if it is ANY of the
+  // selected types, and from ANY of the selected sources.
+  const types = (query.type || '').split(',').filter(Boolean)
+  if (types.length && !types.includes(serverType)) return false
   if (query.unavailable && !item.unavailable) return false
-  if (query.source && !(SOURCE_BY_KEY[query.source]?.test(item))) return false
+  const sources = (query.source || '').split(',').filter(Boolean)
+  if (sources.length && !sources.some((k) => SOURCE_BY_KEY[k]?.test(item))) return false
   if (query.q && query.q.trim()) {
     const hay = [item.text, item.title, item.note, item.name, item.host, (item.tags || []).join(' ')]
       .filter(Boolean).join(' ').toLowerCase()

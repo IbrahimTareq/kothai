@@ -51,7 +51,9 @@ export default function App() {
   const [chatTotal, setChatTotal] = useState(0)               // how many exist server-side
   const [search, setSearch] = useState('')
   const [searchFocus, setSearchFocus] = useState(false)
-  const [galFilter, setGalFilter] = useState<string>('all')  // Everything-page type/source filter
+  // Everything-page filters, multi-select. Chip keys are mixed (types, sources
+  // and the 'unavailable' state) and split apart below; an empty set is "All".
+  const [galFilter, setGalFilter] = useState<string[]>([])
   // Drives the capture button's "Added" state after a successful save.
   const [captured, setCaptured] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>(() =>
@@ -80,7 +82,7 @@ export default function App() {
   }, [t.accent])
   useEffect(() => { document.documentElement.dataset.theme = theme; try { localStorage.setItem('kothai-theme', theme) } catch { /* ignore */ } }, [theme])
   useEffect(() => { setView(t.defaultView as ViewMode) }, [t.defaultView])
-  useEffect(() => { setGalFilter('all') }, [nav])   // clear filter when switching pages
+  useEffect(() => { setGalFilter([]) }, [nav])   // clear filters when switching pages
   useEffect(() => { chatIdRef.current = chatId }, [chatId])
   useEffect(() => { const fx = document.getElementById('bg-fx'); if (fx) fx.style.display = t.texture ? '' : 'none' }, [t.texture])
 
@@ -88,12 +90,20 @@ export default function App() {
 
   // nav → server query for the Everything board: the chip filter narrows by
   // type or source, a direct type-nav (e.g. /image) filters server-side too.
-  // "unavailable" is a STATE chip, not a type or source one: a dead link can be
-  // any type from any platform, so it is its own parameter rather than another
-  // value of galFilter's type/source split.
-  const chipUnavailable = galFilter === 'unavailable' || undefined
-  const chipSource = !chipUnavailable && SOURCE_BY_KEY[galFilter] ? galFilter : undefined
-  const chipType = !chipUnavailable && !chipSource && galFilter !== 'all' ? (galFilter === 'note' ? 'text' : galFilter) : undefined
+  // Chips are multi-select and are sorted into their facets here. Selecting
+  // Instagram AND TikTok widens to either; adding Videos then narrows that to
+  // the videos among them — OR within a facet, AND across them, which is what
+  // server/data/query.js applies.
+  //
+  // "unavailable" is a STATE, not a type or a source: a dead link can be any
+  // type from any platform, so it rides as its own parameter and combines with
+  // whatever else is selected rather than replacing it.
+  const chipUnavailable = galFilter.includes('unavailable') || undefined
+  const chipSource = galFilter.filter((k) => SOURCE_BY_KEY[k]).join(',') || undefined
+  const chipType = galFilter
+    .filter((k) => k !== 'unavailable' && !SOURCE_BY_KEY[k])
+    .map((k) => (k === 'note' ? 'text' : k))
+    .join(',') || undefined
   const navType = nav !== 'all' && !nav.startsWith('space:') && CAT[nav as UIType] ? (nav === 'note' ? 'text' : nav) : undefined
   const galleryActive = !(nav === 'core' || nav === 'settings' || nav === 'spaces') && !nav.startsWith('space:')
   const notes = useNotes(

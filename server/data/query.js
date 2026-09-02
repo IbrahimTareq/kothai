@@ -38,11 +38,24 @@ export function matchesQ(n, q) {
 
 // Narrow `notes` (already in canonical order) by any of: server type, source
 // key, substring query, membership id-set. Absent params skip their filter.
+// `type` and `source` accept a single value or a comma-separated list. The
+// semantics are ordinary faceted search: OR **within** a facet, AND **across**
+// them — picking Instagram and TikTok widens to either, while adding Videos
+// narrows that to the videos among them. A list that ANDed within a facet
+// would always be empty (nothing is both a video and a note).
+function toList(v) {
+  if (Array.isArray(v)) return v.filter(Boolean)
+  if (typeof v === 'string' && v) return v.split(',').map((s) => s.trim()).filter(Boolean)
+  return []
+}
+
 export function applyFilters(notes, { type, source, q, collection, unavailable } = {}) {
   let out = notes
   if (collection) out = out.filter((n) => collection.has(n.id))
-  if (type) out = out.filter((n) => n.type === type)
-  if (source) out = out.filter((n) => sourceKey(n) === source)
+  const types = toList(type)
+  if (types.length) out = out.filter((n) => types.includes(n.type))
+  const sources = toList(source)
+  if (sources.length) out = out.filter((n) => sources.includes(sourceKey(n)))
   // Cuts ACROSS type and source rather than being one of them: a dead link can
   // be a video or a post, from any platform. It is a state of the note, not a
   // kind of note, which is why it is its own parameter.
