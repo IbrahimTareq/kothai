@@ -189,6 +189,10 @@
   .search-box{padding-top:0;padding-bottom:0}
   .search-box input{align-self:stretch;min-height:var(--control-md)}
 
+  /* A chat title needs two lines at this width, so every row is the height of
+     two — including the renaming and confirming states, which share the box. */
+  .chat-row{min-height:80px}
+
   /* Ask: composer buttons, and the rename/delete pair on a chat history row */
   .core .attach-btn,.core .send-btn{width:44px;height:44px}
   .core .chat-row .card-del{width:var(--control-md);height:var(--control-md)}
@@ -199,7 +203,7 @@
      .btn--icon pins its own width/height, which this does not fight. */
   .btn,.row-btn,.spaces-new-btn,
   .retag-go,.danger-go,.danger-cancel,
-  .danger-input{min-height:var(--control-md)}
+  .danger-input,.chat-confirm{min-height:var(--control-md)}
 
   /* A segmented control is a border-box trough with pills inset by --space-4,
      so its buttons come out 10px shorter than the trough: 8px of padding plus

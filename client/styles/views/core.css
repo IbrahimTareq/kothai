@@ -57,15 +57,35 @@
 .recent-h::after{content:"";flex:1;height:1px;background:var(--line)}
 
 /* saved chat history (ask mode, empty thread) */
-.chat-list{display:flex;flex-direction:column;gap:var(--space-8)}
-.chat-row{display:flex;align-items:center;gap:var(--space-12);width:100%;text-align:left;cursor:pointer;
-  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
-  padding:var(--space-12) var(--space-14);color:var(--ink);transition:var(--dur-fast)}
-.chat-row:hover{border-color:var(--line-hover);background:var(--panel-2)}
+/* One list, not a stack of tiles: a bordered card per row read as seven
+   separate objects and cost a gap between each. Rows are flat and divided by
+   a hairline, so more of them fit and the highlight is the only thing that
+   moves. */
+.chat-list{display:flex;flex-direction:column;gap:var(--space-2)}
+/* One height for every row, whatever its own title needs: without it the list
+   scanned ragged AND the renaming and delete-confirm states — one line each —
+   collapsed the row and jumped everything below. Sharing the box is what those
+   states were written to do. This floor is the one-line height; the phone
+   block raises it, because that is the only width where titles actually wrap
+   (measured: at 1280 the column is 584px and not one of them takes a second
+   line, so forcing two there is 30px of nothing per row). */
+.chat-row{position:relative;display:flex;align-items:center;gap:var(--space-12);width:100%;
+  min-height:64px;text-align:left;cursor:pointer;background:transparent;border:0;
+  border-radius:var(--radius-md);padding:var(--space-12);color:var(--ink);
+  transition:var(--dur-fast)}
+/* inset so it reads as a divider between rows rather than a rule across the
+   panel, and dropped where the highlight would sit under it */
+.chat-row + .chat-row::before{content:"";position:absolute;top:calc(var(--space-2) * -1);
+  left:var(--space-12);right:var(--space-12);height:1px;background:var(--line-2)}
+.chat-row:hover{background:var(--panel-2)}
 .chat-row>svg{color:var(--ink-dim);flex-shrink:0}
-.chat-title{flex:1;min-width:0;font-size:var(--text-sm);overflow:hidden;
-  text-overflow:ellipsis;white-space:nowrap}
-.chat-meta{font-size:var(--text-3xs);letter-spacing:var(--tracking-mono);flex-shrink:0}
+/* the stacked title + meta column; the actions stay beside it */
+.chat-row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--space-4)}
+/* Two lines, not one ellipsised line — see Chats.tsx for why the single line
+   could not identify a conversation on a phone. */
+.chat-title{font-size:var(--text-sm);line-height:1.4;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.chat-meta{font-size:var(--text-2xs);letter-spacing:var(--tracking-mono)}
 .chat-row .card-del{opacity:0;display:grid;place-items:center}
 .chat-row:hover .card-del{opacity:1}
 
@@ -279,7 +299,8 @@
 @media (hover:none){.core .chat-row .card-del{opacity:1}}
 
 /* ── saved-conversation rows ──────────────────────────────────────────────── */
-.chat-row.active{border-color:var(--ink-faint);background:var(--panel-2)}
+/* the border that used to mark the active row is gone, so the fill carries it */
+.chat-row.active{background:var(--panel-3)}
 /* renaming / delete-confirm states share the row's box so nothing jumps */
 .chat-row.renaming,.chat-row.confirming{cursor:default}
 .chat-rename{flex:1;min-width:0;background:transparent;border:0;outline:none;
