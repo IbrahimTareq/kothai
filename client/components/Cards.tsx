@@ -7,17 +7,13 @@ import { relTime, imgGradient } from '../util/format'
 import { isMediaFirst, sourceGlyph, sourceLabel } from '../domain/source'
 import type { Collection, UIItem } from '../types'
 
-function openUrl(url?: string | null) {
-  if (url) window.open(url, '_blank')
-}
-
 // Deterministic placeholder height so gradient tiles stagger like real media.
 function phHeight(seed: number) { return 150 + (Math.abs(seed) % 4) * 40 }
 
 function ImageThumb({ item, overlay }: { item: UIItem; overlay?: ReactElement }) {
   if (item.img) {
     return (
-      <div className="img-thumb real" onClick={() => openUrl(item.img)}>
+      <div className="img-thumb real">
         <img src={item.img} alt={item.name || 'image'} loading="lazy" />
         <div className="img-scan"></div>
         {overlay}
@@ -161,8 +157,9 @@ export function ItemCard({ item, onDelete, onExpand, collections, onAddTo, onRem
   onAddTo?: (cid: string, itemId: string) => void
   onRemoveFrom?: (cid: string, itemId: string) => void
 }) {
-  // link & video cards open their URL on click (delete stops propagation)
-  const openable = (item.type === 'link' || item.type === 'video') && !!item.url
+  // every card opens the expanded view on click (the corner actions stop
+  // propagation); the source URL is reached from there, not from the tile
+  const openable = !!onExpand
   const brand = sourceGlyph(item)
   // The headline tile draws its own source mark inline, so the floating corner
   // badge would be a second copy of the same glyph.
@@ -176,7 +173,6 @@ export function ItemCard({ item, onDelete, onExpand, collections, onAddTo, onRem
         {canCollect && (
           <button className="card-act add" title="Add to space" onClick={(e) => { e.stopPropagation(); setPopOpen((v) => !v) }}><span className="card-act-plus">＋</span></button>
         )}
-        <button className="card-act expand" title="Expand" onClick={(e) => { e.stopPropagation(); onExpand?.(item) }}><Icon name="expand" size={13} /></button>
         <button className="card-act del" title="Release" onClick={(e) => { e.stopPropagation(); onDelete(item.id) }}><Icon name="trash" size={13} /></button>
       </div>
       {canCollect && popOpen && (
@@ -189,8 +185,10 @@ export function ItemCard({ item, onDelete, onExpand, collections, onAddTo, onRem
   )
   return (
     <article className={'item-card type-' + item.type + (headline ? ' linktile' : '') + (openable ? ' openable' : '')} tabIndex={0}
-      title={openable ? item.url ?? undefined : undefined}
-      onClick={openable ? () => openUrl(item.url) : undefined}>
+      role={openable ? 'button' : undefined}
+      title={item.url ?? undefined}
+      onClick={openable ? () => onExpand!(item) : undefined}
+      onKeyDown={openable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onExpand!(item) } } : undefined}>
       <div className="card-content"><CardInner item={item} overlay={overlay} /></div>
     </article>
   )

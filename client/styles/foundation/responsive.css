@@ -178,15 +178,11 @@
 
   /* The board's per-card cluster was three 26px buttons 6px apart on a 162px
      card: under half the floor, and an unconfirmed delete sitting right
-     beside the button you actually want. On touch it collapses to Expand
-     alone at full size. Nothing is lost — Release and Add to space are both
-     in the expanded view that Expand opens, where they are deliberate rather
-     than one fat-finger away. Expand has to stay: a card body click opens the
-     source URL for links and videos and does nothing at all for an image,
-     note or code card, so this button is the only way into those. */
-  .card-act.add,.card-act.del{display:none}
-  .card-act{width:44px;height:44px;border-radius:var(--radius-md)}
-  .card-act svg{width:16px;height:16px}
+     beside the thing you actually want to tap. On touch the cluster goes
+     entirely — the card body itself opens the expanded view now, and Release
+     and Add to space both live in there, where they are deliberate rather
+     than one fat-finger away. */
+  .card-actions{display:none}
 
   /* the input, not its wrapper, carries the tap — nothing focuses it from
      the surrounding box, so a 20px-tall input was the whole target */
