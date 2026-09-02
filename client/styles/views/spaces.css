@@ -48,11 +48,26 @@
 .coll-title:hover .coll-rename { color: var(--ink-mute); }
 .coll-rename:hover { color: var(--ink); background: var(--panel-2); }
 .coll-count { flex: none; font-size:var(--text-xs); color: var(--ink-faint); white-space: nowrap; }
+/* Rename + delete, grouped with the name they act on. flex:none so a long
+   space name truncates before they do. */
+.coll-idactions { flex: none; display: flex; align-items: center; gap: var(--space-4); }
 .coll-name-input { flex: 1; min-width: 0; font-size:var(--text-xl); background: var(--panel); border: 1px solid var(--line); color: var(--ink); border-radius: var(--radius-md); padding: var(--space-4) var(--space-10); margin: 0; }
 
 /* tier 2 */
 .coll-bar { display: flex; align-items: center; gap: var(--space-16); }
 .coll-rule { flex: 1; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-6); }
+/* Scrolled rather than wrapped on phones (see foundation/responsive.css); the
+   edge with rules behind it fades, the same way the Everything filter bar
+   does — a strip that scrolls with no sign of it reads as a bug. */
+.coll-rule.fade-r{
+  -webkit-mask-image:linear-gradient(to right,#000 calc(100% - var(--space-32)),transparent);  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
+  mask-image:linear-gradient(to right,#000 calc(100% - var(--space-32)),transparent)}  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
+.coll-rule.fade-l{
+  -webkit-mask-image:linear-gradient(to left,#000 calc(100% - var(--space-32)),transparent);  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
+  mask-image:linear-gradient(to left,#000 calc(100% - var(--space-32)),transparent)}  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
+.coll-rule.fade-l.fade-r{
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 var(--space-32),#000 calc(100% - var(--space-32)),transparent);  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
+  mask-image:linear-gradient(to right,transparent,#000 var(--space-32),#000 calc(100% - var(--space-32)),transparent)}
 .coll-tools { flex: none; display: flex; align-items: center; gap: var(--space-8); }
 .coll-tools-sep { width: 1px; height: 18px; background: var(--line); }
 /* Delete is the quietest thing on the bar until you reach for it, and it arms

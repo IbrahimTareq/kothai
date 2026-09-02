@@ -137,11 +137,15 @@
      carries the "Added" confirmation on its own */
   .fab .fab-label{display:none}
   .coll-head{padding:var(--space-14) var(--space-14) var(--space-12)}
-  /* the rule chips wrap at this width, so give them the row and drop the
-     tools onto their own line rather than floating beside a stack of chips */
-  .coll-bar{flex-wrap:wrap;gap:var(--space-10)}
-  .coll-rule{flex:1 1 100%}
-  .coll-tools{margin-left:auto}
+  /* The rule chips used to wrap, which pushed the toolbar onto a third line
+     where `margin-left:auto` parked it against the right edge — 160px of the
+     347px row, 46% of it, was empty, and the header ran to 184px before any
+     content. The chips scroll instead, so the bar keeps the shape it has on
+     the desktop: rules on the left, how-you-look-at-them on the right. */
+  .coll-bar{gap:var(--space-10)}
+  .coll-rule{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .coll-rule::-webkit-scrollbar{display:none}
+  .coll-ruleadd{flex-shrink:0}
   .coll-head::after{left:var(--space-14);right:var(--space-14)}
   .mm-bar{padding-left:var(--space-14);padding-right:var(--space-14)}
 

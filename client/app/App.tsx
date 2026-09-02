@@ -497,7 +497,11 @@ export default function App() {
   // of the three is current — there the marker fades out rather than parking
   // under a tab that isn't the one you're on. Order matches the buttons below.
   const TAB_NAV = ['all', 'core', 'spaces', 'settings']
-  const tabIndex = TAB_NAV.indexOf(nav)
+  // Inside a space `nav` is `space:<id>`, which is in none of these — so the
+  // bar marked no tab at all and the one screen you can get lost on was the
+  // one that never said where you were. A space IS the Spaces destination.
+  const navTab = nav.startsWith('space:') ? 'spaces' : nav
+  const tabIndex = TAB_NAV.indexOf(navTab)
   // Held so the marker fades out WHERE IT IS. Feeding the bar a 0 whenever no
   // tab is current made it slide back to the first tab on its way out, which
   // is a second piece of motion saying nothing.
@@ -536,7 +540,7 @@ export default function App() {
             <button className={'rail-btn' + (nav === 'core' ? ' active' : '')} onClick={goAsk}>
               <Icon name="ask" size={20} /><span className="rail-tip">Ask</span>
             </button>
-            <button className={'rail-btn' + (nav === 'spaces' ? ' active' : '')} onClick={() => { navigate('spaces'); setSearch('') }}>
+            <button className={'rail-btn' + (navTab === 'spaces' ? ' active' : '')} onClick={() => { navigate('spaces'); setSearch('') }}>
               <Icon name="spaces" size={20} /><span className="rail-tip">Spaces</span>
             </button>
             {/* Settings is a page like the three above it, so it rides the same

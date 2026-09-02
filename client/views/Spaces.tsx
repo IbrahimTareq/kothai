@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef, type MutableRefObject } from 'rea
 import { Icon } from '../components/icons'
 import { ItemCard } from '../components/Cards'
 import { WindowedBoard } from '../components/Board'
+import { scrollEdges, edgeClass } from '../layout/overflow'
 import { Mindmap } from '../components/Mindmap'
 import { useNotes } from '../data/useNotes'
 import type { NoteSource } from '../data/useNotes'
@@ -178,6 +179,21 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
     if (t && !collection.tags.includes(t)) editCollectionTags(collection.id, [...collection.tags, t])
     setTagDraft('')  // keep the popover open for adding several rules in a row
   }
+  // The rule strip scrolls sideways on phones, so it carries the same fade
+  // hints the Everything filter bar does — one module, one behaviour.
+  const ruleRef = useRef<HTMLDivElement>(null)
+  const [ruleEdges, setRuleEdges] = useState({ left: false, right: false })
+  useEffect(() => {
+    const el = ruleRef.current
+    if (!el) return
+    const read = () => setRuleEdges(scrollEdges(el.scrollLeft, el.scrollWidth, el.clientWidth))
+    read()
+    el.addEventListener('scroll', read, { passive: true })
+    const ro = new ResizeObserver(read)
+    ro.observe(el)
+    return () => { el.removeEventListener('scroll', read); ro.disconnect() }
+  }, [collection.tags.length])
+
   const ruleSet = new Set(collection.tags)
   const q = tagDraft.trim().toLowerCase()
   const tagCounts = new Map<string, number>()
@@ -213,10 +229,25 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
                   </span>
                 )}
                 <h1 className="coll-name" onClick={startRename}>{collection.name}</h1>
-                <button className="coll-rename" title="Rename space" aria-label="Rename space" onClick={startRename}>
-                  <Icon name="edit" size={14} />
-                </button>
+                {/* The count belongs to the name, so it sits against it — with
+                    the pencil between them it read as a detached third thing. */}
                 <span className="coll-count mono">{collItems.length} item{collItems.length === 1 ? '' : 's'}</span>
+                {/* Rename and delete are what you do to the SPACE, so they live
+                    with its name. Delete used to sit on the view toolbar with
+                    only a hairline between it and "Mindmap", which gave an
+                    irreversible action the same weight as a view switch. */}
+                <span className="coll-idactions">
+                  <button className="coll-rename" title="Rename space" aria-label="Rename space" onClick={startRename}>
+                    <Icon name="edit" size={14} />
+                  </button>
+                  <button className={'coll-del' + (armed ? ' armed' : '')} aria-label={armed ? 'Confirm delete space' : 'Delete space'}
+                    title={armed ? '' : 'Delete space'}
+                    onClick={() => (armed ? del() : setArmed(true))}
+                    onBlur={() => setArmed(false)}
+                    onKeyDown={(e) => { if (e.key === 'Escape') setArmed(false) }}>
+                    {armed ? 'Delete space?' : <Icon name="trash" size={16} />}
+                  </button>
+                </span>
               </div>}
         </div>
 
@@ -224,7 +255,7 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
             it on the right. Density sits at the left of the tool group so that
             dropping it in mindmap mode never moves the view switch or the bin. */}
         <div className="coll-bar">
-          <div className="coll-rule">
+          <div className={'coll-rule' + edgeClass(ruleEdges)} ref={ruleRef}>
             {collection.tags.map((t) => (
               <button key={t} className="chip coll-tag" title="Remove rule tag" onClick={() => removeTag(t)}>{t}<span className="coll-tag-x">×</span></button>
             ))}
@@ -273,16 +304,6 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
               <button role="tab" aria-selected={!mind} className={'seg-btn' + (!mind ? ' on' : '')} onClick={() => setMind(false)}>Grid</button>
               <button role="tab" aria-selected={mind} className={'seg-btn' + (mind ? ' on' : '')} onClick={() => setMind(true)}>Mindmap</button>
             </div>
-            <span className="coll-tools-sep" />
-            {/* Deleting a space is one click away and cannot be undone, so the
-                bin arms itself first and says what it is about to do. */}
-            <button className={'coll-del' + (armed ? ' armed' : '')} aria-label={armed ? 'Confirm delete space' : 'Delete space'}
-              title={armed ? '' : 'Delete space'}
-              onClick={() => (armed ? del() : setArmed(true))}
-              onBlur={() => setArmed(false)}
-              onKeyDown={(e) => { if (e.key === 'Escape') setArmed(false) }}>
-              {armed ? 'Delete space?' : <Icon name="trash" size={16} />}
-            </button>
           </div>
         </div>
       </header>
