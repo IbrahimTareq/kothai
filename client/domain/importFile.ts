@@ -42,6 +42,13 @@ export const IMPORT_SOURCES: ImportSource[] = [
     extensions: /\.(zip|json)$/i,
     extensionsLabel: '.zip or .json',
   },
+  {
+    id: 'tiktok',
+    label: 'TikTok',
+    accept: '.zip,.json',
+    extensions: /\.(zip|json)$/i,
+    extensionsLabel: '.zip or .json',
+  },
 ]
 
 export function getImportSource(id: string): ImportSource | null {

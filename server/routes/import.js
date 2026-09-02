@@ -69,6 +69,14 @@ export async function handleImport(req, res) {
 // it. A small tracking-param allowlist is still stripped so the intended
 // benefit (surviving a shared/copied link's tracking noise) applies outside
 // Instagram too, without touching anything that could be a real identifier.
+// TikTok reaches the same video by three different URLs: the export's
+// `tiktokv.com/share/video/<id>/`, the canonical `tiktok.com/@user/video/<id>`
+// a person would paste from the app, and the handle-less
+// `tiktok.com/video/<id>` the importer rewrites to. The numeric id is the
+// identity, so all three collapse to one key — without this, saving a TikTok
+// by hand and then importing your favourites would store it twice.
+const TT_HOST = /(^|\.)(tiktok\.com|tiktokv\.com)$/
+const TT_VIDEO_ID = /\/(?:share\/)?video\/(\d+)/
 const IG_HOST = /(^|\.)instagram\.com$/
 const IG_SHORTCODE = /\/(?:p|reel|reels|tv)\/([^/]+)/i // path keyword case-insensitive; shortcode itself stays case-sensitive (Instagram shortcodes are)
 // utm_*/igsh/fbclid are unambiguous tracking noise on ANY host. `si` is NOT —
@@ -102,6 +110,10 @@ function canonicalUrl(raw) {
   }
   const host = u.hostname.toLowerCase().replace(/^www\./, '')
   const path = u.pathname.replace(/\/+$/, '') || '/'
+  if (TT_HOST.test(host)) {
+    const m = path.match(TT_VIDEO_ID)
+    if (m) return `tiktok:${m[1]}`
+  }
   if (IG_HOST.test(host)) {
     const m = path.match(IG_SHORTCODE)
     if (m) return `instagram:${m[1]}` // /p/, /reel/, /reels/, /tv/ for the same code are the same post

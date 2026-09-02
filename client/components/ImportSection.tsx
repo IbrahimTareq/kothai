@@ -28,6 +28,14 @@ const INSTRUCTIONS: Record<string, ReactNode> = {
       become spaces — or the whole ZIP. Posts and collections can also be imported separately, in either order.
     </>
   ),
+  tiktok: (
+    <>
+      Profile → Settings and privacy → Account → Download your data, with file format <b>JSON</b>.
+      Drop <code>user_data_tiktok.json</code> or the ZIP. Only your <b>favourites</b> come across — the videos you
+      bookmarked — not likes or watch history. TikTok's export names your collections but doesn't say
+      which videos are in them, so favourites arrive as one list.
+    </>
+  ),
 }
 
 export function ImportSection() {

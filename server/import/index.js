@@ -4,8 +4,9 @@
 // touching the route, and the client's per-source Import sections address
 // them by `name`.
 import * as instagram from './instagram.js'
+import * as tiktok from './tiktok.js'
 
-const IMPORTERS = [instagram]
+const IMPORTERS = [instagram, tiktok]
 
 // Exact-name lookup, used when the upload names its source (each Import
 // sub-section in Settings knows which platform it is). Selecting by name

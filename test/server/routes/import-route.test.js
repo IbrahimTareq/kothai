@@ -985,3 +985,49 @@ test('multi-file: too many files is refused before anything is decoded', async (
   assert.match(res.body.error, /Too many files/)
   assert.equal(notes.length, 0)
 })
+
+// --- TikTok ---------------------------------------------------------------
+
+test('tiktok: an export imports as videos, and its three URL forms dedup to one note', async () => {
+  reset()
+  const exportJson = {
+    'Likes and Favorites': {
+      'Favorite Videos': { FavoriteVideoList: [{ Date: '2025-08-09 10:20:53', Link: 'https://www.tiktokv.com/share/video/7325881953608158497/' }] },
+      'Like List': { ItemFavoriteList: [{ Date: '2025-01-01 00:00:00', Link: 'https://www.tiktokv.com/share/video/999/' }] },
+    },
+  }
+  const res = fakeRes()
+  await handleImport(fakeReq({ source: 'tiktok', files: [{ name: 'user_data_tiktok.json', data: b64(exportJson) }] }), res)
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.body.importer, 'tiktok')
+  assert.equal(res.body.imported, 1, 'the Like List is not imported')
+  assert.equal(notes[0].type, 'video')
+  assert.deepEqual(notes[0].tags, ['tiktok'])
+  assert.equal(notes[0].url, 'https://www.tiktok.com/video/7325881953608158497')
+
+  // The same video saved by hand from the app carries the @handle form. A
+  // second import must recognise it as already saved, not store it twice.
+  const again = fakeRes()
+  await handleImport(fakeReq({
+    source: 'tiktok',
+    files: [{ name: 'user_data_tiktok.json', data: b64({ 'Likes and Favorites': { 'Favorite Videos': { FavoriteVideoList: [
+      { Date: '2025-08-09 10:20:53', Link: 'https://www.tiktok.com/@someone/video/7325881953608158497' },
+    ] } } }) }],
+  }), again)
+  assert.equal(again.body.imported, 0)
+  assert.equal(again.body.skipped, 1)
+  assert.equal(notes.length, 1)
+})
+
+test('tiktok: an Instagram export dropped on the TikTok source is refused by name', async () => {
+  reset()
+  const res = fakeRes()
+  await handleImport(fakeReq({
+    source: 'tiktok',
+    files: [{ name: 'saved_posts.json', data: b64(savedPostsPayload([post('natgeo', 'AAA111')])) }],
+  }), res)
+  assert.equal(res.statusCode, 400)
+  assert.equal(res.body.code, 'import_source_mismatch')
+  assert.match(res.body.error, /TikTok/)
+  assert.equal(notes.length, 0)
+})
