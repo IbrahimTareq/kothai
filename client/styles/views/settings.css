@@ -156,9 +156,23 @@
 .row-btn.danger { color: var(--danger); }
 .row-btn.danger:hover { border-color: var(--danger); }
 
-/* Import: the whole row is the drop target, the button is the picker. */
+/* Import: the whole row is the drop target, the button is the picker. The
+   affordance is the hint line under the button plus the highlight below — no
+   resting outline, so the import rows still read as part of the settings list
+   rather than as cut-out upload boxes. */
 .settings-row[data-drag] { background: var(--panel-2); }
 .settings-row[data-drag] .row-btn { border-color: var(--ink-faint); }
+/* Sits under the picker so the row states its second, less obvious entry point
+   without the description having to spend a sentence on it. Hidden mid-drag,
+   where the button itself already says "Drop to import". */
+.import-hint {
+  margin-top: var(--space-10);
+  color: var(--ink-faint);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-tight);
+  text-align: center;
+}
+.settings-row[data-drag] .import-hint { visibility: hidden; }
 /* Children of the row would otherwise fire their own dragenter/dragleave as
    the pointer crosses them. dragDepth in Settings.tsx already tolerates that,
    but ignoring pointer events on the inner content is cheaper and steadier. */
@@ -177,6 +191,7 @@
 @media (max-width: 560px) {
   .settings-row-head { flex-direction: column; align-items: stretch; gap: var(--space-12); }
   .settings-row-action .row-btn { width: 100%; }
+  .import-hint { text-align: center; }
   /* The theme switch is a segmented control, not a .row-btn, so it kept its
      content width and sat short beside the full-width buttons above it. The
      trough spans, and its pills split what it spans. */

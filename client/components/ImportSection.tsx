@@ -142,7 +142,8 @@ function ImportSourceRow({ source }: { source: ImportSource }) {
             {importing ? 'Importing…' : dragging ? 'Drop to import' : 'Choose files'}
           </span>
         </label>
-      }>
+      }
+      hint={<>or drop here</>}>
       {result && (
         <div className="settings-row-extra">
           <div className="import-result" role="status" aria-live="polite">

@@ -20,10 +20,14 @@ export function SettingsGroup({ label, sub, className, children }: {
 // One row of the settings row list: title + explanation on the left, its
 // control on the right. `children` renders full-width beneath the row — the
 // confirmation steps and result/error messages expand there in place.
-export function SettingsRow({ title, desc, action, danger, children, ...rest }: {
+export function SettingsRow({ title, desc, action, hint, danger, children, ...rest }: {
   title: string
   desc: ReactNode
   action?: ReactNode
+  /** Small line under the control — a secondary way to use the row (e.g. that
+   *  it also accepts a drop), kept out of `desc` so it sits with the control
+   *  it describes rather than at the end of a paragraph. */
+  hint?: ReactNode
   danger?: boolean
   children?: ReactNode
 } & HTMLAttributes<HTMLDivElement>) {
@@ -34,7 +38,12 @@ export function SettingsRow({ title, desc, action, danger, children, ...rest }: 
           <div className="settings-row-title">{title}</div>
           <div className="settings-row-desc">{desc}</div>
         </div>
-        {action && <div className="settings-row-action">{action}</div>}
+        {action && (
+          <div className="settings-row-action">
+            {action}
+            {hint && <div className="import-hint">{hint}</div>}
+          </div>
+        )}
       </div>
       {children}
     </div>
