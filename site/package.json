@@ -5,7 +5,7 @@
   "description": "Documentation site for Kothai. Deliberately its own package so the app's CI never installs it.",
   "packageManager": "pnpm@10.15.1",
   "engines": {
-    "node": ">=22.13.0"
+    "node": ">=22.13.0 <23"
   },
   "scripts": {
     "dev": "vitepress dev --port 5175 --strictPort",
