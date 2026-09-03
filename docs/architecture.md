@@ -67,11 +67,11 @@ client/                 React 19 + TypeScript, bundled by Vite
 ├─ app/                 main.tsx · App.tsx (the shell) · router.ts
 ├─ views/               full screens: Core (ask), Gallery, Spaces, Expanded,
 │                       Settings, Onboarding
-├─ components/          Board, Capture, Cards, Mindmap, Carousel, Chats,
+├─ components/          Board, Capture, Cards, Canvas, Carousel, Chats,
 │                       ModelPicker, Tweaks, icons
 ├─ data/                api.ts · pager.ts · useNotes.ts    ← server talk
 ├─ domain/              detect · source · importFile       ← pure rules
-├─ layout/              masonry · carousel · mindmap       ← pure geometry
+├─ layout/              masonry · carousel · canvas       ← pure geometry
 ├─ util/                format · markdown
 └─ styles/              foundation/ · components/ · views/ (see design-system.md)
 
@@ -334,7 +334,7 @@ The layer split is by **what a module is allowed to touch**:
 | `components/` | Reusable UI. |
 | `data/` | The only place that talks to the server. |
 | `domain/` | Pure rules — type detection, source classification, upload validation. |
-| `layout/` | Pure geometry — masonry packing, carousel maths, mindmap radial layout. |
+| `layout/` | Pure geometry — masonry packing, carousel maths, canvas packing/columns and doc↔React Flow conversion. |
 | `util/` | Pure formatting. |
 
 `domain/`, `layout/` and `util/` import nothing from React and nothing from the

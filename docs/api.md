@@ -182,7 +182,7 @@ Chats float to the front on every touch, not just on creation.
 |---|---|
 | `GET /api/collections` | `{ collections }` |
 | `POST /api/collections` | `{ name, tags? }` → `{ collection }`. Name max 120, tags max 40. |
-| `PATCH /api/collections/:id` | `{ name?, tags? }` |
+| `PATCH /api/collections/:id` | `{ name?, tags?, canvas? }`. `canvas` is the space's board (JSON Canvas-style `{ nodes, edges }`; `null` clears it); malformed docs are `400`, oversized ones (over 2000 nodes or edges) too. |
 | `DELETE /api/collections/:id` | `{ ok }` |
 | `POST /api/collections/:id/items` | `{ itemId }` → `{ collection }` · `404` if the note doesn't exist |
 | `DELETE /api/collections/:id/items/:itemId` | `{ collection }` |
