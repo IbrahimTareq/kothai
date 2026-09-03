@@ -71,7 +71,7 @@ client/                 React 19 + TypeScript, bundled by Vite
 │                       ModelPicker, Tweaks, icons
 ├─ data/                api.ts · pager.ts · useNotes.ts    ← server talk
 ├─ domain/              detect · source · importFile       ← pure rules
-├─ layout/              masonry · carousel · canvas       ← pure geometry
+├─ layout/              masonry · carousel · canvas        ← pure geometry
 ├─ util/                format · markdown
 └─ styles/              foundation/ · components/ · views/ (see design-system.md)
 
