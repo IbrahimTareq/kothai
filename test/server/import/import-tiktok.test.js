@@ -115,9 +115,17 @@ test('parseFavorites: the item cap is a budget the caller can shrink, and overfl
 })
 
 test('parse: a maliciously deep export degrades to a warning instead of blowing the stack', () => {
-  let node = { FavoriteVideoList: [{ Date: '2025-01-01 00:00:00', Link: share('1') }] }
-  for (let i = 0; i < 5000; i++) node = { nested: node }
-  const result = parse(files({ 'user_data_tiktok.json': JSON.stringify(node) }))
+  // Built as text rather than by JSON.stringify-ing a nested object. stringify
+  // recurses once per level, so at this depth it overflows inside the test
+  // before parse() is ever called: the ceiling is ~6.2k on Node 24 but under 5k
+  // on the Node 22 that .nvmrc pins CI to, which is why this passed locally and
+  // failed there. JSON.parse walks iteratively, so building the input this way
+  // leaves the parser's own depth-guarded walk as the only thing under test —
+  // which is the point of the case.
+  const depth = 5000
+  const leaf = JSON.stringify({ FavoriteVideoList: [{ Date: '2025-01-01 00:00:00', Link: share('1') }] })
+  const nested = `${'{"nested":'.repeat(depth)}${leaf}${'}'.repeat(depth)}`
+  const result = parse(files({ 'user_data_tiktok.json': nested }))
   assert.equal(result.items.length, 0)
   assert.ok(result.warnings.some((w) => /too deeply nested/.test(w)), JSON.stringify(result.warnings))
 })
