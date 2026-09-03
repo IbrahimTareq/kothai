@@ -16,7 +16,7 @@ import { CoreView } from '../views/Core'
 import { GalleryView } from '../views/Gallery'
 import { SpacesView, CollectionView } from '../views/Spaces'
 import type {
-  ChatSummary, Collection, ThreadMsg, UIItem, UIType, VaultStatus, ViewMode,
+  CanvasDoc, ChatSummary, Collection, ThreadMsg, UIItem, UIType, VaultStatus, ViewMode,
 } from '../types'
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -391,6 +391,12 @@ export default function App() {
     setCollections((prev) => prev.map((c) => (c.id === id ? { ...c, name } : c)))
     Collections.update(id, { name }).catch(() => {})
   }
+  // The mounted canvas is the authority for the space it shows; this only
+  // keeps App's copy current so leaving and returning shows the latest board.
+  const saveCanvas = (id: string, canvas: CanvasDoc) => {
+    setCollections((prev) => prev.map((c) => (c.id === id ? { ...c, canvas } : c)))
+    Collections.update(id, { canvas }).catch(() => { Collections.list().then(setCollections).catch(() => {}) })
+  }
   // These three await the server (its response reflects smart-rule backfill /
   // membership); on failure we just refetch the truth rather than leave the UI
   // ahead of the server.
@@ -429,7 +435,7 @@ export default function App() {
     setExpanded(item)
     const path = routeToPath(nav, item.id)
     if (location.pathname === path) return
-    // Replace rather than stack when one overlay opens another (mindmap → item),
+    // Replace rather than stack when one overlay opens another (canvas → item),
     // so a single Back always returns to the board.
     if (pathToRoute(location.pathname).item) history.replaceState(null, '', path)
     else { history.pushState(null, '', path); pushedItem.current = true }
@@ -606,7 +612,7 @@ export default function App() {
             : nav === 'spaces'
             ? <SpacesView {...{ collections, createCollection, navigate }} />
             : nav.startsWith('space:')
-            ? <CollectionView {...{ collection: collections.find((c) => c.id === nav.slice(6)) || null, view, setView, deleteItem, onExpand: openExpanded, collections, addToCollection, removeFromCollection, renameCollection, editCollectionTags, deleteCollection, navigate, notesRef: spaceNotesRef }} />
+            ? <CollectionView {...{ collection: collections.find((c) => c.id === nav.slice(6)) || null, view, setView, deleteItem, onExpand: openExpanded, collections, addToCollection, removeFromCollection, renameCollection, editCollectionTags, saveCanvas, deleteCollection, navigate, notesRef: spaceNotesRef }} />
             : <GalleryView {...{ nav, view, setView, search, setSearch, searchFocus, setSearchFocus, deleteItem, slots: notes.slots, total: notes.total, ready: notes.ready, onWindow: notes.ensure, galFilter, setGalFilter, galSort, setGalSort, typeChips, sourceChips, unavailableCount, onExpand: openExpanded, collections, addToCollection, removeFromCollection }} />}
         </main>
       </div>

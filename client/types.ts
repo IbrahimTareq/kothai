@@ -190,4 +190,24 @@ export interface Collection {
   removedIds: string[]
   count: number       // resolved by the server (= itemIds.length)
   covers?: UIItem[]   // tile preview — first few members, newest-first; absent on endpoints that don't join it
+  canvas?: CanvasDoc  // the space's freeform board; absent until first saved
 }
+
+// ── Space canvas ────────────────────────────────────────────────────────────
+// JSON Canvas (jsoncanvas.org) shape with one extension: an `item` node is a
+// member card. Coordinates are absolute canvas pixels; a node sits inside a
+// column (`group`) when its centre lies inside the column's rectangle.
+export type CanvasSide = 'top' | 'right' | 'bottom' | 'left'
+interface CanvasNodeBase { id: string; x: number; y: number; width: number; height: number }
+export type CanvasItemNode = CanvasNodeBase & { type: 'item'; itemId: string }
+export type CanvasTextNode = CanvasNodeBase & { type: 'text'; text: string }
+export type CanvasGroupNode = CanvasNodeBase & { type: 'group'; label?: string }
+export type CanvasNode = CanvasItemNode | CanvasTextNode | CanvasGroupNode
+export interface CanvasEdge {
+  id: string
+  fromNode: string
+  toNode: string
+  fromSide?: CanvasSide
+  toSide?: CanvasSide
+}
+export interface CanvasDoc { nodes: CanvasNode[]; edges: CanvasEdge[] }

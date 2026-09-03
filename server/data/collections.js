@@ -92,6 +92,20 @@ function attach(c, itemId) {
   c.removedIds = c.removedIds.filter((x) => x !== itemId)
 }
 
+// Drop the canvas card for an item that left the space, plus any line that
+// touched it. A canvas never carries a card for a non-member. Returns whether
+// the doc changed.
+function pruneCanvas(c, itemId) {
+  if (!c.canvas) return false
+  const gone = new Set(c.canvas.nodes.filter((n) => n.type === 'item' && n.itemId === itemId).map((n) => n.id))
+  if (!gone.size) return false
+  c.canvas = {
+    nodes: c.canvas.nodes.filter((n) => !gone.has(n.id)),
+    edges: c.canvas.edges.filter((e) => !gone.has(e.fromNode) && !gone.has(e.toNode)),
+  }
+  return true
+}
+
 // Add all current tag-matching notes to a smart collection (in-memory; caller
 // persists). Respects removedIds. `notes` is an array of at least { id, tags }.
 export function backfill(c, notes) {
@@ -117,8 +131,9 @@ export async function create({ name, tags = [] }, notes = []) {
   return withCovers(c)
 }
 
-// Rename and/or edit the smart rule. Editing tags re-runs backfill (additive —
-// never removes items that no longer match). Returns null if not found.
+// Rename, edit the smart rule and/or replace the canvas. Editing tags re-runs
+// backfill (additive — never removes items that no longer match). Returns
+// null if not found.
 export async function update(id, patch, notes = []) {
   const c = find(id)
   if (!c) return null
@@ -126,6 +141,11 @@ export async function update(id, patch, notes = []) {
   if (Array.isArray(patch.tags)) {
     c.tags = norm(patch.tags)
     if (c.tags.length) backfill(c, notes)
+  }
+  // The route has already sanitized `canvas`; null clears the board.
+  if ('canvas' in patch) {
+    if (patch.canvas === null) delete c.canvas
+    else c.canvas = patch.canvas
   }
   updateRow(await getDb(), c)
   return withCovers(c)
@@ -182,6 +202,7 @@ export async function removeItem(id, itemId) {
   if (!c) return null
   c.itemIds = c.itemIds.filter((x) => x !== itemId)
   if (!c.removedIds.includes(itemId)) c.removedIds.push(itemId)
+  pruneCanvas(c, itemId)
   updateRow(await getDb(), c)
   return withCovers(c)
 }
@@ -213,7 +234,8 @@ export async function deleteItemEverywhere(itemId) {
     const br = c.removedIds.length
     c.itemIds = c.itemIds.filter((x) => x !== itemId)
     c.removedIds = c.removedIds.filter((x) => x !== itemId)
-    if (c.itemIds.length !== bi || c.removedIds.length !== br) touched.push(c)
+    const pruned = pruneCanvas(c, itemId)
+    if (pruned || c.itemIds.length !== bi || c.removedIds.length !== br) touched.push(c)
   }
   if (touched.length) {
     const db = await getDb()

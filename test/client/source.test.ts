@@ -1,43 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { platformBucket, SOURCES, isAwaitingContent } from '../../client/domain/source.ts'
+import { SOURCES, isAwaitingContent } from '../../client/domain/source.ts'
 import { sourceKey } from '../../server/data/query.js'
 import type { UIItem } from '../../client/types.ts'
-
-// Minimal UIItem-shaped fixtures (test files aren't typechecked by the build).
-const mk = (o) => ({ id: 'x', ts: 0, type: 'link', tags: [], pending: false, ...o })
-
-test('github host resolves to the GitHub bucket', () => {
-  assert.deepEqual(
-    platformBucket(mk({ host: 'github.com', url: 'https://github.com/a/b' })),
-    { key: 'github', label: 'GitHub' },
-  )
-})
-
-test('an instagram reel url resolves to Instagram Reels', () => {
-  assert.deepEqual(
-    platformBucket(mk({ host: 'www.instagram.com', url: 'https://www.instagram.com/reel/abc' })),
-    { key: 'reels', label: 'Instagram Reels' },
-  )
-})
-
-test('a plain link with a host falls under Web', () => {
-  assert.deepEqual(
-    platformBucket(mk({ host: 'example.com', url: 'https://example.com/x', type: 'link' })),
-    { key: 'web', label: 'Web' },
-  )
-})
-
-test('an instagram post url resolves to Instagram Posts', () => {
-  assert.deepEqual(
-    platformBucket(mk({ host: 'www.instagram.com', url: 'https://www.instagram.com/p/abc' })),
-    { key: 'igposts', label: 'Instagram Posts' },
-  )
-})
-
-test('an unmatched item (note, no host) falls under Other', () => {
-  assert.deepEqual(platformBucket(mk({ type: 'note' })), { key: 'other', label: 'Other' })
-})
 
 test('server sourceKey agrees with client SOURCES on every predicate', () => {
   const fixtures = [

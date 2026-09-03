@@ -47,7 +47,7 @@ when you're trying to find something which is the problem this is built around.
 - **Ask your archive.** Cosine similarity and keyword search both run, and the top cards go to the language model. It has to cite each one by number. If nothing matches, it says so instead of making something up.
 - **Images count as notes.** Drop a screenshot and a vision model writes a caption for it, so it shows up in search like anything else.
 - **Links turn into cards.** Page metadata gets fetched once and cached. YouTube captions and full article text come along too, which makes videos and long reads far easier to find later.
-- **Spaces.** Collections of items, optionally with a tag rule that files matching notes automatically. Any Space can be viewed as a radial mindmap.
+- **Spaces.** Collections of items, optionally with a tag rule that files matching notes automatically. Any Space can be opened as a freeform canvas: drag cards around, write notes, stack things in columns and draw lines between them.
 - **Swappable models.** Three slots, all changeable while the app is running. Swap the embedding model and the library re-indexes itself.
 - **Tunable memory.** Each model role can be always on, on demand, or off. Turn all three off and you have a working bookmark manager on a 1 GB box.
 - **Runs on modest hardware.** A Raspberry Pi 5 handles the small models fine. There's also a 250 MB lite image that does no inference itself and talks to any OpenAI-compatible endpoint.
