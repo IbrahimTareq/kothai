@@ -225,6 +225,48 @@ First-run only. `{ skip: true }` for AI-free mode, otherwise the model
 selection — which commits it and kicks off the download. `409` if already
 configured, or if the provider has no weights to download.
 
+### `GET /api/models/files`
+
+The model download cache on disk. QVAC never prunes what it fetches, so a
+long-lived install accumulates every model it has ever been pointed at.
+
+```jsonc
+{ "dir": "/app/models",
+  "totalBytes": 9200000000,
+  "reclaimableBytes": 4200000000,       // everything not marked inUse
+  "entries": [                          // largest first
+    { "name": "6dea07e2f9342ff3_Qwen3-4B-Q4_K_M.gguf", "kind": "file",
+      "sizeBytes": 2497280256, "inUse": true, "usedBy": "llm" },
+    { "name": "c06f2a9027791346_salamandrata_2b_inst_q4.gguf", "kind": "file",
+      "sizeBytes": 1400000000, "inUse": false, "usedBy": null },
+    { "name": "sets", "kind": "dir", "sizeBytes": 36700160, "inUse": false, "usedBy": null }
+  ] }
+```
+
+`inUse` is matched on the registry filename the current selection resolves to —
+including the vision model's projector, and a companion-set directory holding
+any of them. The match deliberately ignores the SDK's `<hash>_` cache prefix,
+which is an `@qvac/sdk` internal: a false *not* in use costs a multi-GB
+re-download, a false in use costs nothing.
+
+`404` `no_local_models` on a provider that downloads no weights (the lite image
+running remote inference).
+
+### `DELETE /api/models/files/<name>`
+
+```jsonc
+→ { "deleted": "c06f…_salamandrata_2b_inst_q4.gguf", "freedBytes": 1400000000 }
+```
+
+Undoable in the sense that matters: anything deleted here re-downloads the next
+time it is selected. `409` `in_use` (with `usedBy`) for a file the current
+selection needs — the listing's badge is a hint, this is the enforcement.
+`400` `invalid_name` for anything that is not a direct child of the models dir,
+`404` `not_found` if it is already gone, `404` `no_local_models` as above.
+
+Weights survive `/api/wipe` by design, so this is the only way to reclaim that
+space from inside the app.
+
 ## Enrichment
 
 | | |
@@ -322,6 +364,9 @@ message, so the UI can render a real state instead of parsing prose.
 | `backup_in_progress` | 409 | a backup is already being prepared |
 | `backup_failed` | 500 | snapshot couldn't be written |
 | `confirm_required` | 400 | destructive action needs its exact token |
+| `no_local_models` | 404 | model-file routes on a provider that downloads no weights |
+| `in_use` | 409 | that model file is the current selection for a role |
+| `invalid_name` | 400 | model file name isn't a direct child of the models dir |
 
 `FeatureDisabledError` defaults its code to `` `${role}_off` ``, so `embed_off`
 is possible too — it just isn't raised by any route today. The remote provider

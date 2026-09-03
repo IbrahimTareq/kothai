@@ -78,3 +78,7 @@ export const warmRole = (...a) => P().warmRole?.(...a) ?? Promise.resolve()
 export const warmCache = (...a) => P().warmCache?.(...a) ?? Promise.resolve()
 export const applyResidency = (...a) => P().applyResidency?.(...a) ?? Promise.resolve()
 export const configureModels = (...a) => P().configureModels?.(...a) ?? Promise.resolve()
+// Model files on disk, for the cache-management routes. A provider that
+// downloads nothing claims no files, so the routes' capability gate is the
+// only thing that has to know about the difference.
+export const weightsInUse = (...a) => P().weightsInUse?.(...a) ?? {}

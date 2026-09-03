@@ -146,6 +146,15 @@ Weights live in `./models/`. `server/index.js` writes `qvac.config.json` with a
 downloads land in the project rather than your home directory. Every import
 after that line is dynamic for exactly this reason.
 
+Nothing prunes that directory. Switching a preset leaves the old file there for
+the life of the install, and a preset later dropped from the catalogue leaves
+one nothing in the app can even name — `/api/wipe` deliberately keeps weights,
+so a years-old install can be carrying several models it will never load again.
+[`GET /api/models/files`](api.md#get-apimodelsfiles) lists what is on disk with
+the current selection marked, and `DELETE /api/models/files/<name>` removes one;
+files the selection needs (the vision projector included) are refused. Anything
+deleted re-downloads the next time it is selected.
+
 ## Remote inference
 
 Set two env vars and any OpenAI-compatible `/v1` endpoint works — Ollama,

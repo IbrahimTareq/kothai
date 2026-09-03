@@ -80,7 +80,7 @@ server/                 dependency-light Node ESM, serves ./dist
 ├─ router.js            method + path → handler, and the auth gate
 ├─ config.js            every env var resolved in one place
 ├─ routes/              API by domain: notes, ask, chats, collections,
-│                       settings, import, export, backup, wipe, auth
+│                       settings, models, import, export, backup, wipe, auth
 ├─ ai/                  index.js (facade) · roles.js (residency + lifecycle)
 │  │                    enrich.js (the queue) · meta.js · prompts · normalise
 │  │                    presets · backlog · circuit
@@ -88,9 +88,9 @@ server/                 dependency-light Node ESM, serves ./dist
 ├─ data/                db.js (SQLite) · notes · chats · collections ·
 │                       settings · tagvocab · query · embedding · migrate
 ├─ import/              importer registry: Instagram today
-└─ lib/                 http · auth · ssrf · tags · zip · canvas
+└─ lib/                 http · auth · ssrf · tags · zip · canvas · weights
 
-test/                   mirrors the source tree · 789 tests, node:test
+test/                   mirrors the source tree · 943 tests, node:test
 docs/                   the detail, indexed in README.md
 data/                   your notes, uploads, kothai.db      (git-ignored)
 models/                 cached model weights                (git-ignored)

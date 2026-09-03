@@ -34,6 +34,26 @@ export function presetInfo() {
   return { llm: PRESETS.llm.map(withSize), embed: PRESETS.embed.map(withSize), vision: PRESETS.vision.map(withSize) }
 }
 
+// Which files in the download cache the current selection depends on, keyed by
+// the registry BASENAME (`Qwen3-4B-Q4_K_M.gguf`) rather than the SDK's hashed
+// cache filename — see server/lib/weights.js for why that indirection is the
+// safe one. Vision contributes two entries: the weights and their projector.
+//
+// Unknown keys resolve through presetFor's default fallback, exactly as
+// configureModels would, so what this protects is what the app would load.
+export function weightsInUse(selection = {}) {
+  const out = {}
+  for (const role of ROLES) {
+    const preset = presetFor(role, selection[role])
+    if (!preset) continue
+    for (const key of [preset.key, preset.proj]) {
+      const registryPath = key && MODELS[key]?.registryPath
+      if (registryPath) out[registryPath.split('/').pop()] = role
+    }
+  }
+  return out
+}
+
 // ---- role lifecycle ----------------------------------------------------
 // Each role is a RoleManager; residency policy (off/ondemand/always) decides
 // when its model occupies RAM. This module adapts the managers to @qvac/sdk.

@@ -9,6 +9,7 @@ import { handleExport } from './routes/export.js'
 import { handleBackup } from './routes/backup.js'
 import { handleCheckpoint } from './routes/checkpoint.js'
 import { handleWipe } from './routes/wipe.js'
+import { handleModelFiles, handleDeleteModelFile } from './routes/models.js'
 import { handleAsk } from './routes/ask.js'
 import { handleChats, handleChat, handleRenameChat, handleDeleteChat } from './routes/chats.js'
 import {
@@ -59,6 +60,14 @@ async function handleRequest(req, res) {
     if (req.method === 'GET' && p === '/api/backup') return await handleBackup(req, res)
     if (req.method === 'POST' && p === '/api/checkpoint') return await handleCheckpoint(res)
     if (req.method === 'POST' && p === '/api/wipe') return await handleWipe(req, res)
+    if (req.method === 'GET' && p === '/api/models/files') return await handleModelFiles(res)
+    // The parameter is a cache FILENAME, so it arrives percent-encoded and is
+    // decoded here; routes/models.js re-validates it before any path is built
+    // from it. Anchored so only a direct child name can match — a nested path
+    // falls through to the 405 below rather than reaching the handler.
+    if (req.method === 'DELETE' && /^\/api\/models\/files\/[^/]+$/.test(p)) {
+      return await handleDeleteModelFile(res, decodeURIComponent(p.slice('/api/models/files/'.length)))
+    }
     if (req.method === 'POST' && p === '/api/availability/scan') return await handleAvailabilityScan(req, res)
     if (req.method === 'POST' && p === '/api/availability/remove') return await handleAvailabilityRemove(req, res)
     if (req.method === 'GET' && p === '/api/enrich/backlog') return handleBacklog(res)
