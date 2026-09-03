@@ -1,0 +1,532 @@
+/* custom.css — the Kothai docs skin.
+   A warm cream ground, content on white cards with 12px corners, a single
+   variable sans set at weight 460 with roughly -0.0275em tracking, and lavender
+   as the only hue.
+
+   Note this deliberately diverges from docs/design-system.md, which governs the
+   app itself and forbids brand colour. The app stays monochrome; the site does
+   not. Nothing here is loaded by the client, and lint:tokens does not read it. */
+
+/* ─────────────────────────── fonts ───────────────────────────────────────── */
+/* Same self-hosted variable files the app ships, served from the repo's
+   /public via the publicDir override in config.ts. Vite rewrites these absolute
+   paths with the /kothai/ base at build time. */
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("/vendor/fonts/Geist-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url("/vendor/fonts/GeistMono-latin.woff2") format("woff2");
+}
+
+/* ─────────────────────────── palette ─────────────────────────────────────── */
+:root {
+  /* The ink is a warm near-black, never #000, and the ground is a warm cream,
+     never #fff. That pairing is most of the look. */
+  --kt-ink: #292827;
+  --kt-cream: #f7f5f2;
+  --kt-white: #ffffff;
+
+  /* Lavender is the only hue. The fill is theirs; the deep tone is ours,
+     darkened until body links clear AA on cream. */
+  --kt-lav: #d4c7ff;
+  --kt-lav-soft: #e8e0ff;
+  --kt-lav-deep: #5a42c9;
+
+  --kt-radius: 12px;      /* cards, panels, code blocks */
+  --kt-radius-sm: 8px;    /* buttons, inline chips */
+
+  --vp-font-family-base: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --vp-font-family-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Headings sit at 460 — between normal and medium. It is why the site reads
+     calm at large sizes where semibold would shout. Geist is variable across
+     300–700, so the value is real, not rounded. */
+  --kt-fw-heading: 460;
+
+  /* The nav's own gutter, mirrored onto the page content below so both share
+     one left and right edge. VitePress switches at 960px and so does this. */
+  --kt-gutter: 24px;
+
+  --vp-layout-max-width: 1440px;
+  --vp-nav-height: 68px;
+  --vp-sidebar-width: 264px;
+}
+
+/* Light */
+:root {
+  --vp-c-bg: var(--kt-cream);
+  --vp-c-bg-alt: var(--kt-cream);
+  --vp-c-bg-soft: #efece7;
+  --vp-c-bg-elv: var(--kt-white);
+
+  --vp-c-text-1: var(--kt-ink);
+  --vp-c-text-2: rgba(41, 40, 39, .68);
+  --vp-c-text-3: rgba(41, 40, 39, .48);
+
+  --vp-c-divider: rgba(41, 40, 39, .10);
+  --vp-c-gutter: rgba(41, 40, 39, .08);
+  --vp-c-border: rgba(41, 40, 39, .12);
+
+  --vp-c-brand-1: var(--kt-lav-deep);
+  --vp-c-brand-2: #4a34ad;
+  --vp-c-brand-3: var(--kt-lav);
+  --vp-c-brand-soft: var(--kt-lav-soft);
+
+  /* The primary button is lavender with ink on top, not white on purple. */
+  --vp-button-brand-bg: var(--kt-lav);
+  --vp-button-brand-text: var(--kt-ink);
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-hover-bg: #c4b3ff;
+  --vp-button-brand-hover-text: var(--kt-ink);
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-active-bg: #b9a5ff;
+  --vp-button-brand-active-text: var(--kt-ink);
+
+  --vp-button-alt-bg: transparent;
+  --vp-button-alt-text: var(--kt-ink);
+  --vp-button-alt-border: rgba(41, 40, 39, .16);
+  --vp-button-alt-hover-bg: rgba(41, 40, 39, .04);
+  --vp-button-alt-hover-border: rgba(41, 40, 39, .28);
+  --vp-button-alt-hover-text: var(--kt-ink);
+
+  --vp-c-default-soft: rgba(41, 40, 39, .05);
+  /* Inline code is everywhere in these docs. VitePress tints it indigo by
+     default, which turns a page of prose into confetti — the soft background is
+     enough to mark it. */
+  --vp-c-text-code: var(--kt-ink);
+  --vp-c-tip-1: var(--kt-lav-deep);
+  --vp-c-tip-soft: var(--kt-lav-soft);
+}
+
+/* Dark — the same page inverted onto a warm near-black, with the lavender
+   lifted so it still reads as the accent rather than as a link colour. */
+.dark {
+  --kt-ink: #f2f0ed;
+  --kt-cream: #141312;
+
+  --vp-c-bg: #141312;
+  --vp-c-bg-alt: #141312;
+  --vp-c-bg-soft: #1f1e1c;
+  --vp-c-bg-elv: #1c1b19;
+
+  --vp-c-text-1: #f2f0ed;
+  --vp-c-text-2: rgba(242, 240, 237, .66);
+  --vp-c-text-3: rgba(242, 240, 237, .44);
+
+  --vp-c-divider: rgba(242, 240, 237, .12);
+  --vp-c-gutter: rgba(242, 240, 237, .08);
+  --vp-c-border: rgba(242, 240, 237, .14);
+
+  --vp-c-brand-1: #c9b8ff;
+  --vp-c-brand-2: #ddd2ff;
+  --vp-c-brand-3: #6f5bbf;
+  --vp-c-brand-soft: rgba(201, 184, 255, .14);
+
+  --vp-button-brand-bg: var(--kt-lav);
+  --vp-button-brand-text: #292827;
+  --vp-button-brand-hover-bg: #e0d5ff;
+  --vp-button-brand-hover-text: #292827;
+
+  --vp-button-alt-text: #f2f0ed;
+  --vp-button-alt-border: rgba(242, 240, 237, .18);
+  --vp-button-alt-hover-bg: rgba(242, 240, 237, .06);
+
+  --vp-c-default-soft: rgba(242, 240, 237, .06);
+  --vp-c-text-code: #f2f0ed;
+  --vp-c-tip-soft: rgba(201, 184, 255, .12);
+}
+
+@media (min-width: 960px) {
+  :root { --kt-gutter: 32px; }
+}
+
+/* ─────────────────────────── alignment ───────────────────────────────────── */
+/* The default home layout insets its sections to a 1152px column while the nav
+   runs to the layout width, so the hero starts 112px right of the logo. Pull
+   both onto the nav's gutter instead. */
+.VPHome .VPHero,
+.VPHome .VPFeatures {
+  padding-left: var(--kt-gutter);
+  padding-right: var(--kt-gutter);
+}
+
+.VPHome .VPHero .container,
+.VPHome .VPFeatures .container {
+  max-width: calc(var(--vp-layout-max-width) - var(--kt-gutter) * 2);
+}
+
+/* Same idea on a doc page: the article column is centred inside its grid cell,
+   which leaves it floating clear of the sidebar. Let it fill the cell so its
+   edges line up with everything else, and drop the 32px the default theme adds
+   inside the cell — that pushes the card off the nav's right edge. */
+.VPDoc .content-container {
+  max-width: none;
+  margin: 0;
+}
+
+.VPDoc .content {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* With the outline gone the card is ~1100px wide, and prose running the whole
+   of that is around 105 characters a line — well past readable. Tables, code
+   and images take the full width (the point of removing the outline); running
+   text stops at roughly 90. */
+/* Headings stay full width — they are short anyway, and capping an h2 would cut
+   its rule short of the code blocks below it. */
+.vp-doc > div > p,
+.vp-doc > div > ul,
+.vp-doc > div > ol,
+.vp-doc > div > blockquote {
+  max-width: 820px;
+}
+
+/* ─────────────────────────── type ────────────────────────────────────────── */
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tracking tightens as size grows, the same rule the app follows — here the
+   whole scale sits at -0.0275em, and leading stays at 1.2 so
+   two-line headings read as one block. */
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3,
+.vp-doc h4,
+.VPHero .name,
+.VPHero .text,
+.VPFeature .title {
+  font-weight: var(--kt-fw-heading);
+  letter-spacing: -.0275em;
+  line-height: 1.2;
+}
+
+.vp-doc h1 {
+  font-size: clamp(2.125rem, 1.6rem + 2.2vw, 2.875rem);
+  margin-bottom: 20px;
+}
+
+.vp-doc h2 {
+  font-size: 2rem;
+  margin-top: 64px;
+  padding-top: 32px;
+  border-top: 1px solid var(--vp-c-divider);
+}
+
+.vp-doc h3 {
+  font-size: 1.25rem;
+  margin-top: 40px;
+}
+
+.vp-doc p,
+.vp-doc li {
+  line-height: 1.7;
+}
+
+/* Nothing on the page is bold. 600 is reserved for small buttons and never used
+   for running text; <strong> gets a nudge instead of a jump. */
+.vp-doc strong {
+  font-weight: 560;
+}
+
+.vp-doc a {
+  font-weight: inherit;
+  text-decoration-color: var(--vp-c-brand-3);
+  text-underline-offset: 3px;
+}
+
+.vp-doc a:hover {
+  text-decoration-color: var(--vp-c-brand-1);
+}
+
+/* ─────────────────────────── chrome ──────────────────────────────────────── */
+/* The nav floats on the ground rather than sitting in its own bar: no fill, no
+   divider, just the ground showing through. */
+.VPNav,
+.VPNavBar,
+.VPNavBar.has-sidebar .content-body,
+.VPNavBar:not(.has-sidebar):not(.top) .content-body {
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.VPNavBar .divider,
+.VPNavBar .divider-line {
+  display: none;
+}
+
+.VPNavBar .title {
+  font-weight: var(--kt-fw-heading);
+  letter-spacing: -.0275em;
+}
+
+.VPNavBarMenuLink,
+.VPNavBarMenuGroup .VPFlyout .text {
+  font-weight: 460;
+  letter-spacing: -.01em;
+}
+
+/* Sidebar reads as a list on the ground, not a panel: no border, and the active
+   item is a soft lavender pill instead of a coloured word. */
+.VPSidebar {
+  background: transparent;
+  border-right: none;
+  padding-top: 24px;
+}
+
+.VPSidebarItem.level-0 > .item > .text {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -.005em;
+  color: var(--vp-c-text-3);
+}
+
+.VPSidebarItem.level-1 .link .text,
+.VPSidebarItem.level-2 .link .text {
+  font-weight: 460;
+  letter-spacing: -.012em;
+  padding: 5px 10px;
+  margin-left: -10px;
+  border-radius: var(--kt-radius-sm);
+  transition: background-color .15s ease, color .15s ease;
+}
+
+.VPSidebarItem.is-active > .item .link .text {
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-text-1);
+}
+
+.VPSidebarItem .link:hover .text {
+  background: var(--vp-c-default-soft);
+}
+
+/* The page body is a white card on the cream, which is the single move that
+   does most to define the layout. */
+.VPDoc:not(.has-sidebar) .container > .content,
+.VPDoc .content-container {
+  background: var(--vp-c-bg-elv);
+  border: 1px solid var(--vp-c-gutter);
+  border-radius: var(--kt-radius);
+  /* Roomy side padding because the card now fills its column — it keeps the
+     line length near 75 characters instead of letting prose run the full width. */
+  padding: 44px 72px 56px;
+}
+
+.VPDoc {
+  padding-top: 40px !important;
+}
+
+@media (max-width: 768px) {
+  .VPDoc .content-container {
+    padding: 28px 22px 36px;
+    border-radius: var(--kt-radius-sm);
+  }
+}
+
+/* ─────────────────────────── blocks ──────────────────────────────────────── */
+/* Code sits in a warm near-black block in both themes — the app makes the same
+   exception, and on cream the contrast is the point. */
+.vp-doc div[class*='language-'],
+.vp-block {
+  border-radius: var(--kt-radius);
+  background: #1c1b19;
+}
+
+.dark .vp-doc div[class*='language-'] {
+  background: #1f1e1c;
+  border: 1px solid var(--vp-c-divider);
+}
+
+.vp-doc div[class*='language-'] code {
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+
+.vp-doc :not(pre) > code {
+  background: var(--vp-c-default-soft);
+  border-radius: 5px;
+  font-size: .875em;
+  padding: 2px 5px;
+  /* VitePress colours inline code with the brand. These docs are dense with it,
+     and a page of purple fragments reads as noise — the soft fill is the mark. */
+  color: var(--vp-c-text-1);
+}
+
+.vp-doc table {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.vp-doc tr,
+.vp-doc tr:nth-child(2n) {
+  background: transparent;
+  border-top: 1px solid var(--vp-c-divider);
+}
+
+.vp-doc th,
+.vp-doc td {
+  border: none;
+  padding: 11px 14px 11px 0;
+  text-align: left;
+}
+
+.vp-doc th {
+  background: transparent;
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: -.005em;
+  color: var(--vp-c-text-2);
+}
+
+.vp-doc blockquote {
+  border-left: 2px solid var(--vp-c-brand-3);
+  color: var(--vp-c-text-2);
+}
+
+.vp-doc .custom-block {
+  border: none;
+  border-radius: var(--kt-radius);
+  padding: 16px 20px;
+}
+
+.vp-doc hr {
+  border-top: 1px solid var(--vp-c-divider);
+  margin: 48px 0;
+}
+
+/* ─────────────────────────── home ────────────────────────────────────────── */
+.VPHero .name,
+.VPHero .text {
+  font-size: clamp(2.5rem, 1.4rem + 4.4vw, 4rem);
+  max-width: 20ch;
+}
+
+.VPHero .name {
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  -webkit-text-fill-color: currentColor;
+  color: var(--vp-c-text-1);
+}
+
+.VPHero .tagline {
+  font-size: clamp(1rem, .95rem + .3vw, 1.1875rem);
+  line-height: 1.55;
+  letter-spacing: -.011em;
+  color: var(--vp-c-text-2);
+  max-width: 46ch;
+}
+
+.VPButton {
+  border-radius: var(--kt-radius-sm);
+  font-weight: 600;
+  letter-spacing: -.006em;
+}
+
+/* Feature cards: white, 12px, hairline, and they lift a little on hover rather
+   than changing colour. */
+/* Scoped through .VPFeatures because the card also carries .VPLink, and a
+   single class would lose the specificity race to the default theme. */
+.VPFeatures .VPFeature {
+  background: var(--vp-c-bg-elv);
+  border: 1px solid var(--vp-c-gutter);
+  border-radius: var(--kt-radius);
+  padding: 26px;
+  transition: transform .18s ease, border-color .18s ease;
+}
+
+.VPFeatures .VPFeature:hover {
+  transform: translateY(-2px);
+  border-color: var(--vp-c-border);
+}
+
+.VPFeatures .VPFeature .title {
+  font-size: 1.125rem;
+}
+
+.VPFeatures .VPFeature .details {
+  line-height: 1.6;
+  color: var(--vp-c-text-2);
+}
+
+/* The mark is a framed square, so it wants to sit as an object beside the
+   headline rather than fill the column the way a product shot would. */
+.VPHero .image-container {
+  transform: none;
+  padding: 0;
+}
+
+.VPHero .image-src {
+  max-height: 260px;
+  border-radius: var(--kt-radius);
+}
+
+/* ─────────────────────────── odds and ends ───────────────────────────────── */
+.VPDocFooter,
+.VPDocAsideOutline .outline-title {
+  letter-spacing: -.01em;
+}
+
+.pager-link {
+  border-radius: var(--kt-radius);
+  background: var(--vp-c-bg-elv);
+  border: 1px solid var(--vp-c-gutter);
+}
+
+.pager-link:hover {
+  border-color: var(--vp-c-border);
+}
+
+.VPFooter {
+  background: transparent;
+  border-top: 1px solid var(--vp-c-divider);
+}
+
+/* ─────────────────────────── footer ──────────────────────────────────────── */
+/* The page signs off with the brand name set enormous and nearly invisible
+   across a dark band. It carries no information, so it is decoration only: 5%
+   ink, sized off the content width, centred, with room beneath it so it never
+   sits flush to the page edge. */
+.kt-footer {
+  background: #1c1b19;
+  margin-top: 96px;
+  padding: 64px var(--kt-gutter) 72px;
+}
+
+.kt-wordmark {
+  display: block;
+  width: 100%;
+  max-width: calc(var(--vp-layout-max-width) - var(--kt-gutter) * 2);
+  margin: 0 auto;
+}
+
+.kt-wordmark text {
+  font-family: var(--vp-font-family-base);
+  font-size: 200px;
+  font-weight: var(--kt-fw-heading);
+  letter-spacing: -.0275em;
+  fill: rgba(242, 240, 237, .05);
+}
+
+/* The default theme's own footer would otherwise stack above this one on the
+   home page. */
+.VPFooter {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .kt-footer {
+    padding: 40px var(--kt-gutter) 48px;
+  }
+}
