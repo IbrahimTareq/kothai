@@ -171,9 +171,9 @@
    what it sits on, leave the box alone and let an ::after pad carry the hit
    area out to 44. The target grows, the design does not. */
 @media (hover:none){
-  /* Reaches .chip (the Everything filter bar), .seg / .view-toggle,
-     .btn--icon, .coll-act, .coll-del and the mindmap bar in one move —
-     they are all sized from these two. */
+  /* Reaches .chip (the Everything filter bar), .seg / .view-toggle
+     (the Grid/Canvas switch), .btn--icon, .coll-act and .coll-del in
+     one move — they are all sized from these two. */
   :root{--control-sm:40px;--control-md:44px}
 
   /* The board's per-card cluster was three 26px buttons 6px apart on a 162px

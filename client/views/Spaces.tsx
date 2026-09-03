@@ -5,11 +5,11 @@ import { Icon } from '../components/icons'
 import { ItemCard } from '../components/Cards'
 import { WindowedBoard } from '../components/Board'
 import { scrollEdges, edgeClass } from '../layout/overflow'
-import { Mindmap } from '../components/Mindmap'
+import { Canvas } from '../components/Canvas'
 import { useNotes } from '../data/useNotes'
 import type { NoteSource } from '../data/useNotes'
 import { isPlaceholder } from '../data/pager'
-import type { Collection, UIItem, ViewMode } from '../types'
+import type { CanvasDoc, Collection, UIItem, ViewMode } from '../types'
 
 interface SpacesViewProps {
   collections: Collection[]
@@ -97,6 +97,7 @@ interface CollectionViewProps {
   removeFromCollection: (cid: string, itemId: string) => void
   renameCollection: (id: string, name: string) => void
   editCollectionTags: (id: string, tags: string[]) => void
+  saveCanvas: (id: string, doc: CanvasDoc) => void
   deleteCollection: (id: string) => void
   navigate: (next: string) => void
   // App's delete/update handlers also drive the ExpandedView modal, which is
@@ -107,12 +108,12 @@ interface CollectionViewProps {
   notesRef?: MutableRefObject<NoteSource | null>
 }
 
-export function CollectionView({ collection, view, setView, deleteItem, onExpand, collections, addToCollection, removeFromCollection, renameCollection, editCollectionTags, deleteCollection, navigate, notesRef }: CollectionViewProps) {
+export function CollectionView({ collection, view, setView, deleteItem, onExpand, collections, addToCollection, removeFromCollection, renameCollection, editCollectionTags, saveCanvas, deleteCollection, navigate, notesRef }: CollectionViewProps) {
   const [renaming, setRenaming] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [tagDraft, setTagDraft] = useState('')
   const [addingTag, setAddingTag] = useState(false)
-  const [mind, setMind] = useState(false)
+  const [board, setBoard] = useState(false)  // false = grid, true = canvas
   const [armed, setArmed] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -234,7 +235,7 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
                 <span className="coll-count mono">{collItems.length} item{collItems.length === 1 ? '' : 's'}</span>
                 {/* Rename and delete are what you do to the SPACE, so they live
                     with its name. Delete used to sit on the view toolbar with
-                    only a hairline between it and "Mindmap", which gave an
+                    only a hairline between it and "Canvas", which gave an
                     irreversible action the same weight as a view switch. */}
                 <span className="coll-idactions">
                   <button className="coll-rename" title="Rename space" aria-label="Rename space" onClick={startRename}>
@@ -253,7 +254,7 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
 
         {/* Tier 2 — one bar: what fills the space on the left, how you look at
             it on the right. Density sits at the left of the tool group so that
-            dropping it in mindmap mode never moves the view switch or the bin. */}
+            dropping it in canvas mode never moves the view switch or the bin. */}
         <div className="coll-bar">
           <div className={'coll-rule' + edgeClass(ruleEdges)} ref={ruleRef}>
             {collection.tags.map((t) => (
@@ -293,7 +294,7 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
           </div>
 
           <div className="coll-tools">
-            {!mind && (
+            {!board && (
               <div className="view-toggle">
                 <button className={view === 'grid4' ? 'on' : ''} onClick={() => setView('grid4')} title="4 columns"><Icon name="grid4" size={16} /></button>
                 <button className={view === 'grid6' ? 'on' : ''} onClick={() => setView('grid6')} title="6 columns"><Icon name="grid6" size={16} /></button>
@@ -301,15 +302,17 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
               </div>
             )}
             <div className="seg" role="tablist" aria-label="View mode">
-              <button role="tab" aria-selected={!mind} className={'seg-btn' + (!mind ? ' on' : '')} onClick={() => setMind(false)}>Grid</button>
-              <button role="tab" aria-selected={mind} className={'seg-btn' + (mind ? ' on' : '')} onClick={() => setMind(true)}>Mindmap</button>
+              <button role="tab" aria-selected={!board} className={'seg-btn' + (!board ? ' on' : '')} onClick={() => setBoard(false)}>Grid</button>
+              <button role="tab" aria-selected={board} className={'seg-btn' + (board ? ' on' : '')} onClick={() => setBoard(true)}>Canvas</button>
             </div>
           </div>
         </div>
       </header>
 
-      {mind
-        ? <Mindmap items={collItems} spaceName={collection.name} onExpand={onExpand} />
+      {board
+        ? <Canvas collectionId={collection.id} items={collItems} doc={collection.canvas}
+            onSave={(d) => saveCanvas(collection.id, d)} onExpand={onExpand}
+            onRemoveItem={(id) => handleRemoveFrom(collection.id, id)} />
         : <div className="gal-scroll" ref={scrollRef}>
             {collItems.length === 0
               ? <div className="empty"><Icon name="spark" size={40} /><p>{collection.tags.length > 0 ? 'NO ITEMS MATCH YET' : 'ADD ITEMS FROM EVERYTHING'}</p></div>

@@ -80,13 +80,6 @@ export const SOURCES: SourceDef[] = [
 ]
 export const SOURCE_BY_KEY: Record<string, SourceDef> = Object.fromEntries(SOURCES.map((s) => [s.key, s]))
 
-// Maps an item to its platform/source bucket for the mindmap. Reuses the SOURCES
-// predicate table (PLATFORMS + Web); items matching none fall under "Other".
-export function platformBucket(item: UIItem): { key: string; label: string } {
-  const found = SOURCES.find((s) => s.test(item))
-  return found ? { key: found.key, label: found.label } : { key: 'other', label: 'Other' }
-}
-
 // Whether a tile has content still on its way, and so should render as loading
 // rather than as a finished tile whose picture happens to be a gradient.
 //
