@@ -1,0 +1,100 @@
+/* canvas.css — the space canvas. Monochrome, tokens-driven: cards stay
+   chromeless as in the grid, notes and columns sit on --panel with a --line
+   hairline, lines between nodes are --line-2, selection is --line-focus. */
+
+.cv-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+/* The board's own bar sits on the same 28px gutter as the header above; adds
+   on the left, commands on the right, all borderless commands. */
+.cv-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--space-12); padding: var(--space-10) var(--space-28); border-bottom: 1px solid var(--line);
+}
+.cv-add, .cv-cmds { display: flex; align-items: center; gap: var(--space-4); }
+.cv-bar button {
+  height: var(--control-md); padding: 0 var(--space-10); border: 0; border-radius: var(--radius);
+  background: transparent; color: var(--ink-faint); font: inherit; font-size: var(--text-xs);
+  white-space: nowrap; cursor: pointer; transition: var(--dur-fast);
+}
+.cv-bar button:hover { color: var(--ink); background: var(--panel-2); }
+
+.cv-canvas { flex: 1; min-height: 0; position: relative; }
+
+/* React Flow surface inherits the app background; its +/-/fit panel follows
+   our theme instead of React Flow's hard-coded light default. */
+.cv-canvas .react-flow {
+  background: var(--bg);
+  --xy-controls-button-background-color: var(--bg-2);
+  --xy-controls-button-background-color-hover: var(--bg-raise);
+  --xy-controls-button-color: var(--ink);
+  --xy-controls-button-color-hover: var(--ink);
+  --xy-controls-button-border-color: var(--line);
+  --xy-controls-box-shadow: none;
+}
+.cv-canvas .react-flow__controls { border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden; }
+.cv-canvas .react-flow__node { font: inherit; }
+.cv-canvas .react-flow__edge-path { stroke: var(--line-2); stroke-width: 1.5; }
+.cv-canvas .react-flow__edge.selected .react-flow__edge-path,
+.cv-canvas .react-flow__edge:hover .react-flow__edge-path { stroke: var(--ink-dim); }
+.cv-canvas .react-flow__connection-path { stroke: var(--ink-dim); stroke-width: 1.5; }
+.cv-canvas .react-flow__selection,
+.cv-canvas .react-flow__nodesselection-rect {
+  background: color-mix(in srgb, var(--ink) 6%, transparent); border: 1px solid var(--line-hover);
+}
+.cv-canvas .react-flow__node.selected .cv-item,
+.cv-canvas .react-flow__node.selected .cv-text,
+.cv-canvas .react-flow__node.selected .cv-col { outline: 2px solid var(--line-focus); outline-offset: 2px; }
+
+/* Ports: hidden until the node is hovered or selected, or a line is being drawn. */
+.cv-port {
+  width: 8px; height: 8px; min-width: 0; min-height: 0;
+  background: var(--bg); border: 1px solid var(--ink-dim); opacity: 0; transition: opacity var(--dur-fast);
+}
+.cv-canvas .react-flow__node:hover .cv-port,
+.cv-canvas .react-flow__node.selected .cv-port,
+.cv-canvas .react-flow.connecting .cv-port { opacity: 1; }
+
+/* Cards: the grid card, without its hover lift (it fights dragging). */
+.cv-item { width: 100%; border-radius: var(--radius-lg); }
+.cv-item:hover { transform: none; }
+
+/* Text notes */
+.cv-text {
+  position: relative; width: 100%; box-sizing: border-box;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: var(--space-10) var(--space-12);
+}
+.cv-text textarea {
+  display: block; width: 100%; resize: none; border: 0; background: transparent; color: var(--ink);
+  font: inherit; font-size: var(--text-sm); line-height: var(--leading-normal); outline: none; overflow: hidden;
+}
+.cv-text textarea::placeholder { color: var(--ink-faint); }
+
+/* Columns. .cv-col-head height must match COL_HEAD in layout/canvas.ts. */
+.cv-col {
+  position: relative; width: 100%; height: 100%; box-sizing: border-box;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg);
+}
+.cv-col-head {
+  display: flex; align-items: center; gap: var(--space-8); height: 36px; box-sizing: border-box;
+  padding: 0 var(--space-12); border-bottom: 1px solid var(--line); cursor: grab;
+}
+.cv-col-head:active { cursor: grabbing; }
+.cv-col-grip {
+  flex: none; width: 10px; height: 14px;
+  background-image: radial-gradient(var(--ink-faint) 1px, transparent 1.2px); background-size: 5px 5px;
+}
+.cv-col-head input {
+  flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink); outline: none;
+  font: inherit; font-size: var(--text-xs); font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-label); text-transform: uppercase;
+}
+.cv-col-head input::placeholder { color: var(--ink-faint); }
+
+/* The horizontal resize line on notes and columns */
+.cv-resize { width: 6px; border: 0; background: transparent; cursor: ew-resize; }
+
+.cv-hint {
+  position: absolute; inset: 0; display: grid; place-items: center; margin: 0; pointer-events: none;
+  color: var(--ink-faint); font-size: var(--text-xs); letter-spacing: var(--tracking-label); text-transform: uppercase;
+}

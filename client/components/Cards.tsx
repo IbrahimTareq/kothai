@@ -115,7 +115,7 @@ function LinkTile({ item, overlay }: { item: UIItem; overlay?: ReactElement }): 
 // `overlay` (brand badge + action buttons) is placed INSIDE the thumbnail when
 // there is one, so it sits over the image (like the top-left brand badge); for
 // media-less cards (note/code/faviconless link) it falls back to card level.
-function CardInner({ item, overlay }: { item: UIItem; overlay?: ReactElement }): ReactElement {
+export function CardInner({ item, overlay }: { item: UIItem; overlay?: ReactElement }): ReactElement {
   const it = item
   switch (it.type) {
     case 'link':
