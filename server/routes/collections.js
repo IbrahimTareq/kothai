@@ -2,6 +2,7 @@ import { normalizeTags } from '../lib/tags.js'
 import * as store from '../data/notes.js'
 import * as collections from '../data/collections.js'
 import { json, readBody } from '../lib/http.js'
+import { sanitizeCanvas } from '../lib/canvas.js'
 
 // ---- collections (Spaces) ----------------------------------------------
 export function handleCollections(res) {
@@ -25,6 +26,12 @@ export async function handleUpdateCollection(req, res, id) {
     patch.name = name.slice(0, 120)
   }
   if (Array.isArray(body.tags)) patch.tags = normalizeTags(body.tags, { max: 40 })
+  if (body.canvas === null) patch.canvas = null
+  else if (body.canvas !== undefined) {
+    const doc = sanitizeCanvas(body.canvas)
+    if (!doc) return json(res, 400, { error: 'invalid canvas' })
+    patch.canvas = doc
+  }
   if (!Object.keys(patch).length) return json(res, 400, { error: 'nothing to update' })
   const c = await collections.update(id, patch, store.allNotes())
   if (!c) return json(res, 404, { error: 'collection not found' })

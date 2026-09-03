@@ -183,3 +183,47 @@ test('addItems: an empty batch is a no-op', async () => {
   await collections.addItems(c.id, [])
   assert.deepEqual(collections.get(c.id).itemIds, [])
 })
+
+const canvasFor = (itemId) => ({
+  nodes: [
+    { id: 'item:' + itemId, type: 'item', itemId, x: 0, y: 0, width: 220, height: 100 },
+    { id: 'n1', type: 'text', text: 'keep me', x: 300, y: 0, width: 220, height: 60 },
+  ],
+  edges: [{ id: 'e1', fromNode: 'item:' + itemId, toNode: 'n1' }],
+})
+
+test('update stores a canvas doc and null clears it', async () => {
+  collections._reset()
+  const c = await collections.create({ name: 'Board' })
+  await collections.update(c.id, { canvas: canvasFor('n1') })
+  assert.deepEqual(collections.get(c.id).canvas, canvasFor('n1'))
+  await collections.update(c.id, { name: 'Renamed' })          // untouched by other patches
+  assert.deepEqual(collections.get(c.id).canvas, canvasFor('n1'))
+  await collections.update(c.id, { canvas: null })
+  assert.equal('canvas' in collections.get(c.id), false)
+})
+
+test('removeItem prunes the card and its lines from the canvas', async () => {
+  collections._reset()
+  const c = await collections.create({ name: 'Board' })
+  await collections.addItem(c.id, 'a')
+  await collections.update(c.id, { canvas: canvasFor('a') })
+  await collections.removeItem(c.id, 'a')
+  assert.deepEqual(collections.get(c.id).canvas, {
+    nodes: [{ id: 'n1', type: 'text', text: 'keep me', x: 300, y: 0, width: 220, height: 60 }],
+    edges: [],
+  })
+})
+
+test('deleteItemEverywhere prunes canvases in every collection that drew the item', async () => {
+  collections._reset()
+  const c1 = await collections.create({ name: 'One' })
+  const c2 = await collections.create({ name: 'Two' })
+  await collections.addItem(c1.id, 'a')
+  await collections.update(c1.id, { canvas: canvasFor('a') })
+  await collections.update(c2.id, { canvas: canvasFor('a') }) // drawn but never a member
+  await collections.deleteItemEverywhere('a')
+  assert.deepEqual(collections.get(c1.id).itemIds, [])
+  assert.equal(collections.get(c1.id).canvas.nodes.length, 1)
+  assert.equal(collections.get(c2.id).canvas.nodes.length, 1)
+})
