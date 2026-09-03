@@ -74,3 +74,44 @@ export function reconcile(doc: CanvasDoc, items: { id: string }[]): CanvasDoc {
   const edges = doc.edges.filter((e) => ids.has(e.fromNode) && ids.has(e.toNode))
   return { nodes, edges }
 }
+
+// --- columns ---------------------------------------------------------------
+
+function inside(n: CanvasNode, g: CanvasNode): boolean {
+  const cx = n.x + n.width / 2
+  const cy = n.y + n.height / 2
+  return cx >= g.x && cx <= g.x + g.width && cy >= g.y && cy <= g.y + g.height
+}
+
+// The column a node sits in: the smallest group whose rectangle contains the
+// node's centre, or null. Groups never nest, so a group is never a child.
+export function columnOf(doc: CanvasDoc, nodeId: string): string | null {
+  const n = doc.nodes.find((x) => x.id === nodeId)
+  if (!n || n.type === 'group') return null
+  let best: CanvasNode | null = null
+  for (const g of doc.nodes) {
+    if (g.type !== 'group' || !inside(n, g)) continue
+    if (!best || g.width * g.height < best.width * best.height) best = g
+  }
+  return best ? best.id : null
+}
+
+export function childrenOf(doc: CanvasDoc, groupId: string): CanvasNode[] {
+  return doc.nodes.filter((n) => n.type !== 'group' && columnOf(doc, n.id) === groupId)
+}
+
+// Lays a column's children out vertically in their current top-to-bottom
+// order, full column width minus padding, and grows the column to fit.
+export function stackColumn(doc: CanvasDoc, groupId: string): CanvasDoc {
+  const g = doc.nodes.find((n) => n.id === groupId)
+  if (!g || g.type !== 'group') return doc
+  const kids = childrenOf(doc, groupId).sort((a, b) => a.y - b.y || a.x - b.x)
+  const moved = new Map<string, CanvasNode>()
+  let y = g.y + COL_HEAD + COL_PAD
+  for (const k of kids) {
+    moved.set(k.id, { ...k, x: g.x + COL_PAD, y, width: g.width - 2 * COL_PAD })
+    y += k.height + COL_PAD
+  }
+  const height = Math.max(COL_MIN_H, y - g.y)
+  return { ...doc, nodes: doc.nodes.map((n) => (n.id === groupId ? { ...n, height } : moved.get(n.id) ?? n)) }
+}
