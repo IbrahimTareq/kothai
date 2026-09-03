@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { flowPack, bounds, reconcile, columnOf, childrenOf, stackColumn, tidy, ITEM_W, DEFAULT_H, GAP, COL_HEAD, COL_PAD, COL_MIN_H } from '../../client/layout/canvas.ts'
+import { flowPack, bounds, reconcile, columnOf, childrenOf, stackColumn, tidy, toFlow, fromFlow, ITEM_W, DEFAULT_H, GAP, COL_HEAD, COL_PAD, COL_MIN_H } from '../../client/layout/canvas.ts'
 
 const box = (id, w = 220, h = 160) => ({ id, type: 'text', text: '', x: 0, y: 0, width: w, height: h })
 
@@ -102,4 +102,58 @@ test('tidy re-packs top-level nodes in reading order and carries column children
   // the child moved by the same delta as its column and is still inside it
   assert.deepEqual(at('kid'), [488 + COL_PAD, COL_HEAD + COL_PAD])
   assert.equal(columnOf(d, 'kid'), 'g')
+})
+
+test('toFlow gives column children a parentId and relative position, groups first', () => {
+  const doc = {
+    nodes: [card('kid', 100 + COL_PAD, 200 + COL_HEAD + COL_PAD), col('g', 100, 200), card('loose', 900, 900)],
+    edges: [{ id: 'e1', fromNode: 'kid', toNode: 'loose', fromSide: 'right', toSide: 'left' }],
+  }
+  const f = toFlow(doc)
+  assert.equal(f.nodes[0].id, 'g')
+  const kid = f.nodes.find((n) => n.id === 'kid')
+  assert.equal(kid.parentId, 'g')
+  assert.deepEqual(kid.position, { x: COL_PAD, y: COL_HEAD + COL_PAD })
+  assert.equal(kid.width, 220)
+  assert.deepEqual(kid.data, { kind: 'item', itemId: 'kid', h: 100 })
+  const g = f.nodes.find((n) => n.id === 'g')
+  assert.deepEqual([g.width, g.height, g.dragHandle], [260, 400, '.cv-col-head'])
+  assert.equal(f.nodes.find((n) => n.id === 'loose').parentId, undefined)
+  assert.deepEqual(f.edges, [{ id: 'e1', source: 'kid', target: 'loose', sourceHandle: 'right', targetHandle: 'left' }])
+})
+
+test('toFlow keeps selection and measurements from the previous flow nodes', () => {
+  const doc = { nodes: [card('a', 0, 0)], edges: [] }
+  const prev = [{ id: 'a', type: 'item', position: { x: 0, y: 0 }, data: {}, selected: true, measured: { width: 220, height: 333 } }]
+  const f = toFlow(doc, prev)
+  assert.equal(f.nodes[0].selected, true)
+  assert.deepEqual(f.nodes[0].measured, { width: 220, height: 333 })
+})
+
+test('fromFlow restores absolute coordinates, measured heights and edge sides', () => {
+  const nodes = [
+    { id: 'g', type: 'group', position: { x: 100, y: 200 }, width: 260, height: 400, data: { kind: 'group', label: 'Reads', h: 400 } },
+    { id: 'item:a', type: 'item', parentId: 'g', position: { x: 12, y: 48 }, width: 236, data: { kind: 'item', itemId: 'a', h: 100 }, measured: { width: 236, height: 150 } },
+    { id: 'n1', type: 'text', position: { x: 900.4, y: 10 }, width: 300, data: { kind: 'text', text: 'note', h: 60 } },
+  ]
+  const edges = [{ id: 'e1', source: 'item:a', target: 'n1', sourceHandle: 'bottom', targetHandle: null }]
+  const d = fromFlow(nodes, edges)
+  assert.deepEqual(d.nodes, [
+    { id: 'g', type: 'group', label: 'Reads', x: 100, y: 200, width: 260, height: 400 },
+    { id: 'item:a', type: 'item', itemId: 'a', x: 112, y: 248, width: 236, height: 150 },
+    { id: 'n1', type: 'text', text: 'note', x: 900, y: 10, width: 300, height: 60 },
+  ])
+  assert.deepEqual(d.edges, [{ id: 'e1', fromNode: 'item:a', toNode: 'n1', fromSide: 'bottom', toSide: undefined }])
+})
+
+test('toFlow then fromFlow round-trips a doc with a column', () => {
+  const doc = {
+    nodes: [col('g', 100, 200), card('kid', 100 + COL_PAD, 200 + COL_HEAD + COL_PAD), card('loose', 900, 900)],
+    edges: [{ id: 'e1', fromNode: 'kid', toNode: 'loose' }],
+  }
+  const f = toFlow(doc)
+  const back = fromFlow(f.nodes, f.edges)
+  const byId = (d) => Object.fromEntries(d.nodes.map((n) => [n.id, n]))
+  assert.deepEqual(byId(back), byId(doc))
+  assert.deepEqual(back.edges, [{ id: 'e1', fromNode: 'kid', toNode: 'loose', fromSide: undefined, toSide: undefined }])
 })
