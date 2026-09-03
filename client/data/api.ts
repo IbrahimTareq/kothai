@@ -2,7 +2,7 @@
 // the real /api endpoints. Server types: link/image/video/code/
 // text ("text" becomes "note" in the UI).
 import type {
-  Chat, ChatMessage, ChatSummary, Collection, ModelStatus, Residency, ServerNote, SettingsResponse, UIItem, UIType,
+  CanvasDoc, Chat, ChatMessage, ChatSummary, Collection, ModelStatus, Residency, ServerNote, SettingsResponse, UIItem, UIType,
 } from '../types'
 
 function hostOf(url: string): string {
@@ -314,7 +314,7 @@ export const Collections = {
     )
     return d.collection
   },
-  async update(id: string, patch: { name?: string; tags?: string[] }): Promise<Collection> {
+  async update(id: string, patch: { name?: string; tags?: string[]; canvas?: CanvasDoc | null }): Promise<Collection> {
     const d = await _json<{ collection: Collection }>(
       await fetch('/api/collections/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) }),
     )
