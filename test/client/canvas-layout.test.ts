@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { flowPack, bounds, reconcile, columnOf, childrenOf, stackColumn, ITEM_W, DEFAULT_H, GAP, COL_HEAD, COL_PAD, COL_MIN_H } from '../../client/layout/canvas.ts'
+import { flowPack, bounds, reconcile, columnOf, childrenOf, stackColumn, tidy, ITEM_W, DEFAULT_H, GAP, COL_HEAD, COL_PAD, COL_MIN_H } from '../../client/layout/canvas.ts'
 
 const box = (id, w = 220, h = 160) => ({ id, type: 'text', text: '', x: 0, y: 0, width: w, height: h })
 
@@ -82,4 +82,24 @@ test('stackColumn stacks children top to bottom, sets their width and grows the 
 test('stackColumn keeps an empty column at its minimum height', () => {
   const d = stackColumn({ nodes: [col('g', 0, 0, 260, 500)], edges: [] }, 'g')
   assert.equal(d.nodes[0].height, COL_MIN_H)
+})
+
+test('tidy re-packs top-level nodes in reading order and carries column children along', () => {
+  const doc = {
+    nodes: [
+      card('second', 600, 5),           // same visual row as first, further right
+      card('first', 0, 0),
+      col('g', 0, 500, 260, 200),
+      card('kid', COL_PAD, 500 + COL_HEAD + COL_PAD), // inside g
+    ],
+    edges: [],
+  }
+  const d = tidy(doc)
+  const at = (id) => { const n = d.nodes.find((x) => x.id === id); return [n.x, n.y] }
+  assert.deepEqual(at('first'), [0, 0])
+  assert.deepEqual(at('second'), [244, 0])
+  assert.deepEqual(at('g'), [488, 0])
+  // the child moved by the same delta as its column and is still inside it
+  assert.deepEqual(at('kid'), [488 + COL_PAD, COL_HEAD + COL_PAD])
+  assert.equal(columnOf(d, 'kid'), 'g')
 })

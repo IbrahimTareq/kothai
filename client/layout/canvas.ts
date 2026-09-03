@@ -115,3 +115,23 @@ export function stackColumn(doc: CanvasDoc, groupId: string): CanvasDoc {
   const height = Math.max(COL_MIN_H, y - g.y)
   return { ...doc, nodes: doc.nodes.map((n) => (n.id === groupId ? { ...n, height } : moved.get(n.id) ?? n)) }
 }
+
+// Re-packs every top-level node (anything not inside a column) in reading
+// order — rows of ~50px, then left to right — from the content's top-left.
+// Column contents are not re-laid; they move with their column.
+export function tidy(doc: CanvasDoc): CanvasDoc {
+  const parentOf = new Map<string, string | null>(doc.nodes.map((n) => [n.id, columnOf(doc, n.id)]))
+  const top = doc.nodes.filter((n) => parentOf.get(n.id) === null)
+  const row = (n: CanvasNode) => Math.round(n.y / 50)
+  const ordered = [...top].sort((a, b) => row(a) - row(b) || a.x - b.x)
+  const b = bounds(top)
+  const packed = flowPack(ordered, b ? { originX: b.minX, originY: b.minY } : {})
+  const delta = new Map(packed.map((p, i) => [p.id, { dx: p.x - ordered[i].x, dy: p.y - ordered[i].y }]))
+  return {
+    ...doc,
+    nodes: doc.nodes.map((n) => {
+      const d = delta.get(n.id) ?? delta.get(parentOf.get(n.id) ?? '')
+      return d ? { ...n, x: n.x + d.dx, y: n.y + d.dy } : n
+    }),
+  }
+}
