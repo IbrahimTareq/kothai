@@ -25,8 +25,8 @@ interface GalleryViewProps {
    *  Empty means "All". */
   galFilter: string[]
   setGalFilter: (v: string[]) => void
-  galSort: 'added' | 'saved'
-  setGalSort: (v: 'added' | 'saved') => void
+  galSort: 'newest' | 'oldest'
+  setGalSort: (v: 'newest' | 'oldest') => void
   typeChips: { key: string; label: string; glyph: string; count: number }[]
   sourceChips: { key: string; label: string; dot: string; glyph?: string; count: number }[]
   unavailableCount: number
@@ -126,12 +126,12 @@ export function GalleryView({ nav, view, setView, search, setSearch, searchFocus
             column count you get matters less there than what order you are
             reading in. */}
         <div className="seg gal-sort" role="group" aria-label="Sort order">
-          <button className={'seg-btn' + (galSort === 'added' ? ' on' : '')}
-            aria-pressed={galSort === 'added'} title="Newest in your library first"
-            onClick={() => setGalSort('added')}>Added</button>
-          <button className={'seg-btn' + (galSort === 'saved' ? ' on' : '')}
-            aria-pressed={galSort === 'saved'} title="By the date you originally saved it"
-            onClick={() => setGalSort('saved')}>Saved</button>
+          <button className={'seg-btn' + (galSort === 'newest' ? ' on' : '')}
+            aria-pressed={galSort === 'newest'} title="Newest first"
+            onClick={() => setGalSort('newest')}>Newest</button>
+          <button className={'seg-btn' + (galSort === 'oldest' ? ' on' : '')}
+            aria-pressed={galSort === 'oldest'} title="Oldest first"
+            onClick={() => setGalSort('oldest')}>Oldest</button>
         </div>
         <div className="view-toggle">
           <button className={view === 'grid4' ? 'on' : ''} onClick={() => setView('grid4')} title="4 columns"><Icon name="grid4" size={16} /></button>

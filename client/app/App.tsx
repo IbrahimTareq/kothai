@@ -54,9 +54,8 @@ export default function App() {
   // Everything-page filters, multi-select. Chip keys are mixed (types, sources
   // and the 'unavailable' state) and split apart below; an empty set is "All".
   const [galFilter, setGalFilter] = useState<string[]>([])
-  // Board order. 'added' = newest arrival first (the default), 'saved' = the
-  // original timeline the items were saved on. See server/data/query.js.
-  const [galSort, setGalSort] = useState<'added' | 'saved'>('added')
+  // Board order: by the date on the tile, newest or oldest first.
+  const [galSort, setGalSort] = useState<'newest' | 'oldest'>('newest')
   // Drives the capture button's "Added" state after a successful save.
   const [captured, setCaptured] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>(() =>

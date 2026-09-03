@@ -93,24 +93,20 @@ export function facetsOf(notes) {
   return { types, sources, unavailable }
 }
 
-// Board ordering. Two dates exist per note and they are NOT the same thing:
-// `createdAt` is when you saved the thing originally (an importer sets it from
-// the export, so an imported reel keeps its 2024 date), and `importedAt` is
-// when it arrived in this library.
+// Board ordering, by the date a note carries on its tile — `createdAt`, which
+// is when it was saved originally (an importer takes it from the export, so a
+// reel keeps its 2024 date rather than the day it was imported).
 //
-//   'added' (default) — newest arrival first
-//   'saved'           — the original timeline
+//   'newest' (default) — most recent first
+//   'oldest'           — the other way round
 //
 // Before this the board had no sort at all: notes came back in INSERTION order
-// (`ORDER BY seq DESC`), which happens to look right for hand-saved notes and
-// is meaningless for a bulk import, where 197 rows land in one second in
-// whatever order the export file listed them. That is why the top of an
-// imported library was its OLDEST items, each captioned "8 months ago".
-//
-// Imports share one `importedAt` across the whole batch, so 'added' ties are
-// broken by `createdAt` — within one arrival, newest-saved first — otherwise a
-// batch would fall back to that same meaningless file order.
-const SORTS = new Set(['added', 'saved'])
+// (`ORDER BY seq DESC`), which looks right for hand-saved notes and is
+// meaningless for a bulk import, where 197 rows land in one second in whatever
+// order the export file listed them. That is why the top of an imported
+// library was its OLDEST items, each captioned "8 months ago", while the tiles
+// showed a date the order plainly did not follow.
+const SORTS = new Set(['newest', 'oldest'])
 
 function timeOf(v) {
   const t = Date.parse(v || '')
@@ -118,23 +114,25 @@ function timeOf(v) {
 }
 
 export function sortNotes(notes, sort) {
-  const mode = SORTS.has(sort) ? sort : 'added'
+  const oldestFirst = sort === 'oldest'
+  if (!SORTS.has(sort) && sort) sort = 'newest' // unknown value: fall back rather than throw
   // Copied, never sorted in place: this array belongs to the note store, and
   // reordering it would quietly reorder every other reader's view too.
-  const out = notes.slice()
-  if (mode === 'saved') {
-    out.sort((a, b) => timeOf(b.createdAt) - timeOf(a.createdAt))
-    return out
-  }
-  // Arrival is bucketed to the minute before comparing. Sub-minute precision
-  // within one import is noise — the batch arrived as a single event — and
-  // comparing it exactly means the tie-break below never fires, so a batch
-  // keeps whatever order its export file listed. Libraries imported before the
-  // route stamped one time per run still carry per-row millisecond stamps, so
-  // this is what makes THEIR ordering sane too, not just future imports.
-  const arrival = (n) => Math.floor((timeOf(n.importedAt) || timeOf(n.createdAt)) / 60000)
-  out.sort((a, b) => (arrival(b) - arrival(a)) || (timeOf(b.createdAt) - timeOf(a.createdAt)))
-  return out
+  // Ties break on INSERTION order, which is the order `notes` already arrives
+  // in (the store keeps newest-first). Two reasons it has to break somewhere:
+  // a bulk import gives thousands of rows the same date, and two notes saved
+  // in the same second are ordinary — without a tiebreak the comparator is
+  // unstable, so paging can show one note twice and drop another between
+  // requests. Insertion order is the right one rather than, say, id, because
+  // for same-second notes it still means "most recently added first", which is
+  // what someone who just saved something expects to see at the top.
+  const out = notes.map((n, i) => [n, i])
+  out.sort((x, y) => {
+    const d = timeOf(x[0].createdAt) - timeOf(y[0].createdAt)
+    if (d) return oldestFirst ? d : -d
+    return oldestFirst ? y[1] - x[1] : x[1] - y[1]
+  })
+  return out.map((e) => e[0])
 }
 
 export function pageOf(notes, offset, limit) {
