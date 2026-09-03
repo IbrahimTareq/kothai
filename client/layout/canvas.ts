@@ -52,3 +52,25 @@ export function flowPack(nodes: CanvasNode[], opts: PackOpts = {}): CanvasNode[]
     return placed
   })
 }
+
+// Membership is the source of truth for WHICH cards exist: every member gets
+// exactly one item node, and cards for departed members go, along with any
+// edge touching them. New members are packed in a row below the current
+// content (bottom-left) so additions land somewhere visible without covering
+// existing work; on an empty doc everything packs from the origin, which is
+// how a pre-canvas space gets a tidy grid on first open.
+export function reconcile(doc: CanvasDoc, items: { id: string }[]): CanvasDoc {
+  const members = new Set(items.map((i) => i.id))
+  const kept = doc.nodes.filter((n) => n.type !== 'item' || members.has(n.itemId))
+  const have = new Set<string>()
+  for (const n of kept) if (n.type === 'item') have.add(n.itemId)
+  const fresh: CanvasNode[] = items
+    .filter((i) => !have.has(i.id))
+    .map((i) => ({ id: itemNodeId(i.id), type: 'item', itemId: i.id, x: 0, y: 0, width: ITEM_W, height: DEFAULT_H }))
+  const b = bounds(kept)
+  const placed = fresh.length ? flowPack(fresh, b ? { originX: b.minX, originY: b.maxY + GAP } : {}) : []
+  const nodes = [...kept, ...placed]
+  const ids = new Set(nodes.map((n) => n.id))
+  const edges = doc.edges.filter((e) => ids.has(e.fromNode) && ids.has(e.toNode))
+  return { nodes, edges }
+}
