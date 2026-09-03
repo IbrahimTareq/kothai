@@ -88,7 +88,7 @@ server/                 dependency-light Node ESM, serves ./dist
 ├─ data/                db.js (SQLite) · notes · chats · collections ·
 │                       settings · tagvocab · query · embedding · migrate
 ├─ import/              importer registry: Instagram today
-└─ lib/                 http · auth · ssrf · tags · zip
+└─ lib/                 http · auth · ssrf · tags · zip · canvas
 
 test/                   mirrors the source tree · 789 tests, node:test
 docs/                   the detail, indexed in README.md

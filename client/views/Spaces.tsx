@@ -134,6 +134,12 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
       .sort((a, b) => (order.get(a.id) ?? Infinity) - (order.get(b.id) ?? Infinity))
   }, [notes.slots, collection?.itemIds])
 
+  // Canvas trusts `items` as the full, authoritative membership list (see
+  // reconcile in layout/canvas.ts) — mounting it against a partial page would
+  // have it silently delete cards/lines for not-yet-loaded members and
+  // autosave that damage. Only mount once every page has actually landed.
+  const membersReady = notes.ready && !notes.slots.some(isPlaceholder)
+
   useEffect(() => {
     if (!notesRef) return
     notesRef.current = notes
@@ -310,9 +316,14 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
       </header>
 
       {board
-        ? <Canvas collectionId={collection.id} items={collItems} doc={collection.canvas}
-            onSave={(d) => saveCanvas(collection.id, d)} onExpand={onExpand}
-            onRemoveItem={(id) => handleRemoveFrom(collection.id, id)} />
+        ? (membersReady
+            ? <Canvas collectionId={collection.id} items={collItems} doc={collection.canvas}
+                onSave={(d) => saveCanvas(collection.id, d)} onExpand={onExpand}
+                onRemoveItem={(id) => handleRemoveFrom(collection.id, id)} />
+            // Membership isn't fully loaded yet — mounting Canvas now would have
+            // it treat not-yet-loaded members as departed and delete their cards
+            // (see membersReady above). Wait rather than risk that.
+            : <div className="empty"><Icon name="spark" size={40} /><p>LOADING CANVAS…</p></div>)
         : <div className="gal-scroll" ref={scrollRef}>
             {collItems.length === 0
               ? <div className="empty"><Icon name="spark" size={40} /><p>{collection.tags.length > 0 ? 'NO ITEMS MATCH YET' : 'ADD ITEMS FROM EVERYTHING'}</p></div>

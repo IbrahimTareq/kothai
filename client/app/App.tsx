@@ -435,7 +435,7 @@ export default function App() {
     setExpanded(item)
     const path = routeToPath(nav, item.id)
     if (location.pathname === path) return
-    // Replace rather than stack when one overlay opens another (mindmap → item),
+    // Replace rather than stack when one overlay opens another (canvas → item),
     // so a single Back always returns to the board.
     if (pathToRoute(location.pathname).item) history.replaceState(null, '', path)
     else { history.pushState(null, '', path); pushedItem.current = true }

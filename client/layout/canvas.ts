@@ -205,8 +205,8 @@ export function fromFlow(nodes: FlowNode[], edges: FlowEdge[]): CanvasDoc {
   }
   const out: CanvasNode[] = nodes.map((n) => {
     const { x, y } = abs(n)
-    const width = Math.round(n.width ?? n.measured?.width ?? ITEM_W)
-    const height = Math.round((n.type === 'group' ? n.height : undefined) ?? n.measured?.height ?? n.data.h)
+    const width = Math.max(1, Math.round(n.width ?? n.measured?.width ?? ITEM_W))
+    const height = Math.max(1, Math.round((n.type === 'group' ? n.height : undefined) ?? n.measured?.height ?? n.data.h))
     const base = { id: n.id, x: Math.round(x), y: Math.round(y), width, height }
     if (n.type === 'item') return { ...base, type: 'item', itemId: String(n.data.itemId) }
     if (n.type === 'text') return { ...base, type: 'text', text: String(n.data.text ?? '') }
