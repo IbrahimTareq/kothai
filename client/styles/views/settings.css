@@ -328,3 +328,58 @@
    slot: it only exists once a scan has found something, and it is destructive,
    so it belongs with the count that justifies it. */
 .avail-actions{margin-top:var(--space-10)}
+
+/* Downloaded models. A row list inside a settings row: one line per cache
+   entry, its size on the right of the name, and either a delete button or the
+   badge saying which role is holding it. The name is the only elastic part —
+   sizes and controls keep their width so the column of numbers stays readable
+   as the list scrolls. */
+.model-files {
+  margin: var(--space-10) 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+.model-file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  padding: var(--space-10) var(--space-14);
+  border-top: 1px solid var(--line);
+}
+.model-file:first-child { border-top: none; }
+.mf-main { display: flex; align-items: baseline; gap: var(--space-8); min-width: 0; flex: 1; }
+.mf-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-tight);
+}
+.mf-size { flex: none; color: var(--ink-dim); font-size: var(--text-xs); }
+/* Reads as a state, not a disabled button: there is no action here to enable,
+   the file is spoken for until a different model is picked. */
+.mf-badge {
+  flex: none;
+  color: var(--ink-faint);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-tight);
+  text-transform: lowercase;
+}
+.mf-delete { flex: none; }
+.mf-confirm { display: flex; flex: none; gap: var(--space-8); }
+
+/* Phone: the name gets the full width and its controls drop beneath it, rather
+   than three things fighting over 375px. Same --bp-sm as the row above it, so
+   a row and its file list reflow together (written out — custom properties
+   cannot be read inside a media condition). */
+@media (max-width: 560px) {
+  .model-file { flex-wrap: wrap; }
+  .mf-main { flex: 1 1 100%; }
+  .mf-delete, .mf-confirm, .mf-badge { margin-left: auto; }
+}

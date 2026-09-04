@@ -181,6 +181,24 @@ export interface SettingsResponse {
   endpoint: EndpointInfo
 }
 
+// One entry in the model download cache — a weights file, or a companion-set
+// directory. `usedBy` is the role whose current selection needs it; the server
+// refuses to delete anything with one (server/routes/models.js).
+export interface ModelFile {
+  name: string
+  kind: 'file' | 'dir'
+  sizeBytes: number
+  inUse: boolean
+  usedBy: 'llm' | 'embed' | 'vision' | null
+}
+
+export interface ModelFilesResponse {
+  dir: string
+  entries: ModelFile[]
+  totalBytes: number
+  reclaimableBytes: number
+}
+
 export interface Collection {
   id: string
   createdAt: string

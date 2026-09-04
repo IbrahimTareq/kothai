@@ -2,7 +2,7 @@
 // the real /api endpoints. Server types: link/image/video/code/
 // text ("text" becomes "note" in the UI).
 import type {
-  CanvasDoc, Chat, ChatMessage, ChatSummary, Collection, ModelStatus, Residency, ServerNote, SettingsResponse, UIItem, UIType,
+  CanvasDoc, Chat, ChatMessage, ChatSummary, Collection, ModelFilesResponse, ModelStatus, Residency, ServerNote, SettingsResponse, UIItem, UIType,
 } from '../types'
 
 function hostOf(url: string): string {
@@ -248,6 +248,16 @@ export const API = {
   async setup(patch: SettingsPatch | { skip: true }): Promise<{ ok: boolean; current: SettingsPatch }> {
     return await _json(
       await fetch('/api/setup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) }),
+    )
+  },
+  // downloaded weights on disk, and reclaiming their space. Nothing prunes the
+  // cache — see server/routes/models.js.
+  async modelFiles(): Promise<ModelFilesResponse> {
+    return await _json<ModelFilesResponse>(await fetch('/api/models/files'))
+  },
+  async deleteModelFile(name: string): Promise<{ deleted: string; freedBytes: number }> {
+    return await _json(
+      await fetch('/api/models/files/' + encodeURIComponent(name), { method: 'DELETE', headers: JSON_HEADERS }),
     )
   },
   async status(): Promise<ModelStatus> {

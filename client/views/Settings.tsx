@@ -15,6 +15,7 @@ import { RoleAccordion, RemoteModelField, ROLE_META, fmtGB, type Role } from '..
 import { SettingsGroup, SettingsRow } from '../components/SettingsRow'
 import { ImportSection } from '../components/ImportSection'
 import { AvailabilityRow } from '../components/AvailabilityRow'
+import { ModelFilesRow } from '../components/ModelFilesRow'
 import { API } from '../data/api'
 import type { Residency, SettingsResponse, VaultStatus } from '../types'
 
@@ -253,6 +254,16 @@ export function SettingsView({ vault, theme, setTheme }: {
                 )
               ))}
             </SettingsGroup>
+
+            {/* Only where weights exist: a remote-inference install downloads
+                nothing, and the routes behind this row 404 there. */}
+            {cfg.capabilities.downloadsWeights && (
+              <SettingsGroup label="STORAGE">
+                <div className="settings-rows">
+                  <ModelFilesRow />
+                </div>
+              </SettingsGroup>
+            )}
 
             <ImportSection />
 
