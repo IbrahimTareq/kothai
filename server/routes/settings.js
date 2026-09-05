@@ -42,29 +42,36 @@ export async function handleGetSettings(res) {
     residency: settings.getResidency(),
     presets: await ai.listModels(),
     capabilities: caps,
-    endpoint: caps.kind === 'remote' ? endpointInfo() : { configured: false, host: null },
+    endpoint: ROLES.some((r) => caps.roles[r] === 'remote') ? endpointInfo() : { configured: false, host: null },
   })
 }
 
-// Validation is provider-specific: local rejects a key that isn't in its
-// preset catalogue; remote accepts any non-empty string and only warns about
-// one the endpoint doesn't list, because saving settings must not fail
-// whenever the endpoint happens to be down.
-function validateModels(body) {
-  const caps = ai.capabilities()
-  const field = caps.managesResidency ? null : 'remote'
-  const source = field ? body.remote || {} : body
-  const patch = {}
+// Validation is provider-specific and now role-by-role: local rejects a key
+// that isn't in its preset catalogue, remote accepts any non-empty string and
+// only warns about one the endpoint doesn't list, because saving settings must
+// not fail whenever the endpoint happens to be down.
+//
+// A role served on-device reads its key from the body root; a role served
+// remotely reads its id from body.remote. In a single-provider install that is
+// exactly the old behaviour — all three roles resolve to the same source — and
+// on a mixed one it is what keeps an endpoint's model ids out of the on-device
+// columns, where nothing would ever read them again.
+// Exported under an underscore for the unit tests.
+export function _validateModels(body) {
+  const { roles } = ai.capabilities()
+  const local = {}
+  const remote = {}
   const warnings = []
   for (const role of ROLES) {
-    const key = source[role]
+    const isLocal = roles[role] === 'local'
+    const key = (isLocal ? body : body.remote || {})[role]
     if (key === undefined) continue
     const r = ai.validateModel(role, key)
     if (!r.ok) return { error: r.error }
     if (r.warning) warnings.push(r.warning)
-    patch[role] = key
+    ;(isLocal ? local : remote)[role] = key
   }
-  return { patch, warnings, remote: Boolean(field) }
+  return { local, remote, warnings }
 }
 
 function validateResidency(body) {
@@ -97,10 +104,10 @@ export async function handleSetup(req, res) {
     return json(res, 200, { ok: true, current: settings.get() })
   }
 
-  const { patch, error } = validateModels(body)
+  const { local, error } = _validateModels(body)
   if (error) return json(res, 400, { error })
 
-  const current = await settings.save({ ...patch, configured: true, residency: settings.getResidency() })
+  const current = await settings.save({ ...local, configured: true, residency: settings.getResidency() })
   await ai.configureModels(current)
   // Download in the background through the job queue so it can't race saves.
   enrich.queueJob(async () => {
@@ -116,58 +123,63 @@ export async function handleSetup(req, res) {
 export async function handleSaveSettings(req, res) {
   const body = await readBody(req)
   const caps = ai.capabilities()
-  const models = validateModels(body)
+  const models = _validateModels(body)
   if (models.error) return json(res, 400, { error: models.error })
   const resPatch = caps.managesResidency ? validateResidency(body) : { patch: {} }
   if (resPatch.error) return json(res, 400, { error: resPatch.error })
-  if (!Object.keys(models.patch).length && !Object.keys(resPatch.patch).length) {
-    return json(res, 400, { error: 'nothing to change' })
-  }
+  const changing = Object.keys(models.local).length + Object.keys(models.remote).length + Object.keys(resPatch.patch).length
+  if (!changing) return json(res, 400, { error: 'nothing to change' })
 
-  if (models.remote) {
-    await settings.save({ remote: models.patch })
+  // Endpoint ids are a plain store-and-apply: no weights, no residency, and no
+  // re-index — the endpoint's own catalogue is the only thing that changed.
+  if (Object.keys(models.remote).length) {
+    await settings.save({ remote: models.remote })
     // Role-keyed { llm, embed, vision } — the same shape both providers take.
     await ai.applySettings(settings.getRemote())
-    return json(res, 200, { ok: true, remote: settings.getRemote(), warnings: models.warnings })
   }
 
   const prev = settings.get()
   const prevRes = settings.getResidency()
-  const toSave = { ...models.patch }
-  if (Object.keys(resPatch.patch).length) toSave.residency = resPatch.patch
-  const current = await settings.save(toSave)
-  const embedChanged = models.patch.embed && models.patch.embed !== prev.embed
+  const embedChanged = Boolean(models.local.embed) && models.local.embed !== prev.embed
 
-  // Apply through the job queue so it can't race in-flight enrichment.
-  enrich.queueJob(async () => {
-    const residency = settings.getResidency()
-    // Residency first: applyModels()'s "reload an always-role whose model
-    // changed" step reads each manager's CURRENT policy, so if a model swap
-    // and an off/ondemand transition land in the same request, applying
-    // residency first means it never loads a model it's about to unload.
-    await ai.applyResidency(residency)
-    await ai.applySettings(models.patch)
-    await ai.boot() // (re)load always-roles after any transition
-    // Pre-download weights for roles just switched on from off, so their
-    // first real use is a local load rather than a surprise download.
-    for (const role of Object.keys(resPatch.patch)) {
-      if (prevRes[role] === 'off' && residency[role] === 'ondemand') {
-        try {
-          await ai.warmRole(role) // download now; the idle timer frees the RAM
-        } catch (e) {
-          console.error(`[settings] ${role} warm failed:`, e.message)
+  let current = prev
+  if (Object.keys(models.local).length || Object.keys(resPatch.patch).length) {
+    const toSave = { ...models.local }
+    if (Object.keys(resPatch.patch).length) toSave.residency = resPatch.patch
+    current = await settings.save(toSave)
+
+    // Apply through the job queue so it can't race in-flight enrichment.
+    enrich.queueJob(async () => {
+      const residency = settings.getResidency()
+      // Residency first: applyModels()'s "reload an always-role whose model
+      // changed" step reads each manager's CURRENT policy, so if a model swap
+      // and an off/ondemand transition land in the same request, applying
+      // residency first means it never loads a model it's about to unload.
+      await ai.applyResidency(residency)
+      await ai.applySettings(models.local)
+      await ai.boot() // (re)load always-roles after any transition
+      // Pre-download weights for roles just switched on from off, so their
+      // first real use is a local load rather than a surprise download.
+      for (const role of Object.keys(resPatch.patch)) {
+        if (prevRes[role] === 'off' && residency[role] === 'ondemand') {
+          try {
+            await ai.warmRole(role) // download now; the idle timer frees the RAM
+          } catch (e) {
+            console.error(`[settings] ${role} warm failed:`, e.message)
+          }
         }
       }
-    }
-    // A new embedding model speaks a different vector space, so every note is
-    // re-embedded in the background (search degrades gracefully meanwhile).
-    // The sweep itself lives in enrich.js so the boot-time recipe check runs
-    // the identical code — see enrich.reembedAll.
-    if (embedChanged && residency.embed !== 'off') {
-      await enrich.reembedAll(`model → ${models.patch.embed}`)
-    }
-  })
-  json(res, 200, { ok: true, current, residency: settings.getResidency() })
+      // A new embedding model speaks a different vector space, so every note is
+      // re-embedded in the background (search degrades gracefully meanwhile).
+      // The sweep itself lives in enrich.js so the boot-time recipe check runs
+      // the identical code — see enrich.reembedAll.
+      if (embedChanged && residency.embed !== 'off') {
+        await enrich.reembedAll(`model → ${models.local.embed}`)
+      }
+    })
+  }
+
+  json(res, 200, { ok: true, current, remote: settings.getRemote(), residency: settings.getResidency(), warnings: models.warnings })
 }
 
 // ---- enrichment backlog ---------------------------------------------------
