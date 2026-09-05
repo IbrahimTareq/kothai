@@ -55,35 +55,26 @@ when you're trying to find something which is the problem this is built around.
 
 ## Quick start
 
-The one question that decides your setup is where the models run. Keep them on
-this machine and you need the hardware to hold them; hand them to an endpoint
-you already have and the whole thing fits in 250 MB. Either way it's one
-container and the same app at the end of it.
+One container and the same app either way. The only choice is where the models
+run: keep them on this machine and you need the hardware to hold them, or point
+at an endpoint you already have and only the embedding model stays local.
 
 ### Everything baked in — heavier
 
 Models included, nothing leaves the box, nothing to sign up for.
 
-Recommended: 8 GB of RAM and 6 GB of free disk. A Pi 5 or a 4 GB VPS works too,
-as long as you pick the light models when it asks.
-
-The wizard reads your hardware, asks three questions, writes `.env` and a
-compose file, and starts the container:
-
 ```bash
-curl -fsSL https://github.com/IbrahimTareq/kothai/archive/refs/heads/main.tar.gz | tar xz --strip=1 kothai-main/scripts
-node scripts/init.mjs
+docker run -d --name kothai -p 5173:5173 -v ./data:/app/data -v ./models:/app/models \
+  ghcr.io/ibrahimtareq/kothai:latest
 ```
 
-The first line drops a `scripts/` folder in the current directory and nothing
-else; the second is the part that asks and starts. It wants Node 22 on the
-host. If you haven't got it, or you'd rather read a file before running it,
-plain compose gets you the same container:
+Open http://localhost:5173 and pick your models. 8 GB of RAM and 6 GB of free
+disk is comfortable; a Pi 5 or a 4 GB VPS works too, as long as you pick the
+light models when it asks.
 
-```bash
-curl -O https://raw.githubusercontent.com/IbrahimTareq/kothai/main/docker-compose.yml
-docker compose up -d
-```
+Add `-e STASH_PASSWORD=…` to require a password, and change the left half of
+`-p 5173:5173` if that port is taken. There's a `docker-compose.yml` in the repo
+if you'd rather run it that way — see [Self-hosting](docs/self-hosting.md).
 
 ### Bring your own AI — lighter
 
