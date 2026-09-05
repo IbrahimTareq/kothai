@@ -24,6 +24,28 @@ All three are optional. With every role off, Kothai is a working bookmark
 manager — that's the *"Skip for now"* path in the first-run flow, and it runs
 on about 1 GB.
 
+Each role also picks its own provider (see [`ai/routing.js`](../server/ai/routing.js)).
+`STASH_AI_PROVIDER=local` puts all three on-device, unchanged. `STASH_AI_PROVIDER=remote`
+sends `llm` and `vision` to the endpoint but keeps `embed` on-device wherever the
+image can run one — most hosted endpoints (Ollama Cloud, Groq, Anthropic,
+OpenRouter) don't serve `/embeddings` at all, and the embedding model is small
+enough (~300 MB, CPU-only) to keep local regardless. `STASH_AI_EMBED_PROVIDER=remote`
+opts back into sending it out, for an endpoint that does serve embeddings. The
+lite image has no on-device inference to fall back to, so on it every role
+always goes remote, `embed` included.
+
+Moving the embedding role between providers re-indexes the whole library:
+vectors from two different embedding models aren't comparable, so the app runs
+the same full re-embed sweep a model swap triggers, in the background, logged
+as it happens (see [The embedding recipe](#the-embedding-recipe)). An install
+upgrading to per-role routing with `STASH_AI_PROVIDER=remote` re-indexes once
+on its first boot after the upgrade, because its embeddings move on-device.
+
+It also means semantic search stops depending on the network once `embed` is
+local. A question is embedded as a query before retrieval runs, so with a
+remote embedding model, an endpoint that's down or rate-limited takes semantic
+search down with it — over notes embedded weeks ago, not just new ones.
+
 ## Residency: the RAM dial
 
 Each role has a **residency policy**, set in Settings → Model Cores and
@@ -108,13 +130,14 @@ the whole library re-indexes itself in the background.
 ## The provider facade
 
 [`server/ai/index.js`](../server/ai/index.js) is the only module the rest of the
-app imports for inference. It resolves exactly one provider at boot:
+app imports for inference. It resolves each role — `llm`, `embed`, `vision` —
+to a provider at boot, via the rule in [`ai/routing.js`](../server/ai/routing.js):
 
 ```mermaid
 flowchart LR
   APP["routes/ · enrich.js"] --> F["ai/index.js"]
-  F -->|"STASH_AI_PROVIDER=local"| L["providers/local.js<br/>@qvac/sdk"]
-  F -->|"STASH_AI_PROVIDER=remote"| R["providers/remote.js<br/>OpenAI-compatible"]
+  F -->|"per role, see ai/routing.js"| L["providers/local.js<br/>@qvac/sdk"]
+  F -->|"per role, see ai/routing.js"| R["providers/remote.js<br/>OpenAI-compatible"]
   L --- P["ai/prompts.js<br/>ai/normalise.js"]
   R --- P
 ```
@@ -166,6 +189,10 @@ STASH_AI_BASE_URL=http://localhost:11434/v1
 STASH_AI_API_KEY=…        # not needed for Ollama or llama.cpp
 ```
 
+On the full image this endpoint only needs to serve chat completions — `embed`
+stays on-device by default, see [The three roles](#the-three-roles). The lite
+image has no on-device fallback, so its endpoint must also serve `/embeddings`.
+
 Model **names** are picked in Settings (they differ per endpoint). Credentials
 are **env-only** — never written to SQLite, never returned by any API response,
 so they can't leak through a backup or an export. `/api/settings` echoes only
@@ -211,6 +238,8 @@ Vectors built under an *older* recipe — different prefixes, or a different set
 of fields — aren't comparable with new ones. So the recipe is versioned, and a
 change triggers a one-time background re-embed of the whole library on the same
 FIFO queue as everything else (`enrich.queueRecipeReembed()`, called at boot).
+The embedding role changing provider fires the same sweep, via
+`enrich.queueEmbedProviderReembed()` — see [The three roles](#the-three-roles).
 
 > [!IMPORTANT]
 > If you change what goes into an embedding, bump the recipe. A library holding

@@ -108,17 +108,21 @@ hook that deleted `-wal`/`-shm` could throw away committed data.
 
 ## Running lite (remote inference)
 
-The default image runs every model on your own hardware. The **lite** image
-runs none of them — it sends classification, embedding and image captioning to
-an OpenAI-compatible endpoint you point it at, and ships at ~250 MB with no
-model download at all.
+The default image can run two ways: `STASH_AI_PROVIDER=local` (the default)
+keeps every model on your own hardware, and `STASH_AI_PROVIDER=remote` sends
+classification and image captioning to an OpenAI-compatible endpoint while
+keeping embedding on-device — see [Models & inference](models.md#the-three-roles)
+for why. The **lite** image runs nothing locally at all — it has no on-device
+inference to fall back to, so `remote` is its only mode and all three roles,
+embedding included, go to the endpoint. It ships at ~250 MB with no model
+download at all.
 
 | | |
 |---|---|
 | **RAM** | ~300 MB |
 | **Disk** | ~250 MB, no model weights |
 | **CPU** | anything — no native inference code, so no AVX2 requirement |
-| **Needs** | an OpenAI-compatible endpoint (Ollama, llama.cpp server, vLLM, OpenAI, OpenRouter) |
+| **Needs** | an OpenAI-compatible endpoint that also serves embeddings (Ollama, llama.cpp server, vLLM, OpenAI) — unlike the full image in remote mode, lite has no on-device fallback for that role |
 
 ```bash
 docker run -d --name kothai \
@@ -150,7 +154,8 @@ Every setting is optional. The defaults are what the image already uses.
 | `STASH_DATA_DIR` | `<app>/data` | Notes, chats, settings, collections, uploads. |
 | `STASH_MODELS_DIR` | `<app>/models` | Downloaded model weights. |
 | `STASH_CONFIG_PATH` | `<app>/qvac.config.json` | Generated QVAC config file. |
-| `STASH_AI_PROVIDER` | `local` | `local` runs models on-device via QVAC; `remote` calls an OpenAI-compatible endpoint. The lite image defaults to `remote`. |
+| `STASH_AI_PROVIDER` | `local` | `local` runs all three model roles (language, embedding, vision) on-device via QVAC. `remote` sends the language and vision roles to an OpenAI-compatible endpoint; on the full image the embedding role stays on-device unless `STASH_AI_EMBED_PROVIDER` says otherwise, while the lite image (no on-device inference at all) sends all three, embedding included. The lite image defaults to `remote`. |
+| `STASH_AI_EMBED_PROVIDER` | *(unset)* | Only matters when `STASH_AI_PROVIDER=remote` on the full image — the lite image always sends embedding remote regardless. Unset keeps embedding on-device, since most hosted endpoints (Ollama Cloud, Groq, Anthropic, OpenRouter) don't serve `/embeddings` at all. Set to `remote` to send it out anyway, for an endpoint that does serve embeddings. Either way, moving the embedding role to a different provider re-indexes the whole library once, in the background — vectors from two different embedding models aren't comparable. |
 | `STASH_AI_BASE_URL` | *(unset)* | Base URL of the OpenAI-compatible endpoint, e.g. `http://ollama:11434/v1`. Remote only. |
 | `STASH_AI_API_KEY` | *(unset)* | Bearer token for that endpoint. Not needed for Ollama or llama.cpp server. |
 | `STASH_PASSWORD` | *(unset)* | Require this password before anything is served. Unset means no auth at all, which is the default and is fine on a LAN or a tailnet. Set it before exposing Kothai on a public hostname. |
