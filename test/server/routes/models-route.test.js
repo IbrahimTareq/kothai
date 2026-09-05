@@ -128,7 +128,10 @@ test('DELETE /api/models/files reports a cache entry that is not there', async (
 
 test('the model cache endpoints are not offered by a provider that downloads no weights', async () => {
   _reset()
-  await initProvider('remote', {})
+  // localAvailable:false is the lite image — the only configuration with no
+  // weights on disk at all. Plain provider=remote here would keep embedding
+  // on-device, and that install does have a cache worth managing.
+  await initProvider('remote', {}, { localAvailable: false })
   assert.equal((await list()).statusCode, 404)
   const res = await del(ORPHAN)
   assert.equal(res.statusCode, 404)

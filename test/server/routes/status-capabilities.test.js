@@ -19,7 +19,13 @@ test('handleStatus includes a capabilities descriptor', async () => {
   const res = fakeRes()
   handleStatus(res)
   assert.equal(res.statusCode, 200)
-  assert.deepEqual(res.body.capabilities, { kind: 'local', managesResidency: true, downloadsWeights: true })
+  // `roles` says who serves each role; a pure-local install owns all three.
+  assert.deepEqual(res.body.capabilities, {
+    kind: 'local',
+    managesResidency: true,
+    downloadsWeights: true,
+    roles: { llm: 'local', embed: 'local', vision: 'local' },
+  })
 })
 
 test('handleStatus still carries the fields the client already reads', async () => {
