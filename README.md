@@ -87,23 +87,25 @@ docker compose up -d
 
 ### Bring your own AI — lighter
 
-Runs no models itself and sends the work to an OpenAI-compatible
-endpoint instead. Good for a NAS, a small VPS, or a CPU too old for local
-inference.
+Point it at any OpenAI-compatible endpoint and the language and vision models
+run there. The embedding model stays on your machine, which is what makes a
+chat-only endpoint enough — Ollama Cloud, Groq, Anthropic and OpenRouter serve
+no embeddings at all — and it means search still works when the endpoint
+doesn't.
 
-Needs 300 MB of RAM, 250 MB of disk, and an endpoint: Ollama, llama.cpp, vLLM,
-OpenAI, OpenRouter.
+Needs an endpoint and about 300 MB of RAM for the embedding model.
 
 ```bash
-docker run -d --name kothai -p 5173:5173 -v ./data:/app/data \
+docker run -d --name kothai -p 5173:5173 -v ./data:/app/data -v ./models:/app/models \
   -e STASH_AI_PROVIDER=remote \
-  -e STASH_AI_BASE_URL=http://ollama:11434/v1 \
-  ghcr.io/ibrahimtareq/kothai:lite
+  -e STASH_AI_BASE_URL=https://ollama.com/v1 \
+  -e STASH_AI_API_KEY=your-key \
+  ghcr.io/ibrahimtareq/kothai:latest
 ```
 
-Model names are picked in Settings, not here. The wizard above lands you on
-this image too if you answer "external", or if your hardware can't run models
-on-device.
+Model names are picked in Settings, not here. For a NAS or a 1 GB box there's
+the 250 MB `:lite` image, which runs nothing locally — but then the endpoint
+has to serve embeddings too.
 
 ### From source
 
