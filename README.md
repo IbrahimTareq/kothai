@@ -55,9 +55,17 @@ when you're trying to find something which is the problem this is built around.
 
 ## Quick start
 
-One container and the same app either way. The only choice is where the models
-run: keep them on this machine and you need the hardware to hold them, or point
-at an endpoint you already have and only the embedding model stays local.
+```bash
+curl -fsSL https://ibrahimtareq.github.io/kothai/install.sh | sh
+```
+
+Starts the container, waits until it actually answers, prints the URL. It asks
+nothing — you pick your models in the browser. `--lite`, `--endpoint URL`,
+`--port N`, `--dir PATH`, `--password …`; `--help` lists them.
+
+The two sections below are what it runs. Read them instead if you would rather
+type it yourself, or paste it into Portainer, Dockge or a NAS UI. Either way
+it's one container and the same app: the only choice is where the models run.
 
 ### Everything baked in — heavier
 

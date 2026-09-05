@@ -19,6 +19,14 @@ including the models — runs on your own hardware.
 ## Quick start
 
 ```bash
+curl -fsSL https://ibrahimtareq.github.io/kothai/install.sh | sh
+```
+
+It starts the container, waits until it serves, and prints the URL — `--help`
+lists its flags. Everything below is what it does, if you would rather do it
+yourself.
+
+```bash
 docker run -d --name kothai \
   -p 5173:5173 \
   -v ./data:/app/data \
