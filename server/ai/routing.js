@@ -34,6 +34,7 @@ export function kindsInUse(byRole) {
 // Each merge below short-circuits when one kind is in use: pure-local and
 // pure-remote installs get their provider's own object back, byte for byte,
 // so this whole file is dead weight for them and cannot regress them.
+// mergeCapabilities is an exception: it always spreads to attach roles.
 
 export function mergeStatus(byRole, snapshots) {
   const kinds = kindsInUse(byRole)
@@ -42,17 +43,17 @@ export function mergeStatus(byRole, snapshots) {
   const roles = {}
   for (const role of ROLES) roles[role] = snapshots[byRole[role]].roles[role]
 
-  // Same precedence local's own computeAggregate uses: a fault anywhere wins,
-  // then a load in progress, then ready. Every role off is AI-free mode, which
-  // is ready — not an error.
-  const anyOn = ROLES.some((role) => roles[role].state !== 'off')
-  const errored = ROLES.find((role) => roles[role].state === 'error')
-  const loading = ROLES.find((role) => roles[role].state === 'loading')
-  if (anyOn && errored) {
-    return { roles, aggregate: { state: 'error', progress: 0, message: roles[errored].message || 'Inference unavailable' } }
-  }
-  if (loading) {
-    return { roles, aggregate: { state: 'loading', progress: roles[loading].progress || 0, message: roles[loading].message || '' } }
+  // Severity comes from each provider's OWN aggregate rather than being
+  // re-derived here: local gates a fault on the role's residency (an ondemand
+  // role retries on next acquire) and remote gates it on its circuit breaker,
+  // and neither rule is recoverable from the role states alone.
+  const aggregates = kinds.map((kind) => snapshots[kind].aggregate)
+  const errored = aggregates.find((a) => a.state === 'error')
+  if (errored) return { roles, aggregate: errored }
+  const loading = aggregates.filter((a) => a.state === 'loading')
+  if (loading.length) {
+    const progress = Math.round(loading.reduce((sum, a) => sum + (a.progress || 0), 0) / loading.length)
+    return { roles, aggregate: { state: 'loading', progress, message: loading[0].message || '' } }
   }
   return { roles, aggregate: { state: 'ready', progress: 100, message: 'Ready' } }
 }
@@ -69,14 +70,15 @@ export function mergeListModels(byRole, lists) {
 // way to ask who serves a role instead of inferring it from `kind`.
 export function mergeCapabilities(byRole, caps) {
   const kinds = kindsInUse(byRole)
+  const hasLocal = ROLES.some((role) => byRole[role] === 'local')
   const base = kinds.length === 1
     ? caps[kinds[0]]
     : {
         kind: 'mixed',
         // True when ANY role is local: the residency panel and the model-cache
         // row both exist as soon as one role has weights on disk.
-        managesResidency: ROLES.some((role) => byRole[role] === 'local'),
-        downloadsWeights: ROLES.some((role) => byRole[role] === 'local'),
+        managesResidency: hasLocal,
+        downloadsWeights: hasLocal,
       }
   return { ...base, roles: { ...byRole } }
 }

@@ -103,6 +103,19 @@ test('every role off in mixed mode is ready (AI-free), not an error', () => {
   assert.equal(mergeStatus(MIXED, snapshots).aggregate.state, 'ready')
 })
 
+test('a fault outranks a download still in progress', () => {
+  const snapshots = {
+    local: { roles: { llm: snap('off'), embed: snap('loading', { progress: 10 }), vision: snap('off') }, aggregate: { state: 'loading', progress: 10, message: 'Downloading' } },
+    remote: { roles: { llm: snap('error', { message: 'endpoint down' }), embed: snap('error'), vision: snap('ready') }, aggregate: { state: 'error', progress: 0, message: 'endpoint down' } },
+  }
+  assert.equal(mergeStatus(MIXED, snapshots).aggregate.state, 'error')
+})
+
+test('one kind in use returns the provider list untouched', () => {
+  const lists = { local: { llm: [], embed: [], vision: [] } }
+  assert.equal(mergeListModels(ALL_LOCAL, lists), lists.local)
+})
+
 test('mergeListModels offers each role the catalogue of its own provider', () => {
   const lists = {
     local: { llm: [{ key: 'local-llm' }], embed: [{ key: 'embeddinggemma-300m' }], vision: [{ key: 'local-vision' }] },
