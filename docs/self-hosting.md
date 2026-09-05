@@ -23,8 +23,14 @@ curl -fsSL https://ibrahimtareq.github.io/kothai/install.sh | sh
 ```
 
 It starts the container, waits until it serves, and prints the URL — `--help`
-lists its flags. Everything below is what it does, if you would rather do it
-yourself.
+lists its flags. It also installs a `kothai` command (`start`, `stop`,
+`restart`, `status`, `logs`, `update`, `uninstall`; `--no-shim` skips it) into
+`/usr/local/bin`, or `~/.local/bin` when that is not writable — it never
+prompts for a password. `kothai update` reads the port, mounts and environment
+back off the running container, so an API key you passed to `--key` is never
+copied into a file on your PATH.
+
+Everything below is what the script does, if you would rather do it yourself.
 
 ```bash
 docker run -d --name kothai \

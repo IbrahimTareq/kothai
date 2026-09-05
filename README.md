@@ -63,6 +63,16 @@ Starts the container, waits until it actually answers, prints the URL. It asks
 nothing — you pick your models in the browser. `--lite`, `--endpoint URL`,
 `--port N`, `--dir PATH`, `--password …`; `--help` lists them.
 
+It leaves a `kothai` command behind too:
+
+```bash
+kothai start · stop · restart · status · logs · update · uninstall
+```
+
+`update` pulls the newest image and recreates the container with the settings
+it already has. `uninstall` removes the container and never your data. Pass
+`--no-shim` to the installer if you would rather not have the command.
+
 The two sections below are what it runs. Read them instead if you would rather
 type it yourself, or paste it into Portainer, Dockge or a NAS UI. Either way
 it's one container and the same app: the only choice is where the models run.
