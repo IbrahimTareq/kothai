@@ -9,7 +9,7 @@ test('queueBacklog enqueues nothing and reports 0 when the provider is unavailab
     namedExports: {
       available: () => false,
       roleEnabled: () => true,
-      capabilities: () => ({ kind: 'remote', managesResidency: false, downloadsWeights: false }),
+      capabilities: () => ({ kind: 'remote', managesResidency: false, downloadsWeights: false, roles: { llm: 'remote', embed: 'remote', vision: 'remote' } }),
       classify: async () => ({}),
       embedText: async () => [],
       describeImage: async () => '',
