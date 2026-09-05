@@ -1,6 +1,6 @@
 // Kothai backend entry — boots the local models and HTTP server.
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { PORT, MODELS_DIR, CONFIG_PATH, PASSWORD } from './config.js'
+import { PORT, MODELS_DIR, CONFIG_PATH, PASSWORD, AI_PROVIDER } from './config.js'
 
 mkdirSync(MODELS_DIR, { recursive: true })
 writeFileSync(CONFIG_PATH, JSON.stringify({ cacheDirectory: MODELS_DIR }, null, 2) + '\n')
@@ -32,6 +32,13 @@ enrich.queueMetaBackfill()
 // changed recipe re-embeds the library once, in the background, on the same
 // job queue as everything else.
 const reembedding = enrich.queueRecipeReembed()
+// Vectors from an on-device model and vectors from an endpoint's model live
+// in different spaces too, so the embed role changing provider invalidates
+// the library just as thoroughly as a recipe change does.
+const providerReembedding = enrich.queueEmbedProviderReembed({
+  resolved: ai.capabilities().roles.embed,
+  wasRemote: AI_PROVIDER === 'remote',
+})
 // On a fresh install we hold off on downloading any models until the user
 // picks them in the first-run flow (POST /api/setup boots them then). A
 // configured install boots its always-roles immediately; on-demand roles
@@ -50,7 +57,7 @@ server.listen(PORT, () => {
   // before pointing a public hostname at this.
   if (PASSWORD) console.log('  Auth: password required (STASH_PASSWORD is set)\n')
   else console.log('  Auth: none — anyone who can reach this port has full access. Set STASH_PASSWORD to require a password.\n')
-  if (reembedding) console.log('  Re-embedding the library in the background after an embedding-recipe change…\n')
+  if (reembedding || providerReembedding) console.log('  Re-embedding the library in the background after an embedding change…\n')
   if (!ai.capabilities().downloadsWeights) console.log(`  Inference: remote endpoint\n`)
   else if (settings.isConfigured()) console.log('  Loading local QVAC models in the background (first run downloads them)…\n')
   else console.log('  Waiting for first-run model selection at the app before downloading models…\n')

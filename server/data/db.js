@@ -67,7 +67,8 @@ CREATE TABLE IF NOT EXISTS settings (
   remote_llm TEXT,
   remote_embed TEXT,
   remote_vision TEXT,
-  embed_recipe TEXT
+  embed_recipe TEXT,
+  embed_provider TEXT
 );
 CREATE TABLE IF NOT EXISTS tag_vocab (
   tag TEXT PRIMARY KEY,
@@ -110,6 +111,10 @@ async function open() {
   // prompts.js's EMBED_RECIPE. NULL on an existing install, which is exactly
   // the mismatch that triggers the one-time re-embed.
   ensureColumns(db, 'settings', { embed_recipe: 'TEXT' })
+  // Which provider produced the stored vectors. NULL on an install that
+  // predates the marker — enrich.embedProviderChanged infers the answer from
+  // how that install was configured rather than re-embedding on a guess.
+  ensureColumns(db, 'settings', { embed_provider: 'TEXT' })
   // Existing databases predate the column; notes.js moves each vector out of
   // the JSON and into it on first load (see migrateEmbeddings there).
   ensureColumns(db, 'notes', { embedding: 'BLOB' })

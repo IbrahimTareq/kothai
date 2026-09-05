@@ -799,6 +799,33 @@ export function queueRecipeReembed() {
   return true
 }
 
+// Did the embedding role change provider since the last boot? Pure so the
+// inference for installs that predate the marker is testable on its own.
+export function embedProviderChanged({ stored, resolved, wasRemote }) {
+  const previous = stored || (wasRemote ? 'remote' : 'local')
+  return previous !== resolved
+}
+
+// Queue a full re-embed when the embedding role has changed hands — an
+// on-device model and an endpoint's model produce vectors in different
+// spaces, and a library holding both answers every query badly. Mirrors
+// queueRecipeReembed's guards exactly: nothing to do with the role off, and
+// an empty library just records the new value.
+export function queueEmbedProviderReembed({ resolved, wasRemote }) {
+  const stored = settings.getEmbedProvider()
+  if (!embedProviderChanged({ stored, resolved, wasRemote })) return false
+  if (settings.getResidency().embed === 'off') return false
+  if (!store.count()) {
+    settings.save({ embedProvider: resolved }).catch(() => {})
+    return false
+  }
+  queueJob(async () => {
+    await reembedAll(`embed provider ${stored || (wasRemote ? 'remote' : 'local')} → ${resolved}`)
+    await settings.save({ embedProvider: resolved })
+  })
+  return true
+}
+
 // Build the enrichNote job args for an existing note — same shape a fresh
 // /api/save posts, so a resweep or a forced retag behaves identically to a
 // brand-new save.

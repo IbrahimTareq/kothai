@@ -11,6 +11,7 @@ let residency = resolveResidency({})
 let remote = { llm: '', embed: '', vision: '' }
 let configured = false
 let embedRecipe = null
+let embedProvider = null
 let loaded = false
 
 export async function load() {
@@ -23,12 +24,14 @@ export async function load() {
     settings = { llm: row.llm, embed: row.embed, vision: row.vision }
     remote = { llm: row.remote_llm || '', embed: row.remote_embed || '', vision: row.remote_vision || '' }
     embedRecipe = row.embed_recipe || null
+    embedProvider = row.embed_provider || null
   } else {
     configured = false
     residency = resolveResidency({})
     settings = { ...DEFAULTS }
     remote = { llm: '', embed: '', vision: '' }
     embedRecipe = null
+    embedProvider = null
   }
   loaded = true
 }
@@ -59,6 +62,13 @@ export function getEmbedRecipe() {
   return embedRecipe
 }
 
+// Which provider produced the stored vectors ('local' | 'remote'). null on an
+// install that predates the marker — see enrich.embedProviderChanged, which
+// infers the answer from how that install was configured.
+export function getEmbedProvider() {
+  return embedProvider
+}
+
 // Has the user completed the first-run model picker? Gates the initial download.
 export function isConfigured() {
   return configured
@@ -70,10 +80,11 @@ export function isConfigured() {
 // its current value — rather than silently reset to a fresh-install default,
 // which resolveResidency's migration semantics would otherwise produce.
 export async function save(patch) {
-  const { residency: rPatch, remote: remotePatch, embedRecipe: recipePatch, ...rest } = patch
+  const { residency: rPatch, remote: remotePatch, embedRecipe: recipePatch, embedProvider: providerPatch, ...rest } = patch
   for (const role of ROLES) if (rest[role]) settings[role] = rest[role]
   if (rest.configured) configured = true
   if (recipePatch !== undefined) embedRecipe = recipePatch
+  if (providerPatch !== undefined) embedProvider = providerPatch
   if (rPatch) {
     const merged = { ...residency }
     for (const role of ROLES) if (POLICIES.includes(rPatch[role])) merged[role] = rPatch[role]
@@ -85,14 +96,15 @@ export async function save(patch) {
   }
   const db = await getDb()
   db.prepare(`
-    INSERT INTO settings (id, llm, embed, vision, residency_llm, residency_embed, residency_vision, configured, remote_llm, remote_embed, remote_vision, embed_recipe)
-    VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO settings (id, llm, embed, vision, residency_llm, residency_embed, residency_vision, configured, remote_llm, remote_embed, remote_vision, embed_recipe, embed_provider)
+    VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       llm = excluded.llm, embed = excluded.embed, vision = excluded.vision,
       residency_llm = excluded.residency_llm, residency_embed = excluded.residency_embed, residency_vision = excluded.residency_vision,
       configured = excluded.configured,
       remote_llm = excluded.remote_llm, remote_embed = excluded.remote_embed, remote_vision = excluded.remote_vision,
-      embed_recipe = excluded.embed_recipe
-  `).run(settings.llm, settings.embed, settings.vision, residency.llm, residency.embed, residency.vision, configured ? 1 : 0, remote.llm, remote.embed, remote.vision, embedRecipe)
+      embed_recipe = excluded.embed_recipe,
+      embed_provider = excluded.embed_provider
+  `).run(settings.llm, settings.embed, settings.vision, residency.llm, residency.embed, residency.vision, configured ? 1 : 0, remote.llm, remote.embed, remote.vision, embedRecipe, embedProvider)
   return get()
 }
