@@ -18,34 +18,6 @@ including the models — runs on your own hardware.
 
 ## Quick start
 
-The wizard checks your hardware, asks three questions, and starts everything:
-
-```bash
-curl -fsSL https://github.com/IbrahimTareq/kothai/archive/refs/heads/main.tar.gz | tar xz --strip=1 kothai-main/scripts && node scripts/init.mjs
-```
-
-It picks the right image for your machine — including telling you *before* any
-download if this CPU cannot run models on-device — writes `.env`, and waits
-until the server actually answers before saying it is ready.
-
-Prefer to do it by hand? The compose file below is what the wizard would write:
-
-```bash
-curl -O https://raw.githubusercontent.com/IbrahimTareq/kothai/main/docker-compose.yml
-docker compose up -d
-```
-
-Open <http://localhost:5173>.
-
-The app is usable immediately. Models download in the background — a progress
-bar tracks it, and classification and Ask switch on by themselves once it reads
-**Ready**. Notes saved before then keep their instant heuristic version and are
-enriched later; nothing is lost.
-
-## Other ways to run it
-
-**Plain Docker**
-
 ```bash
 docker run -d --name kothai \
   -p 5173:5173 \
@@ -54,6 +26,25 @@ docker run -d --name kothai \
   --restart unless-stopped \
   ghcr.io/ibrahimtareq/kothai:latest
 ```
+
+Or with compose, which is the same container plus the options you will probably
+want later, already written out and commented:
+
+```bash
+curl -O https://raw.githubusercontent.com/IbrahimTareq/kothai/main/docker-compose.yml
+docker compose up -d
+```
+
+Open <http://localhost:5173> and pick your models. Running them on-device needs
+AVX2 or arm64; if this machine has neither, use
+[lite](#running-lite-remote-inference) or the full image in remote mode.
+
+The app is usable immediately. Models download in the background — a progress
+bar tracks it, and classification and Ask switch on by themselves once it reads
+**Ready**. Notes saved before then keep their instant heuristic version and are
+enriched later; nothing is lost.
+
+## Other ways to run it
 
 **Build from source** instead of pulling the published image — uncomment
 `build: .` in `docker-compose.yml`, then:
