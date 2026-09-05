@@ -20,11 +20,16 @@ export function Carousel({ slides, alt, onOpen, badge }: CarouselProps) {
   // stage takes its shape from the first slide rather than cropping everything
   // to one guess. 4:5 until that image reports its size.
   const [ratio, setRatio] = useState(0.8)
+  // Slides whose image has decoded. A sidecar's later slides are still being
+  // pulled over the network when the deck first renders, so an undecoded one
+  // is a black rectangle with no explanation — it gets the skeleton sheen
+  // (.carousel-slide.loading) until its image is actually there.
+  const [loaded, setLoaded] = useState<Record<string, boolean>>({})
   const stage = useRef<HTMLDivElement>(null)
   const startX = useRef<number | null>(null)
   const dragged = useRef(false)
 
-  useEffect(() => { setI(0); setDrag(0) }, [slides.join('|')])
+  useEffect(() => { setI(0); setDrag(0); setLoaded({}) }, [slides.join('|')])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -77,7 +82,7 @@ export function Carousel({ slides, alt, onOpen, badge }: CarouselProps) {
           return (
             <div
               key={src}
-              className={'carousel-slide' + (idx === i ? ' active' : '')}
+              className={'carousel-slide' + (idx === i ? ' active' : '') + (loaded[src] ? '' : ' loading')}
               style={{ transform: `translateX(${x}%) scale(${scale})`, opacity, zIndex: z }}
             >
               <img
@@ -86,6 +91,7 @@ export function Carousel({ slides, alt, onOpen, badge }: CarouselProps) {
                 draggable={false}
                 loading={Math.abs(idx - i) <= 1 ? 'eager' : 'lazy'}
                 onLoad={(e) => {
+                  setLoaded((m) => (m[src] ? m : { ...m, [src]: true }))
                   if (idx !== 0) return
                   const el = e.currentTarget
                   if (el.naturalWidth && el.naturalHeight) {

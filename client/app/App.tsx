@@ -29,6 +29,8 @@ export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS)
   const [collections, setCollections] = useState<Collection[]>([])
   const [expanded, setExpanded] = useState<UIItem | null>(null)
+  // id of the item whose Instagram carousel slides are in flight, if any
+  const [slidesLoading, setSlidesLoading] = useState<string | null>(null)
   const [pendingImg, setPendingImg] = useState<string | null>(null)
   const [vault, setVault] = useState<VaultStatus>({ state: 'loading', txt: 'BOOTING', pct: 0 })
   const [llmOff, setLlmOff] = useState(false)
@@ -145,12 +147,17 @@ export default function App() {
     if (askedSlides.current.has(it.id)) return
     askedSlides.current.add(it.id)
     let stop = false
+    // The fetch can run for several seconds on a big sidecar, so the id being
+    // waited on is state, not a ref: ExpandedView shows a "Loading slides"
+    // affordance over the still-single thumbnail while it is set.
+    setSlidesLoading(it.id)
     API.slides(it.id).then((fresh) => {
       if (stop || !fresh.slides?.length) return
       notes.patchLocal(fresh.id, { slides: fresh.slides })
       spaceNotesRef.current?.patchLocal(fresh.id, { slides: fresh.slides })
       setExpanded((cur) => (cur && cur.id === fresh.id ? { ...cur, slides: fresh.slides } : cur))
     }).catch(() => { askedSlides.current.delete(it.id) })
+      .finally(() => setSlidesLoading((cur) => (cur === it.id ? null : cur)))
     return () => { stop = true }
   }, [expanded?.id])
 
@@ -636,7 +643,7 @@ export default function App() {
         </span>
       </button>
 
-      {expanded && <ExpandedView item={expanded} onClose={closeExpanded} onDelete={deleteItem} onUpdate={updateItem} onRetag={retagItem} collections={collections} onAddTo={addToCollection} onRemoveFrom={removeFromCollection} onNav={navExpanded} />}
+      {expanded && <ExpandedView item={expanded} onClose={closeExpanded} onDelete={deleteItem} onUpdate={updateItem} onRetag={retagItem} collections={collections} onAddTo={addToCollection} onRemoveFrom={removeFromCollection} onNav={navExpanded} slidesLoading={slidesLoading === expanded.id} />}
 
       {captureOpen && <CaptureModal onClose={() => setCaptureOpen(false)} onSave={saveCapture} />}
 

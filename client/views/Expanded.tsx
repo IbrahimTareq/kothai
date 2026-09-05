@@ -51,7 +51,7 @@ function RedditPanel({ item }: { item: UIItem }): ReactElement {
   )
 }
 
-function MediaPanel({ item }: { item: UIItem }): ReactElement {
+function MediaPanel({ item, slidesLoading }: { item: UIItem; slidesLoading?: boolean }): ReactElement {
   const brand = sourceGlyph(item)
   const media = item.thumb || item.img
   // A multi-photo post is a deck to swipe through, not one cropped still. The
@@ -70,11 +70,26 @@ function MediaPanel({ item }: { item: UIItem }): ReactElement {
   return (
     <div className="exp-media" onClick={() => openUrl(item.url)}>
       <div className="exp-media-frame" style={media ? undefined : { background: imgGradient((item.title || 'v').length * 7) }}>
-        {media && <img src={media} alt={item.title || ''} loading="lazy" />}
+        {media && <img className={slidesLoading ? 'loading' : ''} src={media} alt={item.title || ''} loading="lazy" />}
         <div className="exp-media-scan" />
         {item.type === 'video' && <div className="exp-play"><Icon name="play" size={30} /></div>}
         {brand && <span className="exp-media-badge"><Icon name={brand} size={15} /></span>}
+        {slidesLoading && <SlidesLoading />}
       </div>
+    </div>
+  )
+}
+
+// Shown over the single thumbnail while the server is still pulling an
+// Instagram post's remaining slides (see the API.slides effect in App.tsx).
+// A sidecar with a dozen photos can take several seconds to come back, and
+// until it does the view is indistinguishable from a one-image post — so the
+// deck being on its way is the one thing worth saying.
+function SlidesLoading(): ReactElement {
+  return (
+    <div className="exp-slides-loading mono" role="status">
+      <span className="exp-slides-dots"><span /><span /><span /></span>
+      Loading carousel
     </div>
   )
 }
@@ -145,12 +160,12 @@ function Field({ label, value, big }: { label: string; value: string; big?: bool
   )
 }
 
-function MainPanel({ item }: { item: UIItem }): ReactElement {
+function MainPanel({ item, slidesLoading }: { item: UIItem; slidesLoading?: boolean }): ReactElement {
   const brand = sourceGlyph(item)
   if (item.type === 'link' || item.type === 'video') {
     if (brand === 'github') return <GithubPanel item={item} />
     if (brand === 'reddit') return <RedditPanel item={item} />
-    if (isMediaFirst(item)) return <MediaPanel item={item} />
+    if (isMediaFirst(item)) return <MediaPanel item={item} slidesLoading={slidesLoading} />
     return <ArticlePanel item={item} />
   }
   if (item.type === 'image') return <ImagePanel item={item} />
@@ -175,9 +190,12 @@ interface ExpandedProps {
   // neighbour actually exists — asking for one that doesn't just springs
   // the drag back, same as not clearing the commit distance at all.
   onNav?: (dir: -1 | 1) => void
+  // True while this item's carousel slides are still being fetched (App owns
+  // that request). Drives the "Loading slides" affordance on the media panel.
+  slidesLoading?: boolean
 }
 
-export function ExpandedView({ item, onClose, onDelete, onUpdate, onRetag, collections, onAddTo, onRemoveFrom, onNav }: ExpandedProps) {
+export function ExpandedView({ item, onClose, onDelete, onUpdate, onRetag, collections, onAddTo, onRemoveFrom, onNav, slidesLoading }: ExpandedProps) {
   const [tags, setTags] = useState<string[]>(item.tags || [])
   const [note, setNote] = useState<string>(item.mindNote || '')
   const [adding, setAdding] = useState(false)
@@ -351,7 +369,7 @@ export function ExpandedView({ item, onClose, onDelete, onUpdate, onRetag, colle
           onPointerMove={onGestureMove}
           onPointerUp={onGestureEnd}
           onPointerCancel={onGestureCancel}
-        ><MainPanel item={item} /></div>
+        ><MainPanel item={item} slidesLoading={slidesLoading} /></div>
 
         <aside className="exp-side">
           <div className="exp-side-scroll">
