@@ -6,12 +6,14 @@
 // control to the main app.
 import { useState, useEffect } from 'react'
 import { Icon } from '../components/icons'
-import { RoleAccordion, ROLE_META, fmtGB, type Role } from '../components/ModelPicker'
+import { RoleAccordion, fmtGB, type Role } from '../components/ModelPicker'
 import { API } from '../data/api'
 import type { SettingsResponse, VaultStatus } from '../types'
 
-// Every role downloads up front at setup (on-demand roles are then unloaded),
-// so first use is a fast local load — count them all toward the download size.
+// Every locally-served role downloads up front at setup (on-demand roles are
+// then unloaded), so first use is a fast local load — count them all toward the
+// download size. Roles an endpoint serves download nothing and are filtered out
+// below, so a mixed install only asks about the ones it will fetch.
 const UPFRONT: Role[] = ['llm', 'embed', 'vision']
 
 export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComplete: () => void }) {
@@ -29,8 +31,13 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
 
   const pick = (role: Role, key: string) => setSel((s) => (s ? { ...s, [role]: key } : s))
 
+  // Only the roles this machine actually serves on-device get downloaded, so a
+  // mixed install asks about those and leaves the endpoint-served roles alone.
+  const localRoles = cfg ? UPFRONT.filter((role) => cfg.capabilities.roles[role] === 'local') : []
+  const allLocal = localRoles.length === UPFRONT.length
+
   const upfrontBytes = cfg && sel
-    ? UPFRONT.reduce((sum, role) => sum + (cfg.presets[role].find((p) => p.key === sel[role])?.sizeBytes || 0), 0)
+    ? localRoles.reduce((sum, role) => sum + (cfg.presets[role].find((p) => p.key === sel[role])?.sizeBytes || 0), 0)
     : 0
 
   const start = async () => {
@@ -62,9 +69,14 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
         <header className="onboarding-head">
           <span className="onboarding-mark"><Icon name="settings" size={22} /></span>
           <h1>Choose your models</h1>
+          {/* Until settings arrive, assume the all-local case — it's the common
+              one, and the mixed copy would be wrong for it. */}
           <p className="onboarding-lede">
-            Kothai runs entirely on your machine. Pick the local models that fit your hardware —
-            you can change any of these later in Settings.
+            {!cfg || allLocal
+              ? <>Kothai runs entirely on your machine. Pick the local models that fit your hardware —
+                  you can change any of these later in Settings.</>
+              : <>The rest of your inference runs on a remote endpoint — these are the models that stay on
+                  your machine. Pick what fits your hardware; you can change this later in Settings.</>}
           </p>
         </header>
 
@@ -86,14 +98,14 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
             : (
               <>
                 <div className="onboarding-picker">
-                  {(Object.keys(ROLE_META) as Role[]).map((role) => (
+                  {localRoles.map((role) => (
                     <RoleAccordion key={role} role={role}
                       presets={cfg.presets[role]}
                       currentKey={sel[role]}
                       busy={false}
                       switching={false}
                       pct={0}
-                      defaultOpen={role === 'llm'}
+                      defaultOpen={role === localRoles[0]}
                       onPick={(key) => pick(role, key)} />
                   ))}
                 </div>
@@ -104,7 +116,9 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
                   <button className="onboarding-start" onClick={start}>Download &amp; start</button>
                 </footer>
                 <button className="onboarding-skip" onClick={skip}>
-                  Skip for now — run without AI. You can enable models any time in Settings.
+                  {allLocal
+                    ? 'Skip for now — run without AI. You can enable models any time in Settings.'
+                    : 'Skip for now — run on your endpoint alone. You can enable these models any time in Settings.'}
                 </button>
               </>
             )}

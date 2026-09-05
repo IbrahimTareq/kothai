@@ -161,10 +161,17 @@ export interface ModelPreset {
   sizeBytes: number
 }
 
+// Which provider serves a role: on-device weights, or an OpenAI-compatible
+// endpoint. A single install can mix the two (embedding local, the rest remote).
+export type Provider = 'local' | 'remote'
+
 export interface Capabilities {
-  kind: 'local' | 'remote'
+  kind: Provider | 'mixed'
   managesResidency: boolean
   downloadsWeights: boolean
+  // Which provider serves each role. Present in every mode, so branch on this
+  // rather than on `kind`.
+  roles: { llm: Provider; embed: Provider; vision: Provider }
 }
 
 export interface EndpointInfo {

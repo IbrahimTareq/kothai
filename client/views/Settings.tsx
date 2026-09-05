@@ -176,7 +176,9 @@ export function SettingsView({ vault, theme, setTheme }: {
   const sizeOf = (c: SettingsResponse, r: Role) => c.presets[r].find((p) => p.key === c.current[r])?.sizeBytes || 0
   const idleGB = cfg ? fmtGB(roles.filter((r) => cfg.residency[r] === 'always').reduce((s, r) => s + sizeOf(cfg, r), 0)) : ''
   const peakGB = cfg ? fmtGB(roles.filter((r) => cfg.residency[r] !== 'off').reduce((s, r) => s + sizeOf(cfg, r), 0)) : ''
-  const remote = cfg && !cfg.capabilities.managesResidency
+  // Per role, not per install: a mixed setup serves embedding from on-device
+  // presets and the other two from endpoint-defined ids in the same panel.
+  const isRemote = (role: Role) => cfg?.capabilities.roles[role] === 'remote'
 
   return (
     <div className="settings-view">
@@ -202,8 +204,8 @@ export function SettingsView({ vault, theme, setTheme }: {
         ? <div className="settings-loading mono">LOADING…</div>
         : <div className="settings-body">
             <SettingsGroup label="MODEL CORES"
-              sub={remote
-                ? `Inference runs on a remote endpoint${cfg.endpoint.host ? ` (${cfg.endpoint.host})` : ''}. Set the endpoint and credentials with STASH_AI_BASE_URL and STASH_AI_API_KEY.`
+              sub={roles.some(isRemote)
+                ? `Inference ${roles.every(isRemote) ? '' : `for ${roles.filter(isRemote).join(', ')} `}runs on a remote endpoint${cfg.endpoint.host ? ` (${cfg.endpoint.host})` : ''}. Set the endpoint and credentials with STASH_AI_BASE_URL and STASH_AI_API_KEY.`
                 : <>Idle ≈ <b>{idleGB || '0.0 GB'}</b> · Peak ≈ <b>{peakGB || '0.0 GB'}</b> of RAM, from each model's residency below.</>}>
               {backlog !== null && (
                 <div className="backlog-banner">
@@ -221,7 +223,7 @@ export function SettingsView({ vault, theme, setTheme }: {
                 </div>
               )}
               {roles.map((role) => (
-                remote ? (
+                isRemote(role) ? (
                   <div key={role} className="role-acc open">
                     <div className="role-acc-head">
                       <span className="role-acc-info">
