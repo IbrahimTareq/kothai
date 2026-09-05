@@ -9,13 +9,29 @@ import { isInstagramPost } from '../ai/meta.js'
 import { json, readBody } from '../lib/http.js'
 import { AI_BASE_URL } from '../config.js'
 
+// A provider with nothing to download has nothing to CONSENT to — but it still
+// needs one model name per role before any role can run, and on a pure-remote
+// install collecting those names is the only thing first-run has left to do.
+// Skipping the screen there dropped people into the app with every role dark
+// and no signpost but Settings.
+//
+// Reads the remote store, never the local one: endpoint ids live in their own
+// columns (server/data/settings.js), so a leftover local default would
+// otherwise report a fresh endpoint install as already set up.
+//
+// The `configured` clause keeps installs that predate this gate out of the
+// screen — they never posted /api/setup, but they do have names.
+// Exported for the unit tests.
+export function firstRunComplete(caps, configured, remoteNames) {
+  if (caps.downloadsWeights) return configured
+  return configured || ROLES.some((r) => Boolean(remoteNames[r]))
+}
+
 export function handleStatus(res) {
   const caps = ai.capabilities()
   json(res, 200, {
     ...ai.statusSnapshot(),
-    // A provider with nothing to download has nothing to consent to, so the
-    // first-run model picker is skipped entirely for it.
-    configured: caps.downloadsWeights ? settings.isConfigured() : true,
+    configured: firstRunComplete(caps, settings.isConfigured(), settings.getRemote()),
     count: store.count(),
     capabilities: caps,
   })
@@ -92,10 +108,12 @@ function validateResidency(body) {
 // Otherwise: persist the choice, boot always-roles, pre-download on-demand
 // roles (warm cache), and seed the tag registry.
 export async function handleSetup(req, res) {
-  // Nothing to download means nothing to consent to — the first-run picker
-  // does not exist for this provider.
-  if (!ai.capabilities().downloadsWeights) return json(res, 409, { error: 'no first-run setup for this provider' })
-  if (settings.isConfigured()) return json(res, 409, { error: 'already configured' })
+  // The same predicate that decides whether the client shows the screen, so
+  // the gate and the endpoint behind it can never disagree about whether
+  // first-run is still open.
+  if (firstRunComplete(ai.capabilities(), settings.isConfigured(), settings.getRemote())) {
+    return json(res, 409, { error: 'already configured' })
+  }
   const body = await readBody(req)
 
   if (body.skip) {
@@ -104,8 +122,16 @@ export async function handleSetup(req, res) {
     return json(res, 200, { ok: true, current: settings.get() })
   }
 
-  const { local, error } = _validateModels(body)
+  const { local, remote, error } = _validateModels(body)
   if (error) return json(res, 400, { error })
+
+  // Endpoint ids go to their own store first — the same split
+  // handleSaveSettings makes, and for the same reason: nothing ever reads a
+  // local column back for a role the endpoint serves.
+  if (Object.keys(remote).length) {
+    await settings.save({ remote })
+    await ai.applySettings(settings.getRemote())
+  }
 
   const current = await settings.save({ ...local, configured: true, residency: settings.getResidency() })
   await ai.configureModels(current)
