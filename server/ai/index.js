@@ -185,4 +185,9 @@ export const configureModels = (patch) => L()?.configureModels?.(localOnly(patch
 // Model files on disk, for the cache-management routes. A provider that
 // downloads nothing claims no files, so the routes' capability gate is the
 // only thing that has to know about the difference.
-export const weightsInUse = (...a) => L()?.weightsInUse?.(...a) ?? {}
+//
+// Sliced like the two above: in mixed mode the language and vision weights on
+// disk belong to no running role, so the cache route must be free to reclaim
+// them. Claiming them would leave a mixed install unable to delete the exact
+// multi-gigabyte files it switched to an endpoint to avoid.
+export const weightsInUse = (selection) => L()?.weightsInUse?.(localOnly(selection)) ?? {}

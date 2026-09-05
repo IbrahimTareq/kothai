@@ -13,6 +13,7 @@ import {
   roleEnabled,
   applyResidency,
   warmCache,
+  weightsInUse,
 } from '../../../server/ai/index.js'
 
 test('a sync accessor before init fails loudly rather than returning undefined', () => {
@@ -161,4 +162,15 @@ test('a pure-local install passes the residency map through untouched', async ()
   const residency = { llm: 'always', embed: 'always', vision: 'ondemand' }
   await applyResidency(residency)
   assert.deepEqual(local.calls.find((c) => c[0] === 'applyResidency')[1], residency)
+})
+
+test('a mixed install does not claim the weights of a remotely-served role', async () => {
+  _reset()
+  const local = fake('local')
+  const remote = fake('remote')
+  local.weightsInUse = (sel) => { local.calls.push(['weightsInUse', sel]); return {} }
+  await initProvider('remote', {}, { load: (k) => (k === 'local' ? local : remote), localAvailable: true })
+
+  weightsInUse({ llm: 'big-llm', embed: 'embeddinggemma-300m', vision: 'big-vision' })
+  assert.deepEqual(local.calls.find((c) => c[0] === 'weightsInUse')[1], { embed: 'embeddinggemma-300m' })
 })
