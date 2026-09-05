@@ -95,3 +95,9 @@ test('PASSWORD is null unless STASH_PASSWORD is set — auth stays off for every
   assert.equal(resolveConfig({ STASH_PASSWORD: '' }, '/app').PASSWORD, null)
   assert.equal(resolveConfig({ STASH_PASSWORD: 'hunter2' }, '/app').PASSWORD, 'hunter2')
 })
+
+test('AI_EMBED_PROVIDER is null unless set, and passes its raw value through', () => {
+  assert.equal(resolveConfig({}, ROOT).AI_EMBED_PROVIDER, null)
+  assert.equal(resolveConfig({ STASH_AI_EMBED_PROVIDER: 'remote' }, ROOT).AI_EMBED_PROVIDER, 'remote')
+  assert.equal(resolveConfig({ STASH_AI_EMBED_PROVIDER: 'local' }, ROOT).AI_EMBED_PROVIDER, 'local')
+})

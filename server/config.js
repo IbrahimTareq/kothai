@@ -36,6 +36,11 @@ export function resolveConfig(env = process.env, root = ROOT) {
     // export. Model NAMES are user-editable and live in the settings table.
     AI_BASE_URL: env.STASH_AI_BASE_URL ? env.STASH_AI_BASE_URL.replace(/\/+$/, '') : null,
     AI_API_KEY: env.STASH_AI_API_KEY || null,
+    // Which provider serves the embedding role when AI_PROVIDER is 'remote'.
+    // Unset means "on-device if this image has a local provider" — see
+    // ai/routing.js's resolveRoleProviders, which is also where an
+    // unrecognised value is ignored rather than rejected here.
+    AI_EMBED_PROVIDER: env.STASH_AI_EMBED_PROVIDER || null,
     // Escape hatch for the outbound-fetch guard (server/lib/ssrf.js): lets link
     // previews reach private/loopback addresses again, for people stashing
     // intranet links on a trusted LAN. Opt-in only, and the allowed spellings
@@ -61,5 +66,6 @@ export const CONFIG_PATH = config.CONFIG_PATH
 export const AI_PROVIDER = config.AI_PROVIDER
 export const AI_BASE_URL = config.AI_BASE_URL
 export const AI_API_KEY = config.AI_API_KEY
+export const AI_EMBED_PROVIDER = config.AI_EMBED_PROVIDER
 export const ALLOW_PRIVATE_FETCH = config.ALLOW_PRIVATE_FETCH
 export const PASSWORD = config.PASSWORD
