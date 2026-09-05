@@ -5,7 +5,7 @@
 import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { initProvider, _reset } from '../../../server/ai/index.js'
-import { handleGetSettings, handleStatus, handleSetup } from '../../../server/routes/settings.js'
+import { handleGetSettings, handleStatus, handleSetup, _validateModels } from '../../../server/routes/settings.js'
 import { Readable } from 'node:stream'
 import { _resetDb } from '../../../server/data/db.js'
 import * as settings from '../../../server/data/settings.js'
@@ -129,4 +129,24 @@ test('POST /api/setup refuses once first run is already closed', async () => {
   await handleSetup(req, res)
   assert.equal(res.statusCode, 409)
   assert.equal(settings.getRemote().llm, 'gpt-oss:120b')
+})
+
+
+// Regression. The endpoint-only screen collects model ids, and for one commit
+// the mixed screen posted them too — untouched blanks for the roles it never
+// asks about. Rejecting an empty name is correct, so the fix is that only the
+// screen which collects ids sends them; this pins the reason.
+test('empty endpoint ids are rejected, which is why a mixed first run omits them', async () => {
+  await initProvider('remote', {}, { localAvailable: true })
+  const local = settings.get()
+
+  const withBlanks = _validateModels({ ...local, remote: { llm: '', embed: '', vision: '' } })
+  assert.match(withBlanks.error, /cannot be empty/)
+
+  // What the mixed screen actually sends: local picks only, no remote key.
+  const omitted = _validateModels(local)
+  assert.equal(omitted.error, undefined)
+  assert.deepEqual(omitted.remote, {})
+  // embed is the role that stays on-device in a mixed install.
+  assert.equal(omitted.local.embed, local.embed)
 })

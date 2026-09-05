@@ -62,9 +62,12 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
       }
       return
     }
+    // Only the endpoint-only screen collects ids, so only it sends them. A
+    // mixed install was never asked, and posting its untouched blanks fails
+    // validation on the roles the endpoint serves.
     setSubmitted(true)
     try {
-      await API.setup({ ...sel, remote: remoteSel || {} })
+      await API.setup(sel)
     } catch (e) {
       setSubmitted(false)
       setErr((e as Error).message || 'Setup failed. Please try again.')
