@@ -305,3 +305,27 @@ test('a weights call before init fails loudly rather than reporting an empty cac
   // in use, and its DELETE would happily remove the running model's weights.
   assert.throws(() => weightsInUse({ llm: 'x' }), /not initialised/)
 })
+
+// The slice keeps any role whose value is not `undefined`, so an empty string
+// is a real instruction — "this role has no model" — and it is forwarded.
+// That is why a caller must pass the roles it actually means rather than the
+// whole remote store: settings.getRemote() carries '' for every role the
+// endpoint does not serve, and handing it over blanks the local provider's own
+// model. It did, and first run on a mixed install stopped returning.
+test('applySettings forwards an empty name, so callers must pass only the roles they mean', async () => {
+  _reset()
+  const local = fake('local')
+  const remote = fake('remote')
+  await initProvider('remote', {}, { load: (k) => (k === 'local' ? local : remote), localAvailable: true })
+
+  // The shape of settings.getRemote() on a mixed install: llm named, and the
+  // locally-served embed role blank.
+  await applySettings({ llm: 'gpt-oss:120b', embed: '', vision: '' })
+  const localCall = local.calls.find((c) => c[0] === 'applySettings')
+  assert.deepEqual(localCall[1], { embed: '' }, 'the blank reaches the local provider')
+
+  // Passing only the remote-owned roles leaves the local provider alone.
+  local.calls.length = 0
+  await applySettings({ llm: 'gpt-oss:120b' })
+  assert.equal(local.calls.find((c) => c[0] === 'applySettings'), undefined)
+})

@@ -35,14 +35,22 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
   const pick = (role: Role, key: string) => setSel((s) => (s ? { ...s, [role]: key } : s))
   const pickRemote = (role: Role, id: string) => setRemoteSel((s) => (s ? { ...s, [role]: id } : s))
 
-  // Only the roles this machine actually serves on-device get downloaded, so a
-  // mixed install asks about those and leaves the endpoint-served roles alone.
+  // Each role is asked about in the shape its own provider needs: a preset
+  // picker for the ones this machine serves, a model id for the ones the
+  // endpoint does. A mixed install shows both.
   const localRoles = cfg ? UPFRONT.filter((role) => cfg.capabilities.roles[role] === 'local') : []
   const remoteRoles = cfg ? UPFRONT.filter((role) => cfg.capabilities.roles[role] === 'remote') : []
   const allLocal = localRoles.length === UPFRONT.length
   // Nothing served on-device: the endpoint's model ids are the only thing
   // first-run has to collect, and there is no download to wait on.
   const noneLocal = Boolean(cfg) && localRoles.length === 0
+
+  // Only ids for roles the endpoint actually serves, and only ones that were
+  // filled in. An empty name is rejected by validation, so sending a blank the
+  // user was never going to fill would block first run on a field that is
+  // legitimately optional — the role simply stays off until Settings.
+  const remotePatch = () =>
+    Object.fromEntries(remoteRoles.map((role) => [role, (remoteSel?.[role] || '').trim()]).filter(([, id]) => id))
 
   const upfrontBytes = cfg && sel
     ? localRoles.reduce((sum, role) => sum + (cfg.presets[role].find((p) => p.key === sel[role])?.sizeBytes || 0), 0)
@@ -53,21 +61,19 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
     setErr(null)
     // With nothing to download there is nothing to wait for, so save and enter
     // the way skip() does — the progress bar below would never move.
+    const remote = remotePatch()
     if (noneLocal) {
       try {
-        await API.setup({ remote: remoteSel || {} })
+        await API.setup({ remote })
         onComplete()
       } catch (e) {
         setErr((e as Error).message || 'Setup failed. Please try again.')
       }
       return
     }
-    // Only the endpoint-only screen collects ids, so only it sends them. A
-    // mixed install was never asked, and posting its untouched blanks fails
-    // validation on the roles the endpoint serves.
     setSubmitted(true)
     try {
-      await API.setup(sel)
+      await API.setup(Object.keys(remote).length ? { ...sel, remote } : sel)
     } catch (e) {
       setSubmitted(false)
       setErr((e as Error).message || 'Setup failed. Please try again.')
@@ -100,8 +106,9 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
               : noneLocal
                 ? <>Every role runs on {cfg.endpoint.host || 'your endpoint'}. Name a model it serves for
                     each one — nothing downloads, and you can change these later in Settings.</>
-                : <>The rest of your inference runs on a remote endpoint — these are the models that stay on
-                    your machine. Pick what fits your hardware; you can change this later in Settings.</>}
+                : <>Some of this runs on {cfg.endpoint.host || 'your endpoint'} and some stays on your
+                    machine. Pick what fits your hardware, and name a model the endpoint serves for the
+                    rest — leave one blank to set it later in Settings.</>}
           </p>
         </header>
 
@@ -123,36 +130,35 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
             : (
               <>
                 <div className="onboarding-picker">
-                  {noneLocal
-                    ? remoteRoles.map((role) => (
-                      // Same markup Settings uses for an endpoint-served role,
-                      // so the two screens don't drift apart visually.
-                      <div key={role} className="role-acc open">
-                        <div className="role-acc-head">
-                          <span className="role-acc-info">
-                            <span className="role-acc-title mono">{ROLE_META[role].title}</span>
-                            <span className="role-acc-sub">{ROLE_META[role].sub}</span>
-                          </span>
-                        </div>
-                        <div className="model-list">
-                          <RemoteModelField role={role}
-                            value={remoteSel?.[role] || ''}
-                            options={cfg.presets[role]}
-                            busy={false}
-                            onCommit={(id) => pickRemote(role, id)} />
-                        </div>
+                  {localRoles.map((role) => (
+                    <RoleAccordion key={role} role={role}
+                      presets={cfg.presets[role]}
+                      currentKey={sel[role]}
+                      busy={false}
+                      switching={false}
+                      pct={0}
+                      defaultOpen={role === localRoles[0]}
+                      onPick={(key) => pick(role, key)} />
+                  ))}
+                  {remoteRoles.map((role) => (
+                    // Same markup Settings uses for an endpoint-served role, so
+                    // the two screens don't drift apart visually.
+                    <div key={role} className="role-acc open">
+                      <div className="role-acc-head">
+                        <span className="role-acc-info">
+                          <span className="role-acc-title mono">{ROLE_META[role].title}</span>
+                          <span className="role-acc-sub">{ROLE_META[role].sub}</span>
+                        </span>
                       </div>
-                    ))
-                    : localRoles.map((role) => (
-                      <RoleAccordion key={role} role={role}
-                        presets={cfg.presets[role]}
-                        currentKey={sel[role]}
-                        busy={false}
-                        switching={false}
-                        pct={0}
-                        defaultOpen={role === localRoles[0]}
-                        onPick={(key) => pick(role, key)} />
-                    ))}
+                      <div className="model-list">
+                        <RemoteModelField role={role}
+                          value={remoteSel?.[role] || ''}
+                          options={cfg.presets[role]}
+                          busy={false}
+                          onCommit={(id) => pickRemote(role, id)} />
+                      </div>
+                    </div>
+                  ))}
                 </div>
                 <footer className="onboarding-foot">
                   <span className="onboarding-size mono">

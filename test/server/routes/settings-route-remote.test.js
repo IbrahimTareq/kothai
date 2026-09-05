@@ -131,22 +131,26 @@ test('POST /api/setup refuses once first run is already closed', async () => {
   assert.equal(settings.getRemote().llm, 'gpt-oss:120b')
 })
 
-
-// Regression. The endpoint-only screen collects model ids, and for one commit
-// the mixed screen posted them too — untouched blanks for the roles it never
-// asks about. Rejecting an empty name is correct, so the fix is that only the
-// screen which collects ids sends them; this pins the reason.
-test('empty endpoint ids are rejected, which is why a mixed first run omits them', async () => {
+// Regression. First run posts a model id for every role the endpoint serves,
+// but an empty name is rejected — so the screen sends only the ones actually
+// filled in. Sending untouched blanks blocked mixed first run entirely, and a
+// blank has to stay legitimate: that role is simply named later in Settings.
+test('a blank endpoint id is rejected, so first run omits rather than sends it', async () => {
   await initProvider('remote', {}, { localAvailable: true })
   const local = settings.get()
 
   const withBlanks = _validateModels({ ...local, remote: { llm: '', embed: '', vision: '' } })
   assert.match(withBlanks.error, /cannot be empty/)
 
-  // What the mixed screen actually sends: local picks only, no remote key.
+  // What a mixed first run sends once the endpoint's models are named: local
+  // keys at the root, endpoint ids under remote, each to its own store.
+  const filled = _validateModels({ ...local, remote: { llm: 'gpt-oss:120b', vision: 'llava:7b' } })
+  assert.equal(filled.error, undefined)
+  assert.deepEqual(filled.remote, { llm: 'gpt-oss:120b', vision: 'llava:7b' })
+  assert.equal(filled.local.embed, local.embed)
+
+  // And left blank, the local picks alone still validate.
   const omitted = _validateModels(local)
   assert.equal(omitted.error, undefined)
   assert.deepEqual(omitted.remote, {})
-  // embed is the role that stays on-device in a mixed install.
-  assert.equal(omitted.local.embed, local.embed)
 })

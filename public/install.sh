@@ -33,7 +33,7 @@ usage() {
     --port N          host port to serve on (default 5173)
     --dir PATH        where data and models live (default: current directory)
     --name NAME       container name (default kothai)
-    --lite            250 MB image, no on-device models; needs --endpoint
+    --lite            475 MB image, no on-device models; needs --endpoint
     --endpoint URL    OpenAI-compatible endpoint for language and vision
     --key KEY         API key for that endpoint, if it needs one
     --password VALUE  require a password before anything is served

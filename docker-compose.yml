@@ -47,7 +47,7 @@ services:
     #   # Changing this later re-indexes the whole library.
     #   STASH_AI_EMBED_PROVIDER: remote
 
-  # Lite: ~250 MB, no model weights, no models volume. Every role goes to the
+  # Lite: ~475 MB on disk, no model weights, no models volume. Every role goes to the
   # endpoint, embedding included — so it needs one that serves embeddings
   # (Ollama, llama.cpp server, vLLM, OpenAI), not a chat-only host. For those,
   # use the service above in remote mode instead.

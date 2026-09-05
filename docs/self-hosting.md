@@ -11,10 +11,10 @@ including the models — runs on your own hardware.
 | | |
 |---|---|
 | **RAM** | **Depends on what you enable.** AI off: ~1 GB. Search only: ~1.5 GB. The default (search always on, language model on demand): ~1.5 GB idle, more while classifying or answering. Everything always-loaded with the largest models: 9+ GB. |
-| **Disk** | ~2 GB for the image, plus 1.3–3.4 GB of model weights depending on which you pick, plus your own data. |
+| **Disk** | ~2.2 GB for the image once unpacked (~510 MB to download), plus 1.3–3.4 GB of model weights depending on which you pick, plus your own data. Every figure here is unpacked size unless it says download. |
 | **CPU** | x86-64 with AVX2, or arm64. A Raspberry Pi 5 works well with the light model trio. |
 | **Network** | Setup downloads the models you enable (~3.3 GB for the default trio, nothing in AI-free mode). After that it never needs the internet, except to fetch link previews. |
-| **Lite** | Optional ~250 MB image with no on-device models. Inference goes to an OpenAI-compatible endpoint — see [Running lite](#running-lite-remote-inference). |
+| **Lite** | Optional ~475 MB image with no on-device models. Inference goes to an OpenAI-compatible endpoint — see [Running lite](#running-lite-remote-inference). |
 
 ## Quick start
 
@@ -119,13 +119,13 @@ classification and image captioning to an OpenAI-compatible endpoint while
 keeping embedding on-device — see [Models & inference](models.md#the-three-roles)
 for why. The **lite** image runs nothing locally at all — it has no on-device
 inference to fall back to, so `remote` is its only mode and all three roles,
-embedding included, go to the endpoint. It ships at ~250 MB with no model
-download at all.
+embedding included, go to the endpoint. It ships at ~475 MB unpacked, ~110 MB
+to download, with no model weights at all.
 
 | | |
 |---|---|
 | **RAM** | ~300 MB |
-| **Disk** | ~250 MB, no model weights |
+| **Disk** | ~475 MB unpacked (~110 MB download), no model weights |
 | **CPU** | anything — no native inference code, so no AVX2 requirement |
 | **Needs** | an OpenAI-compatible endpoint that also serves embeddings (Ollama, llama.cpp server, vLLM, OpenAI) — unlike the full image in remote mode, lite has no on-device fallback for that role |
 

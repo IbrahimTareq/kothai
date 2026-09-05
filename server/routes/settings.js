@@ -130,7 +130,11 @@ export async function handleSetup(req, res) {
   // local column back for a role the endpoint serves.
   if (Object.keys(remote).length) {
     await settings.save({ remote })
-    await ai.applySettings(settings.getRemote())
+    // The validated patch, not the whole remote store: getRemote() carries an
+    // empty string for every role the endpoint does NOT serve, and
+    // applySettings only skips `undefined` — so passing it hands the local
+    // provider a blank model name for its own role.
+    await ai.applySettings(remote)
   }
 
   const current = await settings.save({ ...local, configured: true, residency: settings.getResidency() })

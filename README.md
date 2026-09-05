@@ -50,7 +50,7 @@ when you're trying to find something which is the problem this is built around.
 - **Spaces.** Collections of items, optionally with a tag rule that files matching notes automatically. Any Space can be opened as a freeform canvas: drag cards around, write notes, stack things in columns and draw lines between them.
 - **Swappable models.** Three slots, all changeable while the app is running. Swap the embedding model and the library re-indexes itself.
 - **Tunable memory.** Each model role can be always on, on demand, or off. Turn all three off and you have a working bookmark manager on a 1 GB box.
-- **Runs on modest hardware.** A Raspberry Pi 5 handles the small models fine. There's also a 250 MB lite image that does no inference itself and talks to any OpenAI-compatible endpoint.
+- **Runs on modest hardware.** A Raspberry Pi 5 handles the small models fine. There's also a lite image — 475 MB on disk, no model weights — that does no inference itself and talks to any OpenAI-compatible endpoint.
 - **Your data stays yours.** One SQLite file on disk, JSON export in a click, and hot database backups that need no downtime. No account, no telemetry.
 
 ## Quick start
@@ -113,7 +113,7 @@ docker run -d --name kothai -p 5173:5173 -v ./data:/app/data -v ./models:/app/mo
 ```
 
 Model names are picked in Settings, not here. For a NAS or a 1 GB box there's
-the 250 MB `:lite` image, which runs nothing locally — but then the endpoint
+the 475 MB `:lite` image, which runs nothing locally — but then the endpoint
 has to serve embeddings too.
 
 ### From source
