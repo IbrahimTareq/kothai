@@ -205,7 +205,9 @@ export function SettingsView({ vault, theme, setTheme }: {
         : <div className="settings-body">
             <SettingsGroup label="MODEL CORES"
               sub={roles.some(isRemote)
-                ? `Inference ${roles.every(isRemote) ? '' : `for ${roles.filter(isRemote).join(', ')} `}runs on a remote endpoint${cfg.endpoint.host ? ` (${cfg.endpoint.host})` : ''}. Set the endpoint and credentials with STASH_AI_BASE_URL and STASH_AI_API_KEY.`
+                // Named by the same titles the accordions below carry, so the
+                // sentence and the rows it describes read as one thing.
+                ? `Inference ${roles.every(isRemote) ? '' : `for ${roles.filter(isRemote).map((r) => ROLE_META[r].title.toLowerCase()).join(' and ')} `}runs on a remote endpoint${cfg.endpoint.host ? ` (${cfg.endpoint.host})` : ''}. Set the endpoint and credentials with STASH_AI_BASE_URL and STASH_AI_API_KEY.`
                 : <>Idle ≈ <b>{idleGB || '0.0 GB'}</b> · Peak ≈ <b>{peakGB || '0.0 GB'}</b> of RAM, from each model's residency below.</>}>
               {backlog !== null && (
                 <div className="backlog-banner">
