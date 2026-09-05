@@ -35,11 +35,11 @@ export function capability(probe) {
 
 // Rules in order: disk first because it is a physical limit no answer can
 // argue with, then capability. Note that a capable machine gets `latest` even
-// when the user picks an external endpoint today — the full image runs fine in
-// remote mode (server/ai/index.js only imports the local provider when the
-// provider is not `remote`), so this keeps the door open at no cost. Verified
-// 2026-09-02 against the published image: remote mode never logs "Bare worker
-// started", so @qvac/sdk's native prebuilds are never loaded — see the test.
+// when the user picks an external endpoint — remote mode keeps the embedding
+// role on-device (server/ai/index.js routes per role; only the language and
+// vision roles go out), because most hosted endpoints serve no /embeddings at
+// all. So the full image is not merely harmless for an external setup, it is
+// what makes semantic search work on one — see the test.
 export function chooseImage(probe, answers, flags = {}) {
   if (flags.lite) return 'lite'
   if (probe.diskBytes < MIN_DISK_FULL) return 'lite'

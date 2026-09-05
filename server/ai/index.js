@@ -38,7 +38,8 @@ function R(role) {
 // provider when there is one, because every one of them is about weights on
 // disk. A pure-remote install has none and they no-op.
 function L() {
-  return impls?.local || null
+  ready()
+  return impls.local || null
 }
 
 export async function _selectProvider(kind, load = null) {
@@ -57,16 +58,21 @@ export async function _selectProvider(kind, load = null) {
 }
 
 // Can this image serve a role on-device? The lite image cannot: @qvac/sdk is
-// not installed, the import throws ERR_MODULE_NOT_FOUND, and every role goes
-// remote. Any other failure is a real bug and must not be swallowed into a
-// silent downgrade, so it rethrows.
+// not installed and the import throws ERR_MODULE_NOT_FOUND. A full image whose
+// native binding won't load on this host (no AVX2, glibc mismatch) is the same
+// answer arrived at the hard way — and killing boot over it would strand the
+// operator who set STASH_AI_PROVIDER=remote precisely to escape that, so it
+// degrades to all-remote rather than throwing. A genuinely local install never
+// reaches here: _selectProvider still fails loudly for it.
 export async function _localAvailable(load = null) {
   try {
     await (load ? load() : import('./providers/local.js'))
     return true
   } catch (e) {
-    if (e?.code === 'ERR_MODULE_NOT_FOUND') return false
-    throw e
+    if (e?.code !== 'ERR_MODULE_NOT_FOUND') {
+      console.error('[ai] on-device provider unusable, serving every role remotely:', e.message)
+    }
+    return false
   }
 }
 
@@ -80,14 +86,25 @@ export function _reset() {
 export async function initProvider(kind = AI_PROVIDER, current = {}, opts = {}) {
   if (impls) return impls
   const { load = null, embedProvider = AI_EMBED_PROVIDER } = opts
-  const localAvailable = opts.localAvailable ?? (kind === 'remote' ? await _localAvailable(load ? () => load('local') : null) : true)
-  byRole = resolveRoleProviders({ provider: kind, embedProvider, localAvailable })
+  // Probe only when the answer can change the outcome: resolveRoleProviders
+  // ignores localAvailable when the embedding role is pinned remote, and
+  // loading the whole on-device stack into a process that will never call it
+  // is pure cost — and, on a host where the native binding is broken, risk.
+  const needsProbe = kind === 'remote' && embedProvider !== 'remote'
+  const localAvailable = opts.localAvailable ?? (needsProbe ? await _localAvailable(load ? () => load('local') : null) : kind !== 'remote')
+  const roles = resolveRoleProviders({ provider: kind, embedProvider, localAvailable })
 
-  impls = {}
-  for (const k of kindsInUse(byRole)) {
-    impls[k] = await _selectProvider(k, load ? () => load(k) : null)
-    await impls[k].init(current)
+  // Built into a local and published only once every provider is up. Assigning
+  // impls before the loop would let a throw halfway through leave a truthy
+  // half-built map: ready() would pass, and the retry would short-circuit on
+  // the guard above and hand out a provider that never initialised.
+  const next = {}
+  for (const k of kindsInUse(roles)) {
+    next[k] = await _selectProvider(k, load ? () => load(k) : null)
+    await next[k].init(current)
   }
+  byRole = roles
+  impls = next
   return impls
 }
 
