@@ -55,21 +55,60 @@ when you're trying to find something which is the problem this is built around.
 
 ## Quick start
 
-**Docker.** The easy path, and what runs well on a Pi. The wizard checks your
-hardware, asks three questions, and starts everything:
+The one question that decides your setup is where the models run. Keep them on
+this machine and you need the hardware to hold them; hand them to an endpoint
+you already have and the whole thing fits in 250 MB. Either way it's one
+container and the same app at the end of it.
+
+### Everything baked in — heavier
+
+Models included, nothing leaves the box, nothing to sign up for.
+
+Recommended: 8 GB of RAM and 6 GB of free disk. A Pi 5 or a 4 GB VPS works too,
+as long as you pick the light models when it asks.
+
+The wizard reads your hardware, asks three questions, writes `.env` and a
+compose file, and starts the container:
 
 ```bash
-curl -fsSL https://github.com/IbrahimTareq/kothai/archive/refs/heads/main.tar.gz | tar xz --strip=1 kothai-main/scripts && node scripts/init.mjs
+curl -fsSL https://github.com/IbrahimTareq/kothai/archive/refs/heads/main.tar.gz | tar xz --strip=1 kothai-main/scripts
+node scripts/init.mjs
 ```
 
-Prefer to do it by hand? The compose file below is what the wizard would write:
+The first line drops a `scripts/` folder in the current directory and nothing
+else; the second is the part that asks and starts. It wants Node 22 on the
+host. If you haven't got it, or you'd rather read a file before running it,
+plain compose gets you the same container:
 
 ```bash
 curl -O https://raw.githubusercontent.com/IbrahimTareq/kothai/main/docker-compose.yml
 docker compose up -d
 ```
 
-**From source**, if you want to work on it:
+### Bring your own AI — lighter
+
+Runs no models itself and sends the work to an OpenAI-compatible
+endpoint instead. Good for a NAS, a small VPS, or a CPU too old for local
+inference.
+
+Needs 300 MB of RAM, 250 MB of disk, and an endpoint: Ollama, llama.cpp, vLLM,
+OpenAI, OpenRouter.
+
+```bash
+docker run -d --name kothai -p 5173:5173 -v ./data:/app/data \
+  -e STASH_AI_PROVIDER=remote \
+  -e STASH_AI_BASE_URL=http://ollama:11434/v1 \
+  ghcr.io/ibrahimtareq/kothai:lite
+```
+
+Model names are picked in Settings, not here. The wizard above lands you on
+this image too if you answer "external", or if your hardware can't run models
+on-device.
+
+### From source
+
+If you want to work on it. No Docker, Node 22 on the host, and the same RAM and
+disk story as the baked-in setup above:
 
 ```bash
 git clone https://github.com/IbrahimTareq/kothai.git
@@ -79,22 +118,20 @@ pnpm install
 pnpm start           # builds the client, then serves on :5173
 ```
 
-**Lite**, about 250 MB, no weights, bring your own endpoint:
+`pnpm dev` runs both the server and Vite instead, and you develop against
+:5174 with HMR. The test suite, the two ports and the conventions are in
+[Development](docs/development.md).
 
-```bash
-docker run -d --name kothai -p 5173:5173 -v ./data:/app/data \
-  -e STASH_AI_PROVIDER=remote \
-  -e STASH_AI_BASE_URL=http://ollama:11434/v1 \
-  ghcr.io/ibrahimtareq/kothai:lite
-```
+### First run
 
-Then:
+Open <http://localhost:5173> and pick your models, or hit *Skip for now* and
+turn them on later. Weights download in the background, so keep pasting while
+they do: anything saved meanwhile gets its title and tags from a quick
+heuristic, then gets properly enriched once the bar says Ready. That's when Ask
+starts working too.
 
-1. Open <http://localhost:5173>.
-2. Pick your models on the first run, or hit "Skip for now" to go without any and turn them on later.
-3. Start pasting while the weights download, which is about 3.3 GB for the defaults. The app works throughout. Anything you save meanwhile keeps its quick heuristic version and gets enriched once the models are up.
-4. Wait for the progress bar to say Ready. Classification and Ask switch themselves on at that point.
-5. Flip the box to Ask and start asking.
+HTTPS, backups, upgrades and the rest of the hosting story are in
+[Self-hosting](docs/self-hosting.md).
 
 ## How it works
 
