@@ -7,7 +7,7 @@ import { ROLES, POLICIES, OFF_RESIDENCY } from '../ai/roles.js'
 import { backlogCount } from '../ai/backlog.js'
 import { isInstagramPost } from '../ai/meta.js'
 import { json, readBody } from '../lib/http.js'
-import { AI_BASE_URL } from '../config.js'
+import { getAiConfig } from '../config.js'
 
 // A provider with nothing to download has nothing to CONSENT to — but it still
 // needs one model name per role before any role can run, and on a pure-remote
@@ -42,9 +42,10 @@ export function handleStatus(res) {
 // key. Some providers carry credentials in the URL path, so the whole string
 // is treated as secret.
 function endpointInfo() {
-  if (!AI_BASE_URL) return { configured: false, host: null }
+  const { baseUrl } = getAiConfig()
+  if (!baseUrl) return { configured: false, host: null }
   try {
-    return { configured: true, host: new URL(AI_BASE_URL).hostname }
+    return { configured: true, host: new URL(baseUrl).hostname }
   } catch {
     return { configured: true, host: null }
   }

@@ -1,6 +1,6 @@
 // Kothai backend entry — boots the local models and HTTP server.
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { PORT, MODELS_DIR, CONFIG_PATH, PASSWORD, AI_PROVIDER } from './config.js'
+import { PORT, MODELS_DIR, CONFIG_PATH, PASSWORD, getAiConfig, setAiCredentials } from './config.js'
 
 mkdirSync(MODELS_DIR, { recursive: true })
 writeFileSync(CONFIG_PATH, JSON.stringify({ cacheDirectory: MODELS_DIR }, null, 2) + '\n')
@@ -37,7 +37,7 @@ const reembedding = enrich.queueRecipeReembed()
 // the library just as thoroughly as a recipe change does.
 const providerReembedding = enrich.queueEmbedProviderReembed({
   resolved: ai.capabilities().roles.embed,
-  wasRemote: AI_PROVIDER === 'remote',
+  wasRemote: getAiConfig().provider === 'remote',
 })
 // On a fresh install we hold off on downloading any models until the user
 // picks them in the first-run flow (POST /api/setup boots them then). A

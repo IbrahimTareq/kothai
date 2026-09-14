@@ -57,28 +57,6 @@ test('empty-string vars are ignored rather than resolving to the root', () => {
   assert.equal(c.DATA_DIR, path.join(ROOT, 'data'))
 })
 
-test('AI_PROVIDER defaults to local when unset', () => {
-  assert.equal(resolveConfig({}, '/app').AI_PROVIDER, 'local')
-})
-
-test('AI_PROVIDER accepts remote', () => {
-  assert.equal(resolveConfig({ STASH_AI_PROVIDER: 'remote' }, '/app').AI_PROVIDER, 'remote')
-})
-
-test('an unrecognised AI_PROVIDER falls back to local rather than throwing at import time', () => {
-  assert.equal(resolveConfig({ STASH_AI_PROVIDER: 'banana' }, '/app').AI_PROVIDER, 'local')
-})
-
-test('AI_BASE_URL and AI_API_KEY are null when unset', () => {
-  const c = resolveConfig({}, '/app')
-  assert.equal(c.AI_BASE_URL, null)
-  assert.equal(c.AI_API_KEY, null)
-})
-
-test('AI_BASE_URL has any trailing slash stripped so path joins stay predictable', () => {
-  assert.equal(resolveConfig({ STASH_AI_BASE_URL: 'http://ollama:11434/v1/' }, '/app').AI_BASE_URL, 'http://ollama:11434/v1')
-})
-
 test('ALLOW_PRIVATE_FETCH is off unless explicitly opted into', () => {
   assert.equal(resolveConfig({}, '/app').ALLOW_PRIVATE_FETCH, false)
   assert.equal(resolveConfig({ STASH_ALLOW_PRIVATE_FETCH: '1' }, '/app').ALLOW_PRIVATE_FETCH, true)
@@ -101,3 +79,7 @@ test('AI_EMBED_PROVIDER is null unless set, and passes its raw value through', (
   assert.equal(resolveConfig({ STASH_AI_EMBED_PROVIDER: 'remote' }, ROOT).AI_EMBED_PROVIDER, 'remote')
   assert.equal(resolveConfig({ STASH_AI_EMBED_PROVIDER: 'local' }, ROOT).AI_EMBED_PROVIDER, 'local')
 })
+
+// The inference endpoint (base URL, key, provider kind) is no longer part of
+// this frozen resolution — it is resolved on demand so it can change at
+// runtime. Its precedence rules are covered in test/server/config-ai.test.js.

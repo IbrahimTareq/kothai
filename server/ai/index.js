@@ -11,7 +11,7 @@
 // provider that owns the role and throw if called before initProvider(). That
 // is safe because server/index.js awaits initProvider() before the HTTP server
 // listens, so no request can arrive first.
-import { AI_PROVIDER, AI_EMBED_PROVIDER } from '../config.js'
+import { getAiConfig, AI_EMBED_PROVIDER } from '../config.js'
 import { ROLES } from './roles.js'
 import { resolveRoleProviders, kindsInUse, mergeStatus, mergeListModels, mergeCapabilities } from './routing.js'
 
@@ -83,7 +83,7 @@ export function _reset() {
 
 // `opts` exists for tests: `load(kind)` swaps in fakes, and the two resolution
 // inputs can be pinned without touching process.env.
-export async function initProvider(kind = AI_PROVIDER, current = {}, opts = {}) {
+export async function initProvider(kind = getAiConfig().provider, current = {}, opts = {}) {
   if (impls) return impls
   const { load = null, embedProvider = AI_EMBED_PROVIDER } = opts
   // Probe only when the answer can change the outcome: resolveRoleProviders

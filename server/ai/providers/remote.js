@@ -10,7 +10,7 @@
 // they are the user's choice and vary per endpoint.
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
-import { AI_BASE_URL, AI_API_KEY } from '../../config.js'
+import { getAiConfig } from '../../config.js'
 import { FeatureDisabledError, ROLES } from '../roles.js'
 import { Circuit } from '../circuit.js'
 import { CLASSIFY_SCHEMA, DESCRIBE_IMAGE_PROMPT, classifySystemPrompt, classifyUserPrompt, answerSystemPrompt, answerUserPrompt, embedInput, clipToTokens } from '../prompts.js'
@@ -242,9 +242,12 @@ export const answer = (...a) => (singleton || boot({})).answer(...a)
 export const shutdown = async () => { if (singleton) await singleton.shutdown() }
 
 function boot(models) {
+  // Read at boot, not at import: this is what makes re-pointing the endpoint a
+  // matter of calling init() again rather than restarting the container.
+  const { baseUrl, apiKey } = getAiConfig()
   singleton = createRemoteProvider({
-    baseUrl: AI_BASE_URL,
-    apiKey: AI_API_KEY,
+    baseUrl,
+    apiKey,
     models: { llm: models.llm || '', embed: models.embed || '', vision: models.vision || '' },
   })
   return singleton
