@@ -7,7 +7,9 @@ import { ROLES, POLICIES, OFF_RESIDENCY } from '../ai/roles.js'
 import { backlogCount } from '../ai/backlog.js'
 import { isInstagramPost } from '../ai/meta.js'
 import { json, readBody } from '../lib/http.js'
-import { getAiConfig } from '../config.js'
+import { getAiConfig, setAiCredentials } from '../config.js'
+import { writeCredentials } from '../data/credentials.js'
+import { ENDPOINTS } from '../ai/endpoints.js'
 
 // A provider with nothing to download has nothing to CONSENT to — but it still
 // needs one model name per role before any role can run, and on a pure-remote
@@ -60,6 +62,9 @@ export async function handleGetSettings(res) {
     presets: await ai.listModels(),
     capabilities: caps,
     endpoint: ROLES.some((r) => caps.roles[r] === 'remote') ? endpointInfo() : { configured: false, host: null },
+    // Static catalogue, so the wizard can render provider tiles without a
+    // second request. Contains no credentials — it is public reference data.
+    endpoints: ENDPOINTS,
   })
 }
 
@@ -103,12 +108,34 @@ function validateResidency(body) {
   return { patch }
 }
 
+// The endpoint half of a first-run submission. Validated and written BEFORE
+// any model name is looked at, because the provider map those names are
+// validated against depends on which provider is serving each role.
+//
+// `dir` is threaded through for tests only — production passes nothing and
+// the credential store falls back to DATA_DIR.
+async function applyEndpointFromSetup(endpoint, dir) {
+  const baseUrl = typeof endpoint.baseUrl === 'string' ? endpoint.baseUrl.trim().replace(/\/+$/, '') : ''
+  if (!baseUrl) return { error: 'An endpoint needs a base URL.' }
+  try {
+    const u = new URL(baseUrl)
+    if (!['http:', 'https:'].includes(u.protocol)) return { error: 'An endpoint must be an http:// or https:// URL.' }
+  } catch {
+    return { error: 'That does not look like a URL.' }
+  }
+  const apiKey = typeof endpoint.apiKey === 'string' && endpoint.apiKey.trim() ? endpoint.apiKey.trim() : null
+  const creds = dir ? writeCredentials({ baseUrl, apiKey }, dir) : writeCredentials({ baseUrl, apiKey })
+  setAiCredentials(creds)
+  await ai.reconfigure({ local: settings.get(), remote: settings.getRemote() })
+  return {}
+}
+
 // ---- first-run setup ------------------------------------------------------
 // Fresh installs hold off on loading any model until the user confirms here.
 // { skip: true } enters AI-free mode: configured, every role off, no download.
 // Otherwise: persist the choice, boot always-roles, pre-download on-demand
 // roles (warm cache), and seed the tag registry.
-export async function handleSetup(req, res) {
+export async function handleSetup(req, res, opts = {}) {
   // The same predicate that decides whether the client shows the screen, so
   // the gate and the endpoint behind it can never disagree about whether
   // first-run is still open.
@@ -121,6 +148,14 @@ export async function handleSetup(req, res) {
     await settings.save({ configured: true, residency: { ...OFF_RESIDENCY } })
     await ai.applyResidency(settings.getResidency())
     return json(res, 200, { ok: true, current: settings.get() })
+  }
+
+  // Before _validateModels: that function asks ai.capabilities() which role
+  // each provider serves, and connecting an endpoint is exactly what changes
+  // the answer. Validating first would check the model ids against the old map.
+  if (body.endpoint) {
+    const { error: endpointError } = await applyEndpointFromSetup(body.endpoint, opts.dir)
+    if (endpointError) return json(res, 400, { error: endpointError })
   }
 
   const { local, remote, error } = _validateModels(body)
