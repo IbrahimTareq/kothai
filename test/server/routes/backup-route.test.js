@@ -34,6 +34,9 @@ mock.module('../../../server/routes/import.js', {
 })
 
 const store = await import('../../../server/data/notes.js')
+const settings = await import('../../../server/data/settings.js')
+const { writeCredentials, readCredentials } = await import('../../../server/data/credentials.js')
+const { setAiCredentials } = await import('../../../server/config.js')
 const { createServer } = await import('../../../server/router.js')
 
 const server = createServer()
@@ -159,4 +162,24 @@ test('a backup can be taken again immediately after one finishes', async () => {
 
 test('no temp snapshot survives the whole run, including the one the concurrent test lost', async () => {
   assert.deepEqual(await waitForCleanup(), [])
+})
+
+// The guarantee the credential store exists to keep. If this ever fails on the
+// assertion rather than the setup, something is writing a credential into
+// SQLite and the design is breached — find it before doing anything else.
+test('a downloaded backup contains no part of a stored credential', async () => {
+  writeCredentials({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-MUST-NOT-APPEAR' }, DATA_DIR)
+  setAiCredentials(readCredentials(DATA_DIR))
+  await settings.load()
+  await settings.save({ remote: { llm: 'gpt-4o-mini' } })
+
+  const res = await backup()
+  assert.equal(res.status, 200)
+
+  // latin1 so every byte of the binary database maps to a character and a
+  // substring search cannot miss a key that straddles a chunk boundary.
+  const dump = Buffer.from(await res.arrayBuffer()).toString('latin1')
+  assert.ok(!dump.includes('sk-MUST-NOT-APPEAR'), 'the API key must not be in the backup')
+  assert.ok(!dump.includes('api.openai.com'), 'nor the endpoint it points at')
+  assert.ok(dump.includes('gpt-4o-mini'), 'model names ARE settings and should be in it')
 })
