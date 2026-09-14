@@ -1,7 +1,8 @@
 # Self-hosting Kothai
 
-One container, no database server, no account, no API key. Everything —
-including the models — runs on your own hardware.
+One container, no database server, no account. Run the models on your own
+hardware and there is no API key either; point it at a hosted endpoint instead
+and the only thing that leaves your machine is the inference.
 
 > Related: [Models & inference](models.md) for the RAM story · [Security](security.md)
 > before exposing it · [all docs](../README.md#if-you-want-to)
@@ -139,10 +140,15 @@ docker run -d --name kothai \
   ghcr.io/ibrahimtareq/kothai:lite
 ```
 
-Credentials are env-only — `STASH_AI_BASE_URL` and `STASH_AI_API_KEY` are never
-written to the database and never returned by the API, so they cannot leak
-through a backup or an export. Model *names* are chosen in Settings, because
-they differ per endpoint.
+You can also leave both unset and let first run collect them: the setup screen
+offers the known providers, takes your key, and tests the connection before you
+commit to it. Either way the credential never reaches the database — a key set
+in the app is written to `data/credentials.json` at mode 0600, because
+`/api/backup` is a `VACUUM INTO` over the whole SQLite file and anything in a
+table rides along in every backup. Environment variables win over the file, and
+win as a pair: set `STASH_AI_BASE_URL` and the key must come from the
+environment too. Model *names* are chosen in Settings, because they differ per
+endpoint.
 
 Without an endpoint configured the lite image still runs: it serves your notes
 as a plain bookmark manager with heuristic classification, the same as AI-free

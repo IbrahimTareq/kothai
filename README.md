@@ -16,7 +16,7 @@ rather than the open web.
 [![license](https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square&labelColor=1a1a1a)](LICENSE)
 [![last commit](https://img.shields.io/github/last-commit/IbrahimTareq/kothai?style=flat-square&labelColor=1a1a1a)](https://github.com/IbrahimTareq/kothai/commits/main)
 
-`no cloud` · `no account` · `no API key` · `runs on a Raspberry Pi`
+`your data stays yours` · `no account` · `no telemetry` · `runs on a Raspberry Pi`
 
 <!-- Demo GIF goes here. Record the capture, enrich and ask loop, drop it in
      docs/assets/demo.gif, and uncomment:
@@ -59,9 +59,39 @@ when you're trying to find something which is the problem this is built around.
 curl -fsSL https://ibrahimtareq.github.io/kothai/install.sh | sh
 ```
 
-Starts the container, waits until it actually answers, prints the URL. It asks
-nothing — you pick your models in the browser. `--lite`, `--endpoint URL`,
-`--port N`, `--dir PATH`, `--password …`; `--help` lists them.
+It asks two questions, pulls the right image, waits until it actually answers,
+and opens the browser.
+
+```
+  Where should the AI run?
+
+    1) A cloud service — nothing to download, needs an API key
+    2) On this machine — private, no key, no bills, ~3 GB
+  > 1
+
+  Which one?
+
+    1) OpenAI        — full search
+    2) Ollama Cloud  — chat only; keeps a small search model here
+    3) Groq          — same
+    4) Something else
+  > 1
+
+  Pulling ghcr.io/ibrahimtareq/kothai:lite — this is the slow part.
+  Ready — http://localhost:5173
+```
+
+Paste your key in the browser, press Start. That's the whole setup — the model
+names are filled in for you and the key never touches your shell history.
+
+Those two questions exist because they pick the image, which is the one choice
+that cannot be made later: a service that serves no embeddings keeps a small
+search model on your machine, and that needs the bigger image. Everything else
+is a screen in the app.
+
+`--lite`, `--local`, `--endpoint URL`, `--port N`, `--dir PATH`, `--password …`
+answer up front and skip the questions entirely; `--help` lists them. With no
+terminal at all — CI, a Dockerfile, a NAS UI — nothing is asked.
 
 It leaves a `kothai` command behind too:
 
@@ -74,8 +104,39 @@ it already has. `uninstall` removes the container and never your data. Pass
 `--no-shim` to the installer if you would rather not have the command.
 
 The two sections below are what it runs. Read them instead if you would rather
-type it yourself, or paste it into Portainer, Dockge or a NAS UI. Either way
-it's one container and the same app: the only choice is where the models run.
+type it yourself, or paste it into Portainer, Dockge or a NAS UI.
+
+### Bring your own AI — lighter
+
+Nothing downloads and nothing runs on your hardware, so a NAS or a 1 GB box is
+plenty. You need an API key from a service that speaks the OpenAI format.
+
+```bash
+docker run -d --name kothai -p 5173:5173 -v ./data:/app/data \
+  ghcr.io/ibrahimtareq/kothai:lite
+```
+
+Open <http://localhost:5173>, pick your provider, paste the key. 475 MB, about
+300 MB of RAM.
+
+One catch decides which image you want. Most hosted chat services — Ollama
+Cloud, Groq, OpenRouter, Anthropic — serve no embeddings at all, and embeddings
+are what make search work by meaning rather than by exact words. With one of
+those, use the full image instead and Kothai keeps a small (~300 MB) embedding
+model on your machine while the language and vision work goes out:
+
+```bash
+docker run -d --name kothai -p 5173:5173 -v ./data:/app/data -v ./models:/app/models \
+  ghcr.io/ibrahimtareq/kothai:latest
+```
+
+OpenAI, a self-hosted Ollama, llama.cpp server and vLLM all serve embeddings,
+so `:lite` is enough for those. The installer picks correctly for you.
+
+You can still set the endpoint with environment variables rather than in the
+browser — `STASH_AI_PROVIDER=remote`, `STASH_AI_BASE_URL`, `STASH_AI_API_KEY` —
+and those win over anything set in the app. See
+[Self-hosting](docs/self-hosting.md).
 
 ### Everything baked in — heavier
 
@@ -86,35 +147,13 @@ docker run -d --name kothai -p 5173:5173 -v ./data:/app/data -v ./models:/app/mo
   ghcr.io/ibrahimtareq/kothai:latest
 ```
 
-Open http://localhost:5173 and pick your models. 8 GB of RAM and 6 GB of free
+Open <http://localhost:5173> and pick your models. 8 GB of RAM and 6 GB of free
 disk is comfortable; a Pi 5 or a 4 GB VPS works too, as long as you pick the
 light models when it asks.
 
 Add `-e STASH_PASSWORD=…` to require a password, and change the left half of
 `-p 5173:5173` if that port is taken. There's a `docker-compose.yml` in the repo
 if you'd rather run it that way — see [Self-hosting](docs/self-hosting.md).
-
-### Bring your own AI — lighter
-
-Point it at any OpenAI-compatible endpoint and the language and vision models
-run there. The embedding model stays on your machine, which is what makes a
-chat-only endpoint enough — Ollama Cloud, Groq, Anthropic and OpenRouter serve
-no embeddings at all — and it means search still works when the endpoint
-doesn't.
-
-Needs an endpoint and about 300 MB of RAM for the embedding model.
-
-```bash
-docker run -d --name kothai -p 5173:5173 -v ./data:/app/data -v ./models:/app/models \
-  -e STASH_AI_PROVIDER=remote \
-  -e STASH_AI_BASE_URL=https://ollama.com/v1 \
-  -e STASH_AI_API_KEY=your-key \
-  ghcr.io/ibrahimtareq/kothai:latest
-```
-
-Model names are picked in Settings, not here. For a NAS or a 1 GB box there's
-the 475 MB `:lite` image, which runs nothing locally — but then the endpoint
-has to serve embeddings too.
 
 ### From source
 
@@ -135,9 +174,10 @@ pnpm start           # builds the client, then serves on :5173
 
 ### First run
 
-Open <http://localhost:5173> and pick your models, or hit *Skip for now* and
-turn them on later. Weights download in the background, so keep pasting while
-they do: anything saved meanwhile gets its title and tags from a quick
+Open <http://localhost:5173>. If you connected a service you paste your key and
+you are done; if the models run here, pick them or hit *Skip for now* and turn
+them on later. Weights download in the background, so keep pasting while they
+do: anything saved meanwhile gets its title and tags from a quick
 heuristic, then gets properly enriched once the bar says Ready. That's when Ask
 starts working too.
 

@@ -85,8 +85,20 @@ accepted, so a typo fails closed.
 
 ## Secrets handling
 
-`STASH_PASSWORD`, `STASH_AI_BASE_URL`, `STASH_AI_API_KEY` are env-only —
-never written to SQLite, so never leak via backup or export.
+`STASH_PASSWORD` is env-only — never written to SQLite, so it cannot leak via
+backup or export.
+
+The inference endpoint and its key (`STASH_AI_BASE_URL`, `STASH_AI_API_KEY`)
+can also be set in the app, since first run collects them in the browser. When
+they are, they go to `data/credentials.json` at mode 0600 — **never** into the
+database. That distinction is load-bearing: `GET /api/backup` is a `VACUUM
+INTO` over the whole SQLite file, so anything held in a table is copied into
+every backup the user downloads. Keeping credentials outside it preserves the
+same guarantee the env-only rule gave. Environment variables still win over the
+file, and win as a pair: if `STASH_AI_BASE_URL` is set, the key must come from
+the environment too, so a stored key can never be sent to an operator-supplied
+URL. `test/server/routes/backup-route.test.js` asserts a downloaded backup
+contains neither the key nor the endpoint hostname.
 
 `GET /api/settings` echoes only the endpoint's hostname, never the full URL
 or key (some providers put credentials in the URL path). Model names are

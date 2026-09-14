@@ -24,8 +24,8 @@ hero:
 features:
   - title: Self-hosting
     details: >-
-      One container, no database server, no account, no API key. Docker,
-      Compose, ONCE, Tailscale, and how to back the whole thing up.
+      One container, no database server, no account. Docker, Compose, ONCE,
+      Tailscale, and how to back the whole thing up.
     link: /self-hosting
     linkText: Get it running
   - title: Architecture
