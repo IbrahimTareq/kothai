@@ -66,6 +66,12 @@ async function _json<T = unknown>(r: Response): Promise<T> {
 
 interface SavePayload { text?: string; image?: string | null }
 interface AskPayload { question?: string; image?: string | null; chatId?: string | null }
+interface EndpointPatch {
+  providerId: string
+  baseUrl: string
+  apiKey: string
+}
+
 interface SettingsPatch {
   llm?: string
   embed?: string
@@ -245,7 +251,20 @@ export const API = {
     )
   },
   // first-run: commit the chosen models and kick off their initial download
-  async setup(patch: SettingsPatch | { skip: true }): Promise<{ ok: boolean; current: SettingsPatch }> {
+  // Ask the server whether an endpoint answers with this key. Never throws on
+  // a refused key — that comes back as ok:false with a message to show.
+  async testEndpoint(baseUrl: string, apiKey: string): Promise<{ ok: boolean; models: string[]; error?: string }> {
+    return await _json(
+      await fetch('/api/setup/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseUrl, apiKey }),
+      }),
+    )
+  },
+  async setup(
+    patch: (SettingsPatch & { endpoint?: EndpointPatch }) | { skip: true },
+  ): Promise<{ ok: boolean; current: SettingsPatch }> {
     return await _json(
       await fetch('/api/setup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) }),
     )

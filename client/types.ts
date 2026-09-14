@@ -179,6 +179,18 @@ export interface EndpointInfo {
   host: string | null
 }
 
+// One entry in the server's catalogue of known endpoints (server/ai/endpoints.js).
+// `defaults` are seeds for the model fields, not a promise that those ids exist.
+export interface EndpointOption {
+  id: string
+  label: string
+  baseUrl: string
+  needsKey: boolean
+  servesEmbeddings: boolean
+  note: string
+  defaults: { llm: string; embed: string; vision: string }
+}
+
 export interface SettingsResponse {
   current: { llm: string; embed: string; vision: string }
   remote: { llm: string; embed: string; vision: string }
@@ -186,6 +198,7 @@ export interface SettingsResponse {
   presets: { llm: ModelPreset[]; embed: ModelPreset[]; vision: ModelPreset[] }
   capabilities: Capabilities
   endpoint: EndpointInfo
+  endpoints: EndpointOption[]
 }
 
 // One entry in the model download cache — a weights file, or a companion-set
