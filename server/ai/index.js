@@ -108,6 +108,39 @@ export async function initProvider(kind = getAiConfig().provider, current = {}, 
   return impls
 }
 
+// Re-resolve the role map against current config and bring up whatever it now
+// needs. Called after the endpoint or its key changes, so that a credential
+// saved in the browser takes effect without a container restart.
+//
+// Three deliberate choices:
+//   - the local provider is never re-initialised if it is already up; its
+//     init() loads model weights, and an endpoint change has nothing to do
+//     with them.
+//   - the remote provider IS re-initialised, because its boot() reads the
+//     endpoint from config — re-running init() is precisely what re-points it.
+//   - the new map is built into a local and published only on success, the
+//     same contract initProvider keeps, so a throw cannot strand the process
+//     with a half-built map that ready() would happily wave through.
+export async function reconfigure(current = {}, opts = {}) {
+  ready()
+  const { provider = getAiConfig().provider, load = null, embedProvider = AI_EMBED_PROVIDER } = opts
+  const needsProbe = provider === 'remote' && embedProvider !== 'remote'
+  const localAvailable =
+    opts.localAvailable ??
+    (Boolean(impls.local) ||
+      (needsProbe ? await _localAvailable(load ? () => load('local') : null) : provider !== 'remote'))
+  const roles = resolveRoleProviders({ provider, embedProvider, localAvailable })
+
+  const next = { ...impls }
+  for (const k of kindsInUse(roles)) {
+    if (!next[k]) next[k] = await _selectProvider(k, load ? () => load(k) : null)
+    // Remote re-inits every time (that IS the re-point); local only on first use.
+    if (k === 'remote' || !impls[k]) await next[k].init(current)
+  }
+  byRole = roles
+  impls = next
+}
+
 // ---- provider-wide, merged ------------------------------------------------
 export function capabilities() {
   ready()
