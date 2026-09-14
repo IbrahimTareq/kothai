@@ -95,11 +95,17 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
     }
   }
 
-  const needsWizard = Boolean(cfg) && !cfg!.endpoint.configured && !wizardDone
+  // What the installer already asked, so the wizard never asks it twice.
+  // 'local' means the operator chose on-device models at install time: there is
+  // no endpoint to connect and the picker is the whole of first run.
+  const preAnswered = cfg?.setup?.providerId || null
+  const needsWizard =
+    Boolean(cfg) && !cfg!.endpoint.configured && !wizardDone && preAnswered !== 'local'
   if (needsWizard) {
     return (
       <SetupWizard
         endpoints={cfg!.endpoints}
+        preselect={preAnswered}
         onLocal={() => setWizardDone(true)}
         onSkip={skip}
         onConnected={async (r) => {

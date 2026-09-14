@@ -19,16 +19,23 @@ type Probe = { state: 'idle' | 'testing' | 'ok' | 'fail'; message: string; model
 
 export function SetupWizard({
   endpoints,
+  preselect,
   onLocal,
   onConnected,
   onSkip,
 }: {
   endpoints: EndpointOption[]
+  // A provider id the installer already collected. When present the first
+  // question is skipped entirely — it has been answered in the terminal, and
+  // asking again would make the installer's question pointless.
+  preselect?: string | null
   onLocal: () => void
   onConnected: (r: WizardResult) => void
   onSkip: () => void
 }) {
-  const [picked, setPicked] = useState<EndpointOption | null>(null)
+  const [picked, setPicked] = useState<EndpointOption | null>(
+    () => endpoints.find((e) => e.id === preselect) || null,
+  )
   const [url, setUrl] = useState('')
   const [key, setKey] = useState('')
   const [probe, setProbe] = useState<Probe>({ state: 'idle', message: '', models: [] })

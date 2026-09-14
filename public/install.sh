@@ -1,10 +1,21 @@
 #!/bin/sh
 # Kothai installer — https://github.com/IbrahimTareq/kothai
 #
-# Runs the container, waits until it actually serves, and prints the URL.
-# It asks nothing: piped into sh there is no terminal to ask on, and every
-# choice it would have asked about is either a flag here or a screen in the
-# app. What it will not do is guess about your data — an existing container is
+# Runs the container, waits until it actually serves, opens the browser.
+#
+# Asks two questions, and only two: where the AI should run, and which service
+# if it is a hosted one. Those decide which image to pull, which is the one
+# choice that cannot be deferred to a screen in the app. Everything else —
+# the endpoint URL, the API key, the model names — is collected in the browser,
+# where a pasted key does not end up in your shell history.
+#
+# The questions are read from /dev/tty, not stdin: the script's own stdin is
+# the script when it arrives through a pipe, but the terminal is still there.
+# With no terminal at all (CI, a Dockerfile, a NAS UI) it asks nothing and
+# behaves exactly as it did before. So does any run that passes a flag which
+# already answers a question.
+#
+# What it will not do is guess about your data — an existing container is
 # reported, never replaced, unless you say --replace.
 #
 #   curl -fsSL https://ibrahimtareq.github.io/kothai/install.sh | sh
@@ -17,7 +28,9 @@ NAME=kothai
 PORT=5173
 DIR=$(pwd)
 LITE=0
+LOCAL=0
 REPLACE=0
+PROVIDER=
 SHIM=1
 ENDPOINT=
 APIKEY=
@@ -33,7 +46,8 @@ usage() {
     --port N          host port to serve on (default 5173)
     --dir PATH        where data and models live (default: current directory)
     --name NAME       container name (default kothai)
-    --lite            475 MB image, no on-device models; needs --endpoint
+    --lite            475 MB image, no on-device models
+    --local           full image, models on this machine (skips the questions)
     --endpoint URL    OpenAI-compatible endpoint for language and vision
     --key KEY         API key for that endpoint, if it needs one
     --password VALUE  require a password before anything is served
@@ -42,9 +56,10 @@ usage() {
     --tag TAG         image tag (default latest)
     -h, --help        this
 
-  With --endpoint on the full image, embedding stays on your machine and only
-  the language and vision roles go out — most hosted endpoints serve no
-  embeddings route, and semantic search needs one.
+  Passing any of --lite, --local or --endpoint answers the questions up front,
+  so nothing is asked. With --endpoint on the full image, embedding stays on
+  your machine and only the language and vision roles go out — most hosted
+  endpoints serve no embeddings route, and semantic search needs one.
 USAGE
   exit 0
 }
@@ -59,6 +74,7 @@ while [ $# -gt 0 ]; do
     --key) APIKEY=${2:?--key needs a value}; shift 2 ;;
     --password) PASSWORD=${2:?--password needs a value}; shift 2 ;;
     --lite) LITE=1; shift ;;
+    --local) LOCAL=1; shift ;;
     --replace) REPLACE=1; shift ;;
     --no-shim) SHIM=0; shift ;;
     -h|--help) usage ;;
@@ -71,8 +87,72 @@ case $PORT in ''|*[!0-9]*) die "--port must be a number, got: $PORT" ;; esac
 case $NAME in
   ''|*[!a-zA-Z0-9_.-]*) die "--name must be letters, digits, _ . or -, got: $NAME" ;;
 esac
-[ "$LITE" = 1 ] && [ -z "$ENDPOINT" ] && die "--lite runs no models itself, so it needs --endpoint. See --help."
+[ "$LITE" = 1 ] && [ "$LOCAL" = 1 ] && die "--lite and --local are opposites. Pick one."
 [ "$LITE" = 1 ] && TAG=lite
+
+# ---- the two questions ----------------------------------------------------
+# Read from /dev/tty rather than stdin, because stdin is the script itself when
+# this arrives through a pipe. Anything that makes asking impossible — no
+# terminal, or a flag that already answers — falls through silently and leaves
+# the historical behaviour exactly as it was.
+#
+# Only the IMAGE is decided here. The endpoint URL and the API key are not
+# asked for on purpose: a key typed on a command line lands in shell history,
+# and the browser is two seconds away.
+ask() {
+  printf '%s' "$1" > /dev/tty
+  read -r REPLY < /dev/tty || REPLY=
+  printf '%s' "$REPLY"
+}
+
+choose_setup() {
+  # Already answered by a flag.
+  [ -n "$ENDPOINT" ] && return 0
+  [ "$LITE" = 1 ] && return 0
+  [ "$LOCAL" = 1 ] && { PROVIDER=local; return 0; }
+  # Nowhere to ask. Not an error: this is CI, a Dockerfile, or a NAS UI.
+  #
+  # Tested by actually OPENING it, in a subshell so a failure cannot take this
+  # shell down with it. `[ -r /dev/tty ]` is not enough — on macOS the device
+  # node exists and looks readable even when no terminal is attached, so the
+  # test passes and the first prompt then dies on a redirect.
+  ( : < /dev/tty ) 2>/dev/null || return 0
+
+  printf '\n  Where should the AI run?\n\n' > /dev/tty
+  printf '    1) A cloud service — nothing to download, needs an API key\n' > /dev/tty
+  printf '    2) On this machine — private, no key, no bills, ~3 GB\n\n' > /dev/tty
+  where=$(ask '  > ')
+
+  # Anything unrecognised takes the on-machine path: it is what this installer
+  # did before the question existed, and it needs nothing from the user.
+  case $where in
+    1) ;;
+    *) PROVIDER=local; return 0 ;;
+  esac
+
+  printf '\n  Which one?\n\n' > /dev/tty
+  printf '    1) OpenAI        — full search\n' > /dev/tty
+  printf '    2) Ollama Cloud  — chat only; keeps a small search model here\n' > /dev/tty
+  printf '    3) Groq          — same\n' > /dev/tty
+  printf '    4) Something else\n\n' > /dev/tty
+  which=$(ask '  > ')
+
+  # The image follows from whether the provider serves embeddings, which is the
+  # whole reason this is asked in a terminal rather than in the browser. A
+  # chat-only provider keeps the embedding model on this machine, and that
+  # needs the full image; only a provider that serves embeddings can run lite.
+  # Anything unrecognised gets the full image — the answer that always works.
+  case $which in
+    1) PROVIDER=openai;       TAG=lite ;;
+    2) PROVIDER=ollama-cloud ;;
+    3) PROVIDER=groq ;;
+    *) PROVIDER=other ;;
+  esac
+  [ "$TAG" = lite ] && LITE=1
+  return 0
+}
+
+choose_setup
 
 command -v docker >/dev/null 2>&1 || die "Docker is not installed — https://docs.docker.com/get-docker/"
 docker info >/dev/null 2>&1 || die "Docker is installed but not running — start it and try again."
@@ -91,6 +171,9 @@ set -- run -d --name "$NAME" --restart unless-stopped -p "$PORT:5173" -v "$DIR/d
 [ -z "$ENDPOINT" ] || set -- "$@" -e STASH_AI_PROVIDER=remote -e "STASH_AI_BASE_URL=$ENDPOINT"
 [ -z "$APIKEY" ] || set -- "$@" -e "STASH_AI_API_KEY=$APIKEY"
 [ -z "$PASSWORD" ] || set -- "$@" -e "STASH_PASSWORD=$PASSWORD"
+# An id, never a credential: it only tells the first-run screen which questions
+# have already been answered here.
+[ -z "$PROVIDER" ] || set -- "$@" -e "STASH_SETUP_PROVIDER=$PROVIDER"
 set -- "$@" "$IMAGE:$TAG"
 
 say ""
@@ -232,6 +315,18 @@ install_shim() {
   fi
 }
 
+# Best-effort, and never fatal: the URL is printed either way, and a headless
+# box has nothing to open. Backgrounded so a slow-launching browser cannot hold
+# up the installer's own exit.
+open_browser() {
+  if command -v open >/dev/null 2>&1; then
+    open "$1" >/dev/null 2>&1 &
+  elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$1" >/dev/null 2>&1 &
+  fi
+  return 0
+}
+
 say "Waiting for it to come up…"
 i=0
 while [ "$i" -lt 60 ]; do
@@ -239,8 +334,12 @@ while [ "$i" -lt 60 ]; do
     say ""
     say "Ready — http://localhost:$PORT"
     [ -z "$PASSWORD" ] || say "Password: the one you passed to --password."
-    say "Open it to choose your models."
+    case $PROVIDER in
+      ''|local) say "Open it to choose your models." ;;
+      *) say "Open it to paste your API key — that is the last step." ;;
+    esac
     install_shim || true
+    open_browser "http://localhost:$PORT"
     say ""
     exit 0
   fi

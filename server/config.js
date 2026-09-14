@@ -32,6 +32,11 @@ export function resolveConfig(env = process.env, root = ROOT) {
     // ai/routing.js's resolveRoleProviders, which is also where an
     // unrecognised value is ignored rather than rejected here.
     AI_EMBED_PROVIDER: env.STASH_AI_EMBED_PROVIDER || null,
+    // Which provider the INSTALLER already asked about, so the first-run
+    // screen does not ask again. An id from ai/endpoints.js, or 'local'. Never
+    // a credential — the installer deliberately collects none, because a key
+    // typed on a command line lands in shell history.
+    SETUP_PROVIDER: env.STASH_SETUP_PROVIDER || null,
     // Escape hatch for the outbound-fetch guard (server/lib/ssrf.js): lets link
     // previews reach private/loopback addresses again, for people stashing
     // intranet links on a trusted LAN. Opt-in only, and the allowed spellings
@@ -55,6 +60,7 @@ export const UPLOAD_DIR = config.UPLOAD_DIR
 export const MODELS_DIR = config.MODELS_DIR
 export const CONFIG_PATH = config.CONFIG_PATH
 export const AI_EMBED_PROVIDER = config.AI_EMBED_PROVIDER
+export const SETUP_PROVIDER = config.SETUP_PROVIDER
 export const ALLOW_PRIVATE_FETCH = config.ALLOW_PRIVATE_FETCH
 export const PASSWORD = config.PASSWORD
 

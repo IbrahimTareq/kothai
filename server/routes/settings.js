@@ -7,7 +7,7 @@ import { ROLES, POLICIES, OFF_RESIDENCY } from '../ai/roles.js'
 import { backlogCount } from '../ai/backlog.js'
 import { isInstagramPost } from '../ai/meta.js'
 import { json, readBody } from '../lib/http.js'
-import { getAiConfig, setAiCredentials } from '../config.js'
+import { getAiConfig, setAiCredentials, SETUP_PROVIDER } from '../config.js'
 import { writeCredentials } from '../data/credentials.js'
 import { ENDPOINTS } from '../ai/endpoints.js'
 
@@ -65,6 +65,8 @@ export async function handleGetSettings(res) {
     // Static catalogue, so the wizard can render provider tiles without a
     // second request. Contains no credentials — it is public reference data.
     endpoints: ENDPOINTS,
+    // What the installer already asked. An id only; null when nobody asked.
+    setup: { providerId: SETUP_PROVIDER },
   })
 }
 

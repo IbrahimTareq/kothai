@@ -151,3 +151,13 @@ test('a request with no endpoint is rejected rather than silently doing nothing'
   await handleSetupEndpoint(fakeReq({}), res, { dir: dir() })
   assert.equal(res.statusCode, 400)
 })
+
+// The installer asks which service in the terminal, because that answer picks
+// the image. Echoing it back is what stops the wizard asking a second time.
+test('GET /api/settings reports what the installer already asked', async () => {
+  await initProvider('local', {}, { load, localAvailable: true })
+  const res = fakeRes()
+  await handleGetSettings(res)
+  assert.ok('setup' in res.body, 'the client branches on this')
+  assert.ok('providerId' in res.body.setup)
+})

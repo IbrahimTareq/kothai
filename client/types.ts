@@ -199,6 +199,9 @@ export interface SettingsResponse {
   capabilities: Capabilities
   endpoint: EndpointInfo
   endpoints: EndpointOption[]
+  // Which provider the installer already asked about — an id from `endpoints`,
+  // 'local', or null when the install did not go through the installer.
+  setup: { providerId: string | null }
 }
 
 // One entry in the model download cache — a weights file, or a companion-set
