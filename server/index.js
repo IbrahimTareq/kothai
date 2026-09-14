@@ -1,6 +1,7 @@
 // Kothai backend entry — boots the local models and HTTP server.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { PORT, MODELS_DIR, CONFIG_PATH, PASSWORD, getAiConfig, setAiCredentials } from './config.js'
+import { readCredentials } from './data/credentials.js'
 
 mkdirSync(MODELS_DIR, { recursive: true })
 writeFileSync(CONFIG_PATH, JSON.stringify({ cacheDirectory: MODELS_DIR }, null, 2) + '\n')
@@ -23,6 +24,9 @@ await chats.load()
 await settings.load()
 await collections.load()
 const hadTagRegistry = await tagvocab.load()
+// Before any provider is resolved: a stored endpoint decides which provider
+// kind initProvider picks, so loading it later would boot the wrong one.
+setAiCredentials(readCredentials())
 // Both selections are passed; each provider reads only its own half.
 await ai.initProvider(undefined, { local: settings.get(), remote: settings.getRemote() })
 if (ai.capabilities().managesResidency) await ai.applyResidency(settings.getResidency())
