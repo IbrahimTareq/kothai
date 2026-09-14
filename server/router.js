@@ -21,6 +21,7 @@ import {
   handleBacklog, handleEnrichBacklog, handlePrioritize,
   handleRetagAll,
 } from './routes/settings.js'
+import { handleSetupTest } from './routes/setup-test.js'
 
 async function handleRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`)
@@ -55,6 +56,7 @@ async function handleRequest(req, res) {
     if (req.method === 'GET' && p === '/api/settings') return await handleGetSettings(res)
     if (req.method === 'POST' && p === '/api/settings') return await handleSaveSettings(req, res)
     if (req.method === 'POST' && p === '/api/setup') return await handleSetup(req, res)
+    if (req.method === 'POST' && p === '/api/setup/test') return await handleSetupTest(req, res)
     if (req.method === 'POST' && p === '/api/import') return await handleImport(req, res)
     if (req.method === 'GET' && p === '/api/export') return handleExport(res)
     if (req.method === 'GET' && p === '/api/backup') return await handleBackup(req, res)
