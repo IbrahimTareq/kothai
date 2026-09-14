@@ -262,6 +262,17 @@ export const API = {
       }),
     )
   },
+  // Apply an endpoint mid-first-run, BEFORE the model picker is drawn: which
+  // provider serves each role decides what that picker has to ask for.
+  async applyEndpoint(endpoint: EndpointPatch): Promise<{ ok: boolean }> {
+    return await _json(
+      await fetch('/api/setup/endpoint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint }),
+      }),
+    )
+  },
   async setup(
     patch: (SettingsPatch & { endpoint?: EndpointPatch }) | { skip: true },
   ): Promise<{ ok: boolean; current: SettingsPatch }> {

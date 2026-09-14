@@ -17,7 +17,7 @@ import {
   handleAddItem, handleRemoveItem, handleDeleteCollection,
 } from './routes/collections.js'
 import {
-  handleStatus, handleGetSettings, handleSaveSettings, handleSetup,
+  handleStatus, handleGetSettings, handleSaveSettings, handleSetup, handleSetupEndpoint,
   handleBacklog, handleEnrichBacklog, handlePrioritize,
   handleRetagAll,
 } from './routes/settings.js'
@@ -57,6 +57,7 @@ async function handleRequest(req, res) {
     if (req.method === 'POST' && p === '/api/settings') return await handleSaveSettings(req, res)
     if (req.method === 'POST' && p === '/api/setup') return await handleSetup(req, res)
     if (req.method === 'POST' && p === '/api/setup/test') return await handleSetupTest(req, res)
+    if (req.method === 'POST' && p === '/api/setup/endpoint') return await handleSetupEndpoint(req, res)
     if (req.method === 'POST' && p === '/api/import') return await handleImport(req, res)
     if (req.method === 'GET' && p === '/api/export') return handleExport(res)
     if (req.method === 'GET' && p === '/api/backup') return await handleBackup(req, res)

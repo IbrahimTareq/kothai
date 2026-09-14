@@ -130,6 +130,30 @@ async function applyEndpointFromSetup(endpoint, dir) {
   return {}
 }
 
+// POST /api/setup/endpoint — apply an endpoint DURING first run, before the
+// model picker is drawn.
+//
+// Separate from handleSetup because of ordering: the picker asks about each
+// role in the shape its provider needs, and which provider serves a role is
+// exactly what connecting an endpoint changes. Folding this into handleSetup
+// meant the picker was drawn against the OLD role map — offering a local
+// download to someone who had just connected OpenAI, and never collecting the
+// endpoint's model ids at all.
+//
+// Deliberately does NOT set `configured`: first run is still open, and the
+// caller comes straight back with the model names.
+export async function handleSetupEndpoint(req, res, opts = {}) {
+  if (firstRunComplete(ai.capabilities(), settings.isConfigured(), settings.getRemote())) {
+    return json(res, 409, { error: 'already configured' })
+  }
+  const body = await readBody(req)
+  if (!body.endpoint) return json(res, 400, { error: 'an endpoint is required' })
+  const { error } = await applyEndpointFromSetup(body.endpoint, opts.dir)
+  if (error) return json(res, 400, { error })
+  const caps = ai.capabilities()
+  json(res, 200, { ok: true, capabilities: caps, endpoint: endpointInfo() })
+}
+
 // ---- first-run setup ------------------------------------------------------
 // Fresh installs hold off on loading any model until the user confirms here.
 // { skip: true } enters AI-free mode: configured, every role off, no download.

@@ -9,6 +9,7 @@ import { Icon } from '../components/icons'
 import { RoleAccordion, RemoteModelField, ROLE_META, fmtGB, type Role } from '../components/ModelPicker'
 import { API } from '../data/api'
 import type { SettingsResponse, VaultStatus } from '../types'
+import { SetupWizard } from './SetupWizard'
 
 // Every locally-served role downloads up front at setup (on-demand roles are
 // then unloaded), so first use is a fast local load — count them all toward the
@@ -22,6 +23,9 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
   const [remoteSel, setRemoteSel] = useState<Record<Role, string> | null>(null)
   const [submitted, setSubmitted] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  // The wizard runs only when this install has no endpoint yet. A full local
+  // image has nothing to connect, so it falls straight through to the picker.
+  const [wizardDone, setWizardDone] = useState(false)
 
   useEffect(() => {
     API.settings()
@@ -89,6 +93,35 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
     } catch (e) {
       setErr((e as Error).message || 'Setup failed. Please try again.')
     }
+  }
+
+  const needsWizard = Boolean(cfg) && !cfg!.endpoint.configured && !wizardDone
+  if (needsWizard) {
+    return (
+      <SetupWizard
+        endpoints={cfg!.endpoints}
+        onLocal={() => setWizardDone(true)}
+        onSkip={skip}
+        onConnected={async (r) => {
+          // Apply it NOW rather than at submit. The picker below asks about
+          // each role in the shape its provider needs, and connecting an
+          // endpoint is what decides which provider that is — so the server
+          // has to know before we re-read capabilities and draw it.
+          try {
+            await API.applyEndpoint({ providerId: r.providerId, baseUrl: r.baseUrl, apiKey: r.apiKey })
+            const fresh = await API.settings()
+            setCfg(fresh)
+            setSel({ ...fresh.current })
+            // Seed the endpoint's model fields from the provider's defaults so
+            // the next screen is filled in rather than three empty boxes.
+            setRemoteSel({ ...fresh.remote, ...r.defaults })
+          } catch (e) {
+            setErr((e as Error).message || 'Could not save that endpoint.')
+          }
+          setWizardDone(true)
+        }}
+      />
+    )
   }
 
   return (

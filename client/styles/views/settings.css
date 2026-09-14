@@ -383,3 +383,37 @@
   .mf-main { flex: 1 1 100%; }
   .mf-delete, .mf-confirm, .mf-badge { margin-left: auto; }
 }
+
+/* ---- first-run wizard ---------------------------------------------------- */
+/* Spacing tokens are literal pixels (--space-12 is 12px), and the house style
+   in this file is compact single-line declarations — match both. */
+.wizard-choices{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-12);margin:var(--space-24) 0}
+.wizard-choice{display:flex;flex-direction:column;gap:var(--space-8);padding:var(--space-20);text-align:left;
+  background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-lg);cursor:pointer}
+.wizard-choice:hover{border-color:var(--line-hover)}
+.wizard-choice-title{font-size:var(--text-sm);color:var(--ink);letter-spacing:var(--tracking-tight)}
+.wizard-choice-desc{font-size:var(--text-xs);color:var(--ink-mute);line-height:1.6}
+
+.wizard-providers{display:flex;flex-wrap:wrap;gap:var(--space-8);margin:var(--space-20) 0 var(--space-12)}
+.wizard-provider{display:inline-flex;align-items:center;gap:var(--space-8);padding:var(--space-8) var(--space-14);
+  background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-full);cursor:pointer}
+.wizard-provider:hover{border-color:var(--line-hover)}
+.wizard-provider.picked{border-color:var(--accent)}
+.wizard-provider-label{font-size:var(--text-xs);color:var(--ink)}
+.wizard-provider-tag{font-size:var(--text-3xs);color:var(--ink-faint)}
+.wizard-note{font-size:var(--text-xs);color:var(--ink-mute);line-height:1.6;margin:0 0 var(--space-20)}
+
+.wizard-field{display:block;margin-bottom:var(--space-14)}
+.wizard-field-label{display:block;font-size:var(--text-3xs);color:var(--ink-faint);margin-bottom:var(--space-6)}
+.wizard-optional{color:var(--ink-faint)}
+.wizard-input{width:100%;padding:var(--space-10) var(--space-12);font-size:var(--text-xs);color:var(--ink);
+  background:var(--panel-3);border:1px solid var(--line);border-radius:var(--radius-md)}
+.wizard-input:focus{border-color:var(--line-focus);outline:none}
+
+.wizard-probe{display:flex;align-items:center;gap:var(--space-12);margin-bottom:var(--space-20)}
+.wizard-test{padding:var(--space-8) var(--space-14);font-size:var(--text-xs);color:var(--ink);
+  background:var(--panel-3);border:1px solid var(--line);border-radius:var(--radius-md);cursor:pointer}
+.wizard-test:disabled{color:var(--ink-faint);cursor:default}
+.wizard-probe-msg{font-size:var(--text-3xs)}
+.wizard-probe-msg.ok{color:var(--accent)}
+.wizard-probe-msg.fail{color:var(--ink-mute)}

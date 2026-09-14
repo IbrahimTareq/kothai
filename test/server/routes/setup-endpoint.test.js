@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { Readable } from 'node:stream'
 import { _reset, initProvider } from '../../../server/ai/index.js'
-import { handleSetup, handleGetSettings } from '../../../server/routes/settings.js'
+import { handleSetup, handleSetupEndpoint, handleGetSettings } from '../../../server/routes/settings.js'
 import { _resetDb } from '../../../server/data/db.js'
 import * as settings from '../../../server/data/settings.js'
 import { setAiCredentials, getAiConfig } from '../../../server/config.js'
@@ -112,4 +112,42 @@ test('GET /api/settings still never echoes a credential', async () => {
   const res = fakeRes()
   await handleGetSettings(res)
   assert.ok(!JSON.stringify(res.body).includes('sk-secret'))
+})
+
+// The ordering bug this route exists to prevent: the model picker asks about
+// each role in the shape its provider needs, so the endpoint has to be applied
+// BEFORE that screen is drawn — but applying it must not end first run, or the
+// picker would never get to submit anything.
+test('applying an endpoint mid-first-run does not mark the install configured', async () => {
+  const d = dir()
+  await initProvider('local', {}, { load, localAvailable: true })
+  const res = fakeRes()
+  await handleSetupEndpoint(
+    fakeReq({ endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-mid' } }),
+    res,
+    { dir: d },
+  )
+  assert.equal(res.statusCode, 200)
+  assert.deepEqual(readCredentials(d), { baseUrl: ENDPOINT, apiKey: 'sk-mid' })
+  assert.equal(settings.isConfigured(), false, 'first run must still be open')
+})
+
+test('applying an endpoint reports the capabilities the picker should draw against', async () => {
+  const d = dir()
+  await initProvider('local', {}, { load, localAvailable: true })
+  const res = fakeRes()
+  await handleSetupEndpoint(
+    fakeReq({ endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-mid' } }),
+    res,
+    { dir: d },
+  )
+  assert.ok(res.body.capabilities, 'the client re-reads roles from this')
+  assert.equal(res.body.capabilities.roles.llm, 'remote')
+})
+
+test('a request with no endpoint is rejected rather than silently doing nothing', async () => {
+  await initProvider('local', {}, { load, localAvailable: true })
+  const res = fakeRes()
+  await handleSetupEndpoint(fakeReq({}), res, { dir: dir() })
+  assert.equal(res.statusCode, 400)
 })
