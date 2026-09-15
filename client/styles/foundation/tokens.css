@@ -90,15 +90,16 @@
   --shadow-popover:0 8px 28px rgba(0,0,0,.28);
 
   /* "accent" is pure white — CTAs invert (white bg / dark ink), like Behold's
-     "Download on iOS" pill. Legacy accent vars are remapped to white so all
-     existing component rules adopt the monochrome language automatically.
-     Ink on an accent fill is --on-accent. There was also an --accent-ink,
-     remapped like the others to the accent itself, so it read as "the ink for
-     accent surfaces" and resolved to the fill — its one user rendered a white
-     label on a white button. Removed; don't reintroduce the name. */
+     "Download on iOS" pill. Ink on an accent fill is --on-accent.
+
+     The pre-Behold palette's --accent-ink, --accent-soft and --accent-glow were
+     kept as aliases remapped to white, so component rules written against the
+     old teal would adopt the monochrome language untouched. That job is long
+     done and all three are gone. --accent-ink was the dangerous one: remapped
+     to the accent itself, it read as "the ink for accent surfaces" while
+     resolving to the fill, and its one user rendered a white label on a white
+     button. Don't reintroduce these names. */
   --accent:#fff;
-  --accent-soft:rgba(255,255,255,.08);
-  --accent-glow:rgba(255,255,255,.22);
   --on-accent:#0a0a0a;   /* ink on a white surface */
   /* Derived so it tracks a user's custom --accent (set at runtime from
      settings) instead of the hardcoded white it used to be. */
@@ -240,8 +241,6 @@
   --overlay:rgba(0,0,0,.35);
 
   --accent:#141414;
-  --accent-soft:rgba(0,0,0,.06);
-  --accent-glow:rgba(0,0,0,.22);
   --on-accent:#ffffff;
 
   --arc-rgb:10,10,10;   /* reactor glow goes near-black on light */
