@@ -7,11 +7,22 @@
 // stale default surfaces as validateModel's existing warning rather than a
 // rejection, so a model id that ages out never blocks setup.
 //
-// `servesEmbeddings` is the one field with teeth. Hosted chat endpoints
-// frequently expose no /embeddings route at all (see ai/routing.js), and
-// semantic search needs one — so the installer reads this to decide whether
-// this provider can run on the lite image or needs the full one, where the
-// embedding role stays on-device.
+// `servesEmbeddings` is the one field with teeth. Some hosted endpoints expose
+// no /embeddings route at all (see ai/routing.js), and semantic search needs
+// one — so the installer reads this to decide whether a provider can run on the
+// lite image or needs the full one, where the embedding role stays on-device.
+//
+// It is a claim about somebody else's product, so check it rather than assume,
+// and check the RIGHT list: a provider's chat-model catalogue says nothing
+// about whether it serves embeddings. OpenRouter was wrong here for exactly
+// that reason — its embedding models are absent from /v1/models and sit behind
+// /v1/embeddings/models instead.
+//
+//   openrouter    curl -s https://openrouter.ai/api/v1/embeddings/models
+//   ollama cloud  curl -s https://ollama.com/api/tags      (chat only, checked
+//                 2026-09-16; ollama.com/search?c=cloud&c=embedding is empty —
+//                 its embedding models are pull-and-run-yourself, not hosted)
+//   groq          needs a key even to list models; unverified here.
 
 export const ENDPOINTS = [
   {
@@ -46,9 +57,14 @@ export const ENDPOINTS = [
     label: 'OpenRouter',
     baseUrl: 'https://openrouter.ai/api/v1',
     needsKey: true,
-    servesEmbeddings: false,
-    note: 'One key, many models. No embeddings route.',
-    defaults: { llm: 'openai/gpt-4o-mini', embed: '', vision: 'openai/gpt-4o-mini' },
+    servesEmbeddings: true,
+    note: 'One key, many models — including embeddings, so nothing runs here.',
+    // Its embedding models are NOT in GET /v1/models, which lists chat models
+    // only; they live behind /v1/embeddings/models. So the embed dropdown will
+    // come up empty for this provider and fall back to offering everything —
+    // the pre-filled default below is what actually makes it work. Verify with:
+    //   curl -s https://openrouter.ai/api/v1/embeddings/models | jq '.data[].id'
+    defaults: { llm: 'openai/gpt-4o-mini', embed: 'openai/text-embedding-3-small', vision: 'openai/gpt-4o-mini' },
   },
   {
     id: 'ollama-local',
