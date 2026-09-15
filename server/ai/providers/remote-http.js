@@ -40,12 +40,52 @@ function classify(status, body) {
 // unbounded, so this is a concern only remote has.
 export const TIMEOUTS = { embed: 15_000, classify: 60_000, answer: 120_000, vision: 120_000, probe: 5_000 }
 
-export async function postJson(baseUrl, path, body, { apiKey = null, timeoutMs = 60_000 } = {}) {
-  return request(baseUrl, path, { method: 'POST', body: JSON.stringify(body), apiKey, timeoutMs })
+// Retry policy for the transient failures — 429 and 5xx.
+//
+// RETRIES is small on purpose. The point is to ride out a burst, not to keep
+// a metered account busy: an endpoint that is still refusing after three tries
+// is rate-limiting by the hour or the day, and the honest answer there is to
+// fail, let the note keep its heuristics, and leave it in the backlog.
+//
+// MAX_WAIT_MS caps whatever the endpoint asks for. Providers do return
+// Retry-After values in the thousands of seconds, and honouring one literally
+// would park the whole enrichment chain — which is strictly serial — for the
+// rest of the afternoon.
+const RETRIES = 3
+const MAX_WAIT_MS = 30_000
+const BACKOFF_MS = [1_000, 4_000, 10_000]
+
+const realSleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+// How long before the next attempt: what the endpoint asked for if it said,
+// our own backoff if it did not, capped either way. Jitter keeps several
+// callers coming back at slightly different moments rather than in lockstep.
+function waitFor(err, attempt) {
+  const asked = err.retryAfterMs > 0 ? err.retryAfterMs : BACKOFF_MS[attempt] + Math.random() * 250
+  return Math.min(Math.round(asked), MAX_WAIT_MS)
 }
 
-export async function getJson(baseUrl, path, { apiKey = null, timeoutMs = 60_000 } = {}) {
-  return request(baseUrl, path, { method: 'GET', apiKey, timeoutMs })
+const retryable = (err) => err instanceof RemoteError && err.transient && err.code !== 'bad_response'
+
+export async function postJson(baseUrl, path, body, { apiKey = null, timeoutMs = 60_000, retries = RETRIES, sleep = realSleep } = {}) {
+  return withRetry(() => request(baseUrl, path, { method: 'POST', body: JSON.stringify(body), apiKey, timeoutMs }), retries, sleep)
+}
+
+export async function getJson(baseUrl, path, { apiKey = null, timeoutMs = 60_000, retries = RETRIES, sleep = realSleep } = {}) {
+  return withRetry(() => request(baseUrl, path, { method: 'GET', apiKey, timeoutMs }), retries, sleep)
+}
+
+async function withRetry(attemptFn, retries, sleep) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await attemptFn()
+    } catch (err) {
+      // Config errors (bad key, unknown model) are never retried: no number of
+      // attempts fixes them, and each one against a metered endpoint costs.
+      if (attempt >= retries || !retryable(err)) throw err
+      await sleep(waitFor(err, attempt))
+    }
+  }
 }
 
 async function request(baseUrl, path, { method, body, apiKey, timeoutMs }) {

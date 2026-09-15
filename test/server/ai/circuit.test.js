@@ -82,3 +82,35 @@ test('reason surfaces the last failure message for the status aggregate', () => 
   c.recordFailure({ message: 'connect ECONNREFUSED' })
   assert.equal(c.reason, 'connect ECONNREFUSED')
 })
+
+// A rate-limited endpoint tells you when to come back. Waiting our own guessed
+// cooldown instead is either rude to a provider asking for five minutes, or
+// needlessly idle for one asking for two.
+test('an endpoint-supplied Retry-After sets the cooldown', () => {
+  let t = 0
+  const c = new Circuit({ threshold: 1, cooldownMs: 60_000, now: () => t })
+  c.recordFailure({ transient: true, message: 'slow down', retryAfterMs: 5_000 })
+  assert.equal(c.allow(), false)
+  t = 4_999
+  assert.equal(c.allow(), false, 'still inside the window the endpoint asked for')
+  t = 5_000
+  assert.equal(c.allow(), true, 'and open again exactly when it said')
+})
+
+test('without a Retry-After the configured cooldown still applies', () => {
+  let t = 0
+  const c = new Circuit({ threshold: 1, cooldownMs: 60_000, now: () => t })
+  c.recordFailure({ transient: true, message: 'boom' })
+  t = 59_999
+  assert.equal(c.allow(), false)
+  t = 60_000
+  assert.equal(c.allow(), true)
+})
+
+test('a success clears a Retry-After window along with the rest', () => {
+  let t = 0
+  const c = new Circuit({ threshold: 1, cooldownMs: 60_000, now: () => t })
+  c.recordFailure({ transient: true, retryAfterMs: 90_000 })
+  c.recordSuccess()
+  assert.equal(c.allow(), true, 'a working endpoint is not held to an old limit')
+})

@@ -29,7 +29,9 @@ export async function handleSetupTest(req, res) {
   }
 
   try {
-    const out = await getJson(baseUrl, '/models', { apiKey: apiKey || null, timeoutMs: TIMEOUTS.probe })
+    // No retries: someone is watching this button. A rate-limited endpoint is
+    // a real answer here, not something to sit on for half a minute.
+    const out = await getJson(baseUrl, '/models', { apiKey: apiKey || null, timeoutMs: TIMEOUTS.probe, retries: 0 })
     const models = (out?.data || []).map((m) => m.id).filter(Boolean)
     return json(res, 200, { ok: true, models })
   } catch (e) {

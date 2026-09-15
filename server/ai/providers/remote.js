@@ -46,12 +46,12 @@ export function createRemoteProvider({ baseUrl, apiKey, models }) {
       if (probeError) probeError = ''
       return out
     } catch (e) {
-      if (e instanceof RemoteError) circuit.recordFailure({ transient: e.transient, message: e.message })
+      if (e instanceof RemoteError) circuit.recordFailure({ transient: e.transient, message: e.message, retryAfterMs: e.retryAfterMs })
       throw e
     }
   }
 
-  const chat = (body, timeoutMs) => postJson(baseUrl, '/chat/completions', body, { apiKey, timeoutMs })
+  const chat = (body, timeoutMs, retries) => postJson(baseUrl, '/chat/completions', body, { apiKey, timeoutMs, ...(retries === undefined ? {} : { retries }) })
   const textOf = (r) => (r?.choices?.[0]?.message?.content || '').trim()
 
   return {
@@ -83,13 +83,15 @@ export function createRemoteProvider({ baseUrl, apiKey, models }) {
     async init() {
       if (!baseUrl) return
       try {
-        const res = await getJson(baseUrl, '/models', { apiKey, timeoutMs: TIMEOUTS.probe })
+        // retries:0 — a probe is a question about right now, and something is
+        // waiting on the answer (boot, or the wizard's Test connection button).
+        const res = await getJson(baseUrl, '/models', { apiKey, timeoutMs: TIMEOUTS.probe, retries: 0 })
         catalogue = (res?.data || []).map((m) => m.id).filter(Boolean)
         probeError = ''
         circuit.recordSuccess()
       } catch (e) {
         probeError = e.message
-        circuit.recordFailure({ transient: e.transient !== false, message: e.message })
+        circuit.recordFailure({ transient: e.transient !== false, message: e.message, retryAfterMs: e.retryAfterMs || 0 })
       }
     },
 
@@ -156,7 +158,7 @@ export function createRemoteProvider({ baseUrl, apiKey, models }) {
         // circuit — classify() is the backlog's dominant call, so if its
         // failures never reach the circuit, the enrich queue never halts.
         if (!(e instanceof RemoteError) || e.code !== 'bad_request') {
-          if (e instanceof RemoteError) circuit.recordFailure({ transient: e.transient, message: e.message })
+          if (e instanceof RemoteError) circuit.recordFailure({ transient: e.transient, message: e.message, retryAfterMs: e.retryAfterMs })
           throw e
         }
         raw = textOf(await call(() => chat({ model, messages }, TIMEOUTS.classify)))
