@@ -116,7 +116,7 @@ function validateResidency(body) {
 //
 // `dir` is threaded through for tests only — production passes nothing and
 // the credential store falls back to DATA_DIR.
-async function applyEndpointFromSetup(endpoint, dir) {
+async function applyEndpointFromSetup(endpoint, dir, models = null) {
   const baseUrl = typeof endpoint.baseUrl === 'string' ? endpoint.baseUrl.trim().replace(/\/+$/, '') : ''
   if (!baseUrl) return { error: 'An endpoint needs a base URL.' }
   try {
@@ -128,6 +128,21 @@ async function applyEndpointFromSetup(endpoint, dir) {
   const apiKey = typeof endpoint.apiKey === 'string' && endpoint.apiKey.trim() ? endpoint.apiKey.trim() : null
   const creds = dir ? writeCredentials({ baseUrl, apiKey }, dir) : writeCredentials({ baseUrl, apiKey })
   setAiCredentials(creds)
+
+  // Seed the endpoint's model names BEFORE reconfiguring. Which provider serves
+  // the embedding role is decided by whether one is named (see ai/routing.js),
+  // so reconfiguring first would resolve that role against an empty store and
+  // send it on-device — handing someone who just connected OpenAI a 300 MB
+  // download for a role their endpoint serves perfectly well.
+  if (models) {
+    const patch = {}
+    for (const role of ROLES) {
+      const id = typeof models[role] === 'string' ? models[role].trim() : ''
+      if (id) patch[role] = id
+    }
+    if (Object.keys(patch).length) await settings.save({ remote: patch })
+  }
+
   await ai.reconfigure({ local: settings.get(), remote: settings.getRemote() })
   return {}
 }
@@ -150,7 +165,7 @@ export async function handleSetupEndpoint(req, res, opts = {}) {
   }
   const body = await readBody(req)
   if (!body.endpoint) return json(res, 400, { error: 'an endpoint is required' })
-  const { error } = await applyEndpointFromSetup(body.endpoint, opts.dir)
+  const { error } = await applyEndpointFromSetup(body.endpoint, opts.dir, body.models)
   if (error) return json(res, 400, { error })
   const caps = ai.capabilities()
   json(res, 200, { ok: true, capabilities: caps, endpoint: endpointInfo() })

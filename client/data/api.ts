@@ -264,12 +264,18 @@ export const API = {
   },
   // Apply an endpoint mid-first-run, BEFORE the model picker is drawn: which
   // provider serves each role decides what that picker has to ask for.
-  async applyEndpoint(endpoint: EndpointPatch): Promise<{ ok: boolean }> {
+  // `models` are the provider's default ids. They are sent WITH the endpoint
+  // because naming an embedding model is what sends that role to the endpoint
+  // rather than downloading one — see server/ai/routing.js.
+  async applyEndpoint(
+    endpoint: EndpointPatch,
+    models?: Partial<Record<'llm' | 'embed' | 'vision', string>>,
+  ): Promise<{ ok: boolean }> {
     return await _json(
       await fetch('/api/setup/endpoint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ endpoint }),
+        body: JSON.stringify({ endpoint, models }),
       }),
     )
   },

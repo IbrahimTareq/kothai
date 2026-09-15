@@ -26,6 +26,15 @@
 .role-acc{margin-top:var(--space-10);background:var(--panel);border:1px solid var(--line);
   border-radius:var(--radius-lg);overflow:hidden}
 .role-acc.open{background:var(--panel-2)}
+/* The hidden overflow above keeps the header's hover fill inside the rounded
+   corners — but it also clips the endpoint field's dropdown down to one row.
+   Lift it only for the accordions that contain one; the preset accordions,
+   which have no overlay, keep the clipping they need. */
+.role-acc:has(.remote-model){overflow:visible}
+/* Sibling accordions paint in DOM order, so without this the VISION card draws
+   over a dropdown opened in LANGUAGE. Scoped to the OPEN one — .remote-model-list
+   exists only while it is — so the raise lasts exactly as long as it is needed. */
+.role-acc:has(.remote-model-list){position:relative;z-index:var(--z-popover)}
 .role-acc-head{display:flex;align-items:center;gap:var(--space-12);width:100%;text-align:left;cursor:pointer;
   background:transparent;border:0;padding:var(--space-12) var(--space-14);color:var(--ink);transition:var(--dur-fast)}
 .role-acc-head:hover{background:var(--panel-2)}
@@ -292,18 +301,75 @@
 }
 .danger-cancel:hover:not(:disabled) { color: var(--ink); border-color: var(--ink-faint); }
 
-.remote-model { padding: 0.75rem 0; }
+/* Endpoint model field — a combobox, not a native datalist. The browser's own
+   dropdown cannot be styled, renders differently everywhere, and offered all
+   seventy of an endpoint's models for every role. */
+.remote-model { position: relative; padding: var(--space-12) 0; }
+.remote-model-box { display: flex; align-items: center; gap: var(--space-4); }
 .remote-model-input {
-  width: 100%;
-  padding: 0.5rem 0.65rem;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  flex: 1;
+  padding: var(--space-10) var(--space-12);
+  font-size: var(--text-xs);
   color: var(--ink);
-  font-size:var(--text-sm);
+  background: var(--panel-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
 }
+.remote-model-input:focus { border-color: var(--line-focus); outline: none; }
 .remote-model-input:disabled { opacity: 0.5; }
-.remote-model-desc { margin-top: 0.4rem; font-size:var(--text-xs); color: var(--ink-dim); }
+.remote-model-toggle {
+  display: grid; place-items: center;
+  width: 30px; height: 30px;
+  color: var(--ink-faint);
+  background: var(--panel-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.remote-model-toggle:hover:not(:disabled) { color: var(--ink); border-color: var(--line-hover); }
+.remote-model-toggle:disabled { opacity: 0.4; cursor: default; }
+
+/* Absolute so a long list cannot push the roles below it down the page. */
+.remote-model-list {
+  position: absolute; z-index: var(--z-popover);
+  left: 0; right: 0;
+  max-height: 240px; overflow-y: auto;
+  margin: var(--space-4) 0 0; padding: var(--space-4);
+  list-style: none;
+  /* --surface-popover, not a --panel tint: the panels are translucent overlay
+     colours, correct inline and wrong for anything that floats over content.
+     This is the same surface every other popover in the app uses. */
+  background: var(--surface-popover);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-popover);
+}
+.remote-model-opt {
+  display: block; width: 100%;
+  padding: var(--space-8) var(--space-10);
+  text-align: left;
+  font-size: var(--text-xs);
+  color: var(--ink-dim);
+  background: none; border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.remote-model-opt.active { color: var(--ink); background: var(--panel-3); }
+.remote-model-opt.picked { color: var(--accent); }
+.remote-model-empty { padding: var(--space-8) var(--space-10); font-size: var(--text-3xs); color: var(--ink-faint); }
+.remote-model-more {
+  display: block; width: 100%;
+  margin-top: var(--space-4);
+  padding: var(--space-8) var(--space-10);
+  text-align: left;
+  font-size: var(--text-3xs);
+  color: var(--ink-faint);
+  background: none;
+  border: 0; border-top: 1px solid var(--line);
+  cursor: pointer;
+}
+.remote-model-more:hover { color: var(--ink-dim); }
+.remote-model-desc { margin-top: var(--space-6); font-size: var(--text-3xs); color: var(--ink-faint); }
 
 /* Re-tag everything — the same arm/confirm shape as the danger zone, but in
    the neutral palette: this rebuilds derived metadata rather than destroying

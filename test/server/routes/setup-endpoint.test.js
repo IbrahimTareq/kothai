@@ -161,3 +161,39 @@ test('GET /api/settings reports what the installer already asked', async () => {
   assert.ok('setup' in res.body, 'the client branches on this')
   assert.ok('providerId' in res.body.setup)
 })
+
+// The whole point of the seeding: naming an endpoint embedding model is what
+// keeps the role off this machine. Connecting OpenAI and still being handed a
+// 300 MB local download was the bug.
+test('a provider that serves embeddings takes the embedding role too', async () => {
+  const d = dir()
+  await initProvider('local', {}, { load, localAvailable: true })
+  const res = fakeRes()
+  await handleSetupEndpoint(
+    fakeReq({
+      endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-e' },
+      models: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small', vision: 'gpt-4o-mini' },
+    }),
+    res,
+    { dir: d },
+  )
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.body.capabilities.roles.embed, 'remote', 'no local download for a provider that serves it')
+  assert.equal(settings.getRemote().embed, 'text-embedding-3-small')
+})
+
+test('a chat-only provider leaves the embedding role on this machine', async () => {
+  const d = dir()
+  await initProvider('local', {}, { load, localAvailable: true })
+  const res = fakeRes()
+  await handleSetupEndpoint(
+    fakeReq({
+      endpoint: { providerId: 'ollama-cloud', baseUrl: ENDPOINT, apiKey: 'sk-e' },
+      models: { llm: 'gpt-oss:120b', embed: '', vision: '' },
+    }),
+    res,
+    { dir: d },
+  )
+  assert.equal(res.body.capabilities.roles.embed, 'local', 'it serves no embeddings, so we keep one here')
+  assert.equal(res.body.capabilities.roles.llm, 'remote')
+})

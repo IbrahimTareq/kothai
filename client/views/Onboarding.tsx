@@ -114,7 +114,7 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
           // endpoint is what decides which provider that is — so the server
           // has to know before we re-read capabilities and draw it.
           try {
-            await API.applyEndpoint({ providerId: r.providerId, baseUrl: r.baseUrl, apiKey: r.apiKey })
+            await API.applyEndpoint({ providerId: r.providerId, baseUrl: r.baseUrl, apiKey: r.apiKey }, r.defaults)
             const fresh = await API.settings()
             setCfg(fresh)
             setSel({ ...fresh.current })

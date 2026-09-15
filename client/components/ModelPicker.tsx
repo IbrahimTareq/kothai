@@ -2,9 +2,10 @@
 // tab (hot-swap an already-running model) and the first-run Onboarding flow
 // (pick models before the initial download). A role is a collapsible accordion
 // of presets; each preset is a radio-style row showing its label, blurb, and size.
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Icon } from './icons'
 import type { ModelPreset, Residency } from '../types'
+import { relevantModels } from './model-relevance'
 
 export type Role = 'llm' | 'embed' | 'vision'
 
@@ -16,6 +17,14 @@ export const ROLE_META: Record<Role, { title: string; sub: string }> = {
   llm: { title: 'LANGUAGE', sub: 'Classifies what you save and answers your questions.' },
   embed: { title: 'EMBEDDING', sub: 'Powers semantic search. Switching re-indexes every note in the background.' },
   vision: { title: 'VISION', sub: 'Describes images so they become searchable. Loads only when needed.' },
+}
+
+// A role-shaped example beats a generic one: the placeholder is the only hint
+// on the screen about what an id for THIS role looks like.
+const ROLE_PLACEHOLDER: Record<Role, string> = {
+  llm: 'e.g. gpt-4o-mini',
+  embed: 'e.g. text-embedding-3-small',
+  vision: 'e.g. gpt-4o-mini',
 }
 
 // Human copy for the three residency policies, in display order.
@@ -131,25 +140,120 @@ export function RemoteModelField({
   onCommit: (v: string) => void
 }) {
   const [draft, setDraft] = useState(value)
+  const [open, setOpen] = useState(false)
+  const [showAll, setShowAll] = useState(false)
+  const [active, setActive] = useState(0)
+  const box = useRef<HTMLDivElement>(null)
   useEffect(() => setDraft(value), [value])
-  const listId = `models-${role}`
+
+  // Close on an outside click. Without this the list survives a click on the
+  // next field and two can be open at once.
+  useEffect(() => {
+    if (!open) return
+    const away = (e: MouseEvent) => {
+      if (box.current && !box.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', away)
+    return () => document.removeEventListener('mousedown', away)
+  }, [open])
+
+  const ids = options.map((o) => o.key)
+  const { matched, rest } = relevantModels(role, ids)
+  const pool = showAll ? [...matched, ...rest] : matched
+  // Typing filters; an exact match should not collapse the list to one row the
+  // user then cannot escape, so a draft equal to the value shows everything.
+  const q = draft.trim().toLowerCase()
+  const shown = q && q !== value.toLowerCase() ? pool.filter((id) => id.toLowerCase().includes(q)) : pool
+
+  const commit = (id: string) => {
+    setDraft(id)
+    setOpen(false)
+    if (id !== value) onCommit(id)
+  }
+
+  const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      if (!open) return setOpen(true)
+      const step = e.key === 'ArrowDown' ? 1 : -1
+      setActive((i) => (shown.length ? (i + step + shown.length) % shown.length : 0))
+      return
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      if (open && shown[active]) return commit(shown[active])
+      return commit(draft.trim())
+    }
+    if (e.key === 'Escape' && open) {
+      e.preventDefault()
+      setOpen(false)
+      setDraft(value)
+    }
+  }
+
   return (
-    <div className="remote-model">
-      <input
-        className="remote-model-input mono"
-        list={listId}
-        value={draft}
-        disabled={busy}
-        placeholder="model name, e.g. llama3.2:3b"
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={() => draft !== value && onCommit(draft.trim())}
-        onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-      />
-      <datalist id={listId}>
-        {options.map((o) => <option key={o.key} value={o.key} />)}
-      </datalist>
+    <div className="remote-model" ref={box}>
+      <div className="remote-model-box">
+        <input
+          className="remote-model-input mono"
+          value={draft}
+          disabled={busy}
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={`models-${role}`}
+          placeholder={ROLE_PLACEHOLDER[role]}
+          onChange={(e) => { setDraft(e.target.value); setOpen(true); setActive(0) }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={onKey}
+          onBlur={() => { if (!open && draft.trim() !== value) onCommit(draft.trim()) }}
+        />
+        <button
+          className="remote-model-toggle"
+          type="button"
+          disabled={busy || !ids.length}
+          aria-label={open ? 'Hide models' : 'Show models'}
+          onClick={() => setOpen((o) => !o)}
+        >
+          <Icon name="chevron" size={14} />
+        </button>
+      </div>
+
+      {open && Boolean(ids.length) && (
+        <ul className="remote-model-list" id={`models-${role}`} role="listbox">
+          {shown.map((id, i) => (
+            <li key={id}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={id === value}
+                className={'remote-model-opt mono' + (i === active ? ' active' : '') + (id === value ? ' picked' : '')}
+                onMouseEnter={() => setActive(i)}
+                // mousedown, not click: the input's blur would otherwise fire
+                // first and close the list out from under the click.
+                onMouseDown={(e) => { e.preventDefault(); commit(id) }}
+              >
+                {id}
+              </button>
+            </li>
+          ))}
+          {!shown.length && <li className="remote-model-empty mono">No match — type the name and press Enter.</li>}
+          {Boolean(rest.length) && !showAll && (
+            <li>
+              <button type="button" className="remote-model-more mono"
+                onMouseDown={(e) => { e.preventDefault(); setShowAll(true) }}>
+                Show {rest.length} more this endpoint serves
+              </button>
+            </li>
+          )}
+        </ul>
+      )}
+
       <div className="remote-model-desc">
-        {options.length ? `${options.length} models offered by the endpoint.` : 'Endpoint did not return a model list — type the name directly.'}
+        {!ids.length
+          ? 'Endpoint did not return a model list — type the name directly.'
+          : showAll
+            ? `All ${ids.length} models this endpoint serves.`
+            : `${matched.length} of ${ids.length} models suit this role.`}
       </div>
     </div>
   )

@@ -141,3 +141,39 @@ test('mergeCapabilities reports mixed, and always names the owner of each role',
   assert.equal(mixed.downloadsWeights, true)
   assert.deepEqual(mixed.roles, MIXED)
 })
+
+// Naming an endpoint embedding model IS the opt-in. Before this, connecting
+// OpenAI — which serves embeddings perfectly well — still made first run ask
+// for a 300 MB local download, because the rule assumed no hosted endpoint
+// could serve the role at all.
+test('naming an endpoint embedding model sends the role there', () => {
+  const r = resolveRoleProviders({ provider: 'remote', localAvailable: true, remoteEmbedModel: 'text-embedding-3-small' })
+  assert.equal(r.embed, 'remote')
+})
+
+test('no endpoint embedding model keeps the role on-device, exactly as before', () => {
+  const r = resolveRoleProviders({ provider: 'remote', localAvailable: true, remoteEmbedModel: '' })
+  assert.equal(r.embed, 'local')
+})
+
+// The env var is an operator override and must still beat the model name, in
+// both directions — someone who pinned it did so for a reason.
+test('STASH_AI_EMBED_PROVIDER=local beats a named endpoint model', () => {
+  const r = resolveRoleProviders({
+    provider: 'remote', localAvailable: true,
+    remoteEmbedModel: 'text-embedding-3-small', embedProvider: 'local',
+  })
+  assert.equal(r.embed, 'local')
+})
+
+test('STASH_AI_EMBED_PROVIDER=remote still works with no model named yet', () => {
+  const r = resolveRoleProviders({ provider: 'remote', localAvailable: true, embedProvider: 'remote' })
+  assert.equal(r.embed, 'remote')
+})
+
+// An install that predates this carries no remote embed name, so it resolves
+// exactly as it did before — no surprise re-index on upgrade.
+test('an upgrade with no endpoint embedding model is unchanged', () => {
+  const before = resolveRoleProviders({ provider: 'remote', localAvailable: true })
+  assert.equal(before.embed, 'local')
+})

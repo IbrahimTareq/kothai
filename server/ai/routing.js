@@ -10,18 +10,37 @@ import { ROLES } from './roles.js'
 //   provider=local                       → every role on-device (unchanged).
 //   provider=remote, no local provider   → every role remote (the lite image,
 //                                          where @qvac/sdk isn't installed).
-//   provider=remote, local available     → embedding stays on-device, the
-//                                          language and vision roles go out.
+//   provider=remote, local available     → embedding follows whether an
+//                                          endpoint embedding model is named;
+//                                          language and vision always go out.
 //
-// Embedding is the role singled out because it is the one a hosted endpoint
-// frequently cannot serve at all — Ollama Cloud, Groq, Anthropic and
-// OpenRouter expose no /embeddings — and the one whose model is small enough
-// (~300 MB, CPU-only) to keep here regardless. STASH_AI_EMBED_PROVIDER=remote
-// opts back into sending it out, for endpoints that do serve embeddings and
-// installs that already have an index built that way.
-export function resolveRoleProviders({ provider, embedProvider = null, localAvailable = false }) {
+// Embedding is the role singled out because plenty of hosted endpoints cannot
+// serve it at all — Ollama Cloud, Groq, Anthropic and OpenRouter expose no
+// /embeddings — while its model is small enough (~300 MB, CPU-only) to keep
+// here when they cannot. But plenty of others serve it fine, OpenAI included,
+// and for those a local download is 300 MB and a re-index bought for nothing:
+// if the language role already goes to that endpoint, the note text is already
+// leaving, so the embedding role leaks nothing new.
+//
+// The signal is the model NAME, not a separate switch. Naming a model the
+// endpoint serves is the opt-in, and clearing it is the opt-out — which also
+// means an install that predates this carries no name and resolves exactly as
+// it did before, with no surprise re-index on upgrade.
+//
+// STASH_AI_EMBED_PROVIDER still wins over both, in either direction: an
+// operator who pinned it did so for a reason.
+export function resolveRoleProviders({
+  provider,
+  embedProvider = null,
+  localAvailable = false,
+  remoteEmbedModel = '',
+}) {
   if (provider !== 'remote') return { llm: 'local', embed: 'local', vision: 'local' }
-  const embed = !localAvailable || embedProvider === 'remote' ? 'remote' : 'local'
+  let embed
+  if (!localAvailable) embed = 'remote'
+  else if (embedProvider === 'remote') embed = 'remote'
+  else if (embedProvider === 'local') embed = 'local'
+  else embed = String(remoteEmbedModel || '').trim() ? 'remote' : 'local'
   return { llm: 'remote', embed, vision: 'remote' }
 }
 

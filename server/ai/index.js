@@ -92,7 +92,12 @@ export async function initProvider(kind = getAiConfig().provider, current = {}, 
   // is pure cost — and, on a host where the native binding is broken, risk.
   const needsProbe = kind === 'remote' && embedProvider !== 'remote'
   const localAvailable = opts.localAvailable ?? (needsProbe ? await _localAvailable(load ? () => load('local') : null) : kind !== 'remote')
-  const roles = resolveRoleProviders({ provider: kind, embedProvider, localAvailable })
+  // `current` is { local, remote } — the endpoint's embedding model name is
+  // what decides whether that role goes out. See routing.js.
+  const roles = resolveRoleProviders({
+    provider: kind, embedProvider, localAvailable,
+    remoteEmbedModel: current?.remote?.embed || '',
+  })
 
   // Built into a local and published only once every provider is up. Assigning
   // impls before the loop would let a throw halfway through leave a truthy
@@ -129,7 +134,10 @@ export async function reconfigure(current = {}, opts = {}) {
     opts.localAvailable ??
     (Boolean(impls.local) ||
       (needsProbe ? await _localAvailable(load ? () => load('local') : null) : provider !== 'remote'))
-  const roles = resolveRoleProviders({ provider, embedProvider, localAvailable })
+  const roles = resolveRoleProviders({
+    provider, embedProvider, localAvailable,
+    remoteEmbedModel: current?.remote?.embed || '',
+  })
 
   const next = { ...impls }
   for (const k of kindsInUse(roles)) {
