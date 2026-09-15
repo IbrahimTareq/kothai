@@ -91,9 +91,12 @@
 
   /* "accent" is pure white — CTAs invert (white bg / dark ink), like Behold's
      "Download on iOS" pill. Legacy accent vars are remapped to white so all
-     existing component rules adopt the monochrome language automatically. */
+     existing component rules adopt the monochrome language automatically.
+     Ink on an accent fill is --on-accent. There was also an --accent-ink,
+     remapped like the others to the accent itself, so it read as "the ink for
+     accent surfaces" and resolved to the fill — its one user rendered a white
+     label on a white button. Removed; don't reintroduce the name. */
   --accent:#fff;
-  --accent-ink:#fff;
   --accent-soft:rgba(255,255,255,.08);
   --accent-glow:rgba(255,255,255,.22);
   --on-accent:#0a0a0a;   /* ink on a white surface */
@@ -237,7 +240,6 @@
   --overlay:rgba(0,0,0,.35);
 
   --accent:#141414;
-  --accent-ink:#0a0a0a;
   --accent-soft:rgba(0,0,0,.06);
   --accent-glow:rgba(0,0,0,.22);
   --on-accent:#ffffff;

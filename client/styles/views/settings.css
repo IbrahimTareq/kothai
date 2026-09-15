@@ -495,7 +495,7 @@
   background:var(--panel-3);border:1px solid var(--line);border-radius:var(--radius-md);cursor:pointer}
 .conn-btn:hover:not(:disabled){color:var(--ink);border-color:var(--line-hover)}
 .conn-btn:disabled{opacity:.5;cursor:default}
-.conn-btn.primary{color:var(--accent-ink);background:var(--accent);border-color:var(--accent)}
+.conn-btn.primary{color:var(--on-accent);background:var(--accent);border-color:var(--accent)}
 /* Two-step, like the wipe control: the second press is the one that acts. */
 .conn-btn.armed{color:var(--ink);border-color:var(--line-focus)}
 .conn-edit{margin-top:var(--space-16);padding:var(--space-16);

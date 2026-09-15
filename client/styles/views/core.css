@@ -130,7 +130,7 @@
 .cite-ref:hover{background:var(--panel-3)}
 
 /* ── citation tiles ────────────────────────────────────────────────────────
-   The shape is the shared .tile primitive in components.css — the Spaces
+   The shape is the shared .tile primitive in primitives.css — the Spaces
    landing draws the same one. Only the grid it sits in belongs to Ask: three
    up in a 13px column of prose, narrow enough that a six-source answer stays
    one glance rather than a page of scrolling. */

@@ -1,6 +1,7 @@
 /* token-colors — resolve tokens.css to real colours, per theme.
  *
- * Shared by test/design-tokens.test.ts. Deliberately dependency-free and
+ * Shared by test/client/design-tokens.test.ts and style-pairings.test.ts.
+ * Deliberately dependency-free and
  * deterministic: it reads the stylesheet rather than a browser, so it gives the
  * same answer on a laptop and in CI, which pixel screenshots do not.
  */

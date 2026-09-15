@@ -1,9 +1,9 @@
 # Kothai design system
 
 A monochrome, restrained language adapted from [trybehold.com](https://trybehold.com).
-Everything visual comes from a token in `client/styles/tokens.css`. If a value is
-not a token, it is either a documented exception or a bug — `npm run lint:tokens`
-tells you which.
+Everything visual comes from a token in `client/styles/foundation/tokens.css`. If a
+value is not a token, it is either a documented exception or a bug —
+`npm run lint:tokens` tells you which.
 
 ## The rules
 
@@ -55,13 +55,13 @@ and are deliberately off the duration scale.
 
 ## Components
 
-`client/styles/components.css` holds the shared primitives. **New buttons should
+`client/styles/components/primitives.css` holds the shared primitives. **New buttons should
 use `.btn` plus a modifier** (`.btn--solid`, `.btn--ghost`, `.btn--icon`,
 `.btn--danger`) and nothing else.
 
 The older per-view button names (`.row-btn`, `.spaces-new-btn`, `.coll-menu-btn`,
 `.seg-btn`, `.residency-btn`, `.rail-btn`, `.send-btn`, `.attach-btn`) are grouped
-into the same rules rather than redefining them, so a change in `components.css`
+into the same rules rather than redefining them, so a change in `primitives.css`
 reaches all of them. Treat them as legacy aliases: don't add more.
 
 ## Deliberate exceptions
@@ -89,7 +89,7 @@ npm run lint:tokens
 Runs automatically as part of `npm run build` and `npm test`, and covers two
 surfaces.
 
-In `client/styles/*.css` it fails on raw font sizes, colours, radii, spacing
+Across every sheet under `client/styles/` it fails on raw font sizes, colours, radii, spacing
 under 48px, z-index values, durations under .5s, and on any `var(--x)` with no
 definition and no fallback — that last one silently drops the property, which is
 how an undefined `--fg` once made the "Create space" button render
@@ -114,10 +114,22 @@ color:#ff4500;  /* token-lint-ignore: Reddit brand orange, not ours */
 Two automated layers, and one that is still human.
 
 `npm run lint:tokens` proves every value comes from a token.
-`test/design-tokens.test.ts` proves the resolved colours are *usable*: body-text
-tokens clear WCAG AA in both themes, popover surfaces are opaque, the accent
-hover stays visible against the page, and no colour token is defined for dark
-only. It reads the stylesheet rather than a browser, so it is deterministic
+
+`test/client/design-tokens.test.ts` proves the resolved colours are *usable*:
+body-text tokens clear WCAG AA in both themes, popover surfaces are opaque, the
+accent hover stays visible against the page, and no colour token is defined for
+dark only.
+
+`test/client/style-pairings.test.ts` proves the stylesheets *pair* them
+correctly. A token being individually fine says nothing about the rule that puts
+it on top of another one: `.conn-btn.primary` filled with `--accent` and inked
+with `--accent-ink` — a legacy alias that resolved to the accent itself — and rendered white
+on white in dark, near-black on near-black in light, passing both other layers.
+Every rule declaring `color` and `background` as plain `var()` references is now
+checked in both themes, at 3:1 for controls and a bare perceptibility floor for
+the deliberately recessive ones (`--ink-faint` inks, `--overlay` backdrops).
+
+All three read the stylesheets rather than a browser, so they are deterministic
 across machines — unlike pixel screenshots, whose baselines differ between macOS
 and CI.
 

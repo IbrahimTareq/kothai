@@ -11,7 +11,7 @@
 .space-form-tags { flex: 1; min-width: 220px; }
 .space-form-go { background: var(--ink); color: var(--bg); border: none; border-radius: var(--radius-md); padding: var(--space-10) var(--space-16); cursor: pointer; font-size:var(--text-sm); }
 .spaces-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-14); }
-/* The card itself is the shared .tile (components.css). All that is left here
+/* The card itself is the shared .tile (primitives.css). All that is left here
    is scale: these run about half again as wide as an Ask citation, so the name
    and the count each step up one size rather than reading as small print on a
    large card. The cover also gets a little more room to breathe. */
