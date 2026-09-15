@@ -47,6 +47,23 @@
 .btn--danger{color:var(--danger)}
 .btn--danger:hover:not(:disabled){border-color:var(--danger)}
 
+/* ── button sizes ─────────────────────────────────────────────────────────
+   Three boxes, each lifted from a button that already existed rather than
+   invented: --xs from the chat row's confirm pair, --sm from the Connection
+   panel and the wizard's test control, --lg from the onboarding start button.
+   The scale describes the app instead of asking it to move.
+
+   Size and tone are orthogonal — .btn--sm says nothing about fill, .btn--solid
+   says nothing about box — so they compose: .btn.btn--sm.btn--solid.
+
+   --xs and --sm share a type size and differ only in padding. That is on
+   purpose: .chat-confirm sits in a chat row whose height is load-bearing
+   (core.css:72), and the taller box would push the row open. */
+.btn--xs{padding:var(--space-4) var(--space-10);font-size:var(--text-xs)}
+.btn--sm{padding:var(--space-8) var(--space-14);font-size:var(--text-xs)}
+.btn--lg{padding:var(--space-12) var(--space-20);border-radius:var(--radius-lg);
+  font-size:var(--text-sm)}
+
 /* ── segmented control ────────────────────────────────────────────────────
    One control for every "pick one of these" that sits on a toolbar: a
    --control-md trough holding pills. The space header used to run two of these
