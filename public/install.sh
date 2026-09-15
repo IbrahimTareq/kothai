@@ -132,9 +132,10 @@ choose_setup() {
 
   printf '\n  Which one?\n\n' > /dev/tty
   printf '    1) OpenAI        — full search\n' > /dev/tty
-  printf '    2) Ollama Cloud  — chat only; keeps a small search model here\n' > /dev/tty
-  printf '    3) Groq          — same\n' > /dev/tty
-  printf '    4) Something else\n\n' > /dev/tty
+  printf '    2) OpenRouter    — full search, many models behind one key\n' > /dev/tty
+  printf '    3) Ollama Cloud  — chat only; keeps a small search model here\n' > /dev/tty
+  printf '    4) Groq          — same\n' > /dev/tty
+  printf '    5) Something else\n\n' > /dev/tty
   which=$(ask '  > ')
 
   # The image follows from whether the provider serves embeddings, which is the
@@ -144,8 +145,9 @@ choose_setup() {
   # Anything unrecognised gets the full image — the answer that always works.
   case $which in
     1) PROVIDER=openai;       TAG=lite ;;
-    2) PROVIDER=ollama-cloud ;;
-    3) PROVIDER=groq ;;
+    2) PROVIDER=openrouter;   TAG=lite ;;
+    3) PROVIDER=ollama-cloud ;;
+    4) PROVIDER=groq ;;
     *) PROVIDER=other ;;
   esac
   [ "$TAG" = lite ] && LITE=1

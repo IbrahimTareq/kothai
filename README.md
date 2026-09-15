@@ -72,9 +72,10 @@ and opens the browser.
   Which one?
 
     1) OpenAI        — full search
-    2) Ollama Cloud  — chat only; keeps a small search model here
-    3) Groq          — same
-    4) Something else
+    2) OpenRouter    — full search, many models behind one key
+    3) Ollama Cloud  — chat only; keeps a small search model here
+    4) Groq          — same
+    5) Something else
   > 1
 
   Pulling ghcr.io/ibrahimtareq/kothai:lite — this is the slow part.
@@ -119,19 +120,20 @@ docker run -d --name kothai -p 5173:5173 -v ./data:/app/data \
 Open <http://localhost:5173>, pick your provider, paste the key. 475 MB, about
 300 MB of RAM.
 
-One catch decides which image you want. Most hosted chat services — Ollama
-Cloud, Groq, OpenRouter, Anthropic — serve no embeddings at all, and embeddings
-are what make search work by meaning rather than by exact words. With one of
-those, use the full image instead and Kothai keeps a small (~300 MB) embedding
-model on your machine while the language and vision work goes out:
+One catch decides which image you want. Several hosted chat services — Ollama
+Cloud, Groq, Anthropic — serve no embeddings at all, and embeddings are what
+make search work by meaning rather than by exact words. With one of those, use
+the full image instead and Kothai keeps a small (~300 MB) embedding model on
+your machine while the language and vision work goes out:
 
 ```bash
 docker run -d --name kothai -p 5173:5173 -v ./data:/app/data -v ./models:/app/models \
   ghcr.io/ibrahimtareq/kothai:latest
 ```
 
-OpenAI, a self-hosted Ollama, llama.cpp server and vLLM all serve embeddings,
-so `:lite` is enough for those. The installer picks correctly for you.
+OpenAI, OpenRouter, a self-hosted Ollama, llama.cpp server and vLLM all serve
+embeddings, so `:lite` is enough for those. The installer picks correctly for
+you.
 
 You can still set the endpoint with environment variables rather than in the
 browser — `STASH_AI_PROVIDER=remote`, `STASH_AI_BASE_URL`, `STASH_AI_API_KEY` —

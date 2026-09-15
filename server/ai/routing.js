@@ -15,7 +15,7 @@ import { ROLES } from './roles.js'
 //                                          language and vision always go out.
 //
 // Embedding is the role singled out because plenty of hosted endpoints cannot
-// serve it at all — Ollama Cloud, Groq, Anthropic and OpenRouter expose no
+// serve it at all — Ollama Cloud, Groq and Anthropic expose no
 // /embeddings — while its model is small enough (~300 MB, CPU-only) to keep
 // here when they cannot. But plenty of others serve it fine, OpenAI included,
 // and for those a local download is 300 MB and a re-index bought for nothing:

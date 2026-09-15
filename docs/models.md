@@ -26,13 +26,17 @@ on about 1 GB.
 
 Each role also picks its own provider (see [`ai/routing.js`](../server/ai/routing.js)).
 `STASH_AI_PROVIDER=local` puts all three on-device, unchanged. `STASH_AI_PROVIDER=remote`
-sends `llm` and `vision` to the endpoint but keeps `embed` on-device wherever the
-image can run one — most hosted endpoints (Ollama Cloud, Groq, Anthropic,
-OpenRouter) don't serve `/embeddings` at all, and the embedding model is small
-enough (~300 MB, CPU-only) to keep local regardless. `STASH_AI_EMBED_PROVIDER=remote`
-opts back into sending it out, for an endpoint that does serve embeddings. The
-lite image has no on-device inference to fall back to, so on it every role
-always goes remote, `embed` included.
+always sends `llm` and `vision` to the endpoint. `embed` is the one that varies,
+because endpoints differ: OpenAI and OpenRouter serve `/embeddings`, while
+Ollama Cloud, Groq and Anthropic serve none at all, and the embedding model is
+small enough (~300 MB, CPU-only) to keep local when they cannot.
+
+The signal is the model **name**, not a switch. Naming an endpoint embedding
+model in Settings sends the role there; clearing it brings the role back. That
+also means an install carrying no such name resolves exactly as it always did.
+`STASH_AI_EMBED_PROVIDER=local` or `=remote` overrides that decision in either
+direction. The lite image has no on-device inference to fall back to, so on it
+every role always goes remote, `embed` included.
 
 Moving the embedding role between providers re-indexes the whole library:
 vectors from two different embedding models aren't comparable, so the app runs
