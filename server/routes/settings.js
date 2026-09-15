@@ -73,6 +73,10 @@ export async function handleGetSettings(res) {
     // @qvac/sdk is absent. Settings offers "run on this machine" only when it
     // is true, rather than offering a switch that cannot work.
     localSupported: await ai.localSupported(),
+    // On-device presets with sizes, even while an endpoint serves every role —
+    // `presets` above reports the endpoint's catalogue then, so it cannot say
+    // what switching back would cost or offer anything to pick.
+    localPresets: await ai.localPresets(),
   })
 }
 
@@ -277,12 +281,27 @@ export async function handleSaveEndpoint(req, res, opts = {}) {
 // The endpoint's model names are deliberately kept. They cost nothing while
 // unused, and keeping them means reconnecting the same service later does not
 // mean typing three ids again. What does NOT survive is the key.
-export async function handleClearEndpoint(res, opts = {}) {
+export async function handleClearEndpoint(req, res, opts = {}) {
+  // Optional { models: { llm, embed, vision } } — on-device preset keys chosen
+  // in the same breath as disconnecting. They are applied AFTER reconfigure,
+  // because _validateModels asks which provider serves each role and the answer
+  // is only right once the endpoint is gone.
+  const body = await readBody(req).catch(() => ({}))
   if (opts.dir) clearCredentials(opts.dir)
   else clearCredentials()
   setAiCredentials(null)
   await ai.reconfigure({ local: settings.get(), remote: settings.getRemote() }, opts.load ? { load: opts.load } : {})
+
+  if (body?.models) {
+    const { local, error } = _validateModels(body.models)
+    if (error) return json(res, 400, { error })
+    if (Object.keys(local).length) await settings.save(local)
+  }
+
   await settleRoleMap()
+  // Roles just handed back need their weights. Queued, because for someone who
+  // set up on an endpoint this is the first download of any model at all.
+  enrich.queueJob(() => ai.warmCache(settings.getResidency()))
   json(res, 200, { ok: true, capabilities: ai.capabilities(), endpoint: endpointInfo() })
 }
 

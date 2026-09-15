@@ -60,7 +60,7 @@ async function handleRequest(req, res) {
     if (req.method === 'POST' && p === '/api/setup/test') return await handleSetupTest(req, res)
     if (req.method === 'POST' && p === '/api/setup/endpoint') return await handleSetupEndpoint(req, res)
     if (req.method === 'POST' && p === '/api/settings/endpoint') return await handleSaveEndpoint(req, res)
-    if (req.method === 'DELETE' && p === '/api/settings/endpoint') return await handleClearEndpoint(res)
+    if (req.method === 'DELETE' && p === '/api/settings/endpoint') return await handleClearEndpoint(req, res)
     if (req.method === 'POST' && p === '/api/import') return await handleImport(req, res)
     if (req.method === 'GET' && p === '/api/export') return handleExport(res)
     if (req.method === 'GET' && p === '/api/backup') return await handleBackup(req, res)

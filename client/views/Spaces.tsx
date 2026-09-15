@@ -43,7 +43,7 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
     <div className="spaces-view">
       <header className="spaces-head">
         <h1 className="spaces-title">Spaces</h1>
-        <button className="spaces-new-btn" onClick={() => setCreating((v) => !v)}>＋ New space</button>
+        <button className="btn" onClick={() => setCreating((v) => !v)}>＋ New space</button>
       </header>
 
       {creating && (
@@ -54,7 +54,7 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
           <input className="space-form-tags mono" placeholder="smart tags (comma-separated, optional)" value={tags}
             onChange={(e) => setTags(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') setCreating(false) }} />
-          <button className="space-form-go" onClick={submit}>Create</button>
+          <button className="btn btn--solid" onClick={submit}>Create</button>
         </div>
       )}
 

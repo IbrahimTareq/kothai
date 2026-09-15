@@ -306,19 +306,11 @@
 .chat-rename{flex:1;min-width:0;background:transparent;border:0;outline:none;
   color:var(--ink);font-family:inherit;font-size:var(--text-sm);
   letter-spacing:var(--tracking-tight)}
-.chat-confirm{flex-shrink:0;border:1px solid var(--line);border-radius:var(--radius);
-  background:var(--panel-2);color:var(--ink-dim);cursor:pointer;padding:var(--space-4) var(--space-10);
-  font-size:var(--text-xs);letter-spacing:var(--tracking-tight);transition:var(--dur-fast)}
-.chat-confirm:hover{color:var(--ink);border-color:var(--ink-faint)}
-.chat-confirm.danger:hover{color:var(--danger);border-color:var(--danger)}
-
 /* Load more sits under the list rather than paging it: the count says how much
    is left, so it's clear whether pressing again is worth it. */
-.core .chat-more{display:flex;align-items:center;justify-content:center;gap:var(--space-8);
-  width:100%;margin-top:var(--space-8);padding:var(--space-10) var(--space-12);cursor:pointer;
-  border:1px solid var(--line-2);border-radius:var(--radius-lg);
-  background:transparent;color:var(--ink-dim);font-size:var(--text-xs);
-  letter-spacing:var(--tracking-tight);transition:var(--dur-fast)}
+.core .chat-more{width:100%;margin-top:var(--space-8);
+  border-color:var(--line-2);border-radius:var(--radius-lg);
+  background:transparent;color:var(--ink-dim)}
 .core .chat-more:hover{color:var(--ink);border-color:var(--line);background:var(--panel)}
 .core .chat-more .mono{font-size:var(--text-2xs);letter-spacing:var(--tracking-mono)}
 

@@ -9,7 +9,6 @@
 .space-form-name, .space-form-tags { background: var(--panel); border: 1px solid var(--line); color: var(--ink); border-radius: var(--radius-md); padding: var(--space-10) var(--space-12); font-size:var(--text-sm); }
 .space-form-name { min-width: 200px; }
 .space-form-tags { flex: 1; min-width: 220px; }
-.space-form-go { background: var(--ink); color: var(--bg); border: none; border-radius: var(--radius-md); padding: var(--space-10) var(--space-16); cursor: pointer; font-size:var(--text-sm); }
 .spaces-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-14); }
 /* The card itself is the shared .tile (primitives.css). All that is left here
    is scale: these run about half again as wide as an Ask citation, so the name

@@ -2,14 +2,14 @@
    Part of the Kothai design system. Loaded via style.css, before the per-view
    sheets so those can still override.
 
-   .btn is the canonical button. New code should use .btn plus a modifier and
-   nothing else. The one surviving legacy per-view name (.spaces-new-btn) is
-   grouped into these rules rather than redefined, so a change here reaches
-   every button in the app — that is the whole point of the file. */
+   .btn is the button. Use it plus a size (.btn--xs/--sm/--lg) and a tone
+   (.btn--solid/--ghost/--icon/--danger); size and tone compose freely. There
+   are no per-view button classes left, and lint:tokens fails any new ones —
+   see scripts/button-chrome.mjs. A view may still add a rule for genuine
+   layout (.chat-more's full width) on top of .btn. */
 
 /* ── button ───────────────────────────────────────────────────────────────── */
-.btn,
-.spaces-new-btn{
+.btn{
   display:inline-flex;align-items:center;justify-content:center;gap:var(--space-8);
   padding:var(--space-8) var(--space-14);
   border:1px solid var(--line);border-radius:var(--radius-md);
@@ -18,10 +18,8 @@
   text-decoration:none;white-space:nowrap;cursor:pointer;
   transition:var(--dur-fast);
 }
-.btn:hover:not(:disabled):not([aria-disabled="true"]),
-.spaces-new-btn:hover{border-color:var(--line-hover)}
-.btn:focus-visible,
-.spaces-new-btn:focus-visible{border-color:var(--ink)}
+.btn:hover:not(:disabled):not([aria-disabled="true"]){border-color:var(--line-hover)}
+.btn:focus-visible{border-color:var(--ink)}
 .btn:disabled{color:var(--ink-faint);cursor:default}
 
 /* filled — the primary action. Follows a custom --accent tint. */
@@ -57,8 +55,9 @@
    says nothing about box — so they compose: .btn.btn--sm.btn--solid.
 
    --xs and --sm share a type size and differ only in padding. That is on
-   purpose: .chat-confirm sits in a chat row whose height is load-bearing
-   (core.css:72), and the taller box would push the row open. */
+   purpose: the chat row's delete/cancel pair (Chats.tsx, .btn--xs) sits in a
+   row whose height is load-bearing (core.css:72), and the taller box would
+   push the row open. */
 .btn--xs{padding:var(--space-4) var(--space-10);font-size:var(--text-xs)}
 .btn--sm{padding:var(--space-8) var(--space-14);font-size:var(--text-xs)}
 .btn--lg{padding:var(--space-12) var(--space-20);border-radius:var(--radius-lg);

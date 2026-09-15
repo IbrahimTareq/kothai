@@ -88,7 +88,7 @@ test('disconnecting removes the credential and takes the roles back on-device', 
   await initProvider('remote', {}, { load, localAvailable: true })
 
   const res = fakeRes()
-  await handleClearEndpoint(res, { dir: d, load })
+  await handleClearEndpoint(fakeReq({}), res, { dir: d, load })
   assert.equal(res.statusCode, 200)
   assert.equal(existsSync(path.join(d, 'credentials.json')), false, 'the key is gone from disk')
   assert.equal(getAiConfig().provider, 'local')
@@ -104,7 +104,7 @@ test('disconnecting keeps the endpoint model names for next time', async () => {
   setAiCredentials(readCredentials(d))
   await settings.save({ configured: true, remote: { llm: 'gpt-4o-mini' } })
   await initProvider('remote', {}, { load, localAvailable: true })
-  await handleClearEndpoint(fakeRes(), { dir: d, load })
+  await handleClearEndpoint(fakeReq({}), fakeRes(), { dir: d, load })
   assert.equal(settings.getRemote().llm, 'gpt-4o-mini')
 })
 
@@ -140,7 +140,7 @@ test('switching back to local turns the returning roles on', async () => {
   await settings.save({ configured: true, residency: { llm: 'ondemand', embed: 'always', vision: 'ondemand' } })
   await initProvider('remote', {}, { load, localAvailable: true })
 
-  await handleClearEndpoint(fakeRes(), { dir: d, load })
+  await handleClearEndpoint(fakeReq({}), fakeRes(), { dir: d, load })
 
   const last = localCalls.residency.at(-1)
   assert.ok(last, 'residency must be re-applied when the role map changes')
@@ -156,7 +156,7 @@ test('switching back to local hands the local provider its own model names', asy
   await settings.save({ configured: true })
   await initProvider('remote', {}, { load, localAvailable: true })
 
-  await handleClearEndpoint(fakeRes(), { dir: d, load })
+  await handleClearEndpoint(fakeReq({}), fakeRes(), { dir: d, load })
   const names = localCalls.models.at(-1)
   assert.ok(names, 'the roles it now serves need models configured')
   assert.ok(names.llm, `expected a language model, got ${JSON.stringify(names)}`)
@@ -177,4 +177,41 @@ test('switching to a service releases the roles it takes over', async () => {
   const last = localCalls.residency.at(-1)
   assert.ok(last, 'residency must be re-applied here too')
   assert.equal(last.llm, 'off', 'the endpoint serves language now — stop holding its weights')
+})
+
+// Switching back used to leave you on whatever defaults were stored, with the
+// model pickers only reachable afterwards as a separate, unprompted step.
+test('disconnecting can choose the on-device models in the same request', async () => {
+  const d = dir()
+  writeCredentials({ baseUrl: A, apiKey: 'k' }, d)
+  setAiCredentials(readCredentials(d))
+  await settings.save({ configured: true })
+  await initProvider('remote', {}, { load, localAvailable: true })
+
+  const res = fakeRes()
+  await handleClearEndpoint(
+    fakeReq({ models: { llm: 'QWEN3_4B_INST_Q4_K_M' } }),
+    res,
+    { dir: d, load },
+  )
+  assert.equal(res.statusCode, 200)
+  assert.equal(settings.get().llm, 'QWEN3_4B_INST_Q4_K_M', 'the choice made during the switch sticks')
+})
+
+test('disconnecting with no choice keeps what was already stored', async () => {
+  const d = dir()
+  writeCredentials({ baseUrl: A, apiKey: 'k' }, d)
+  setAiCredentials(readCredentials(d))
+  await settings.save({ configured: true, llm: 'QWEN3_1_7B_INST_Q4' })
+  await initProvider('remote', {}, { load, localAvailable: true })
+
+  await handleClearEndpoint(fakeReq({}), fakeRes(), { dir: d, load })
+  assert.equal(settings.get().llm, 'QWEN3_1_7B_INST_Q4')
+})
+
+test('GET /api/settings carries on-device presets with sizes while a service is connected', async () => {
+  await initProvider('remote', {}, { load, localAvailable: true })
+  const res = fakeRes()
+  await handleGetSettings(res)
+  assert.ok('localPresets' in res.body, 'Settings cannot price the switch without them')
 })

@@ -199,11 +199,11 @@
 
   /* The canonical buttons size to their content, so they had no floor at all:
      Settings' own rows ("Download export", "Erase all data…") measured 36-39px.
-     One rule covers .btn and the surviving legacy name — see components/primitives.css.
+     One rule covers .btn wherever it lands — see components/primitives.css.
      .btn--icon pins its own width/height, which this does not fight. */
-  .btn,.spaces-new-btn,
+  .btn,
   .retag-go,.danger-go,.danger-cancel,
-  .danger-input,.chat-confirm{min-height:var(--control-md)}
+  .danger-input{min-height:var(--control-md)}
 
   /* A segmented control is a border-box trough with pills inset by --space-4,
      so its buttons come out 10px shorter than the trough: 8px of padding plus

@@ -231,7 +231,7 @@ export function CoreView({ focus, onFocus, onBlur, onKey, text, setText, submit,
             ))}
           </div>
           {chatList.length < chatTotal && (
-            <button className="chat-more" onClick={loadMoreChats}>
+            <button className="btn btn--sm chat-more" onClick={loadMoreChats}>
               Load more <span className="mono dim">{chatList.length} / {chatTotal}</span>
             </button>
           )}

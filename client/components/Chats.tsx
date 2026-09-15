@@ -60,8 +60,8 @@ export function ChatRow({ chat, active, open, rename, remove }: RowProps) {
       <div className="chat-row confirming">
         <Icon name="trash" size={14} />
         <span className="chat-title">Delete “{chat.title}”?</span>
-        <button className="chat-confirm danger" onClick={() => remove(chat.id)}>Delete</button>
-        <button className="chat-confirm" onClick={() => setMode('idle')}>Cancel</button>
+        <button className="btn btn--xs btn--danger" onClick={() => remove(chat.id)}>Delete</button>
+        <button className="btn btn--xs" onClick={() => setMode('idle')}>Cancel</button>
       </div>
     )
   }

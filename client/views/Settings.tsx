@@ -49,7 +49,11 @@ export function SettingsView({ vault, theme, setTheme }: {
   const [connChoice, setConnChoice] = useState<EndpointChoice | null>(null)
   const [connBusy, setConnBusy] = useState(false)
   const [connErr, setConnErr] = useState<string | null>(null)
-  const [disarmed, setDisarmed] = useState(true)
+  // Disconnecting is where the on-device models get chosen, so the confirm step
+  // is a panel rather than a second click: falling back to stored defaults meant
+  // the pickers were only reachable afterwards, unprompted.
+  const [leaving, setLeaving] = useState(false)
+  const [leaveSel, setLeaveSel] = useState<Record<Role, string> | null>(null)
 
   useEffect(() => { API.settings().then(setCfg).catch(() => {}) }, [])
   useEffect(() => { API.status().then((s) => setNoteCount(s.count)).catch(() => {}) }, [])
@@ -88,15 +92,26 @@ export function SettingsView({ vault, theme, setTheme }: {
     setConnBusy(false)
   }
 
+  // "up to", not "exactly": a model already in the download cache costs
+  // nothing, and Settings cannot see that cache while an endpoint serves every
+  // role — the route that lists it is gated on the install downloading weights.
+  const leaveBytes = cfg && cfg.localPresets && leaveSel
+    ? (['llm', 'embed', 'vision'] as Role[]).reduce(
+        (sum, role) => sum + (cfg.localPresets![role].find((p) => p.key === leaveSel[role])?.sizeBytes || 0),
+        0,
+      )
+    : 0
+
   const disconnect = async () => {
     if (connBusy) return
     setConnBusy(true)
     setConnErr(null)
     try {
-      await API.clearEndpoint()
+      await API.clearEndpoint(leaveSel || undefined)
       setCfg(await API.settings())
       setEditingConn(false)
-      setDisarmed(true)
+      setLeaving(false)
+      setLeaveSel(null)
     } catch (e) {
       setConnErr((e as Error).message || 'Could not disconnect.')
     }
@@ -260,23 +275,48 @@ export function SettingsView({ vault, theme, setTheme }: {
                         : 'This is the lite image, which runs no models itself — it needs a service.'}
                   </span>
                 </div>
-                {!editingConn && (
+                {!editingConn && !leaving && (
                   <div className="conn-actions">
                     <button className="btn btn--sm mono" onClick={() => { setEditingConn(true); setConnErr(null) }}>
                       {cfg.endpoint.configured ? 'Change' : 'Connect a service'}
                     </button>
                     {cfg.endpoint.configured && cfg.localSupported && (
-                      <button
-                        className={'btn btn--sm mono' + (disarmed ? '' : ' conn-armed')}
-                        disabled={connBusy}
-                        onClick={() => (disarmed ? setDisarmed(false) : disconnect())}
-                      >
-                        {disarmed ? 'Disconnect' : 'Sure? Models move back here'}
+                      <button className="btn btn--sm mono" disabled={connBusy}
+                        onClick={() => { setLeaving(true); setLeaveSel({ ...cfg.current }); setConnErr(null) }}>
+                        Disconnect
                       </button>
                     )}
                   </div>
                 )}
               </div>
+
+              {leaving && cfg.localPresets && leaveSel && (
+                <div className="conn-edit">
+                  <p className="conn-warn">
+                    These will run on this machine instead. Nothing is sent anywhere, and there is no key
+                    or bill — but the weights have to be downloaded the first time each one is used.
+                  </p>
+                  {(['llm', 'embed', 'vision'] as Role[]).map((role) => (
+                    <RoleAccordion key={role} role={role}
+                      presets={cfg.localPresets![role]}
+                      currentKey={leaveSel[role]}
+                      busy={connBusy}
+                      switching={false}
+                      pct={0}
+                      defaultOpen={false}
+                      onPick={(key) => setLeaveSel((sel) => (sel ? { ...sel, [role]: key } : sel))} />
+                  ))}
+                  <div className="conn-actions">
+                    <button className="btn btn--sm btn--primary mono" disabled={connBusy} onClick={disconnect}>
+                      {connBusy ? 'Switching…' : `Switch — up to ${fmtGB(leaveBytes)} to download`}
+                    </button>
+                    <button className="btn btn--sm mono" disabled={connBusy}
+                      onClick={() => { setLeaving(false); setLeaveSel(null) }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {connErr && <div className="conn-err mono">{connErr}</div>}
 

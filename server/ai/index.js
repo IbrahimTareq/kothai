@@ -85,6 +85,23 @@ export function _reset() {
   impls = null
   byRole = null
   localProbe = null
+  localPresetCache = null
+}
+
+// The on-device preset list — with sizes — regardless of who currently serves
+// each role. Settings needs it while every role is on an endpoint, to show what
+// switching back would download; listModels() cannot answer, because it reports
+// the endpoint's catalogue in that state.
+//
+// Cheap: presetInfo() is a pure read of the SDK's registry, so the module is
+// imported but never initialised and no weights are touched.
+let localPresetCache = null
+export async function localPresets(load = null) {
+  if (localPresetCache) return localPresetCache
+  if (!(await localSupported(load))) return null
+  const mod = impls?.local || (await _selectProvider('local', load ? () => load('local') : null))
+  localPresetCache = await mod.listModels()
+  return localPresetCache
 }
 
 // Whether an on-device provider exists in this image. Distinct from

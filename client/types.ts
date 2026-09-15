@@ -205,6 +205,9 @@ export interface SettingsResponse {
   // Whether this image could serve a role on-device at all — false on lite,
   // where there is no on-device provider to switch back to.
   localSupported: boolean
+  // On-device presets with sizes, present even while an endpoint serves every
+  // role — `presets` reports the endpoint's catalogue then. null on lite.
+  localPresets: { llm: ModelPreset[]; embed: ModelPreset[]; vision: ModelPreset[] } | null
 }
 
 // One entry in the model download cache — a weights file, or a companion-set
