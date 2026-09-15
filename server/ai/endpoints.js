@@ -12,6 +12,13 @@
 // one — so the installer reads this to decide whether a provider can run on the
 // lite image or needs the full one, where the embedding role stays on-device.
 //
+// Every entry here currently serves embeddings, and that is the point: a tile
+// on the first-run screen is a recommendation, and recommending an endpoint
+// that cannot do half the job is not one. Chat-only services still work — by
+// --endpoint, or STASH_AI_BASE_URL, or by typing the model names in Settings —
+// they are just not offered as a one-click answer. The field stays because
+// resolveRoleProviders still has to handle an endpoint configured that way.
+//
 // It is a claim about somebody else's product, so check it rather than assume,
 // and check the RIGHT list: a provider's chat-model catalogue says nothing
 // about whether it serves embeddings. OpenRouter was wrong here for exactly
@@ -33,24 +40,6 @@ export const ENDPOINTS = [
     servesEmbeddings: true,
     note: 'Needs API credit — a ChatGPT subscription is a different thing.',
     defaults: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small', vision: 'gpt-4o-mini' },
-  },
-  {
-    id: 'ollama-cloud',
-    label: 'Ollama Cloud',
-    baseUrl: 'https://ollama.com/v1',
-    needsKey: true,
-    servesEmbeddings: false,
-    note: 'Serves no embeddings, so search by meaning needs a model on your machine.',
-    defaults: { llm: 'gpt-oss:120b', embed: '', vision: '' },
-  },
-  {
-    id: 'groq',
-    label: 'Groq',
-    baseUrl: 'https://api.groq.com/openai/v1',
-    needsKey: true,
-    servesEmbeddings: false,
-    note: 'Very fast, and serves no embeddings.',
-    defaults: { llm: 'llama-3.3-70b-versatile', embed: '', vision: '' },
   },
   {
     id: 'openrouter',
@@ -77,15 +66,6 @@ export const ENDPOINTS = [
     servesEmbeddings: true,
     note: 'Nothing leaves your machine, and you manage the models in Ollama.',
     defaults: { llm: 'llama3.2:3b', embed: 'nomic-embed-text', vision: 'llama3.2-vision' },
-  },
-  {
-    id: 'other',
-    label: 'Something else',
-    baseUrl: '',
-    needsKey: false,
-    servesEmbeddings: true,
-    note: 'Any OpenAI-compatible endpoint — llama.cpp server, vLLM, LM Studio.',
-    defaults: { llm: '', embed: '', vision: '' },
   },
 ]
 

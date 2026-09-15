@@ -131,26 +131,26 @@ choose_setup() {
   esac
 
   printf '\n  Which one?\n\n' > /dev/tty
-  printf '    1) OpenAI        — full search\n' > /dev/tty
-  printf '    2) OpenRouter    — full search, many models behind one key\n' > /dev/tty
-  printf '    3) Ollama Cloud  — chat only; keeps a small search model here\n' > /dev/tty
-  printf '    4) Groq          — same\n' > /dev/tty
-  printf '    5) Something else\n\n' > /dev/tty
+  printf '    1) OpenAI\n' > /dev/tty
+  printf '    2) OpenRouter — many models behind one key\n\n' > /dev/tty
   which=$(ask '  > ')
 
-  # The image follows from whether the provider serves embeddings, which is the
-  # whole reason this is asked in a terminal rather than in the browser. A
-  # chat-only provider keeps the embedding model on this machine, and that
-  # needs the full image; only a provider that serves embeddings can run lite.
-  # Anything unrecognised gets the full image — the answer that always works.
+  # Both offered services serve embeddings, so both run on the lite image and
+  # nothing downloads. That was not always true — the menu used to carry
+  # chat-only services, which cannot do semantic search and so needed the full
+  # image to keep an embedding model here. Offering only endpoints that can do
+  # the whole job is what collapsed that branch.
+  #
+  # An unrecognised answer still takes the on-machine path rather than guessing
+  # a provider: it needs nothing from the user and always works. Anything else
+  # is reachable with --endpoint.
   case $which in
-    1) PROVIDER=openai;       TAG=lite ;;
-    2) PROVIDER=openrouter;   TAG=lite ;;
-    3) PROVIDER=ollama-cloud ;;
-    4) PROVIDER=groq ;;
-    *) PROVIDER=other ;;
+    1) PROVIDER=openai ;;
+    2) PROVIDER=openrouter ;;
+    *) PROVIDER=local; return 0 ;;
   esac
-  [ "$TAG" = lite ] && LITE=1
+  LITE=1
+  TAG=lite
   return 0
 }
 

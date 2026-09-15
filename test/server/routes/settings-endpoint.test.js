@@ -107,7 +107,7 @@ test('a malformed endpoint is refused and the working one survives', async () =>
   await initProvider('remote', {}, { load, localAvailable: false })
 
   const res = fakeRes()
-  await handleSaveEndpoint(fakeReq({ endpoint: { providerId: 'other', baseUrl: 'not a url' } }), res, { dir: d })
+  await handleSaveEndpoint(fakeReq({ endpoint: { providerId: null, baseUrl: 'not a url' } }), res, { dir: d })
   assert.equal(res.statusCode, 400)
   assert.deepEqual(readCredentials(d), { baseUrl: A, apiKey: 'good', providerId: null }, 'the old one is untouched')
 })

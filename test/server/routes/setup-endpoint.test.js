@@ -182,14 +182,17 @@ test('a provider that serves embeddings takes the embedding role too', async () 
   assert.equal(settings.getRemote().embed, 'text-embedding-3-small')
 })
 
-test('a chat-only provider leaves the embedding role on this machine', async () => {
+// Not a catalogue entry — the offered providers all serve embeddings now. This
+// is the endpoint someone points at themselves with --endpoint or
+// STASH_AI_BASE_URL, where naming no embedding model is the whole signal.
+test('an endpoint with no embedding model named leaves that role on this machine', async () => {
   const d = dir()
   await initProvider('local', {}, { load, localAvailable: true })
   const res = fakeRes()
   await handleSetupEndpoint(
     fakeReq({
-      endpoint: { providerId: 'ollama-cloud', baseUrl: ENDPOINT, apiKey: 'sk-e' },
-      models: { llm: 'gpt-oss:120b', embed: '', vision: '' },
+      endpoint: { providerId: null, baseUrl: ENDPOINT, apiKey: 'sk-e' },
+      models: { llm: 'some-chat-model', embed: '', vision: '' },
     }),
     res,
     { dir: d },

@@ -71,11 +71,8 @@ and opens the browser.
 
   Which one?
 
-    1) OpenAI        — full search
-    2) OpenRouter    — full search, many models behind one key
-    3) Ollama Cloud  — chat only; keeps a small search model here
-    4) Groq          — same
-    5) Something else
+    1) OpenAI
+    2) OpenRouter — many models behind one key
   > 1
 
   Pulling ghcr.io/ibrahimtareq/kothai:lite — this is the slow part.
@@ -86,9 +83,12 @@ Paste your key in the browser, press Start. That's the whole setup — the model
 names are filled in for you and the key never touches your shell history.
 
 Those two questions exist because they pick the image, which is the one choice
-that cannot be made later: a service that serves no embeddings keeps a small
-search model on your machine, and that needs the bigger image. Everything else
-is a screen in the app.
+that cannot be made later. Everything else is a screen in the app.
+
+Both services on that second list do the whole job — chat, images and search by
+meaning — so either way nothing downloads. Anything else you want to point at,
+including a chat-only service or your own server, is `--endpoint URL` or
+`STASH_AI_BASE_URL`; see [Bring your own AI](#bring-your-own-ai--lighter).
 
 `--lite`, `--local`, `--endpoint URL`, `--port N`, `--dir PATH`, `--password …`
 answer up front and skip the questions entirely; `--help` lists them. With no
@@ -120,11 +120,12 @@ docker run -d --name kothai -p 5173:5173 -v ./data:/app/data \
 Open <http://localhost:5173>, pick your provider, paste the key. 475 MB, about
 300 MB of RAM.
 
-One catch decides which image you want. Several hosted chat services — Ollama
-Cloud, Groq, Anthropic — serve no embeddings at all, and embeddings are what
-make search work by meaning rather than by exact words. With one of those, use
-the full image instead and Kothai keeps a small (~300 MB) embedding model on
-your machine while the language and vision work goes out:
+One catch decides which image you want, and it only matters for endpoints the
+installer does not offer. Several hosted chat services — Ollama Cloud, Groq,
+Anthropic — serve no embeddings at all, and embeddings are what make search work
+by meaning rather than by exact words. Point at one of those and you want the
+full image, where Kothai keeps a small (~300 MB) embedding model on your machine
+while the language and vision work goes out:
 
 ```bash
 docker run -d --name kothai -p 5173:5173 -v ./data:/app/data -v ./models:/app/models \
@@ -132,8 +133,15 @@ docker run -d --name kothai -p 5173:5173 -v ./data:/app/data -v ./models:/app/mo
 ```
 
 OpenAI, OpenRouter, a self-hosted Ollama, llama.cpp server and vLLM all serve
-embeddings, so `:lite` is enough for those. The installer picks correctly for
-you.
+embeddings, so `:lite` is enough for those — which is why the installer offers
+only endpoints of that kind, and picks the image for you.
+
+For anything else, name it yourself:
+
+```bash
+curl -fsSL https://ibrahimtareq.github.io/kothai/install.sh | sh -s -- \
+  --endpoint https://api.groq.com/openai/v1 --key …
+```
 
 You can still set the endpoint with environment variables rather than in the
 browser — `STASH_AI_PROVIDER=remote`, `STASH_AI_BASE_URL`, `STASH_AI_API_KEY` —
