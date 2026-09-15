@@ -3,13 +3,12 @@
    sheets so those can still override.
 
    .btn is the canonical button. New code should use .btn plus a modifier and
-   nothing else. The legacy per-view names (.row-btn, .spaces-new-btn, …) are
-   grouped into these rules rather than redefining them, so a change here
-   reaches every button in the app — that is the whole point of the file. */
+   nothing else. The one surviving legacy per-view name (.spaces-new-btn) is
+   grouped into these rules rather than redefined, so a change here reaches
+   every button in the app — that is the whole point of the file. */
 
 /* ── button ───────────────────────────────────────────────────────────────── */
 .btn,
-.row-btn,
 .spaces-new-btn{
   display:inline-flex;align-items:center;justify-content:center;gap:var(--space-8);
   padding:var(--space-8) var(--space-14);
@@ -20,17 +19,18 @@
   transition:var(--dur-fast);
 }
 .btn:hover:not(:disabled):not([aria-disabled="true"]),
-.row-btn:hover:not(:disabled):not([aria-disabled="true"]),
 .spaces-new-btn:hover{border-color:var(--line-hover)}
 .btn:focus-visible,
-.row-btn:focus-visible,
 .spaces-new-btn:focus-visible{border-color:var(--ink)}
-.btn:disabled,
-.row-btn:disabled{color:var(--ink-faint);cursor:default}
+.btn:disabled{color:var(--ink-faint);cursor:default}
 
 /* filled — the primary action. Follows a custom --accent tint. */
 .btn--solid{background:var(--accent);color:var(--on-accent);border-color:transparent}
 .btn--solid:hover:not(:disabled){background:var(--accent-hover)}
+/* .btn:disabled's ink-faint text assumes the neutral --panel-2 fill underneath
+   it — against --solid's own dark --accent fill that text nearly vanishes.
+   Drop the fill instead, matching how .danger-go/.retag-go handle disabled. */
+.btn--solid:disabled{background:none;border-color:var(--line);color:var(--ink-faint)}
 
 /* ghost — chrome that should recede until touched */
 .btn--ghost{background:transparent;border-color:transparent;color:var(--ink-mute)}

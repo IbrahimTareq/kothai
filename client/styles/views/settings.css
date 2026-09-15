@@ -84,10 +84,7 @@
 .onboarding-foot{display:flex;align-items:center;justify-content:space-between;gap:var(--space-16);margin-top:var(--space-22)}
 .onboarding-size{font-family:var(--font-mono);font-size:var(--text-2xs);color:var(--ink-faint);
   letter-spacing:var(--tracking-mono)}
-.onboarding-start{margin-left:auto;padding:var(--space-12) var(--space-20);cursor:pointer;background:var(--ink);
-  color:var(--bg);border:0;border-radius:var(--radius-lg);font-size:var(--text-sm);
-  letter-spacing:var(--tracking-tight);transition:var(--dur-fast)}
-.onboarding-start:hover{opacity:.86}
+.onboarding-foot .btn{margin-left:auto}
 .onboarding-progress{display:flex;flex-direction:column;gap:var(--space-14);align-items:center;
   padding:var(--space-36) 0 var(--space-10)}
 .onboarding-progress .settings-progress-track{width:100%;max-width:360px}
@@ -161,16 +158,12 @@
    the destructive action reads as one row rather than restyling the list. */
 .settings-row[data-danger] .settings-row-title { color: var(--danger); }
 
-/* The one control shape every row uses — link, button, or file-picker label. */
-.row-btn.danger { color: var(--danger); }
-.row-btn.danger:hover { border-color: var(--danger); }
-
 /* Import: the whole row is the drop target, the button is the picker. The
    affordance is the hint line under the button plus the highlight below — no
    resting outline, so the import rows still read as part of the settings list
    rather than as cut-out upload boxes. */
 .settings-row[data-drag] { background: var(--panel-2); }
-.settings-row[data-drag] .row-btn { border-color: var(--ink-faint); }
+.settings-row[data-drag] .btn { border-color: var(--ink-faint); }
 /* Sits under the picker so the row states its second, less obvious entry point
    without the description having to spend a sentence on it. Hidden mid-drag,
    where the button itself already says "Drop to import". */
@@ -199,9 +192,9 @@
    and fills the row it now has to itself. */
 @media (max-width: 560px) {
   .settings-row-head { flex-direction: column; align-items: stretch; gap: var(--space-12); }
-  .settings-row-action .row-btn { width: 100%; }
+  .settings-row-action .btn { width: 100%; }
   .import-hint { text-align: center; }
-  /* The theme switch is a segmented control, not a .row-btn, so it kept its
+  /* The theme switch is a segmented control, not a .btn, so it kept its
      content width and sat short beside the full-width buttons above it. The
      trough spans, and its pills split what it spans. */
   .settings-row-action .seg { width: 100%; }

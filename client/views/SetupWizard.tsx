@@ -83,7 +83,7 @@ export function SetupWizard({
 
         <footer className="onboarding-foot">
           <span className="onboarding-size mono"></span>
-          <button className="onboarding-start" onClick={() => choice && onConnected(choice)} disabled={!choice}>
+          <button className="btn btn--solid btn--lg" onClick={() => choice && onConnected(choice)} disabled={!choice}>
             Continue
           </button>
         </footer>

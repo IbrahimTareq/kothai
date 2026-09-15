@@ -203,7 +203,7 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
                   <span className="onboarding-size mono">
                     {!noneLocal && upfrontBytes ? `Initial download ≈ ${fmtGB(upfrontBytes)}` : ''}
                   </span>
-                  <button className="onboarding-start" onClick={start}>
+                  <button className="btn btn--solid btn--lg" onClick={start}>
                     {noneLocal ? 'Save & start' : <>Download &amp; start</>}
                   </button>
                 </footer>

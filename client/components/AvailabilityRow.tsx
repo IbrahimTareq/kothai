@@ -71,14 +71,14 @@ export function AvailabilityRow() {
   return (
     <SettingsRow title="Unavailable content"
       desc={<>Check saved links and mark the ones whose content has been deleted, so you can clear them out. Only <b>TikTok</b> links can be verified — Instagram gives no reliable way to ask, and guessing there would mean deleting posts that are merely private or rate-limited. Nothing is removed until you say so.</>}
-      action={<button className="row-btn" onClick={run} disabled={scanning || removing}>{scanning ? 'Checking…' : 'Check links'}</button>}>
+      action={<button className="btn" onClick={run} disabled={scanning || removing}>{scanning ? 'Checking…' : 'Check links'}</button>}>
       {scan && (
         <div className="settings-row-extra">
           <div className={scan.aborted ? 'import-error' : 'import-result'} role="status" aria-live="polite">
             <div>{summary(scan)}</div>
             {!scan.aborted && scan.unavailable > 0 && !armed && (
               <div className="avail-actions">
-                <button className="row-btn danger" onClick={() => { setArmed(true); setError(null) }} disabled={removing}>
+                <button className="btn btn--danger" onClick={() => { setArmed(true); setError(null) }} disabled={removing}>
                   Remove {scan.unavailable} unavailable item{scan.unavailable === 1 ? '' : 's'}…
                 </button>
               </div>

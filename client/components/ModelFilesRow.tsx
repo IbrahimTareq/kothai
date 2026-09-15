@@ -53,7 +53,7 @@ export function ModelFilesRow() {
     <SettingsRow title="Downloaded models"
       desc={<>Model weights are downloaded once and kept. Switching a model leaves the old files behind, and erasing your data doesn't touch them — this is where that space goes. Anything you delete downloads again the next time you pick it.</>}
       action={data && (
-        <button className="row-btn" onClick={() => { setOpen(!open); setError(null) }} aria-expanded={open}>
+        <button className="btn" onClick={() => { setOpen(!open); setError(null) }} aria-expanded={open}>
           {open ? 'Hide files' : 'Manage files'}
         </button>
       )}>
@@ -88,7 +88,7 @@ export function ModelFilesRow() {
                       </span>
                     )
                     : (
-                      <button className="row-btn danger mf-delete" onClick={() => { setPending(f.name); setError(null); setFreed(null) }}>
+                      <button className="btn btn--danger mf-delete" onClick={() => { setPending(f.name); setError(null); setFreed(null) }}>
                         Delete
                       </button>
                     )}

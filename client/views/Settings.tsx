@@ -382,18 +382,18 @@ export function SettingsView({ vault, theme, setTheme }: {
               <div className="settings-rows">
                 <SettingsRow title="Export"
                   desc={<>Everything you've saved — notes, spaces, chats, and settings — as one JSON file. Good for backups or moving to a new install.</>}
-                  action={<a className="row-btn" href="/api/export" download>Download export</a>} />
+                  action={<a className="btn" href="/api/export" download>Download export</a>} />
 
                 <SettingsRow title="Backup"
                   desc={<>A snapshot of the database itself, exactly as stored, safe to download while Kothai is running. Images you pasted or dropped live outside the database, so keep a copy of <code>data/uploads</code> alongside it.</>}
-                  action={<a className="row-btn" href="/api/backup" download>Download backup</a>} />
+                  action={<a className="btn" href="/api/backup" download>Download backup</a>} />
 
                 <AvailabilityRow />
 
                 <SettingsRow title="Re-tag everything"
                   desc={<>Re-run the language model over every saved note, so titles, summaries and tags are rebuilt from everything a note carries now. Worth doing after a big import or after switching language models. Tags you've edited by hand are kept, and it runs in the background.</>}
                   action={!retagArmed && (
-                    <button className="row-btn" onClick={() => { setRetagArmed(true); setRetagError(null); setRetagQueued(null) }} disabled={retagging}>
+                    <button className="btn" onClick={() => { setRetagArmed(true); setRetagError(null); setRetagQueued(null) }} disabled={retagging}>
                       Re-tag all notes…
                     </button>
                   )}>
@@ -431,7 +431,7 @@ export function SettingsView({ vault, theme, setTheme }: {
                 <SettingsRow danger title="Erase all data"
                   desc={<>Erase everything you've saved — notes, spaces, chats, tags, and uploaded images. Your models and settings stay as they are. <b>This cannot be undone</b>, so download an export first if there's any doubt.</>}
                   action={!wipeArmed && (
-                    <button className="row-btn danger" onClick={() => { setWipeArmed(true); setWipeError(null); setWipeResult(null) }}>
+                    <button className="btn btn--danger" onClick={() => { setWipeArmed(true); setWipeError(null); setWipeResult(null) }}>
                       Erase all data…
                     </button>
                   )}>

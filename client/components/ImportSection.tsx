@@ -136,7 +136,7 @@ function ImportSourceRow({ source }: { source: ImportSource }) {
       data-drag={dragging || undefined}
       onDragEnter={onDragEnter} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
       action={
-        <label className="row-btn import-pick" aria-disabled={importing}>
+        <label className="btn import-pick" aria-disabled={importing}>
           <input type="file" multiple accept={source.accept} disabled={importing} onChange={onFileChange} />
           <span aria-live="polite">
             {importing ? 'Importing…' : dragging ? 'Drop to import' : 'Choose files'}
