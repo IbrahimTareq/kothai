@@ -30,13 +30,6 @@ export function findButtonChrome (css) {
     const selector = m[1].replace(COMMENT, '').trim().replace(/\s+/g, ' ')
     if (!selector || selector.startsWith('@')) continue
 
-    // Exclude list/menu items and options: these are clickable but not button boxes.
-    if (/\b(?:row|item|opt|option)\b/i.test(selector)) continue
-
-    // Exclude controls with zero padding on all sides: these are minimal icon buttons.
-    // Only exclude if padding is literally "padding: 0" with nothing after (no spacing values).
-    if (/padding\s*:\s*0\s*(?:;|$)/.test(body)) continue
-
     found.push({
       selector,
       line: css.slice(0, m.index + m[1].length - m[1].trimStart().length).split('\n').length,
