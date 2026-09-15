@@ -67,7 +67,7 @@ test('an endpoint posted at first run is stored and takes effect immediately', a
     { dir: d },
   )
   assert.equal(res.statusCode, 200)
-  assert.deepEqual(readCredentials(d), { baseUrl: ENDPOINT, apiKey: 'sk-wizard' })
+  assert.deepEqual(readCredentials(d), { baseUrl: ENDPOINT, apiKey: 'sk-wizard', providerId: 'openai' })
   assert.equal(getAiConfig().provider, 'remote', 'the running process must be remote now')
 })
 
@@ -128,7 +128,7 @@ test('applying an endpoint mid-first-run does not mark the install configured', 
     { dir: d },
   )
   assert.equal(res.statusCode, 200)
-  assert.deepEqual(readCredentials(d), { baseUrl: ENDPOINT, apiKey: 'sk-mid' })
+  assert.deepEqual(readCredentials(d), { baseUrl: ENDPOINT, apiKey: 'sk-mid', providerId: 'openai' })
   assert.equal(settings.isConfigured(), false, 'first run must still be open')
 })
 

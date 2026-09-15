@@ -56,7 +56,7 @@ test('the endpoint can be changed once first run is over', async () => {
   const res = fakeRes()
   await handleSaveEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: B, apiKey: 'new-key' } }), res, { dir: d })
   assert.equal(res.statusCode, 200)
-  assert.deepEqual(readCredentials(d), { baseUrl: B, apiKey: 'new-key' })
+  assert.deepEqual(readCredentials(d), { baseUrl: B, apiKey: 'new-key', providerId: 'openai' })
   assert.equal(getAiConfig().baseUrl, B, 'and the running process follows')
 })
 
@@ -68,7 +68,7 @@ test('rotating just the key keeps the endpoint', async () => {
   await initProvider('remote', {}, { load, localAvailable: false })
 
   await handleSaveEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: A, apiKey: 'rotated' } }), fakeRes(), { dir: d })
-  assert.deepEqual(readCredentials(d), { baseUrl: A, apiKey: 'rotated' })
+  assert.deepEqual(readCredentials(d), { baseUrl: A, apiKey: 'rotated', providerId: 'openai' })
 })
 
 test('disconnecting removes the credential and takes the roles back on-device', async () => {
@@ -109,7 +109,7 @@ test('a malformed endpoint is refused and the working one survives', async () =>
   const res = fakeRes()
   await handleSaveEndpoint(fakeReq({ endpoint: { providerId: 'other', baseUrl: 'not a url' } }), res, { dir: d })
   assert.equal(res.statusCode, 400)
-  assert.deepEqual(readCredentials(d), { baseUrl: A, apiKey: 'good' }, 'the old one is untouched')
+  assert.deepEqual(readCredentials(d), { baseUrl: A, apiKey: 'good', providerId: null }, 'the old one is untouched')
 })
 
 test('GET /api/settings says whether this image could run models locally', async () => {

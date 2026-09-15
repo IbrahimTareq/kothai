@@ -60,10 +60,11 @@ export const ENDPOINTS = [
     servesEmbeddings: true,
     note: 'One key, many models — including embeddings, so nothing runs here.',
     // Its embedding models are NOT in GET /v1/models, which lists chat models
-    // only; they live behind /v1/embeddings/models. So the embed dropdown will
-    // come up empty for this provider and fall back to offering everything —
-    // the pre-filled default below is what actually makes it work. Verify with:
+    // only; they live behind their own path, which the provider probes as well
+    // so the embedding field offers the thirty-odd real answers rather than
+    // four hundred wrong ones. Verify with:
     //   curl -s https://openrouter.ai/api/v1/embeddings/models | jq '.data[].id'
+    embeddingsPath: '/embeddings/models',
     defaults: { llm: 'openai/gpt-4o-mini', embed: 'openai/text-embedding-3-small', vision: 'openai/gpt-4o-mini' },
   },
   {

@@ -11,6 +11,7 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { getAiConfig } from '../../config.js'
+import { findEndpoint } from '../endpoints.js'
 import { FeatureDisabledError, ROLES } from '../roles.js'
 import { Circuit } from '../circuit.js'
 import { CLASSIFY_SCHEMA, DESCRIBE_IMAGE_PROMPT, classifySystemPrompt, classifyUserPrompt, answerSystemPrompt, answerUserPrompt, embedInput, clipToTokens } from '../prompts.js'
@@ -22,9 +23,15 @@ const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
 // Factory rather than module-level state so tests can drive several
 // independent instances against a throwaway server. The module's default
 // export set (bottom of file) is the singleton the facade resolves.
-export function createRemoteProvider({ baseUrl, apiKey, models }) {
+export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath = '' }) {
   const circuit = new Circuit({ threshold: 5, cooldownMs: 60_000 })
   let catalogue = []
+  // Some providers keep their embedding models out of /models entirely —
+  // OpenRouter lists hundreds of chat models there and not one embedding, and
+  // serves the real list from a path of its own. When the catalogue entry names
+  // that path, the embedding role gets its own list; otherwise it shares the
+  // one catalogue, which is what every other provider needs.
+  let embedCatalogue = []
   let probeError = ''
 
   const modelFor = (role) => (models?.[role] || '').trim()
@@ -68,13 +75,18 @@ export function createRemoteProvider({ baseUrl, apiKey, models }) {
       // Deliberately a warning, not a rejection: the catalogue can be stale
       // or unavailable, and saving settings must not depend on the endpoint
       // being up right now.
-      if (catalogue.length && !catalogue.includes(k)) return { ok: true, warning: `"${k}" is not listed by the endpoint — saving anyway.` }
+      // Checked against the list that actually covers this role, or the
+      // correct embedding id would be warned about for missing a chat list it
+      // was never going to be in.
+      const list = role === 'embed' && embedCatalogue.length ? embedCatalogue : catalogue
+      if (list.length && !list.includes(k)) return { ok: true, warning: `"${k}" is not listed by the endpoint — saving anyway.` }
       return { ok: true }
     },
 
     async listModels() {
-      const opts = catalogue.map((id) => ({ key: id, label: id, desc: '', best: [], sizeBytes: 0 }))
-      return { llm: opts, embed: opts, vision: opts }
+      const asOpts = (ids) => ids.map((id) => ({ key: id, label: id, desc: '', best: [], sizeBytes: 0 }))
+      const opts = asOpts(catalogue)
+      return { llm: opts, embed: embedCatalogue.length ? asOpts(embedCatalogue) : opts, vision: opts }
     },
 
     // One probe, best-effort. A failure here is reported in the status
@@ -89,6 +101,17 @@ export function createRemoteProvider({ baseUrl, apiKey, models }) {
         catalogue = (res?.data || []).map((m) => m.id).filter(Boolean)
         probeError = ''
         circuit.recordSuccess()
+        // Best-effort and deliberately after the success bookkeeping above: a
+        // provider that answers /models is up, and failing to fetch a nicety
+        // must not mark it down or cost the chat roles anything.
+        if (embeddingsPath) {
+          try {
+            const em = await getJson(baseUrl, embeddingsPath, { apiKey, timeoutMs: TIMEOUTS.probe, retries: 0 })
+            embedCatalogue = (em?.data || []).map((m) => m.id).filter(Boolean)
+          } catch {
+            embedCatalogue = []
+          }
+        }
       } catch (e) {
         probeError = e.message
         circuit.recordFailure({ transient: e.transient !== false, message: e.message, retryAfterMs: e.retryAfterMs || 0 })
@@ -246,10 +269,12 @@ export const shutdown = async () => { if (singleton) await singleton.shutdown() 
 function boot(models) {
   // Read at boot, not at import: this is what makes re-pointing the endpoint a
   // matter of calling init() again rather than restarting the container.
-  const { baseUrl, apiKey } = getAiConfig()
+  const { baseUrl, apiKey, providerId } = getAiConfig()
   singleton = createRemoteProvider({
     baseUrl,
     apiKey,
+    // Per-provider quirks live in the catalogue, not in this transport.
+    embeddingsPath: findEndpoint(providerId)?.embeddingsPath || '',
     models: { llm: models.llm || '', embed: models.embed || '', vision: models.vision || '' },
   })
   return singleton

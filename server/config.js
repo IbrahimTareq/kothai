@@ -75,11 +75,13 @@ export const PASSWORD = config.PASSWORD
 // its owner never pointed it.
 export function resolveAiConfig(env = process.env, creds = null) {
   const strip = (u) => u.replace(/\/+$/, '')
+  // providerId only ever comes from the file: an operator setting an endpoint
+  // by environment variable is naming a URL, not picking a catalogue entry.
   const source = env.STASH_AI_BASE_URL
-    ? { baseUrl: strip(env.STASH_AI_BASE_URL), apiKey: env.STASH_AI_API_KEY || null }
+    ? { baseUrl: strip(env.STASH_AI_BASE_URL), apiKey: env.STASH_AI_API_KEY || null, providerId: null }
     : creds?.baseUrl
-      ? { baseUrl: strip(creds.baseUrl), apiKey: creds.apiKey || null }
-      : { baseUrl: null, apiKey: null }
+      ? { baseUrl: strip(creds.baseUrl), apiKey: creds.apiKey || null, providerId: creds.providerId || null }
+      : { baseUrl: null, apiKey: null, providerId: null }
   // An endpoint from either source implies remote. STASH_AI_PROVIDER=remote
   // with no URL stays remote too — that is the lite image's default, and it
   // produces the "set a base URL" state rather than a crash.

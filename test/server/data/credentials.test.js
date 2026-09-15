@@ -13,7 +13,9 @@ const dir = () => mkdtempSync(path.join(tmpdir(), 'kothai-creds-'))
 test('round-trips a base URL and key', () => {
   const d = dir()
   writeCredentials({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-test' }, d)
-  assert.deepEqual(readCredentials(d), { baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-test' })
+  // providerId rides along so the provider can look up its own quirks later
+  // (a separate embeddings catalogue, say) — see server/ai/endpoints.js.
+  assert.deepEqual(readCredentials(d), { baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-test', providerId: null })
 })
 
 test('the file is 0600, even when overwriting a permissive one', () => {

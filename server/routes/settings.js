@@ -132,7 +132,10 @@ async function applyEndpointFromSetup(endpoint, dir, models = null) {
     return { error: 'That does not look like a URL.' }
   }
   const apiKey = typeof endpoint.apiKey === 'string' && endpoint.apiKey.trim() ? endpoint.apiKey.trim() : null
-  const creds = dir ? writeCredentials({ baseUrl, apiKey }, dir) : writeCredentials({ baseUrl, apiKey })
+  const providerId = typeof endpoint.providerId === 'string' ? endpoint.providerId : null
+  const creds = dir
+    ? writeCredentials({ baseUrl, apiKey, providerId }, dir)
+    : writeCredentials({ baseUrl, apiKey, providerId })
   setAiCredentials(creds)
 
   // Seed the endpoint's model names BEFORE reconfiguring. Which provider serves

@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { resolveAiConfig } from '../../server/config.js'
 
 test('nothing configured anywhere is the local provider', () => {
-  assert.deepEqual(resolveAiConfig({}, null), { baseUrl: null, apiKey: null, provider: 'local' })
+  assert.deepEqual(resolveAiConfig({}, null), { baseUrl: null, apiKey: null, providerId: null, provider: 'local' })
 })
 
 test('env alone works exactly as it did before the credential file existed', () => {
