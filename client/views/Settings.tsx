@@ -13,6 +13,7 @@ import { useState, useEffect } from 'react'
 import { Icon } from '../components/icons'
 import { RoleAccordion, RemoteModelField, ROLE_META, fmtGB, type Role } from '../components/ModelPicker'
 import { SettingsGroup, SettingsRow } from '../components/SettingsRow'
+import { EndpointPicker, type EndpointChoice } from '../components/EndpointPicker'
 import { ImportSection } from '../components/ImportSection'
 import { AvailabilityRow } from '../components/AvailabilityRow'
 import { ModelFilesRow } from '../components/ModelFilesRow'
@@ -42,6 +43,13 @@ export function SettingsView({ vault, theme, setTheme }: {
   const [wiping, setWiping] = useState(false)
   const [wipeResult, setWipeResult] = useState<Awaited<ReturnType<typeof API.wipeAll>> | null>(null)
   const [wipeError, setWipeError] = useState<string | null>(null)
+  // Connection panel: collapsed until asked for, because most people set this
+  // once and never look at it again.
+  const [editingConn, setEditingConn] = useState(false)
+  const [connChoice, setConnChoice] = useState<EndpointChoice | null>(null)
+  const [connBusy, setConnBusy] = useState(false)
+  const [connErr, setConnErr] = useState<string | null>(null)
+  const [disarmed, setDisarmed] = useState(true)
 
   useEffect(() => { API.settings().then(setCfg).catch(() => {}) }, [])
   useEffect(() => { API.status().then((s) => setNoteCount(s.count)).catch(() => {}) }, [])
@@ -60,6 +68,39 @@ export function SettingsView({ vault, theme, setTheme }: {
       API.settings().then(setCfg).catch(() => {}) // revert to server truth
     }
     setBusyRole(null)
+  }
+
+  const saveEndpoint = async () => {
+    if (!connChoice || connBusy) return
+    setConnBusy(true)
+    setConnErr(null)
+    try {
+      await API.saveEndpoint(
+        { providerId: connChoice.providerId, baseUrl: connChoice.baseUrl, apiKey: connChoice.apiKey },
+        connChoice.defaults,
+      )
+      setCfg(await API.settings())
+      setEditingConn(false)
+      setConnChoice(null)
+    } catch (e) {
+      setConnErr((e as Error).message || 'Could not save that endpoint.')
+    }
+    setConnBusy(false)
+  }
+
+  const disconnect = async () => {
+    if (connBusy) return
+    setConnBusy(true)
+    setConnErr(null)
+    try {
+      await API.clearEndpoint()
+      setCfg(await API.settings())
+      setEditingConn(false)
+      setDisarmed(true)
+    } catch (e) {
+      setConnErr((e as Error).message || 'Could not disconnect.')
+    }
+    setConnBusy(false)
   }
 
   const pickRemote = async (role: Role, name: string) => {
@@ -203,6 +244,72 @@ export function SettingsView({ vault, theme, setTheme }: {
       {!cfg
         ? <div className="settings-loading mono">LOADING…</div>
         : <div className="settings-body">
+            <SettingsGroup label="CONNECTION">
+              <div className="conn">
+                <div className="conn-state">
+                  <span className="conn-where mono">
+                    {cfg.endpoint.configured
+                      ? cfg.endpoint.host || 'a remote endpoint'
+                      : 'Models run on this machine'}
+                  </span>
+                  <span className="conn-sub">
+                    {cfg.endpoint.configured
+                      ? 'Your key is stored on this machine only, and never appears in a backup or an export.'
+                      : cfg.localSupported
+                        ? 'Nothing leaves the box. Connect a service to stop hosting models yourself.'
+                        : 'This is the lite image, which runs no models itself — it needs a service.'}
+                  </span>
+                </div>
+                {!editingConn && (
+                  <div className="conn-actions">
+                    <button className="conn-btn mono" onClick={() => { setEditingConn(true); setConnErr(null) }}>
+                      {cfg.endpoint.configured ? 'Change' : 'Connect a service'}
+                    </button>
+                    {cfg.endpoint.configured && cfg.localSupported && (
+                      <button
+                        className={'conn-btn mono' + (disarmed ? '' : ' armed')}
+                        disabled={connBusy}
+                        onClick={() => (disarmed ? setDisarmed(false) : disconnect())}
+                      >
+                        {disarmed ? 'Disconnect' : 'Sure? Models move back here'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {connErr && <div className="conn-err mono">{connErr}</div>}
+
+              {editingConn && (
+                <div className="conn-edit">
+                  <EndpointPicker
+                    endpoints={cfg.endpoints}
+                    keyPlaceholder={cfg.endpoint.configured ? 'paste a new key' : 'paste it here'}
+                    onChange={setConnChoice}
+                  />
+                  {/* Only when the change would move the embedding role: the
+                      whole library is re-embedded in the background, and a
+                      warning on every endpoint edit would be noise. */}
+                  {connChoice && cfg.capabilities.roles.embed === 'local'
+                    && Boolean(connChoice.defaults.embed) && (
+                    <p className="conn-warn">
+                      This service serves embeddings, so search moves to it and every note is re-indexed
+                      in the background. Search keeps working while that runs.
+                    </p>
+                  )}
+                  <div className="conn-actions">
+                    <button className="conn-btn primary mono" disabled={!connChoice || connBusy} onClick={saveEndpoint}>
+                      {connBusy ? 'Saving…' : 'Save'}
+                    </button>
+                    <button className="conn-btn mono" disabled={connBusy}
+                      onClick={() => { setEditingConn(false); setConnChoice(null); setConnErr(null) }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </SettingsGroup>
+
             <SettingsGroup label="MODEL CORES"
               sub={roles.some(isRemote)
                 // Named by the same titles the accordions below carry, so the

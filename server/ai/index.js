@@ -23,6 +23,11 @@ export { normaliseClassification, isJunkTag, heuristicType, deriveTitle, isLikel
 let impls = null
 // { llm, embed, vision } → provider kind.
 let byRole = null
+// Memoised answer to "could this image serve a role on-device at all?" — the
+// lite image cannot, and Settings needs to know before offering to switch back
+// to local models. Probed lazily rather than at boot, because loading the
+// on-device stack into a process that may never call it is pure cost.
+let localProbe = null
 
 function ready() {
   if (!impls) throw new Error('AI provider not initialised — initProvider() must run before this call')
@@ -79,6 +84,16 @@ export async function _localAvailable(load = null) {
 export function _reset() {
   impls = null
   byRole = null
+  localProbe = null
+}
+
+// Whether an on-device provider exists in this image. Distinct from
+// capabilities().roles, which says who serves a role RIGHT NOW: an install with
+// every role on an endpoint still reports true here if it could take them back.
+export async function localSupported(load = null) {
+  if (impls?.local) return true
+  if (localProbe === null) localProbe = await _localAvailable(load)
+  return localProbe
 }
 
 // `opts` exists for tests: `load(kind)` swaps in fakes, and the two resolution

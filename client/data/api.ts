@@ -279,6 +279,26 @@ export const API = {
       }),
     )
   },
+  // Change the endpoint AFTER first run — a rotated key, or a different
+  // service. Distinct from applyEndpoint, which only works while first run is
+  // still open.
+  async saveEndpoint(
+    endpoint: EndpointPatch,
+    models?: Partial<Record<'llm' | 'embed' | 'vision', string>>,
+  ): Promise<{ ok: boolean }> {
+    return await _json(
+      await fetch('/api/settings/endpoint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint, models }),
+      }),
+    )
+  },
+  // Forget the credential and take every role back on-device. The endpoint's
+  // model names are kept, so reconnecting the same service is one paste.
+  async clearEndpoint(): Promise<{ ok: boolean }> {
+    return await _json(await fetch('/api/settings/endpoint', { method: 'DELETE' }))
+  },
   async setup(
     patch: (SettingsPatch & { endpoint?: EndpointPatch }) | { skip: true },
   ): Promise<{ ok: boolean; current: SettingsPatch }> {

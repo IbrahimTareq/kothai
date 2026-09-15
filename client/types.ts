@@ -202,6 +202,9 @@ export interface SettingsResponse {
   // Which provider the installer already asked about — an id from `endpoints`,
   // 'local', or null when the install did not go through the installer.
   setup: { providerId: string | null }
+  // Whether this image could serve a role on-device at all — false on lite,
+  // where there is no on-device provider to switch back to.
+  localSupported: boolean
 }
 
 // One entry in the model download cache — a weights file, or a companion-set

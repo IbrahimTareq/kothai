@@ -8,7 +8,7 @@ import { backlogCount } from '../ai/backlog.js'
 import { isInstagramPost } from '../ai/meta.js'
 import { json, readBody } from '../lib/http.js'
 import { getAiConfig, setAiCredentials, SETUP_PROVIDER } from '../config.js'
-import { writeCredentials } from '../data/credentials.js'
+import { writeCredentials, clearCredentials } from '../data/credentials.js'
 import { ENDPOINTS } from '../ai/endpoints.js'
 
 // A provider with nothing to download has nothing to CONSENT to — but it still
@@ -69,6 +69,10 @@ export async function handleGetSettings(res) {
     endpoints: ENDPOINTS,
     // What the installer already asked. An id only; null when nobody asked.
     setup: { providerId: SETUP_PROVIDER },
+    // Whether this image COULD run models on-device — false on lite, where
+    // @qvac/sdk is absent. Settings offers "run on this machine" only when it
+    // is true, rather than offering a switch that cannot work.
+    localSupported: await ai.localSupported(),
   })
 }
 
@@ -227,6 +231,33 @@ export async function handleSetup(req, res, opts = {}) {
     if (residency.embed !== 'off') await tagvocab.rebuildFromNotes(store.allNotes())
   })
   json(res, 200, { ok: true, current })
+}
+
+// ---- changing the endpoint after first run --------------------------------
+// The setup route above refuses once first run is over, which is right for
+// setup and wrong for everything after it: keys get rotated, trials end, and
+// services get swapped. Without these two, the only way to change any of that
+// was to recreate the container — the exact thing the credential store exists
+// to avoid.
+export async function handleSaveEndpoint(req, res, opts = {}) {
+  const body = await readBody(req)
+  if (!body.endpoint) return json(res, 400, { error: 'an endpoint is required' })
+  const { error } = await applyEndpointFromSetup(body.endpoint, opts.dir, body.models)
+  if (error) return json(res, 400, { error })
+  json(res, 200, { ok: true, capabilities: ai.capabilities(), endpoint: endpointInfo() })
+}
+
+// Disconnect: forget the credential and take every role back on-device.
+//
+// The endpoint's model names are deliberately kept. They cost nothing while
+// unused, and keeping them means reconnecting the same service later does not
+// mean typing three ids again. What does NOT survive is the key.
+export async function handleClearEndpoint(res, opts = {}) {
+  if (opts.dir) clearCredentials(opts.dir)
+  else clearCredentials()
+  setAiCredentials(null)
+  await ai.reconfigure({ local: settings.get(), remote: settings.getRemote() })
+  json(res, 200, { ok: true, capabilities: ai.capabilities(), endpoint: endpointInfo() })
 }
 
 export async function handleSaveSettings(req, res) {
