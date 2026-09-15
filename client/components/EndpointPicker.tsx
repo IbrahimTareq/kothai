@@ -35,22 +35,18 @@ export function EndpointPicker({
   const [picked, setPicked] = useState<EndpointOption | null>(
     () => endpoints.find((e) => e.id === preselect) || null,
   )
-  const [url, setUrl] = useState('')
   const [key, setKey] = useState('')
   const [probe, setProbe] = useState<Probe>({ state: 'idle', message: '', models: [] })
 
-  const baseUrl = (picked?.baseUrl || url).trim()
+  // Every catalogue entry carries its own URL — there is no hand-typed
+  // endpoint here. Someone pointing at their own server uses --endpoint or
+  // STASH_AI_BASE_URL, which win over anything set in the app.
+  const baseUrl = (picked?.baseUrl || '').trim()
 
-  const publish = (
-    next: EndpointOption | null,
-    nextUrl = url,
-    nextKey = key,
-    models = probe.models,
-  ) => {
-    const resolved = (next?.baseUrl || nextUrl).trim()
+  const publish = (next: EndpointOption | null, nextKey = key, models = probe.models) => {
     onChange(
-      next && resolved
-        ? { providerId: next.id, baseUrl: resolved, apiKey: nextKey.trim(), models, defaults: next.defaults }
+      next?.baseUrl
+        ? { providerId: next.id, baseUrl: next.baseUrl.trim(), apiKey: nextKey.trim(), models, defaults: next.defaults }
         : null,
     )
   }
@@ -58,7 +54,7 @@ export function EndpointPicker({
   const pick = (e: EndpointOption) => {
     setPicked(e)
     setProbe({ state: 'idle', message: '', models: [] })
-    publish(e, url, key, [])
+    publish(e, key, [])
   }
 
   const test = async () => {
@@ -70,7 +66,7 @@ export function EndpointPicker({
         ? { state: 'ok', message: `${r.models.length} models available`, models: r.models }
         : { state: 'fail', message: r.error || 'Could not reach that endpoint.', models: [] }
       setProbe(next)
-      publish(picked, url, key, next.models)
+      publish(picked, key, next.models)
     } catch (e) {
       setProbe({ state: 'fail', message: (e as Error).message || 'Could not reach that endpoint.', models: [] })
     }
@@ -94,18 +90,6 @@ export function EndpointPicker({
 
       {picked && <p className="wizard-note">{picked.note}</p>}
 
-      {Boolean(picked) && !picked!.baseUrl && (
-        <label className="wizard-field">
-          <span className="wizard-field-label mono">Endpoint URL</span>
-          <input
-            className="wizard-input mono"
-            value={url}
-            placeholder="https://your-server/v1"
-            onChange={(ev) => { setUrl(ev.target.value); publish(picked, ev.target.value) }}
-          />
-        </label>
-      )}
-
       {picked && (
         <label className="wizard-field">
           <span className="wizard-field-label mono">
@@ -116,7 +100,7 @@ export function EndpointPicker({
             type="password"
             value={key}
             placeholder={picked.needsKey ? keyPlaceholder : 'leave blank'}
-            onChange={(ev) => { setKey(ev.target.value); publish(picked, url, ev.target.value) }}
+            onChange={(ev) => { setKey(ev.target.value); publish(picked, ev.target.value) }}
           />
         </label>
       )}
