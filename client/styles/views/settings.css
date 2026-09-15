@@ -470,9 +470,6 @@
 .wizard-input:focus{border-color:var(--line-focus);outline:none}
 
 .wizard-probe{display:flex;align-items:center;gap:var(--space-12);margin-bottom:var(--space-20)}
-.wizard-test{padding:var(--space-8) var(--space-14);font-size:var(--text-xs);color:var(--ink);
-  background:var(--panel-3);border:1px solid var(--line);border-radius:var(--radius-md);cursor:pointer}
-.wizard-test:disabled{color:var(--ink-faint);cursor:default}
 .wizard-probe-msg{font-size:var(--text-3xs)}
 .wizard-probe-msg.ok{color:var(--accent)}
 .wizard-probe-msg.fail{color:var(--ink-mute)}
@@ -484,13 +481,8 @@
 .conn-where{font-size:var(--text-sm);color:var(--ink)}
 .conn-sub{font-size:var(--text-xs);color:var(--ink-faint);line-height:1.5}
 .conn-actions{display:flex;flex-wrap:wrap;gap:var(--space-8);flex-shrink:0}
-.conn-btn{padding:var(--space-8) var(--space-14);font-size:var(--text-xs);color:var(--ink-dim);
-  background:var(--panel-3);border:1px solid var(--line);border-radius:var(--radius-md);cursor:pointer}
-.conn-btn:hover:not(:disabled){color:var(--ink);border-color:var(--line-hover)}
-.conn-btn:disabled{opacity:.5;cursor:default}
-.conn-btn.primary{color:var(--on-accent);background:var(--accent);border-color:var(--accent)}
 /* Two-step, like the wipe control: the second press is the one that acts. */
-.conn-btn.armed{color:var(--ink);border-color:var(--line-focus)}
+.conn-armed{color:var(--ink);border-color:var(--line-focus)}
 .conn-edit{margin-top:var(--space-16);padding:var(--space-16);
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg)}
 .conn-warn{margin:var(--space-12) 0 0;font-size:var(--text-xs);color:var(--ink-dim);line-height:1.5}

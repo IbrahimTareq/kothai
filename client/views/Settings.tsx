@@ -262,12 +262,12 @@ export function SettingsView({ vault, theme, setTheme }: {
                 </div>
                 {!editingConn && (
                   <div className="conn-actions">
-                    <button className="conn-btn mono" onClick={() => { setEditingConn(true); setConnErr(null) }}>
+                    <button className="btn btn--sm mono" onClick={() => { setEditingConn(true); setConnErr(null) }}>
                       {cfg.endpoint.configured ? 'Change' : 'Connect a service'}
                     </button>
                     {cfg.endpoint.configured && cfg.localSupported && (
                       <button
-                        className={'conn-btn mono' + (disarmed ? '' : ' armed')}
+                        className={'btn btn--sm mono' + (disarmed ? '' : ' conn-armed')}
                         disabled={connBusy}
                         onClick={() => (disarmed ? setDisarmed(false) : disconnect())}
                       >
@@ -298,10 +298,10 @@ export function SettingsView({ vault, theme, setTheme }: {
                     </p>
                   )}
                   <div className="conn-actions">
-                    <button className="conn-btn primary mono" disabled={!connChoice || connBusy} onClick={saveEndpoint}>
+                    <button className="btn btn--sm btn--solid mono" disabled={!connChoice || connBusy} onClick={saveEndpoint}>
                       {connBusy ? 'Saving…' : 'Save'}
                     </button>
-                    <button className="conn-btn mono" disabled={connBusy}
+                    <button className="btn btn--sm mono" disabled={connBusy}
                       onClick={() => { setEditingConn(false); setConnChoice(null); setConnErr(null) }}>
                       Cancel
                     </button>

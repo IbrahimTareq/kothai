@@ -107,7 +107,7 @@ export function EndpointPicker({
 
       {picked && (
         <div className="wizard-probe">
-          <button className="wizard-test" type="button" onClick={test}
+          <button className="btn btn--sm" type="button" onClick={test}
             disabled={!baseUrl || probe.state === 'testing'}>
             {probe.state === 'testing' ? 'Checking…' : 'Test connection'}
           </button>
