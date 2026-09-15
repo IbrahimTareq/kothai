@@ -122,7 +122,7 @@ function validateResidency(body) {
 //
 // `dir` is threaded through for tests only — production passes nothing and
 // the credential store falls back to DATA_DIR.
-async function applyEndpointFromSetup(endpoint, dir, models = null) {
+async function applyEndpointFromSetup(endpoint, dir, models = null, load = null) {
   const baseUrl = typeof endpoint.baseUrl === 'string' ? endpoint.baseUrl.trim().replace(/\/+$/, '') : ''
   if (!baseUrl) return { error: 'An endpoint needs a base URL.' }
   try {
@@ -152,7 +152,8 @@ async function applyEndpointFromSetup(endpoint, dir, models = null) {
     if (Object.keys(patch).length) await settings.save({ remote: patch })
   }
 
-  await ai.reconfigure({ local: settings.get(), remote: settings.getRemote() })
+  await ai.reconfigure({ local: settings.get(), remote: settings.getRemote() }, load ? { load } : {})
+  await settleRoleMap()
   return {}
 }
 
@@ -174,7 +175,7 @@ export async function handleSetupEndpoint(req, res, opts = {}) {
   }
   const body = await readBody(req)
   if (!body.endpoint) return json(res, 400, { error: 'an endpoint is required' })
-  const { error } = await applyEndpointFromSetup(body.endpoint, opts.dir, body.models)
+  const { error } = await applyEndpointFromSetup(body.endpoint, opts.dir, body.models, opts.load)
   if (error) return json(res, 400, { error })
   const caps = ai.capabilities()
   json(res, 200, { ok: true, capabilities: caps, endpoint: endpointInfo() })
@@ -204,7 +205,7 @@ export async function handleSetup(req, res, opts = {}) {
   // each provider serves, and connecting an endpoint is exactly what changes
   // the answer. Validating first would check the model ids against the old map.
   if (body.endpoint) {
-    const { error: endpointError } = await applyEndpointFromSetup(body.endpoint, opts.dir)
+    const { error: endpointError } = await applyEndpointFromSetup(body.endpoint, opts.dir, null, opts.load)
     if (endpointError) return json(res, 400, { error: endpointError })
   }
 
@@ -236,6 +237,27 @@ export async function handleSetup(req, res, opts = {}) {
   json(res, 200, { ok: true, current })
 }
 
+// Reconfiguring moves roles between providers, and the local provider has to be
+// told — twice over.
+//
+// While a role was served remotely the facade pinned it 'off' on the local side
+// (localResidency in ai/index.js), which is right at the time and wrong the
+// moment the role comes back: disconnecting an endpoint returned language and
+// vision to this machine with both still switched off, embedding the only thing
+// working, and the status aggregate reporting Ready over the top of it. The
+// reverse leaks instead of breaking — a role that moves OUT to an endpoint
+// keeps its weights resident until something unloads them.
+//
+// Model names and residency are applied inline because they are cheap and
+// nothing downloads. boot() is queued, because for a role whose weights were
+// never fetched it is a multi-gigabyte download and must not hold the request
+// open or race in-flight enrichment.
+async function settleRoleMap() {
+  await ai.configureModels(settings.get())
+  await ai.applyResidency(settings.getResidency())
+  enrich.queueJob(() => ai.boot())
+}
+
 // ---- changing the endpoint after first run --------------------------------
 // The setup route above refuses once first run is over, which is right for
 // setup and wrong for everything after it: keys get rotated, trials end, and
@@ -245,7 +267,7 @@ export async function handleSetup(req, res, opts = {}) {
 export async function handleSaveEndpoint(req, res, opts = {}) {
   const body = await readBody(req)
   if (!body.endpoint) return json(res, 400, { error: 'an endpoint is required' })
-  const { error } = await applyEndpointFromSetup(body.endpoint, opts.dir, body.models)
+  const { error } = await applyEndpointFromSetup(body.endpoint, opts.dir, body.models, opts.load)
   if (error) return json(res, 400, { error })
   json(res, 200, { ok: true, capabilities: ai.capabilities(), endpoint: endpointInfo() })
 }
@@ -259,7 +281,8 @@ export async function handleClearEndpoint(res, opts = {}) {
   if (opts.dir) clearCredentials(opts.dir)
   else clearCredentials()
   setAiCredentials(null)
-  await ai.reconfigure({ local: settings.get(), remote: settings.getRemote() })
+  await ai.reconfigure({ local: settings.get(), remote: settings.getRemote() }, opts.load ? { load: opts.load } : {})
+  await settleRoleMap()
   json(res, 200, { ok: true, capabilities: ai.capabilities(), endpoint: endpointInfo() })
 }
 
