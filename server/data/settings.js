@@ -13,6 +13,12 @@ let configured = false
 let embedRecipe = null
 let embedProvider = null
 let loaded = false
+// Whether this install carried endpoint model names BEFORE the first-run gate
+// existed. Captured once, at load, precisely because it must not be re-derived
+// later: first run itself now writes those names (the wizard seeds them so the
+// embedding role can resolve before the picker is drawn), and re-deriving would
+// read that as "already configured" and refuse to let first run finish.
+let preGate = false
 
 export async function load() {
   if (loaded) return
@@ -25,6 +31,9 @@ export async function load() {
     remote = { llm: row.remote_llm || '', embed: row.remote_embed || '', vision: row.remote_vision || '' }
     embedRecipe = row.embed_recipe || null
     embedProvider = row.embed_provider || null
+    // Names but no `configured` flag means this install was set up before the
+    // gate existed. Read once, here, and never again.
+    preGate = !configured && ROLES.some((r) => Boolean(remote[r]))
   } else {
     configured = false
     residency = resolveResidency({})
@@ -32,6 +41,7 @@ export async function load() {
     remote = { llm: '', embed: '', vision: '' }
     embedRecipe = null
     embedProvider = null
+    preGate = false
   }
   loaded = true
 }
@@ -46,6 +56,13 @@ export function getResidency() {
 
 // Remote model names, kept separate from the local selection: local keys are
 // QVAC registry constants, remote ones are endpoint-defined ids.
+// True only for installs that had endpoint model names before the first-run
+// gate existed — see the note on `preGate`. Never becomes true because first
+// run wrote names.
+export function isPreGate() {
+  return preGate
+}
+
 export function getRemote() {
   return { ...remote }
 }

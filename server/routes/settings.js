@@ -17,23 +17,25 @@ import { ENDPOINTS } from '../ai/endpoints.js'
 // Skipping the screen there dropped people into the app with every role dark
 // and no signpost but Settings.
 //
-// Reads the remote store, never the local one: endpoint ids live in their own
-// columns (server/data/settings.js), so a leftover local default would
-// otherwise report a fresh endpoint install as already set up.
-//
-// The `configured` clause keeps installs that predate this gate out of the
-// screen — they never posted /api/setup, but they do have names.
+// `preGate` is the one concession: an install configured before this gate
+// existed has names and no flag, and must not be dragged back through first
+// run. It is decided once when settings load (server/data/settings.js) rather
+// than inferred here from whether names exist — because first run now WRITES
+// names partway through. The wizard seeds them so the embedding role can
+// resolve before the picker is drawn, and inferring from them meant the server
+// called first run finished the moment a provider was connected, then answered
+// "already configured" when the user pressed Save & start.
 // Exported for the unit tests.
-export function firstRunComplete(caps, configured, remoteNames) {
+export function firstRunComplete(caps, configured, preGate) {
   if (caps.downloadsWeights) return configured
-  return configured || ROLES.some((r) => Boolean(remoteNames[r]))
+  return configured || preGate
 }
 
 export function handleStatus(res) {
   const caps = ai.capabilities()
   json(res, 200, {
     ...ai.statusSnapshot(),
-    configured: firstRunComplete(caps, settings.isConfigured(), settings.getRemote()),
+    configured: firstRunComplete(caps, settings.isConfigured(), settings.isPreGate()),
     count: store.count(),
     capabilities: caps,
   })
@@ -160,7 +162,7 @@ async function applyEndpointFromSetup(endpoint, dir, models = null) {
 // Deliberately does NOT set `configured`: first run is still open, and the
 // caller comes straight back with the model names.
 export async function handleSetupEndpoint(req, res, opts = {}) {
-  if (firstRunComplete(ai.capabilities(), settings.isConfigured(), settings.getRemote())) {
+  if (firstRunComplete(ai.capabilities(), settings.isConfigured(), settings.isPreGate())) {
     return json(res, 409, { error: 'already configured' })
   }
   const body = await readBody(req)
@@ -180,7 +182,7 @@ export async function handleSetup(req, res, opts = {}) {
   // The same predicate that decides whether the client shows the screen, so
   // the gate and the endpoint behind it can never disagree about whether
   // first-run is still open.
-  if (firstRunComplete(ai.capabilities(), settings.isConfigured(), settings.getRemote())) {
+  if (firstRunComplete(ai.capabilities(), settings.isConfigured(), settings.isPreGate())) {
     return json(res, 409, { error: 'already configured' })
   }
   const body = await readBody(req)

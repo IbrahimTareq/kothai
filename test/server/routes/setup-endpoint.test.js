@@ -197,3 +197,27 @@ test('a chat-only provider leaves the embedding role on this machine', async () 
   assert.equal(res.body.capabilities.roles.embed, 'local', 'it serves no embeddings, so we keep one here')
   assert.equal(res.body.capabilities.roles.llm, 'remote')
 })
+
+// The exact flow a person walks: connect a provider in the wizard, then press
+// Save & start on the picker. Seeding the model names must not make the server
+// think first run already finished — that answered the second request with
+// 409 "already configured" and stranded them on the picker.
+test('connecting a provider then finishing first run is not "already configured"', async () => {
+  const d = dir()
+  await initProvider('remote', {}, { load, localAvailable: false })
+  const applied = fakeRes()
+  await handleSetupEndpoint(
+    fakeReq({
+      endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-flow' },
+      models: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small', vision: 'gpt-4o-mini' },
+    }),
+    applied,
+    { dir: d },
+  )
+  assert.equal(applied.statusCode, 200)
+
+  const done = fakeRes()
+  await handleSetup(fakeReq({ remote: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small', vision: 'gpt-4o-mini' } }), done, { dir: d })
+  assert.equal(done.statusCode, 200, `Save & start was refused: ${JSON.stringify(done.body)}`)
+  assert.equal(settings.isConfigured(), true, 'and first run is genuinely over afterwards')
+})

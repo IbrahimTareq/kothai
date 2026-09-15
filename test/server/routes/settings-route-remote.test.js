@@ -76,12 +76,31 @@ test('GET /api/status leaves first run open on a fresh pure-remote install', asy
   assert.equal(res.body.configured, false)
 })
 
-test('GET /api/status closes first run once the endpoint ids are saved', async () => {
+test('GET /api/status leaves an install that predates the gate alone', async () => {
+  // Names in the database with no `configured` flag is what an install set up
+  // before this gate existed looks like. That is decided when settings LOAD,
+  // so persist the names and reload — writing them into a store that is
+  // already loaded is a different thing entirely (see the test below).
   await settings.save({ remote: { llm: 'gpt-oss:120b' } })
+  settings._reset()
+  await settings.load()
   await initProvider('remote', {}, LITE)
   const res = fakeRes()
   handleStatus(res)
   assert.equal(res.body.configured, true)
+})
+
+// The counterpart, and the regression that made this distinction necessary:
+// the setup wizard seeds endpoint model names partway through first run, so
+// that the embedding role resolves before the model picker is drawn. While the
+// gate inferred completion from "are there names?", that seeding ended first
+// run early and Save & start came back 409 "already configured".
+test('names written DURING first run leave it open', async () => {
+  await initProvider('remote', {}, LITE)
+  await settings.save({ remote: { llm: 'gpt-oss:120b' } })
+  const res = fakeRes()
+  handleStatus(res)
+  assert.equal(res.body.configured, false, 'first run is not over until the user says so')
 })
 
 test('a mixed install is gated on the stored flag, not on endpoint ids', async () => {
@@ -122,7 +141,9 @@ test('POST /api/setup stores endpoint ids on a pure-remote install', async () =>
 })
 
 test('POST /api/setup refuses once first run is already closed', async () => {
-  await settings.save({ remote: { llm: 'gpt-oss:120b' } })
+  // Closed the way it actually closes: the flag, set by a completed setup or
+  // an explicit skip. Names alone no longer mean anything here.
+  await settings.save({ remote: { llm: 'gpt-oss:120b' }, configured: true })
   await initProvider('remote', {}, { localAvailable: false })
   const req = Readable.from([Buffer.from(JSON.stringify({ remote: { llm: 'other' } }))])
   const res = fakeRes()
