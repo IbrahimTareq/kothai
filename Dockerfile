@@ -114,7 +114,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store,sharing=locked \
   && rm -rf node_modules/react-native-bare-kit/android node_modules/react-native-bare-kit/ios
 
 COPY server ./server
-COPY docker/entrypoint.js ./docker/entrypoint.js
+COPY docker/entrypoint.ts ./docker/entrypoint.ts
 # Built client (Vite already copied public/ — fonts + logos — into dist)
 COPY --from=client /app/dist ./dist
 
@@ -142,7 +142,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||5173)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 # Starts as root to repair volume ownership, then execs the server as uid 1000.
-ENTRYPOINT ["node", "docker/entrypoint.js"]
+ENTRYPOINT ["node", "docker/entrypoint.ts"]
 
 # ─────────────────────── Stage 3: lite runtime (remote inference) ────────────
 # Same server and client, but @qvac/sdk is deleted before install — so there
@@ -166,7 +166,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store,sharing=locked \
   && pnpm install --prod --no-frozen-lockfile --store-dir=/pnpm/store
 
 COPY server ./server
-COPY docker/entrypoint.js ./docker/entrypoint.js
+COPY docker/entrypoint.ts ./docker/entrypoint.ts
 COPY --from=client /app/dist ./dist
 
 # Notes and uploads only — there are no model weights to persist.
@@ -184,7 +184,7 @@ EXPOSE 5173
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||5173)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-ENTRYPOINT ["node", "docker/entrypoint.js"]
+ENTRYPOINT ["node", "docker/entrypoint.ts"]
 
 # ─────────────────── Stage 4: ONCE runtime (basecamp/once) ───────────────────
 # The full runtime with the three defaults ONCE requires baked in, because ONCE

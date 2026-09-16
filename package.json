@@ -2,16 +2,16 @@
   "name": "kothai",
   "version": "1.3.0",
   "description": "Kothai every thought, picture, link or file",
-  "main": "server/index.js",
+  "main": "server/index.ts",
   "type": "module",
   "packageManager": "pnpm@10.15.1",
   "engines": {
     "node": ">=22.13.0 <23"
   },
   "scripts": {
-    "dev": "concurrently -k -n server,vite -c blue,magenta \"node server/index.js\" \"vite\"",
+    "dev": "concurrently -k -n server,vite -c blue,magenta \"node server/index.ts\" \"vite\"",
     "build": "biome check . && node scripts/lint-tokens.mjs && pnpm run typecheck && vite build",
-    "start": "npm run build && node server/index.js",
+    "start": "npm run build && node server/index.ts",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.server.json --noEmit",
     "typecheck:server": "tsc -p tsconfig.server.json --noEmit",

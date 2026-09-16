@@ -15,12 +15,14 @@ const APP_UID = 1000 // the `node` user, already present in node:22-bookworm-sli
 const APP_GID = 1000
 
 // Only root can chown or drop privileges. Anyone else must skip both silently.
-export function plan(uid) {
+// `undefined` is the no-uid case (non-POSIX, where process.getuid does not
+// exist) and answers the same as any non-root uid: do neither.
+export function plan(uid: number | undefined) {
   const isRoot = uid === 0
   return { chown: isRoot, drop: isRoot }
 }
 
-function chownTree(target, uid, gid) {
+function chownTree(target: string, uid: number, gid: number) {
   chownSync(target, uid, gid)
   for (const entry of readdirSync(target, { withFileTypes: true })) {
     const child = path.join(target, entry.name)
@@ -32,7 +34,7 @@ function chownTree(target, uid, gid) {
 
 // `recursive: false` is REQUIRED for the config file's parent, which by default
 // is /app — recursing there would rewrite ownership across node_modules.
-function ensureOwned(dir, { recursive }) {
+function ensureOwned(dir: string, { recursive }: { recursive: boolean }) {
   mkdirSync(dir, { recursive: true })
   if (statSync(dir).uid === APP_UID) return // already correct — the common case
   console.log(`  repairing ownership of ${dir}…`)
@@ -41,15 +43,20 @@ function ensureOwned(dir, { recursive }) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const { chown, drop } = plan(process.getuid())
+  const { chown, drop } = plan(process.getuid?.())
   if (chown) {
     ensureOwned(DATA_DIR, { recursive: true })
     ensureOwned(MODELS_DIR, { recursive: true })
     ensureOwned(path.dirname(CONFIG_PATH), { recursive: false })
   }
   if (drop) {
-    process.setgid(APP_GID)
-    process.setuid(APP_UID)
+    // @types/node declares getuid/setgid/setuid optional because Windows has
+    // none of them, so these two calls need `?.` to typecheck. It cannot be
+    // the silent no-op it looks like — leaving the container running as root
+    // is the one failure this file exists to prevent: drop is true only when
+    // getuid() answered 0, and a process with no getuid has no uid to be 0.
+    process.setgid?.(APP_GID)
+    process.setuid?.(APP_UID)
   }
-  await import('../server/index.js')
+  await import('../server/index.ts')
 }
