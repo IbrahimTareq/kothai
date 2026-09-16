@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 import { syncDocs } from './sync-docs'
+import { syncAssets } from './sync-assets'
 
 // The markdown lives in /docs at the repo root, not in here. That is deliberate:
 // a PR that changes an endpoint changes the doc in the same commit, and the files
@@ -10,15 +11,21 @@ import { syncDocs } from './sync-docs'
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url))
 const docsDir = join(repoRoot, 'docs')
 const srcDir = fileURLToPath(new URL('../src', import.meta.url))
+// The site publishes its own public/ rather than the app's. They used to be the
+// same directory, which meant every self-hosted instance served /install.sh and
+// /CNAME out of its own build. Assets the two genuinely share are mirrored in.
+const appPublic = join(repoRoot, 'public')
+const publicDir = fileURLToPath(new URL('../public', import.meta.url))
 const REPO = 'https://github.com/IbrahimTareq/kothai'
 // Served at the apex of getkothai.com, so everything sits at the root. The
-// CNAME that points GitHub Pages here lives in public/.
+// CNAME that points GitHub Pages here lives in site/public/.
 const BASE = '/'
 const BLOB = `${REPO}/blob/main/`
 
 // Runs while this config is evaluated, which is before VitePress enumerates
 // pages — a plugin hook would be too late.
 syncDocs(docsDir, srcDir)
+syncAssets(appPublic, publicDir)
 
 export default defineConfig({
   title: 'Kothai',
@@ -79,10 +86,10 @@ export default defineConfig({
     ['meta', { property: 'og:description', content: 'Save now. Remember later.' }],
   ],
 
-  // Reuse the app's self-hosted Geist and logo instead of committing a second
-  // copy of each. vitepress would otherwise look for ../docs/public.
+  // Explicit because VitePress would otherwise look inside srcDir, which is the
+  // gitignored markdown mirror.
   vite: {
-    publicDir: join(repoRoot, 'public'),
+    publicDir,
     plugins: [
       {
         name: 'kothai-watch-docs',
@@ -90,8 +97,10 @@ export default defineConfig({
           // Edit a file in /docs and the mirror updates, so HMR fires on the
           // real source rather than on the copy.
           server.watcher.add(docsDir)
+          server.watcher.add(appPublic)
           server.watcher.on('all', (_event, path) => {
             if (path.startsWith(docsDir)) syncDocs(docsDir, srcDir)
+            if (path.startsWith(appPublic)) syncAssets(appPublic, publicDir)
           })
         },
       },

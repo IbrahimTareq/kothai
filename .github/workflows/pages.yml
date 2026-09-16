@@ -2,7 +2,8 @@ name: Docs site
 
 # The site is its own package under site/, with its own lockfile, so none of
 # this touches ci.yml or the image build. Path-filtered because a change to
-# server code has nothing to publish.
+# server code has nothing to publish. public/** is in the filter because the
+# site mirrors the app's logo and font faces out of it at build time.
 on:
   push:
     branches: [main]
