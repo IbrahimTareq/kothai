@@ -6,7 +6,7 @@
 // implicitly on and silently locks every existing LAN install out on upgrade.
 // Its own process, so it cannot see the password the sibling auth test sets.
 delete process.env.STASH_PASSWORD
-const { createServer } = await import('../../../server/router.js')
+const { createServer } = await import('../../../server/router.ts')
 
 import test, { after } from 'node:test'
 import assert from 'node:assert/strict'

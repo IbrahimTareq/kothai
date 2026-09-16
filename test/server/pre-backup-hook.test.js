@@ -29,7 +29,7 @@ mock.module('../../server/data/import-lock.ts', {
 })
 
 const store = await import('../../server/data/notes.ts')
-const { createServer } = await import('../../server/router.js')
+const { createServer } = await import('../../server/router.ts')
 await store.load()
 
 const HOOK = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../docker/hooks/pre-backup')

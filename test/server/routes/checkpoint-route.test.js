@@ -36,7 +36,7 @@ mock.module('../../../server/data/import-lock.ts', {
 })
 
 const store = await import('../../../server/data/notes.ts')
-const { createServer } = await import('../../../server/router.js')
+const { createServer } = await import('../../../server/router.ts')
 
 await store.load()
 

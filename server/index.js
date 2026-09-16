@@ -8,7 +8,7 @@ writeFileSync(CONFIG_PATH, `${JSON.stringify({ cacheDirectory: MODELS_DIR }, nul
 process.env.QVAC_CONFIG_PATH = CONFIG_PATH
 
 // Imported AFTER the env var above so the local provider picks up the right cache config.
-const { createServer } = await import('./router.js')
+const { createServer } = await import('./router.ts')
 const ai = await import('./ai/index.ts')
 const store = await import('./data/notes.ts')
 const chats = await import('./data/chats.ts')

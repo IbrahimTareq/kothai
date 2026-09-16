@@ -149,7 +149,7 @@ test('the model cache endpoints are not offered by a provider that downloads no 
 // Driven through the real router because the delete path's parameter is a
 // filename taken out of the URL: percent-encoding is decoded there, so this is
 // where a `..%2F` escape attempt would be handed to the handler.
-const { createServer } = await import('../../../server/router.js')
+const { createServer } = await import('../../../server/router.ts')
 const server = createServer()
 await new Promise(r => server.listen(0, '127.0.0.1', r))
 const BASE = `http://127.0.0.1:${server.address().port}`

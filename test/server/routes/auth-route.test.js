@@ -7,7 +7,7 @@
 // freezes its resolved config at import time; node --test gives each file its
 // own process, so this env var cannot leak into any other test.
 process.env.STASH_PASSWORD = 'hunter2'
-const { createServer } = await import('../../../server/router.js')
+const { createServer } = await import('../../../server/router.ts')
 
 import test, { after } from 'node:test'
 import assert from 'node:assert/strict'

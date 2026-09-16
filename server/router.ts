@@ -1,3 +1,4 @@
+import type { IncomingMessage, Server, ServerResponse } from 'node:http'
 import http from 'node:http'
 import { json, serveStatic } from './lib/http.ts'
 import { PASSWORD } from './config.ts'
@@ -44,8 +45,8 @@ import {
 } from './routes/settings.ts'
 import { handleSetupTest } from './routes/setup-test.ts'
 
-async function handleRequest(req, res) {
-  const url = new URL(req.url, `http://${req.headers.host}`)
+async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = new URL(req.url ?? '', `http://${req.headers.host}`)
   const p = url.pathname
   try {
     // Liveness, and the ONLY things in front of the password gate. The container
@@ -71,10 +72,11 @@ async function handleRequest(req, res) {
     if (req.method === 'GET' && /^\/api\/notes\/[^/]+$/.test(p))
       return handleGetNote(res, decodeURIComponent(p.slice(11)))
     if (req.method === 'GET' && p === '/api/chats') return handleChats(res, url.searchParams)
-    if (req.method === 'GET' && p.startsWith('/api/chats/')) return handleChat(res, p.split('/').pop())
+    if (req.method === 'GET' && p.startsWith('/api/chats/')) return handleChat(res, p.split('/').pop() ?? '')
     if (req.method === 'PATCH' && p.startsWith('/api/chats/'))
-      return await handleRenameChat(req, res, p.split('/').pop())
-    if (req.method === 'DELETE' && p.startsWith('/api/chats/')) return await handleDeleteChat(res, p.split('/').pop())
+      return await handleRenameChat(req, res, p.split('/').pop() ?? '')
+    if (req.method === 'DELETE' && p.startsWith('/api/chats/'))
+      return await handleDeleteChat(res, p.split('/').pop() ?? '')
     if (req.method === 'GET' && p === '/api/status') return handleStatus(res)
     if (req.method === 'GET' && p === '/api/settings') return await handleGetSettings(res)
     if (req.method === 'POST' && p === '/api/settings') return await handleSaveSettings(req, res)
@@ -124,16 +126,17 @@ async function handleRequest(req, res) {
       return await handleNoteSlides(res, decodeURIComponent(p.split('/')[3]))
     }
     if (req.method === 'PATCH' && p.startsWith('/api/notes/'))
-      return await handleUpdateNote(req, res, p.split('/').pop())
-    if (req.method === 'DELETE' && p.startsWith('/api/notes/')) return await handleDeleteNote(res, p.split('/').pop())
+      return await handleUpdateNote(req, res, p.split('/').pop() ?? '')
+    if (req.method === 'DELETE' && p.startsWith('/api/notes/'))
+      return await handleDeleteNote(res, p.split('/').pop() ?? '')
     if (req.method === 'GET') return await serveStatic(req, res, p)
     json(res, 405, { error: 'method not allowed' })
   } catch (err) {
     console.error('[server] error:', err)
-    json(res, 500, { error: err.message || 'internal error' })
+    json(res, 500, { error: (err instanceof Error && err.message) || 'internal error' })
   }
 }
 
-export function createServer() {
+export function createServer(): Server {
   return http.createServer(handleRequest)
 }

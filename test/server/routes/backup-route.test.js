@@ -37,7 +37,7 @@ const store = await import('../../../server/data/notes.ts')
 const settings = await import('../../../server/data/settings.ts')
 const { writeCredentials, readCredentials } = await import('../../../server/data/credentials.ts')
 const { setAiCredentials } = await import('../../../server/config.ts')
-const { createServer } = await import('../../../server/router.js')
+const { createServer } = await import('../../../server/router.ts')
 
 const server = createServer()
 await new Promise(r => server.listen(0, '127.0.0.1', r))
