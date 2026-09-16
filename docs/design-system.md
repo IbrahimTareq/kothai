@@ -64,9 +64,14 @@ and are deliberately off the duration scale.
 | tone | `.btn--solid` `.btn--ghost` `.btn--icon` `.btn--danger` |
 
 The sizes were lifted from buttons that already existed rather than invented,
-so the scale describes the app. There are no per-view button classes left — the
-legacy aliases that used to be grouped into these rules are gone, and
-`npm run lint:tokens` fails any new ones.
+so the scale describes the app. There are no per-view aliases of `.btn` left —
+`.row-btn` and `.spaces-new-btn` were grouped straight into these rules, and
+`.conn-btn`/`.wizard-test`/`.chat-confirm`/`.onboarding-start`/`.space-form-go`
+each hand-rolled the same box separately; all are gone now, and
+`npm run lint:tokens` fails any new one. (This doesn't cover every button-shaped
+class in the app — `.seg-btn`, `.residency-btn`, `.rail-btn`, and the
+composer's `.send-btn`/`.attach-btn` are distinct components with their own
+box, not `.btn` wearing another name, so they're untouched.)
 
 A view may still add a rule *on top of* `.btn` for genuine layout, the way
 `.chat-more` sets its own full width. What it may not do is rebuild the box.
