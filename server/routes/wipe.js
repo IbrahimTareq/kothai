@@ -9,9 +9,9 @@
 // a stale tab, or a page-embedded script must not be able to erase anything
 // without the exact token. The client's type-to-confirm box produces it.
 import * as store from '../data/notes.ts'
-import * as collections from '../data/collections.js'
+import * as collections from '../data/collections.ts'
 import * as chats from '../data/chats.ts'
-import * as tagvocab from '../data/tagvocab.js'
+import * as tagvocab from '../data/tagvocab.ts'
 import { isImportInProgress, IMPORT_BUSY } from '../data/import-lock.ts'
 import { json, readBody } from '../lib/http.ts'
 

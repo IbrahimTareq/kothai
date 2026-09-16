@@ -9,11 +9,11 @@
 import path from 'node:path'
 import * as store from '../data/notes.ts'
 import * as tags from '../lib/tags.ts'
-import * as tagvocab from '../data/tagvocab.js'
+import * as tagvocab from '../data/tagvocab.ts'
 import * as inference from './index.ts'
 import { fetchLinkMeta, isInstagramPost, isYouTubeVideo, fetchYouTubeCaptions } from './meta.ts'
 import { applyMeta } from './meta-fields.ts'
-import * as collections from '../data/collections.js'
+import * as collections from '../data/collections.ts'
 import * as settings from '../data/settings.ts'
 import { stepsFor } from './backlog.ts'
 import { DESCRIBE_THUMB_PROMPT, EMBED_RECIPE } from './prompts.ts'
@@ -27,7 +27,7 @@ import {
   isStuckInstagramNote,
   setCaptionHandler,
   _igQueueState,
-} from './ig-queue.js'
+} from './ig-queue.ts'
 
 // The Instagram lane moved to ./ig-queue.js. Re-exported here because the
 // routes and its tests address it through this module, and where the queue

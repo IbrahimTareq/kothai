@@ -20,15 +20,19 @@ import { encodeEmbedding, decodeEmbedding, cosine } from './embedding.ts'
 // fields that never reach a client. `_rev` is delta-sync bookkeeping (see
 // below); `ai`, `article` and `thumbDescription` are written by ai/enrich.js
 // and read here — the first to gate the enrichment backlog, the other two
-// because textSearch's haystack covers them.
+// because textSearch's haystack covers them; the last three are ig-queue.ts's
+// retry budget for a failed Instagram meta fetch plus its carousel-checked mark.
 //
 // Extended here rather than in types.ts because ServerNote describes what
-// crosses the HTTP boundary and none of these four do.
-interface NoteRecord extends ServerNote {
+// crosses the HTTP boundary and none of them do.
+export interface NoteRecord extends ServerNote {
   _rev?: number
   ai?: AiMarkers
   article?: string | null
   thumbDescription?: string | null
+  metaTries?: number
+  metaNextTry?: number
+  slidesFetched?: boolean
 }
 
 // What every read path hands back — see stripEmbedding at the bottom for why

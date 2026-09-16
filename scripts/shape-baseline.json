@@ -71,8 +71,8 @@
     "lines": 136,
     "exports": 13
   },
-  "server/data/collections.js": {
-    "lines": 251,
+  "server/data/collections.ts": {
+    "lines": 286,
     "exports": 15
   },
   "server/data/notes.ts": {

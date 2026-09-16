@@ -10,7 +10,7 @@
 // risk rather than a scary one.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import * as tagvocab from '../../../server/data/tagvocab.js'
+import * as tagvocab from '../../../server/data/tagvocab.ts'
 import { encodeEmbedding } from '../../../server/data/embedding.ts'
 import { getDb } from '../../../server/data/db.ts'
 

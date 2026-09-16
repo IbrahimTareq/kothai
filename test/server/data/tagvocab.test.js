@@ -5,7 +5,7 @@
 // _reset() so no model or disk is touched.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import * as tagvocab from '../../../server/data/tagvocab.js'
+import * as tagvocab from '../../../server/data/tagvocab.ts'
 
 test('nearestTag: returns best entry when ≥ threshold, else null', () => {
   const entries = [

@@ -6,11 +6,46 @@
 // autoAdd, the full note list for backfill), which keeps the boundary clean
 // and the logic trivially testable.
 import { randomUUID } from 'node:crypto'
+import type { DatabaseSync, SQLOutputValue } from 'node:sqlite'
 import { getDb, _resetDb } from './db.ts'
+import type { CollectionRow } from './db.ts'
 import { normalizeTag } from '../lib/tags.ts'
+import type { CanvasDoc } from '../lib/canvas.ts'
 import * as notesStore from './notes.ts'
 
-let collections = []
+// The stored document. `canvas` is optional rather than nullable because
+// update() below DELETES the key to clear a board — the route sends null, and
+// the absence is what a reader tests for.
+interface Collection {
+  id: string
+  createdAt: string
+  name: string
+  tags: string[]
+  itemIds: string[]
+  removedIds: string[]
+  canvas?: CanvasDoc
+}
+
+// All this module ever reads off a note. Spelled out here rather than imported
+// from the note store because the independence is the point — see the header.
+interface TaggedNote {
+  id: string
+  tags?: string[] | null
+}
+
+interface CollectionPatch {
+  name?: string
+  tags?: string[]
+  canvas?: CanvasDoc | null
+}
+
+// Same narrowing as chats.ts's rowData, for the same reason: node:sqlite types
+// every column as SQLOutputValue because the connection knows nothing of the
+// CREATE TABLE, and insertRow/updateRow below are this column's only writers —
+// both through JSON.stringify.
+const rowData = (v: SQLOutputValue): CollectionRow['data'] => String(v)
+
+let collections: Collection[] = []
 let loaded = false
 
 export async function load() {
@@ -19,19 +54,19 @@ export async function load() {
   collections = db
     .prepare('SELECT data FROM collections ORDER BY seq DESC')
     .all()
-    .map(r => JSON.parse(r.data))
+    .map(r => JSON.parse(rowData(r.data)))
   loaded = true
 }
 
-function insertRow(db, c) {
+function insertRow(db: DatabaseSync, c: Collection) {
   db.prepare('INSERT INTO collections (id, data) VALUES (?, ?)').run(c.id, JSON.stringify(c))
 }
 
-function updateRow(db, c) {
+function updateRow(db: DatabaseSync, c: Collection) {
   db.prepare('UPDATE collections SET data = ? WHERE id = ?').run(JSON.stringify(c), c.id)
 }
 
-async function deleteRow(id) {
+async function deleteRow(id: string) {
   ;(await getDb()).prepare('DELETE FROM collections WHERE id = ?').run(id)
 }
 
@@ -43,29 +78,29 @@ export function _reset() {
 }
 
 // Normalize tags for case-insensitive matching / storage.
-function norm(tags) {
+function norm(tags: string[] | null | undefined) {
   return (tags || []).map(normalizeTag).filter(Boolean)
 }
 
 // Does an item with `noteTags` satisfy a `ruleTags` rule (match ANY)?
-export function matchesRule(noteTags, ruleTags) {
+export function matchesRule(noteTags: string[] | null | undefined, ruleTags: string[] | null | undefined) {
   if (!ruleTags || ruleTags.length === 0) return false
   const rule = new Set(norm(ruleTags))
   return norm(noteTags).some(t => rule.has(t))
 }
 
-function find(id) {
+function find(id: string) {
   return collections.find(c => c.id === id)
 }
 
-function withCount(c) {
+function withCount(c: Collection) {
   return { ...c, count: c.itemIds.length }
 }
 
 // Tile previews for the Spaces list — the first few member notes, newest
 // membership first (itemIds order), embeddings already stripped by allNotes().
 const COVER_COUNT = 3
-function withCovers(c) {
+function withCovers(c: Collection) {
   const byId = new Map(notesStore.allNotes().map(n => [n.id, n]))
   const covers = c.itemIds
     .map(id => byId.get(id))
@@ -87,13 +122,13 @@ export function all() {
   return collections.map(withCovers)
 }
 
-export function get(id) {
+export function get(id: string) {
   const c = find(id)
   return c ? withCount(c) : null
 }
 
 // Prepend an id (dedup) and clear any prior manual removal.
-function attach(c, itemId) {
+function attach(c: Collection, itemId: string) {
   if (!c.itemIds.includes(itemId)) c.itemIds.unshift(itemId)
   c.removedIds = c.removedIds.filter(x => x !== itemId)
 }
@@ -101,7 +136,7 @@ function attach(c, itemId) {
 // Drop the canvas card for an item that left the space, plus any line that
 // touched it. A canvas never carries a card for a non-member. Returns whether
 // the doc changed.
-function pruneCanvas(c, itemId) {
+function pruneCanvas(c: Collection, itemId: string) {
   if (!c.canvas) return false
   const gone = new Set(c.canvas.nodes.filter(n => n.type === 'item' && n.itemId === itemId).map(n => n.id))
   if (!gone.size) return false
@@ -114,7 +149,7 @@ function pruneCanvas(c, itemId) {
 
 // Add all current tag-matching notes to a smart collection (in-memory; caller
 // persists). Respects removedIds. `notes` is an array of at least { id, tags }.
-export function backfill(c, notes) {
+export function backfill(c: Collection, notes: TaggedNote[]) {
   for (const n of notes) {
     if (c.removedIds.includes(n.id)) continue
     if (matchesRule(n.tags, c.tags)) attach(c, n.id)
@@ -122,8 +157,8 @@ export function backfill(c, notes) {
 }
 
 // Create a collection. `notes` (optional) backfills a smart rule at creation.
-export async function create({ name, tags = [] }, notes = []) {
-  const c = {
+export async function create({ name, tags = [] }: { name: string; tags?: string[] }, notes: TaggedNote[] = []) {
+  const c: Collection = {
     id: randomUUID(),
     createdAt: new Date().toISOString(),
     name,
@@ -140,7 +175,7 @@ export async function create({ name, tags = [] }, notes = []) {
 // Rename, edit the smart rule and/or replace the canvas. Editing tags re-runs
 // backfill (additive — never removes items that no longer match). Returns
 // null if not found.
-export async function update(id, patch, notes = []) {
+export async function update(id: string, patch: CollectionPatch, notes: TaggedNote[] = []) {
   const c = find(id)
   if (!c) return null
   if (typeof patch.name === 'string') c.name = patch.name
@@ -157,7 +192,7 @@ export async function update(id, patch, notes = []) {
   return withCovers(c)
 }
 
-export async function remove(id) {
+export async function remove(id: string) {
   const before = collections.length
   collections = collections.filter(c => c.id !== id)
   const changed = collections.length !== before
@@ -166,7 +201,7 @@ export async function remove(id) {
 }
 
 // Manual add.
-export async function addItem(id, itemId) {
+export async function addItem(id: string, itemId: string) {
   const c = find(id)
   if (!c) return null
   attach(c, itemId)
@@ -188,7 +223,7 @@ export async function addItem(id, itemId) {
 // Semantics are identical to calling addItem in a loop — attach() dedups and
 // clears removedIds the same way, and unshift order is preserved — so this is
 // purely the same work done once.
-export async function addItems(id, itemIds) {
+export async function addItems(id: string, itemIds: string[]) {
   const c = find(id)
   if (!c) return null
   let changed = false
@@ -203,7 +238,7 @@ export async function addItems(id, itemIds) {
 }
 
 // Manual remove — sticks (auto-add won't re-add it).
-export async function removeItem(id, itemId) {
+export async function removeItem(id: string, itemId: string) {
   const c = find(id)
   if (!c) return null
   c.itemIds = c.itemIds.filter(x => x !== itemId)
@@ -215,8 +250,8 @@ export async function removeItem(id, itemId) {
 
 // Fired when an item is imported/classified. Adds it to every smart collection
 // whose rule its tags satisfy (unless previously hand-removed).
-export async function autoAdd(itemId, itemTags) {
-  const touched = []
+export async function autoAdd(itemId: string, itemTags: string[] | null | undefined) {
+  const touched: Collection[] = []
   for (const c of collections) {
     if (!c.tags.length) continue
     if (c.removedIds.includes(itemId)) continue
@@ -233,8 +268,8 @@ export async function autoAdd(itemId, itemTags) {
 }
 
 // When a note is deleted, purge its id from every collection.
-export async function deleteItemEverywhere(itemId) {
-  const touched = []
+export async function deleteItemEverywhere(itemId: string) {
+  const touched: Collection[] = []
   for (const c of collections) {
     const bi = c.itemIds.length
     const br = c.removedIds.length

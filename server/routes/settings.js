@@ -1,7 +1,7 @@
 import * as ai from '../ai/index.ts'
 import * as store from '../data/notes.ts'
 import * as settings from '../data/settings.ts'
-import * as tagvocab from '../data/tagvocab.js'
+import * as tagvocab from '../data/tagvocab.ts'
 import * as enrich from '../ai/enrich.js'
 import { ROLES, POLICIES, OFF_RESIDENCY } from '../ai/roles.ts'
 import { backlogCount } from '../ai/backlog.ts'

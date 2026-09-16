@@ -64,9 +64,9 @@ reset()
 const realMeta = await import('../../../server/ai/meta.ts')
 const realStore = await import('../../../server/data/notes.ts')
 const realTags = await import('../../../server/lib/tags.ts')
-const realTagvocab = await import('../../../server/data/tagvocab.js')
+const realTagvocab = await import('../../../server/data/tagvocab.ts')
 const realNormalise = await import('../../../server/ai/normalise.ts')
-const realCollections = await import('../../../server/data/collections.js')
+const realCollections = await import('../../../server/data/collections.ts')
 const realSettings = await import('../../../server/data/settings.ts')
 
 mock.module('../../../server/ai/meta.ts', {
@@ -87,7 +87,7 @@ mock.module('../../../server/data/notes.ts', {
   },
 })
 mock.module('../../../server/lib/tags.ts', { namedExports: { ...realTags, buildVocabulary: () => [] } })
-mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async tags => tags } })
+mock.module('../../../server/data/tagvocab.ts', { namedExports: { ...realTagvocab, canonicalize: async tags => tags } })
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
     ...realNormalise,
@@ -106,7 +106,7 @@ mock.module('../../../server/ai/index.ts', {
     },
   },
 })
-mock.module('../../../server/data/collections.js', {
+mock.module('../../../server/data/collections.ts', {
   namedExports: {
     ...realCollections,
     autoAdd: async (id, tags) => {

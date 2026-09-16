@@ -7,22 +7,47 @@
 // Forward-only: existing notes are never rewritten; their tags seed the registry
 // so new tags have something to snap to. Only the enrichment (LLM) path calls
 // canonicalize — manual tag edits are left as the user typed them.
+import type { DatabaseSync, SQLOutputValue } from 'node:sqlite'
 import { getDb, _resetDb } from './db.ts'
+import type { TagVocabRow } from './db.ts'
 import { encodeEmbedding, decodeEmbedding, cosine } from './embedding.ts'
 import { normalizeTags } from '../lib/tags.ts'
 import * as ai from '../ai/index.ts'
+import type { ServerNote } from '../types.ts'
+
+// The same two shapes a note's embedding has — a Float32Array off the BLOB
+// column, or a plain number[] straight from a provider's JSON response. See
+// the `embedding` field in server/types.ts.
+type Vector = NonNullable<ServerNote['embedding']>
+
+// Injectable so the snap logic is unit-testable without a model; production
+// callers get ai.embedText.
+type Embedder = (text: string) => Promise<number[]>
+
+// node:sqlite types every column as SQLOutputValue — the connection carries no
+// knowledge of the CREATE TABLE. These narrow to what db.ts's TagVocabRow says
+// the column holds, exactly like notes.ts's pair. Non-blob is treated as
+// absent rather than thrown on: decodeEmbedding already answers null for
+// anything without a byteLength, so this is the read it always was.
+const rowTag = (v: SQLOutputValue): TagVocabRow['tag'] => String(v)
+const rowEmbedding = (v: SQLOutputValue): TagVocabRow['embedding'] | null => (v instanceof Uint8Array ? v : null)
 
 export const THRESHOLD = 0.88
 
-let registry = new Map() // canonical tag -> embedding vector
+// A value can be null: the legacy-JSON branch of load() stores whatever
+// decodeEmbedding gave it, and an empty stored vector decodes to null. Such an
+// entry is inert rather than harmful — cosine() scores null at 0 and both
+// writers skip it — so it is typed as it is rather than filtered at a
+// behaviour change's cost.
+let registry = new Map<string, Vector | null>() // canonical tag -> embedding vector
 let loaded = false
 
 // ---- pure helpers (no I/O) ---------------------------------------------
 
 // Best-matching entry for `vec` among `entries` ([tag, vector] pairs), but only
 // if its similarity is >= threshold. Returns { tag, score } or null.
-export function nearestTag(vec, entries, threshold) {
-  let best = null
+export function nearestTag(vec: Vector, entries: Iterable<[string, Vector | null]>, threshold: number) {
+  let best: { tag: string; score: number } | null = null
   for (const [tag, v] of entries) {
     const score = cosine(vec, v)
     if (!best || score > best.score) best = { tag, score }
@@ -34,12 +59,12 @@ export function nearestTag(vec, entries, threshold) {
 // True while the table still has the pre-BLOB shape. Checked on the DECLARED
 // type rather than on the rows, so an empty registry is migrated too — a table
 // left as TEXT would quietly take JSON text again on the next write.
-function needsBlobMigration(db) {
+function needsBlobMigration(db: DatabaseSync) {
   const col = db
     .prepare('PRAGMA table_info(tag_vocab)')
     .all()
     .find(c => c.name === 'embedding')
-  return !!col && col.type.toUpperCase() !== 'BLOB'
+  return !!col && String(col.type).toUpperCase() !== 'BLOB'
 }
 
 // SQLite cannot change a column's type in place, so the table is rebuilt from
@@ -50,7 +75,7 @@ function needsBlobMigration(db) {
 // Rebuilding (rather than adding a column) is safe here specifically because
 // this table is derived: rebuildFromNotes can regenerate every entry from note
 // tags. It would not be an acceptable move on the notes table.
-function rebuildTableAsBlob(db) {
+function rebuildTableAsBlob(db: DatabaseSync) {
   console.log(`[tagvocab] moving ${registry.size} tag embeddings into a blob column…`)
   db.exec('BEGIN')
   try {
@@ -66,7 +91,7 @@ function rebuildTableAsBlob(db) {
     db.exec('COMMIT')
   } catch (e) {
     db.exec('ROLLBACK')
-    console.warn('[tagvocab] embedding migration deferred:', e.message)
+    console.warn('[tagvocab] embedding migration deferred:', e instanceof Error ? e.message : e)
   }
 }
 
@@ -88,7 +113,7 @@ export async function load() {
     if (typeof row.embedding === 'string') {
       sawText = true
       try {
-        registry.set(row.tag, decodeEmbedding(encodeEmbedding(JSON.parse(row.embedding))))
+        registry.set(rowTag(row.tag), decodeEmbedding(encodeEmbedding(JSON.parse(row.embedding))))
       } catch {
         // Derived data: losing one entry costs a single re-embed the next time
         // that tag comes up, whereas throwing here would fail the boot.
@@ -96,15 +121,15 @@ export async function load() {
       }
       continue
     }
-    const vec = decodeEmbedding(row.embedding)
-    if (vec) registry.set(row.tag, vec)
+    const vec = decodeEmbedding(rowEmbedding(row.embedding))
+    if (vec) registry.set(rowTag(row.tag), vec)
   }
   if (sawText || needsBlobMigration(db)) rebuildTableAsBlob(db)
   loaded = true
   return registry.size > 0
 }
 
-function persistTag(db, tag, vec) {
+function persistTag(db: DatabaseSync, tag: string, vec: Vector) {
   const blob = encodeEmbedding(vec)
   // An empty vector means the embedder returned nothing useful; skip the row
   // rather than violate NOT NULL. The tag simply re-embeds next time.
@@ -116,7 +141,7 @@ function persistTag(db, tag, vec) {
 }
 
 // test-only: clean in-memory slate against a fresh in-memory database.
-export function _reset({ loaded: isLoaded = true, keepDb = false } = {}) {
+export function _reset({ loaded: isLoaded = true, keepDb = false }: { loaded?: boolean; keepDb?: boolean } = {}) {
   if (!keepDb) _resetDb()
   registry = new Map()
   loaded = isLoaded
@@ -141,9 +166,9 @@ export function size() {
 // note data. Throws if an embed fails (e.g. model not ready) — since nothing
 // is written until the loop finishes, that leaves the registry (and disk)
 // untouched, so the caller can retry clean on the next boot.
-export async function rebuildFromNotes(notes, { embed = ai.embedText } = {}) {
-  const seen = new Set()
-  const fresh = []
+export async function rebuildFromNotes(notes: unknown, { embed = ai.embedText }: { embed?: Embedder } = {}) {
+  const seen = new Set<string>()
+  const fresh: [string, number[]][] = []
   for (const n of Array.isArray(notes) ? notes : []) {
     for (const tag of normalizeTags(n?.tags)) {
       if (seen.has(tag) || registry.has(tag)) continue
@@ -170,10 +195,10 @@ export async function rebuildFromNotes(notes, { embed = ai.embedText } = {}) {
 // failure the original input is returned unchanged (tags are never dropped).
 // `embed` is injectable so the snap logic is unit-testable with a fake embedder;
 // production callers use the default ai.embedText.
-export async function canonicalize(tags, { embed = ai.embedText } = {}) {
+export async function canonicalize(tags: unknown, { embed = ai.embedText }: { embed?: Embedder } = {}) {
   if (!Array.isArray(tags) || tags.length === 0) return Array.isArray(tags) ? tags : []
-  const out = []
-  const seen = new Set()
+  const out: string[] = []
+  const seen = new Set<string>()
   try {
     // A tag registered earlier in this loop becomes a snap target for later tags
     // in the same list, so near-synonyms within one note collapse together. The

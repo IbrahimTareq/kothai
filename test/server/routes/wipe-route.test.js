@@ -11,9 +11,9 @@ import { Readable } from 'node:stream'
 const calls = []
 
 const realStore = await import('../../../server/data/notes.ts')
-const realCollections = await import('../../../server/data/collections.js')
+const realCollections = await import('../../../server/data/collections.ts')
 const realChats = await import('../../../server/data/chats.ts')
-const realTagVocab = await import('../../../server/data/tagvocab.js')
+const realTagVocab = await import('../../../server/data/tagvocab.ts')
 const realSettings = await import('../../../server/data/settings.ts')
 
 mock.module('../../../server/data/notes.ts', {
@@ -30,7 +30,7 @@ mock.module('../../../server/data/notes.ts', {
     },
   },
 })
-mock.module('../../../server/data/collections.js', {
+mock.module('../../../server/data/collections.ts', {
   namedExports: {
     ...realCollections,
     clearAll: async () => {
@@ -48,7 +48,7 @@ mock.module('../../../server/data/chats.ts', {
     },
   },
 })
-mock.module('../../../server/data/tagvocab.js', {
+mock.module('../../../server/data/tagvocab.ts', {
   namedExports: {
     ...realTagVocab,
     clearAll: async () => {

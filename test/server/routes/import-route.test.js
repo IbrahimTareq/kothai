@@ -128,7 +128,7 @@ function reset() {
 reset()
 
 const realStore = await import('../../../server/data/notes.ts')
-const realCollections = await import('../../../server/data/collections.js')
+const realCollections = await import('../../../server/data/collections.ts')
 const realEnrich = await import('../../../server/ai/enrich.js')
 const realImportIndex = await import('../../../server/import/index.ts')
 
@@ -142,7 +142,7 @@ mock.module('../../../server/data/notes.ts', {
     removeMany: ids => fakeRemoveMany(ids),
   },
 })
-mock.module('../../../server/data/collections.js', {
+mock.module('../../../server/data/collections.ts', {
   namedExports: {
     ...realCollections,
     all: () => fakeSpacesAll(),

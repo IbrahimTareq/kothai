@@ -6,7 +6,7 @@ import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 
 const realStore = await import('../../../server/data/notes.ts')
-const realCollections = await import('../../../server/data/collections.js')
+const realCollections = await import('../../../server/data/collections.ts')
 const realChats = await import('../../../server/data/chats.ts')
 const realSettings = await import('../../../server/data/settings.ts')
 
@@ -17,7 +17,7 @@ mock.module('../../../server/data/notes.ts', {
     getNote: id => (id === 'n1' ? { id: 'n1', title: 'Note one', embedding: null } : null),
   },
 })
-mock.module('../../../server/data/collections.js', {
+mock.module('../../../server/data/collections.ts', {
   namedExports: {
     ...realCollections,
     all: () => [{ id: 's1', name: 'Space one', itemIds: ['n1'] }],

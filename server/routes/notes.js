@@ -5,7 +5,7 @@ import * as store from '../data/notes.ts'
 import * as ai from '../ai/index.ts'
 import * as enrich from '../ai/enrich.js'
 import { isInstagramPost } from '../ai/meta.ts'
-import * as collections from '../data/collections.js'
+import * as collections from '../data/collections.ts'
 import * as query from '../data/query.ts'
 import { json, readBody, saveImage } from '../lib/http.ts'
 

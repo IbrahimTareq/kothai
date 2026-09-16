@@ -15,14 +15,24 @@
 // handler rather than an import — so this module has no edge back to enrich.js
 // and the two cannot form a cycle.
 import * as store from '../data/notes.ts'
+import type { NoteRecord } from '../data/notes.ts'
 import { fetchLinkMeta, fetchInstagramSlides, isInstagramPost } from './meta.ts'
 import { applyMeta } from './meta-fields.ts'
+
+// A queued fetch. `slides` picks the carousel job over the thumbnail one;
+// `resolve` settles the promise queueIgSlides handed its caller.
+interface IgJob {
+  noteId: string
+  url: string
+  slides?: boolean
+  resolve?: (value?: unknown) => void
+}
 
 // Called with a noteId once a fetch has produced a caption worth
 // re-classifying on. enrich.js registers the real handler at import; the
 // default no-op keeps this module usable (and testable) on its own.
-let onCaptionLanded = () => {}
-export function setCaptionHandler(fn) {
+let onCaptionLanded: (noteId: string) => void = () => {}
+export function setCaptionHandler(fn: (noteId: string) => void) {
   onCaptionLanded = fn
 }
 
@@ -31,9 +41,9 @@ export function setCaptionHandler(fn) {
 // work). Now an explicit deque instead of a promise chain, so the scrolling
 // client can PROMOTE the notes actually on screen to the front — thumbnails
 // materialize where the user is looking, not in insertion order.
-const igQueue = [] // [{ noteId, url, slides?, resolve? }]
-const igQueued = new Set() // noteIds present in igQueue
-const igInFlight = new Set() // noteIds currently mid-runIgJob (shifted out, not yet settled)
+const igQueue: IgJob[] = [] // [{ noteId, url, slides?, resolve? }]
+const igQueued = new Set<string>() // noteIds present in igQueue
+const igInFlight = new Set<string>() // noteIds currently mid-runIgJob (shifted out, not yet settled)
 let igPumping = false
 let igPaused = false // test hook
 
@@ -44,11 +54,11 @@ let igPaused = false // test hook
 // notes, up to 5 tries per note.
 const META_MAX_TRIES = 5
 
-export function metaRetryDelay(tries) {
+export function metaRetryDelay(tries: number) {
   return Math.min(24 * 3600_000, 600_000 * 4 ** tries)
 }
 
-export function metaRetryEligible(n, now = Date.now()) {
+export function metaRetryEligible(n: Pick<NoteRecord, 'metaFetched' | 'metaTries' | 'metaNextTry'>, now = Date.now()) {
   if (n.metaFetched) return false
   if ((n.metaTries || 0) >= META_MAX_TRIES) return false
   if (n.metaNextTry && now < n.metaNextTry) return false
@@ -57,18 +67,18 @@ export function metaRetryEligible(n, now = Date.now()) {
 
 // Notes stuck by the OLD failure policy: marked fetched, but no piece of
 // metadata actually landed. One retried pass unsticks them.
-export function isStuckInstagramNote(n) {
+export function isStuckInstagramNote(n: Pick<NoteRecord, 'url' | 'metaFetched' | 'thumb' | 'siteTitle' | 'siteDesc'>) {
   return !!(n.url && isInstagramPost(n.url) && n.metaFetched && !n.thumb && !n.siteTitle && !n.siteDesc)
 }
 
-async function runIgJob({ noteId, url }) {
-  const patch = {}
+async function runIgJob({ noteId, url }: IgJob) {
+  const patch: Partial<NoteRecord> = {}
   try {
     const m = await fetchLinkMeta(url, noteId)
     patch.metaFetched = true
     applyMeta(patch, m)
   } catch (e) {
-    console.error('[enrich] instagram meta fetch failed for', url, '-', e.message)
+    console.error('[enrich] instagram meta fetch failed for', url, '-', e instanceof Error ? e.message : e)
     // Record a try count + earliest-next-attempt instead of permanently
     // setting metaFetched — see the meta retry policy below. metaFetched is
     // deliberately left untouched here (stays whatever it was, usually
@@ -87,8 +97,11 @@ async function runIgJob({ noteId, url }) {
 async function pumpIg() {
   if (igPumping || igPaused) return
   igPumping = true
-  while (igQueue.length) {
-    const job = igQueue.shift()
+  // Dequeue in the loop head rather than `while (igQueue.length)` with a shift
+  // inside: Array.shift() is declared possibly-undefined for an empty array, and
+  // the job is handed straight to runIgJob/runSlidesJob. Same dequeue order and
+  // same stopping point — a shift on an empty queue neither mutates nor loops.
+  for (let job = igQueue.shift(); job; job = igQueue.shift()) {
     // Only thumbnail jobs are tracked in igQueued — a slides job for the same
     // note must not clear a still-pending thumbnail job's marker, which would
     // let queueIgMeta enqueue a second fetch for work already in the queue.
@@ -104,7 +117,7 @@ async function pumpIg() {
     try {
       await (job.slides ? runSlidesJob(job) : runIgJob(job))
     } catch (e) {
-      console.error('[enrich] instagram meta job failed:', e.message)
+      console.error('[enrich] instagram meta job failed:', e instanceof Error ? e.message : e)
     } finally {
       igInFlight.delete(job.noteId)
       job.resolve?.()
@@ -113,7 +126,7 @@ async function pumpIg() {
   igPumping = false
 }
 
-export function queueIgMeta(noteId, url) {
+export function queueIgMeta(noteId: string, url: string) {
   if (igQueued.has(noteId) || igInFlight.has(noteId)) return
   igQueued.add(noteId)
   igQueue.push({ noteId, url })
@@ -129,12 +142,12 @@ export function queueIgMeta(noteId, url) {
 // `slidesFetched` records that a post has been checked, so a single-image post
 // is never re-scraped; a FAILED fetch deliberately leaves it unset, so simply
 // opening the item again retries.
-async function runSlidesJob({ noteId, url }) {
-  let slides
+async function runSlidesJob({ noteId, url }: IgJob) {
+  let slides: string[]
   try {
     slides = await fetchInstagramSlides(url, noteId)
   } catch (e) {
-    console.error('[enrich] instagram slides fetch failed for', url, '-', e.message)
+    console.error('[enrich] instagram slides fetch failed for', url, '-', e instanceof Error ? e.message : e)
     return
   }
   // One slide means the post is a single image, not a carousel — record that
@@ -146,12 +159,12 @@ async function runSlidesJob({ noteId, url }) {
 // Enqueued at the FRONT for the same reason promoteIgMeta exists: this note is
 // the one on screen right now. Concurrent callers share one fetch rather than
 // each burning a throttle slot on the same post.
-const slidesWaiters = new Map() // noteId → in-flight promise
+const slidesWaiters = new Map<string, Promise<unknown>>() // noteId → in-flight promise
 
-export function queueIgSlides(noteId, url) {
+export function queueIgSlides(noteId: string, url: string) {
   const running = slidesWaiters.get(noteId)
   if (running) return running
-  let resolve
+  let resolve: IgJob['resolve']
   const done = new Promise(r => {
     resolve = r
   })
@@ -165,12 +178,12 @@ export function queueIgSlides(noteId, url) {
 // Move the given noteIds (those still queued) to the FRONT, preserving the
 // caller's order. Unknown / already-fetched ids are ignored — callers send
 // whatever is on screen without checking.
-export function promoteIgMeta(ids) {
+export function promoteIgMeta(ids: string[]) {
   const want = ids.filter(id => igQueued.has(id))
   if (!want.length) return 0
   const wantSet = new Set(want)
   const rest = igQueue.filter(j => !wantSet.has(j.noteId))
-  const front = want.map(id => igQueue.find(j => j.noteId === id)).filter(Boolean)
+  const front = want.map(id => igQueue.find(j => j.noteId === id)).filter(j => j !== undefined)
   igQueue.length = 0
   igQueue.push(...front, ...rest)
   return front.length

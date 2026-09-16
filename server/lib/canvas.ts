@@ -29,7 +29,7 @@ interface CanvasEdge {
   toSide?: Side
 }
 
-interface CanvasDoc {
+export interface CanvasDoc {
   nodes: CanvasNode[]
   edges: CanvasEdge[]
 }

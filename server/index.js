@@ -14,8 +14,8 @@ const store = await import('./data/notes.ts')
 const chats = await import('./data/chats.ts')
 const settings = await import('./data/settings.ts')
 const enrich = await import('./ai/enrich.js')
-const collections = await import('./data/collections.js')
-const tagvocab = await import('./data/tagvocab.js')
+const collections = await import('./data/collections.ts')
+const tagvocab = await import('./data/tagvocab.ts')
 
 const server = createServer()
 
