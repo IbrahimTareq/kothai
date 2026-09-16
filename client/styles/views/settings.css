@@ -96,7 +96,6 @@
 .residency-btn {
   padding: var(--space-6) var(--space-14);
   font-size:var(--text-xs);
-  letter-spacing: 0.06em;
   background: none;
   border: none;
   border-right: 1px solid var(--line);

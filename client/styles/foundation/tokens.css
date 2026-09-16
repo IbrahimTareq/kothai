@@ -5,14 +5,16 @@
   /* Type families */
   --font-sans:"Geist",ui-sans-serif,system-ui,-apple-system,sans-serif;
   --font-mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,Monaco,monospace;
-  /* legacy aliases used across components */
-  --font:var(--font-sans);
-  --mono:var(--font-mono);
+  /* There were once --font/--mono aliases here, described as "used across
+     components". They had no users at all; the app had always spelled the two
+     families in full. Removed — an alias nobody calls is a second name for the
+     same thing, which is the beginning of drift, not a convenience. */
 
-  /* Weights. Headings carry their own token: the Ask headline's semibold 600
-     was adopted as the app-wide heading weight, replacing the original
-     Behold rule that kept headings at --fw-normal. */
-  --fw-light:300;
+  /* Weights. Four steps, and every one of them is in use. Headings carry their
+     own token: the Ask headline's semibold 600 was adopted as the app-wide
+     heading weight, replacing the original Behold rule that kept headings at
+     --fw-normal. (A --fw-light:300 sat here unused — the Geist file still
+     covers 300, but nothing in the app is set in it.) */
   --fw-normal:400;
   --fw-medium:500;   /* "Book" */
   --fw-heading:600;  /* all h1–h4 */
@@ -26,13 +28,23 @@
   --tracking-heading:-.025em;  /* h1–h4 — the Ask headline's value */
   --tracking-tight:-.02em;     /* small UI text; ~29 sites still on this */
   --tracking-tighter:-.03em;   /* 28px+ */
-  --tracking-tightest:-.05em;  /* display, 36px+ */
-  --tracking-mono:.06em;   /* mono eyebrows get a little positive tracking */
+  /* Positive tracking has exactly two jobs, and the class that applies each is
+     named after it. Anything mono-family gets --tracking-mono via .mono; any
+     uppercase micro-label gets --tracking-label. Three elements used to carry
+     .mono and then re-declare letter-spacing on top of it at .05em, .06em and
+     .08em — three hand-picked values for one job. Don't override these; if a
+     label needs different tracking, it is a different kind of label. */
+  --tracking-mono:.06em;   /* mono eyebrows — applied by .mono, not by hand */
   --tracking-label:.14em;  /* uppercase micro-labels */
 
   /* Type scale. Everything snaps to these steps — the sweep removed the
      8.5/9.5/10.5/11.5/12.5px half-pixel sizes and the un-tokenized 9/11/13px
-     that had accumulated, so there is no size in the app that is off-ladder. */
+     that had accumulated, so there is no size in the app that is off-ladder.
+     The ladder now ends at 28px + the fluid hero. A --text-display:36px and
+     --text-display-lg:40px sat above that with --tracking-tightest to match,
+     an entire display tier for typography this app does not set. Cutting the
+     top of a ladder leaves no gap, so they went; --text-lg is likewise unused
+     but sits mid-ladder, and a hole at 18px would just get filled by hand. */
   --text-3xs:9px;
   --text-2xs:10px;
   --text-xs:12px;
@@ -43,8 +55,6 @@
   --text-xl:20px;
   --text-2xl:22px;
   --text-3xl:28px;
-  --text-display:36px;
-  --text-display-lg:40px;
   /* Fluid hero size — the Ask landing headline */
   --text-display-fluid:clamp(24px,3vw,30px);
 
@@ -55,8 +65,10 @@
   --leading-normal:1.5;
 
   /* ── Colour: monochrome dark ── */
-  --color-black:#000;
-  --color-dark:#0a0a0a;
+  /* The literal white a label keeps in both themes, over an image or a dark
+     overlay. It sat in a trio with --color-black:#000 and --color-dark:#0a0a0a,
+     neither of which had a single consumer — the theme-aware --bg/--ink tokens
+     had covered those jobs for a long time. */
   --color-white:#fff;
 
   --bg:#0a0a0a;
@@ -104,9 +116,6 @@
   /* Derived so it tracks a user's custom --accent (set at runtime from
      settings) instead of the hardcoded white it used to be. */
   --accent-hover:color-mix(in srgb, var(--accent) 88%, var(--bg));
-
-  /* Arc reactor glow channel (masks use --bg) — inverts with the theme */
-  --arc-rgb:255,255,255;
 
   /* Radius. --radius-md was added during the sweep: 8px was the single most
      used radius in the app (11 sites) yet had no token, which meant the scale
@@ -242,8 +251,6 @@
 
   --accent:#141414;
   --on-accent:#ffffff;
-
-  --arc-rgb:10,10,10;   /* reactor glow goes near-black on light */
 
   /* Ask surface — the reference's light values */
   --chat-surface:rgba(255,255,255,.70);

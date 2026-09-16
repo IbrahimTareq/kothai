@@ -29,12 +29,30 @@ const walkStyles = (rel = '') => readdirSync(join(STYLES, rel), { withFileTypes:
 
 const files = walkStyles().filter(f => f.endsWith('.css') && !SKIP.has(basename(f)))
 const tokensSrc = readFileSync(join(STYLES, 'foundation', 'tokens.css'), 'utf8')
-const defined = new Set([...tokensSrc.matchAll(/(--[a-z0-9-]+)\s*:/g)].map(m => m[1]))
+// Comments are stripped before definitions are harvested. tokens.css documents
+// removals by name ("a --text-display:36px sat above that"), and a bare match
+// counted those tombstones as live definitions — so var(--text-display) passed
+// the undefined-token check below and still resolved to nothing at runtime,
+// which is the exact failure that check exists to catch.
+const tokensCode = tokensSrc.replace(/\/\*[\s\S]*?\*\//g, '')
+const defined = new Set([...tokensCode.matchAll(/(--[a-z0-9-]+)\s*:/g)].map(m => m[1]))
 
 const RULES = [
   { id: 'font-size',
     re: /font-size:\s*[0-9.]+(px|rem)/g,
     msg: 'raw font-size — use a --text-* token' },
+  // font-size was guarded from the start; weight and tracking were not, which
+  // is exactly where the drift landed — two hand-written 600s and five one-off
+  // letter-spacings, three of them re-declared on elements that already had
+  // .mono. Guarding all three axes closes the gap. @font-face is exempt: its
+  // `font-weight: 300 700` states what the variable file contains, which is a
+  // fact about the resource rather than a design choice.
+  { id: 'font-weight',
+    re: /font-weight:\s*(?!\s*[0-9]+\s+[0-9]+)[0-9]+/g,
+    msg: 'raw font-weight — use a --fw-* token' },
+  { id: 'letter-spacing',
+    re: /letter-spacing:\s*-?[0-9.]+(em|px|rem)/g,
+    msg: 'raw letter-spacing — use a --tracking-* token (mono text gets it from .mono)' },
   { id: 'colour',
     re: /(?:color|background|background-color|border-color|fill|stroke)\s*:\s*(?:#[0-9a-fA-F]{3,8}|rgba?\([0-9])/g,
     msg: 'raw colour — use an --ink-*/--panel-*/--line-*/--accent-* token' },
@@ -148,6 +166,52 @@ for (const full of walk(CLIENT)) {
       }
     }
   }
+}
+
+/* ── tokens nobody uses ───────────────────────────────────────────────────
+ * Every rule above pushes values *into* tokens.css. Nothing pushed back, so
+ * the file only ever grew: a --font/--mono alias pair whose comment claimed
+ * they were "used across components" when they had never had a single caller,
+ * a --fw-light nothing was set in, a --text-display/-lg/--tracking-tightest
+ * display tier for typography this app does not have, an --arc-rgb channel
+ * left behind by a deleted effect. Each one is a value a reader assumes is
+ * load-bearing, and a name the next person may reach for by accident.
+ *
+ * The rule is that a scale may have empty rungs but a named one-off may not.
+ * A closed ladder (--space-*, --text-*, --z-*) is worth more complete than
+ * minimal: the unoccupied step is what stops someone inventing 44px. A token
+ * that names one thing, though, is only worth its one user. So unoccupied
+ * rungs are listed below by name — which keeps them a deliberate, reviewable
+ * decision rather than drift — and anything else must have a caller.
+ */
+const EXEMPT = new Map([
+  // Ladder rungs held open so the scale stays closed and choosing needs no
+  // judgement. Each is the step someone would otherwise hand-write.
+  ['--text-lg', 'type ladder: a hole at 18px would be filled by hand'],
+  ['--leading-none', 'leading ladder'],
+  ['--space-0', 'spacing ladder: the explicit zero'],
+  ['--space-44', 'spacing ladder: 4px grid above 24'],
+  ['--space-48', 'spacing ladder: its documented top step'],
+  ['--z-docked', 'stacking ladder: named so the mobile composer has a level'],
+  ['--control-lg', 'control-size ladder'],
+  ['--control-xl', 'control-size ladder'],
+  ['--warn', 'completes the danger/warn/ok status triad'],
+  // Reference values. CSS cannot evaluate a custom property inside an @media
+  // condition, so these are documentation plus the JS side's matchMedia().
+  ['--bp-sm', 'breakpoint reference — see tokens.css'],
+  ['--bp-md', 'breakpoint reference — see tokens.css'],
+  ['--bp-lg', 'breakpoint reference — see tokens.css'],
+  ['--bp-xl', 'breakpoint reference — see tokens.css'],
+])
+
+const consumers = [...files.map(f => join(STYLES, f)), ...walk(CLIENT).filter(f => /\.(css|tsx?)$/.test(f))]
+const usedSrc = [...new Set(consumers)].map(f => readFileSync(f, 'utf8')).join('\n')
+const used = new Set([...usedSrc.matchAll(/var\(\s*(--[a-z0-9-]+)/g)].map(m => m[1]))
+for (const token of defined) {
+  if (used.has(token) || EXEMPT.has(token)) continue
+  report.push(`  foundation/tokens.css  [unused-token] ${token} has no consumer`
+    + `\n      delete it, or add it to EXEMPT in lint-tokens.mjs with the reason it is held open`)
+  failures++
 }
 
 if (failures) {

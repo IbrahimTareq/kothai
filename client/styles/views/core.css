@@ -171,7 +171,7 @@
 .cited-go{color:var(--ink-faint);flex-shrink:0}
 .cited:hover .cited-go{color:var(--ink)}
 
-.thinking .warming { margin-left: var(--space-10); font-size:var(--text-xs); color: var(--ink-dim); letter-spacing: 0.05em; }
+.thinking .warming { margin-left: var(--space-10); font-size:var(--text-xs); color: var(--ink-dim); }
 
 /* Ask disabled (language model off) */
 .ask-off {
@@ -185,7 +185,7 @@
   color: var(--ink-dim);
   font-size:var(--text-sm);
 }
-.ask-off .mono { letter-spacing: 0.08em; font-size:var(--text-xs); }
+.ask-off .mono { font-size:var(--text-xs); }
 
 /* ────────────────────── ask surface (ai-sdk chatbot language) ──────────────
    Ported from chatbot.ai-sdk.dev: 13px body text at 1.65 with neutral (not
