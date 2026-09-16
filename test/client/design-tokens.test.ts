@@ -16,9 +16,10 @@
 // the answer is identical on a laptop and in CI.
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { fileURLToPath } from 'node:url'
 import { loadThemes, resolve, pairContrast, contrast } from '../../scripts/token-colors.ts'
 
-const TOKENS = new URL('../../client/styles/foundation/tokens.css', import.meta.url)
+const TOKENS = fileURLToPath(new URL('../../client/styles/foundation/tokens.css', import.meta.url))
 const { dark, light } = loadThemes(TOKENS)
 const THEMES: [string, Record<string, string>][] = [
   ['dark', dark],

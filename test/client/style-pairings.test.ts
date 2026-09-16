@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url'
 import { loadThemes, pairContrast } from '../../scripts/token-colors.ts'
 
 const STYLES = fileURLToPath(new URL('../../client/styles/', import.meta.url))
-const TOKENS = new URL('../../client/styles/foundation/tokens.css', import.meta.url)
+const TOKENS = fileURLToPath(new URL('../../client/styles/foundation/tokens.css', import.meta.url))
 const { dark, light } = loadThemes(TOKENS)
 const THEMES: [string, Record<string, string>][] = [
   ['dark', dark],

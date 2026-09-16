@@ -17,8 +17,28 @@ import {
   COL_PAD,
   COL_MIN_H,
 } from '../../client/layout/canvas.ts'
+import type { FlowEdge, FlowNode } from '../../client/layout/canvas.ts'
+import type { CanvasDoc } from '../../client/types.ts'
 
-const box = (id, w = 220, h = 160) => ({ id, type: 'text', text: '', x: 0, y: 0, width: w, height: h })
+// `.find` over a node list is `T | undefined`; every lookup below is for a node
+// the test itself just put there, so a miss is a broken test and should say so
+// rather than surface as a confusing property-of-undefined further down.
+const need = <T>(n: T | undefined): T => {
+  if (n === undefined) throw new Error('expected the node to be present')
+  return n
+}
+
+// `as const` on every discriminant: without it the literal widens to `string`
+// and the object stops satisfying the CanvasNode union.
+const box = (id: string, w = 220, h = 160) => ({
+  id,
+  type: 'text' as const,
+  text: '',
+  x: 0,
+  y: 0,
+  width: w,
+  height: h,
+})
 
 test('flowPack lays nodes out in rows, wrapping at maxWidth', () => {
   const out = flowPack([box('a'), box('b', 220, 300), box('c')], { maxWidth: 500, gap: 24 })
@@ -65,8 +85,8 @@ test('reconcile packs every member from the origin on an empty doc', () => {
 test('reconcile drops cards for departed members and edges touching them', () => {
   const doc = {
     nodes: [
-      { id: 'item:a', type: 'item', itemId: 'a', x: 0, y: 0, width: 220, height: 100 },
-      { id: 'n1', type: 'text', text: 'hi', x: 300, y: 0, width: 220, height: 60 },
+      { id: 'item:a', type: 'item' as const, itemId: 'a', x: 0, y: 0, width: 220, height: 100 },
+      { id: 'n1', type: 'text' as const, text: 'hi', x: 300, y: 0, width: 220, height: 60 },
     ],
     edges: [{ id: 'e1', fromNode: 'item:a', toNode: 'n1' }],
   }
@@ -80,18 +100,34 @@ test('reconcile drops cards for departed members and edges touching them', () =>
 
 test('reconcile places new members in a row below existing content, keeping old positions', () => {
   const doc = {
-    nodes: [{ id: 'item:a', type: 'item', itemId: 'a', x: 40, y: 10, width: 220, height: 100 }],
+    nodes: [{ id: 'item:a', type: 'item' as const, itemId: 'a', x: 40, y: 10, width: 220, height: 100 }],
     edges: [],
   }
   const d = reconcile(doc, [{ id: 'a' }, { id: 'b' }])
-  const a = d.nodes.find(n => n.id === 'item:a')
-  const b = d.nodes.find(n => n.id === 'item:b')
+  const a = need(d.nodes.find(n => n.id === 'item:a'))
+  const b = need(d.nodes.find(n => n.id === 'item:b'))
   assert.deepEqual([a.x, a.y], [40, 10])
   assert.deepEqual([b.x, b.y], [40, 10 + 100 + GAP])
 })
 
-const col = (id, x, y, w = 260, h = 400) => ({ id, type: 'group', label: id, x, y, width: w, height: h })
-const card = (id, x, y, h = 100) => ({ id, type: 'item', itemId: id, x, y, width: 220, height: h })
+const col = (id: string, x: number, y: number, w = 260, h = 400) => ({
+  id,
+  type: 'group' as const,
+  label: id,
+  x,
+  y,
+  width: w,
+  height: h,
+})
+const card = (id: string, x: number, y: number, h = 100) => ({
+  id,
+  type: 'item' as const,
+  itemId: id,
+  x,
+  y,
+  width: 220,
+  height: h,
+})
 
 test('columnOf: a node belongs to the smallest column containing its centre', () => {
   const doc = {
@@ -116,9 +152,9 @@ test('stackColumn stacks children top to bottom, sets their width and grows the 
     edges: [],
   }
   const d = stackColumn(doc, 'g')
-  const g = d.nodes.find(n => n.id === 'g')
-  const early = d.nodes.find(n => n.id === 'early')
-  const late = d.nodes.find(n => n.id === 'late')
+  const g = need(d.nodes.find(n => n.id === 'g'))
+  const early = need(d.nodes.find(n => n.id === 'early'))
+  const late = need(d.nodes.find(n => n.id === 'late'))
   assert.deepEqual([early.x, early.y, early.width], [COL_PAD, COL_HEAD + COL_PAD, 260 - 2 * COL_PAD])
   assert.deepEqual([late.x, late.y], [COL_PAD, COL_HEAD + COL_PAD + 100 + COL_PAD])
   assert.equal(g.height, COL_HEAD + COL_PAD + 100 + COL_PAD + 80 + COL_PAD)
@@ -126,7 +162,7 @@ test('stackColumn stacks children top to bottom, sets their width and grows the 
     childrenOf(d, 'g').map(n => n.id),
     ['late', 'early'],
   )
-  assert.deepEqual([d.nodes.find(n => n.id === 'out').x], [900]) // untouched
+  assert.deepEqual([need(d.nodes.find(n => n.id === 'out')).x], [900]) // untouched
 })
 
 test('stackColumn keeps an empty column at its minimum height', () => {
@@ -145,8 +181,8 @@ test('tidy re-packs top-level nodes in reading order and carries column children
     edges: [],
   }
   const d = tidy(doc)
-  const at = id => {
-    const n = d.nodes.find(x => x.id === id)
+  const at = (id: string) => {
+    const n = need(d.nodes.find(x => x.id === id))
     return [n.x, n.y]
   }
   assert.deepEqual(at('first'), [0, 0])
@@ -160,29 +196,29 @@ test('tidy re-packs top-level nodes in reading order and carries column children
 test('toFlow gives column children a parentId and relative position, groups first', () => {
   const doc = {
     nodes: [card('kid', 100 + COL_PAD, 200 + COL_HEAD + COL_PAD), col('g', 100, 200), card('loose', 900, 900)],
-    edges: [{ id: 'e1', fromNode: 'kid', toNode: 'loose', fromSide: 'right', toSide: 'left' }],
+    edges: [{ id: 'e1', fromNode: 'kid', toNode: 'loose', fromSide: 'right' as const, toSide: 'left' as const }],
   }
   const f = toFlow(doc)
   assert.equal(f.nodes[0].id, 'g')
-  const kid = f.nodes.find(n => n.id === 'kid')
+  const kid = need(f.nodes.find(n => n.id === 'kid'))
   assert.equal(kid.parentId, 'g')
   assert.deepEqual(kid.position, { x: COL_PAD, y: COL_HEAD + COL_PAD })
   assert.equal(kid.width, 220)
   assert.deepEqual(kid.data, { kind: 'item', itemId: 'kid', h: 100 })
-  const g = f.nodes.find(n => n.id === 'g')
+  const g = need(f.nodes.find(n => n.id === 'g'))
   assert.deepEqual([g.width, g.height, g.dragHandle], [260, 400, '.cv-col-head'])
-  assert.equal(f.nodes.find(n => n.id === 'loose').parentId, undefined)
+  assert.equal(need(f.nodes.find(n => n.id === 'loose')).parentId, undefined)
   assert.deepEqual(f.edges, [{ id: 'e1', source: 'kid', target: 'loose', sourceHandle: 'right', targetHandle: 'left' }])
 })
 
 test('toFlow keeps selection and measurements from the previous flow nodes', () => {
   const doc = { nodes: [card('a', 0, 0)], edges: [] }
-  const prev = [
+  const prev: FlowNode[] = [
     {
       id: 'a',
       type: 'item',
       position: { x: 0, y: 0 },
-      data: {},
+      data: { kind: 'item', h: 160 },
       selected: true,
       measured: { width: 220, height: 333 },
     },
@@ -193,7 +229,7 @@ test('toFlow keeps selection and measurements from the previous flow nodes', () 
 })
 
 test('fromFlow restores absolute coordinates, measured heights and edge sides', () => {
-  const nodes = [
+  const nodes: FlowNode[] = [
     {
       id: 'g',
       type: 'group',
@@ -213,7 +249,7 @@ test('fromFlow restores absolute coordinates, measured heights and edge sides', 
     },
     { id: 'n1', type: 'text', position: { x: 900.4, y: 10 }, width: 300, data: { kind: 'text', text: 'note', h: 60 } },
   ]
-  const edges = [{ id: 'e1', source: 'item:a', target: 'n1', sourceHandle: 'bottom', targetHandle: null }]
+  const edges: FlowEdge[] = [{ id: 'e1', source: 'item:a', target: 'n1', sourceHandle: 'bottom', targetHandle: null }]
   const d = fromFlow(nodes, edges)
   assert.deepEqual(d.nodes, [
     { id: 'g', type: 'group', label: 'Reads', x: 100, y: 200, width: 260, height: 400 },
@@ -230,7 +266,7 @@ test('toFlow then fromFlow round-trips a doc with a column', () => {
   }
   const f = toFlow(doc)
   const back = fromFlow(f.nodes, f.edges)
-  const byId = d => Object.fromEntries(d.nodes.map(n => [n.id, n]))
+  const byId = (d: CanvasDoc) => Object.fromEntries(d.nodes.map(n => [n.id, n]))
   assert.deepEqual(byId(back), byId(doc))
   assert.deepEqual(back.edges, [{ id: 'e1', fromNode: 'kid', toNode: 'loose', fromSide: undefined, toSide: undefined }])
 })

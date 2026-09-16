@@ -2,10 +2,13 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { SOURCES, isAwaitingContent } from '../../client/domain/source.ts'
 import { sourceKey } from '../../server/data/query.ts'
-import type { UIItem } from '../../client/types.ts'
+import type { NoteType, UIItem } from '../../client/types.ts'
+import type { ServerNote } from '../../server/types.ts'
 
 test('server sourceKey agrees with client SOURCES on every predicate', () => {
-  const fixtures = [
+  // Annotated, not inferred: `type` would otherwise widen to `string` and stop
+  // being the NoteType both sides of this parity check are typed against.
+  const fixtures: { url: string | null; type: NoteType }[] = [
     { url: 'https://www.instagram.com/reel/A/', type: 'video' },
     { url: 'https://www.instagram.com/p/B/', type: 'video' },
     { url: 'https://github.com/o/r', type: 'link' },
@@ -16,7 +19,7 @@ test('server sourceKey agrees with client SOURCES on every predicate', () => {
     { url: null, type: 'text' },
   ]
   for (const f of fixtures) {
-    const item = {
+    const item: UIItem = {
       id: 'x',
       ts: 0,
       type: f.type === 'text' ? 'note' : f.type,
@@ -24,9 +27,24 @@ test('server sourceKey agrees with client SOURCES on every predicate', () => {
       pending: false,
       url: f.url,
       host: f.url ? new URL(f.url).hostname.replace(/^www\./, '') : undefined,
-    } as UIItem
+    }
+    // sourceKey reads only `type` and `url`, but it is typed against the whole
+    // record; the rest are filled with empty values rather than narrowing the
+    // server's signature to suit a test.
+    const note: ServerNote = {
+      id: 'x',
+      createdAt: '',
+      type: f.type,
+      category: '',
+      title: '',
+      summary: '',
+      tags: [],
+      content: '',
+      url: f.url,
+      image: null,
+    }
     const clientKey = SOURCES.find(s => s.test(item))?.key ?? null
-    assert.equal(sourceKey({ type: f.type, url: f.url }), clientKey, String(f.url))
+    assert.equal(sourceKey(note), clientKey, String(f.url))
   }
 })
 

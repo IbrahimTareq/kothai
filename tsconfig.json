@@ -6,7 +6,14 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
-    "types": ["vite/client"],
+    // "node" is here only for test/client: those files run under `node --test`
+    // and import node:test, node:assert, node:fs, so without it every one of
+    // them fails to resolve. client/ itself must never see node globals — a
+    // `process.env` or `Buffer` that typechecks here dies in the browser — but
+    // tsc has no per-directory `types`, so this is the price of checking the
+    // tests at all. Nothing mechanical stops a node global reaching client/;
+    // review does.
+    "types": ["vite/client", "node"],
 
     "strict": true,
     "noUnusedLocals": true,
@@ -26,5 +33,8 @@
     "esModuleInterop": true,
     "resolveJsonModule": true
   },
-  "include": ["client"]
+  // test/client went entirely unchecked until 2026-09-17: `include` named only
+  // `client`, so nothing — not tsc, not Vite, not the test run — ever read a
+  // type in these 18 files, and 54 errors had piled up behind that gap.
+  "include": ["client", "test/client"]
 }
