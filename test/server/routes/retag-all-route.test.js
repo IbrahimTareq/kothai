@@ -9,11 +9,11 @@ let retagAllImpl
 let availableImpl
 let residencyImpl
 
-const realEnrich = await import('../../../server/ai/enrich.js')
+const realEnrich = await import('../../../server/ai/enrich.ts')
 const realAi = await import('../../../server/ai/index.ts')
 const realSettings = await import('../../../server/data/settings.ts')
 
-mock.module('../../../server/ai/enrich.js', { namedExports: { ...realEnrich, retagAll: () => retagAllImpl() } })
+mock.module('../../../server/ai/enrich.ts', { namedExports: { ...realEnrich, retagAll: () => retagAllImpl() } })
 mock.module('../../../server/ai/index.ts', { namedExports: { ...realAi, available: () => availableImpl() } })
 mock.module('../../../server/data/settings.ts', {
   namedExports: { ...realSettings, getResidency: () => residencyImpl() },

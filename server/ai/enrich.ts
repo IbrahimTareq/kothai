@@ -8,14 +8,18 @@
 // of staying heuristic forever. Any failure just leaves the heuristic version.
 import path from 'node:path'
 import * as store from '../data/notes.ts'
+import type { NoteRecord } from '../data/notes.ts'
 import * as tags from '../lib/tags.ts'
 import * as tagvocab from '../data/tagvocab.ts'
 import * as inference from './index.ts'
 import { fetchLinkMeta, isInstagramPost, isYouTubeVideo, fetchYouTubeCaptions } from './meta.ts'
+import type { LinkMeta } from './meta.ts'
 import { applyMeta } from './meta-fields.ts'
 import * as collections from '../data/collections.ts'
 import * as settings from '../data/settings.ts'
 import { stepsFor } from './backlog.ts'
+import type { AiMarkers } from './backlog.ts'
+import type { Residency } from './roles.ts'
 import { DESCRIBE_THUMB_PROMPT, EMBED_RECIPE } from './prompts.ts'
 import { UPLOAD_DIR } from '../config.ts'
 import {
@@ -42,18 +46,29 @@ export {
   _igQueueState,
 }
 
-let enrichChain = Promise.resolve()
+let enrichChain: Promise<unknown> = Promise.resolve()
 
 // Enqueue an arbitrary job on the FIFO chain. Also used by the settings
 // re-embed so it can't race in-flight enrichment. Returns the chain promise
 // so callers that care when it lands (tests; queueIgMeta below) can await
 // it — fire-and-forget callers just ignore the return value.
-export function queueJob(fn) {
-  enrichChain = enrichChain.then(fn).catch(e => console.error('[enrich] failed:', e.message))
+export function queueJob(fn: () => unknown): Promise<unknown> {
+  enrichChain = enrichChain.then(fn).catch(e => console.error('[enrich] failed:', e instanceof Error ? e.message : e))
   return enrichChain
 }
 
-export function queueEnrich(noteId, job) {
+// What one enrichNote pass needs: the shape /api/save posts and enrichArgsFor
+// rebuilds for an existing note. `absPath` is optional because routes/notes.js
+// passes `img?.absPath` (undefined for a note with no image) where the import
+// route passes null — enrichNote's own `hasImage && absPath` guard covers both.
+interface EnrichArgs {
+  absPath?: string | null
+  text: string
+  isUrl: boolean
+  hasImage: boolean
+}
+
+export function queueEnrich(noteId: string, job: EnrichArgs) {
   return queueJob(() => enrichNote(noteId, job))
 }
 
@@ -78,19 +93,30 @@ setCaptionHandler(noteId => queueJob(() => reclassifyWithCaption(noteId)))
 // outbound requests to a handful of hosts, and 197 simultaneous fetches is how
 // you earn a rate-limit. Deliberately NOT used for Instagram, which has its
 // own queue on a >=2.5s throttle for exactly that reason (see queueIgMeta).
+interface MetaJob {
+  noteId: string
+  url: string
+}
+
 const META_CONCURRENCY = 4
 let metaActive = 0
-const metaQueue = []
+const metaQueue: MetaJob[] = []
 
-export function queueLinkMeta(noteId, url) {
+export function queueLinkMeta(noteId: string, url: string) {
   if (!noteId || !url || isInstagramPost(url)) return
   metaQueue.push({ noteId, url })
   pumpMeta()
 }
 
 function pumpMeta() {
-  while (metaActive < META_CONCURRENCY && metaQueue.length) {
+  // Dequeue first and break on empty rather than testing metaQueue.length in
+  // the loop head: Array.shift() is declared possibly-undefined and the job
+  // goes straight to runMetaJob. Same dequeue order and same stopping point —
+  // a shift on an empty queue neither mutates nor loops. ig-queue.ts's pumpIg
+  // restructured its own loop head for exactly this reason.
+  while (metaActive < META_CONCURRENCY) {
     const job = metaQueue.shift()
+    if (!job) break
     metaActive++
     runMetaJob(job)
       .catch(() => {})
@@ -101,20 +127,21 @@ function pumpMeta() {
   }
 }
 
-async function runMetaJob({ noteId, url }) {
-  let m
+async function runMetaJob({ noteId, url }: MetaJob) {
+  let m: LinkMeta | null = null
   try {
     m = await fetchLinkMeta(url, noteId)
   } catch (e) {
     // Leave the note untouched and metaFetched unset: enrichNote's own fetch
     // still runs later, so a failure here costs nothing but a retry.
-    console.error('[enrich] fast meta fetch failed:', e.message)
+    console.error('[enrich] fast meta fetch failed:', e instanceof Error ? e.message : e)
     return
   }
   if (!m) return
   const existing = store.getNote(noteId)
   if (!existing) return // deleted (or rolled back) while the fetch was in flight
-  const patch = applyMeta({ metaFetched: true }, m)
+  const patch: Partial<NoteRecord> = { metaFetched: true }
+  applyMeta(patch, m)
   // The provisional title is the whole point of this lane: the card renders
   // `title`, not siteTitle, so without this the tile keeps the importer's
   // placeholder ("TikTok video") until classify eventually runs. Gated on
@@ -126,7 +153,7 @@ async function runMetaJob({ noteId, url }) {
   try {
     await store.updateNote(noteId, patch)
   } catch (e) {
-    console.error('[enrich] fast meta write failed:', e.message)
+    console.error('[enrich] fast meta write failed:', e instanceof Error ? e.message : e)
   }
 }
 
@@ -151,7 +178,11 @@ async function runMetaJob({ noteId, url }) {
 // anywhere. For those the marker is simply wrong, and only the artifact tells
 // the truth. The marker is still written, because it is what the enrichment
 // backlog and deriveAiMarkers read elsewhere. See stepsFor's matching note.
-async function describeThumb(note, residency, ai) {
+async function describeThumb(
+  note: { thumb?: string | null; thumbDescription?: string | null },
+  residency: Residency,
+  ai: AiMarkers,
+): Promise<string> {
   if (residency.vision === 'off' || !note.thumb || note.thumbDescription) return ''
   try {
     const absPath = path.join(UPLOAD_DIR, path.basename(note.thumb))
@@ -159,7 +190,7 @@ async function describeThumb(note, residency, ai) {
     ai.thumbVision = true
     return description
   } catch (e) {
-    console.error('[enrich] thumbnail vision describe failed:', e.message)
+    console.error('[enrich] thumbnail vision describe failed:', e instanceof Error ? e.message : e)
     return ''
   }
 }
@@ -186,7 +217,7 @@ async function describeThumb(note, residency, ai) {
 // (the boot sweep in queueMetaBackfill below, or another queueIgMeta call) —
 // this codebase already prefers that tradeoff (see backlog.js's
 // deriveAiMarkers comment on the same false-positive-vs-false-negative call).
-async function reclassifyWithCaption(id) {
+async function reclassifyWithCaption(id: string) {
   const residency = settings.getResidency()
   const runClassify = residency.llm !== 'off'
   const runEmbed = residency.embed !== 'off'
@@ -195,7 +226,7 @@ async function reclassifyWithCaption(id) {
   const existing = store.getNote(id)
   if (!existing || existing.ai?.igReclassified) return // deleted, or already re-run once
 
-  const ai = { ...existing.ai }
+  const ai: AiMarkers = { ...existing.ai }
   // The thumbnail queueIgMeta just fetched is guaranteed to be on disk by the
   // time this runs, so this is where an Instagram note's frame gets described.
   // enrichNote runs the same step for every other kind of note; whichever
@@ -213,7 +244,7 @@ async function reclassifyWithCaption(id) {
     .join('\n\n')
   if (!richText) return
 
-  const patch = {}
+  const patch: Partial<NoteRecord> = {}
   // Persisted, not just folded into richText: Ask's answer prompt builds its
   // context from the same fields the embedding used (see prompts.js), so a
   // reel retrieved on the strength of its thumbnail description is useless
@@ -243,7 +274,7 @@ async function reclassifyWithCaption(id) {
       ai.classify = true
       madeProgress = true
     } catch (e) {
-      console.error('[enrich] instagram re-classify failed:', e.message)
+      console.error('[enrich] instagram re-classify failed:', e instanceof Error ? e.message : e)
     }
   }
 
@@ -275,7 +306,7 @@ async function reclassifyWithCaption(id) {
       ai.embed = true
       madeProgress = true
     } catch (e) {
-      console.error('[enrich] instagram re-embed failed:', e.message)
+      console.error('[enrich] instagram re-embed failed:', e instanceof Error ? e.message : e)
     }
   }
 
@@ -314,12 +345,17 @@ export function queueMetaBackfill() {
         continue
       }
       if (!n.metaFetched) {
+        // Read out here, not inside the job: the enclosing `n.url &&` test
+        // proves it is a string, and that proof does not survive into a
+        // closure that runs later (the property could have been reassigned by
+        // then, as far as the compiler knows).
+        const url = n.url
         queueJob(async () => {
-          const patch = { metaFetched: true }
+          const patch: Partial<NoteRecord> = { metaFetched: true }
           try {
-            applyMeta(patch, await fetchLinkMeta(n.url, n.id))
+            applyMeta(patch, await fetchLinkMeta(url, n.id))
           } catch (e) {
-            console.error('[enrich] meta backfill failed for', n.url, '-', e.message)
+            console.error('[enrich] meta backfill failed for', url, '-', e instanceof Error ? e.message : e)
           }
           await store.updateNote(n.id, patch)
         })
@@ -336,7 +372,7 @@ export function queueMetaBackfill() {
     // without this, it would stay on URL-only metadata forever. On a large
     // import a restart inside the ~2.5s/post throttle window is routine, not
     // an edge case.
-    if (isInstagramPost(n.url) && (n.siteTitle || n.siteDesc) && !n.ai?.igReclassified) {
+    if (n.url && isInstagramPost(n.url) && (n.siteTitle || n.siteDesc) && !n.ai?.igReclassified) {
       queueJob(() => reclassifyWithCaption(n.id))
     }
     // Captions arrived after these notes were saved, so they carry no
@@ -364,11 +400,11 @@ export function queueMetaBackfill() {
 // returns every applicable step — this covers both the original
 // just-saved path and a later backlog resweep with the same function.
 // Link metadata needs no model and always runs regardless of `steps`.
-async function enrichNote(id, { absPath, text, isUrl, hasImage }) {
+async function enrichNote(id: string, { absPath, text, isUrl, hasImage }: EnrichArgs) {
   const residency = settings.getResidency()
   const existing = store.getNote(id)
   const steps = stepsFor(existing || {}, residency)
-  const ai = {}
+  const ai: AiMarkers = {}
 
   let visionDescription = ''
   if (hasImage && absPath && steps.includes('vision')) {
@@ -376,7 +412,7 @@ async function enrichNote(id, { absPath, text, isUrl, hasImage }) {
       visionDescription = await inference.describeImage({ absPath })
       ai.vision = true
     } catch (e) {
-      console.error('[enrich] vision describe failed:', e.message)
+      console.error('[enrich] vision describe failed:', e instanceof Error ? e.message : e)
     }
   }
 
@@ -407,7 +443,9 @@ async function enrichNote(id, { absPath, text, isUrl, hasImage }) {
   // this design avoids.
   const url = isUrl ? text : inference.extractUrl(text)
   const isIgUrl = !!url && isInstagramPost(url)
-  let linkMeta = isIgUrl ? { siteTitle: existing?.siteTitle ?? null, siteDesc: existing?.siteDesc ?? null } : null
+  let linkMeta: Partial<LinkMeta> | null = isIgUrl
+    ? { siteTitle: existing?.siteTitle ?? null, siteDesc: existing?.siteDesc ?? null }
+    : null
   if (url && !hasImage) {
     if (isIgUrl) {
       if (!existing?.metaFetched || !(existing?.siteTitle || existing?.siteDesc)) queueIgMeta(id, url)
@@ -430,7 +468,7 @@ async function enrichNote(id, { absPath, text, isUrl, hasImage }) {
       try {
         linkMeta = await fetchLinkMeta(url, id)
       } catch (e) {
-        console.error('[enrich] meta fetch failed:', e.message)
+        console.error('[enrich] meta fetch failed:', e instanceof Error ? e.message : e)
       }
     }
   }
@@ -452,7 +490,7 @@ async function enrichNote(id, { absPath, text, isUrl, hasImage }) {
   // record it and never ask again) from "not right now" (leave the marker
   // unset so a later pass retries), matching how every other marker in this
   // file treats permanent versus transient outcomes.
-  let captions = null
+  let captions: string | null = null
   if (url && !hasImage && !existing?.ai?.captions && isYouTubeVideo(url)) {
     const result = await fetchYouTubeCaptions(url)
     if (result.done) ai.captions = true
@@ -483,7 +521,7 @@ async function enrichNote(id, { absPath, text, isUrl, hasImage }) {
   // The deferred queueIgMeta job sets `metaFetched` itself once it actually
   // runs, so a crash between "queued" and "fetched" still can't leave a note
   // permanently marked as attempted when the attempt never happened.
-  const patch = { pending: false }
+  const patch: Partial<NoteRecord> = { pending: false }
   if (!isIgUrl) patch.metaFetched = !!url
   // Persisted for the same reason reclassifyWithCaption persists it: the
   // answer prompt and textSearch both read this field off the note.
@@ -560,7 +598,7 @@ async function enrichNote(id, { absPath, text, isUrl, hasImage }) {
       if (existing?.ai?.tagsEdited) delete patch.tags
       ai.classify = true
     } catch (e) {
-      console.error('[enrich] AI classify failed, keeping heuristics:', e.message)
+      console.error('[enrich] AI classify failed, keeping heuristics:', e instanceof Error ? e.message : e)
     }
   }
 
@@ -581,7 +619,7 @@ async function enrichNote(id, { absPath, text, isUrl, hasImage }) {
       ai.embed = true
       ai.embedRecipe = EMBED_RECIPE
     } catch (e) {
-      console.error('[enrich] embed failed:', e.message)
+      console.error('[enrich] embed failed:', e instanceof Error ? e.message : e)
     }
   }
 
@@ -630,7 +668,12 @@ async function enrichNote(id, { absPath, text, isUrl, hasImage }) {
 // Failures are per-note: one unembeddable note must not abandon the other
 // 1,700. `{ persist: false }` batches the writes into a single transaction at
 // the end, exactly as before.
-export function embedBodyFor(note) {
+export function embedBodyFor(
+  note: Pick<
+    NoteRecord,
+    'title' | 'summary' | 'content' | 'siteTitle' | 'siteDesc' | 'article' | 'thumbDescription' | 'tags'
+  >,
+) {
   return [
     note.title,
     note.summary,
@@ -655,7 +698,7 @@ export async function reembedAll(reason = 'settings') {
         await store.updateNote(n.id, { embedding: await inference.embedText(body) }, { persist: false })
       }
     } catch (e) {
-      console.error('[enrich] re-embed failed for', n.id, '-', e.message)
+      console.error('[enrich] re-embed failed for', n.id, '-', e instanceof Error ? e.message : e)
     }
   }
   await store.flush() // one write for the whole batch, not one per note
@@ -686,7 +729,15 @@ export function queueRecipeReembed() {
 
 // Did the embedding role change provider since the last boot? Pure so the
 // inference for installs that predate the marker is testable on its own.
-export function embedProviderChanged({ stored, resolved, wasRemote }) {
+export function embedProviderChanged({
+  stored,
+  resolved,
+  wasRemote,
+}: {
+  stored: string | null
+  resolved: string
+  wasRemote: boolean
+}) {
   const previous = stored || (wasRemote ? 'remote' : 'local')
   return previous !== resolved
 }
@@ -696,7 +747,7 @@ export function embedProviderChanged({ stored, resolved, wasRemote }) {
 // spaces, and a library holding both answers every query badly. Same guards
 // as queueRecipeReembed, in the same order: the role being off comes first,
 // and an empty library just records the new value.
-export function queueEmbedProviderReembed({ resolved, wasRemote }) {
+export function queueEmbedProviderReembed({ resolved, wasRemote }: { resolved: string; wasRemote: boolean }) {
   // Nothing has been embedded with anything, so there is nothing to compare
   // and nothing to record — the same self-healing choice queueRecipeReembed
   // makes when the role is off.
@@ -727,7 +778,7 @@ export function queueEmbedProviderReembed({ resolved, wasRemote }) {
 // Build the enrichNote job args for an existing note — same shape a fresh
 // /api/save posts, so a resweep or a forced retag behaves identically to a
 // brand-new save.
-function enrichArgsFor(note) {
+function enrichArgsFor(note: Pick<NoteRecord, 'image' | 'content'>): EnrichArgs {
   return {
     absPath: note.image ? path.join(UPLOAD_DIR, path.basename(note.image)) : null,
     text: note.content,
@@ -775,7 +826,7 @@ export async function retagAll() {
   const notes = store.allNotes()
   if (!notes.length) return 0 // nothing to mark, nothing to flush
   for (const n of notes) {
-    const ai = { ...n.ai, classify: false, embed: false }
+    const ai: AiMarkers = { ...n.ai, classify: false, embed: false }
     await store.updateNote(n.id, { pending: true, ai }, { persist: false })
   }
   await store.flush()
@@ -792,10 +843,10 @@ export async function retagAll() {
 // already-classified note is eligible again. tagsEdited is cleared too: the
 // whole point of this action is to replace the tags, hand-edited or not.
 // Returns the (now-pending) note, or null if the id doesn't exist.
-export async function retagNote(id) {
+export async function retagNote(id: string) {
   const existing = store.getNote(id)
   if (!existing) return null
-  const ai = { ...existing.ai, classify: false, embed: false, tagsEdited: false }
+  const ai: AiMarkers = { ...existing.ai, classify: false, embed: false, tagsEdited: false }
   if (existing.image) ai.vision = false
   const note = await store.updateNote(id, { pending: true, ai })
   if (!note) return null

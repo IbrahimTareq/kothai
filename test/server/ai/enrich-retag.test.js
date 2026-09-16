@@ -82,7 +82,7 @@ mock.module('../../../server/data/settings.ts', {
   namedExports: { ...realSettings, getResidency: () => residencyImpl() },
 })
 
-const enrich = await import('../../../server/ai/enrich.js')
+const enrich = await import('../../../server/ai/enrich.ts')
 
 // queueIgMeta is fire-and-forget (it pushes onto its own deque rather than
 // returning a promise a caller can await), so a test that needs the fetch +

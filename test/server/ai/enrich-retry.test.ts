@@ -11,7 +11,7 @@ import {
   isStuckInstagramNote,
   queueMetaBackfill,
   _igQueueState,
-} from '../../../server/ai/enrich.js'
+} from '../../../server/ai/enrich.ts'
 import * as store from '../../../server/data/notes.ts'
 
 test('metaRetryDelay backs off 10min * 4^n capped at 24h', () => {

@@ -14,7 +14,7 @@
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
-import { _igQueueState, queueIgMeta, promoteIgMeta } from '../../../server/ai/enrich.js'
+import { _igQueueState, queueIgMeta, promoteIgMeta } from '../../../server/ai/enrich.ts'
 
 test('queueIgMeta dedupes by noteId and appends in order', () => {
   const s = _igQueueState

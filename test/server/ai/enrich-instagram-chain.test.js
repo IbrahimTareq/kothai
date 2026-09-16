@@ -118,7 +118,7 @@ mock.module('../../../server/data/settings.ts', {
   namedExports: { ...realSettings, getResidency: () => residencyImpl() },
 })
 
-const enrich = await import('../../../server/ai/enrich.js')
+const enrich = await import('../../../server/ai/enrich.ts')
 
 // queueIgMeta used to return the igChain promise so a test could just await
 // it to know the job had landed. It's now a fire-and-forget push onto a

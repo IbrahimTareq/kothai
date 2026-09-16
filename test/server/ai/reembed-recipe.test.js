@@ -67,7 +67,7 @@ mock.module('../../../server/data/settings.ts', {
   },
 })
 
-const enrich = await import('../../../server/ai/enrich.js')
+const enrich = await import('../../../server/ai/enrich.ts')
 const { EMBED_RECIPE } = await import('../../../server/ai/prompts.ts')
 
 function reset(list = []) {

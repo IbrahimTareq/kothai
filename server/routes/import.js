@@ -3,7 +3,7 @@
 // the ONLY consumer of server/import/* today.
 import * as store from '../data/notes.ts'
 import * as collections from '../data/collections.ts'
-import * as enrich from '../ai/enrich.js'
+import * as enrich from '../ai/enrich.ts'
 import { findImporter, getImporter, importerNames } from '../import/index.ts'
 import { readZip, MAX_TOTAL_BYTES } from '../lib/zip.ts'
 import { json, readBody } from '../lib/http.ts'

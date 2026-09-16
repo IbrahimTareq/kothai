@@ -174,7 +174,7 @@ mock.module('../../../server/data/settings.ts', {
   namedExports: { ...realSettings, getResidency: () => residencyImpl() },
 })
 
-const enrich = await import('../../../server/ai/enrich.js')
+const enrich = await import('../../../server/ai/enrich.ts')
 
 function seed(note) {
   notes = [{ id: 'y1', content: WATCH, url: WATCH, type: 'video', ai: {}, ...note }]

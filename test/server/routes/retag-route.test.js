@@ -7,8 +7,8 @@ import assert from 'node:assert/strict'
 
 let retagNoteImpl
 
-const realEnrich = await import('../../../server/ai/enrich.js')
-mock.module('../../../server/ai/enrich.js', {
+const realEnrich = await import('../../../server/ai/enrich.ts')
+mock.module('../../../server/ai/enrich.ts', {
   namedExports: { ...realEnrich, retagNote: id => retagNoteImpl(id) },
 })
 

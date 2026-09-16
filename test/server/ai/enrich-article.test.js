@@ -64,7 +64,7 @@ mock.module('../../../server/data/settings.ts', {
   namedExports: { ...realSettings, getResidency: () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' }) },
 })
 
-const enrich = await import('../../../server/ai/enrich.js')
+const enrich = await import('../../../server/ai/enrich.ts')
 
 test('extracted article reaches classify, embed and the stored note', async () => {
   notes = [{ id: 'n1', content: URL_, url: URL_, type: 'link', ai: {} }]

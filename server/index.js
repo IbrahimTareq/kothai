@@ -13,7 +13,7 @@ const ai = await import('./ai/index.ts')
 const store = await import('./data/notes.ts')
 const chats = await import('./data/chats.ts')
 const settings = await import('./data/settings.ts')
-const enrich = await import('./ai/enrich.js')
+const enrich = await import('./ai/enrich.ts')
 const collections = await import('./data/collections.ts')
 const tagvocab = await import('./data/tagvocab.ts')
 

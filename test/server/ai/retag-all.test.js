@@ -85,7 +85,7 @@ mock.module('../../../server/data/settings.ts', {
   namedExports: { ...realSettings, getResidency: () => ({ llm: 'ondemand', embed: 'always', vision: 'off' }) },
 })
 
-const enrich = await import('../../../server/ai/enrich.js')
+const enrich = await import('../../../server/ai/enrich.ts')
 
 // Jobs queued by an earlier test keep draining on the shared FIFO, so the
 // chain is settled BEFORE the counters are cleared — otherwise the next test

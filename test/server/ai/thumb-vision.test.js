@@ -73,7 +73,7 @@ mock.module('../../../server/data/settings.ts', {
   namedExports: { ...realSettings, getResidency: () => residencyImpl() },
 })
 
-const enrich = await import('../../../server/ai/enrich.js')
+const enrich = await import('../../../server/ai/enrich.ts')
 const { DESCRIBE_THUMB_PROMPT } = await import('../../../server/ai/prompts.ts')
 
 function seed(note = {}) {

@@ -129,7 +129,7 @@ reset()
 
 const realStore = await import('../../../server/data/notes.ts')
 const realCollections = await import('../../../server/data/collections.ts')
-const realEnrich = await import('../../../server/ai/enrich.js')
+const realEnrich = await import('../../../server/ai/enrich.ts')
 const realImportIndex = await import('../../../server/import/index.ts')
 
 mock.module('../../../server/data/notes.ts', {
@@ -151,7 +151,7 @@ mock.module('../../../server/data/collections.ts', {
     addItems: (id, itemIds) => fakeAddItems(id, itemIds),
   },
 })
-mock.module('../../../server/ai/enrich.js', {
+mock.module('../../../server/ai/enrich.ts', {
   namedExports: {
     ...realEnrich,
     queueEnrich: (id, job) => {

@@ -26,6 +26,6 @@ test('queueBacklog enqueues nothing and reports 0 when the provider is unavailab
       FeatureDisabledError: class extends Error {},
     },
   })
-  const enrich = await import('../../../server/ai/enrich.js')
+  const enrich = await import('../../../server/ai/enrich.ts')
   assert.equal(enrich.queueBacklog(), 0)
 })

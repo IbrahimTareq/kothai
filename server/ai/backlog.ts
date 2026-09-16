@@ -11,6 +11,15 @@ export interface AiMarkers {
   classify?: boolean
   embed?: boolean
   thumbVision?: boolean
+  // Written and read by ai/enrich.ts and routes/notes.js; nothing in this file
+  // gates on them. Declared here regardless because `ai` is a single object on
+  // disk — omitting them would not make them go away, it would only make every
+  // honest write of one a type error at its call site and leave this interface
+  // quietly describing less than the field actually holds.
+  captions?: boolean
+  igReclassified?: boolean
+  tagsEdited?: boolean
+  embedRecipe?: string
 }
 
 // Only the fields these helpers actually read. Narrower than ServerNote on
