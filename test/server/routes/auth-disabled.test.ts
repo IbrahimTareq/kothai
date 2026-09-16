@@ -10,10 +10,10 @@ const { createServer } = await import('../../../server/router.ts')
 
 import test, { after } from 'node:test'
 import assert from 'node:assert/strict'
+import { jsonBody, listenOnLoopback } from '../../helpers/http.ts'
 
 const server = createServer()
-await new Promise(r => server.listen(0, '127.0.0.1', r))
-const BASE = `http://127.0.0.1:${server.address().port}`
+const BASE = `http://127.0.0.1:${await listenOnLoopback(server)}`
 after(() => server.close())
 
 test('with no password set the API answers directly, with no session anywhere', async () => {
@@ -43,5 +43,5 @@ test('/up answers whether or not auth is configured', async () => {
   // the SPA fallback answers 200 for any unmatched path.
   const res = await fetch(`${BASE}/up`)
   assert.equal(res.status, 200)
-  assert.equal((await res.json()).ok, true)
+  assert.equal((await jsonBody(res)).ok, true)
 })

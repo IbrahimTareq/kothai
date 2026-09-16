@@ -15,11 +15,11 @@ import {
 } from '../../../server/import/tiktok.ts'
 import { findImporter } from '../../../server/import/index.ts'
 
-function files(obj) {
+function files(obj: Record<string, unknown>) {
   return new Map(Object.entries(obj).map(([k, v]) => [k, Buffer.from(typeof v === 'string' ? v : JSON.stringify(v))]))
 }
 
-const share = id => `https://www.tiktokv.com/share/video/${id}/`
+const share = (id: string) => `https://www.tiktokv.com/share/video/${id}/`
 
 const EXPORT = {
   'Likes and Favorites': {
@@ -192,6 +192,6 @@ test('deriveNote: a favourite becomes a video note keeping its saved-on date', (
 })
 
 test('deriveNote: an absent or absurd timestamp falls back to now rather than throwing', () => {
-  assert.doesNotThrow(() => deriveNote({ url: 'https://www.tiktok.com/video/1', savedAt: 1e300 }))
-  assert.doesNotThrow(() => deriveNote({ url: 'https://www.tiktok.com/video/1', savedAt: 0 }))
+  assert.doesNotThrow(() => deriveNote({ url: 'https://www.tiktok.com/video/1', poster: '', savedAt: 1e300 }))
+  assert.doesNotThrow(() => deriveNote({ url: 'https://www.tiktok.com/video/1', poster: '', savedAt: 0 }))
 })

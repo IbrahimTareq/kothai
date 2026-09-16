@@ -25,6 +25,7 @@ import { mkdtempSync, rmSync, copyFileSync, statSync, existsSync } from 'node:fs
 import os from 'node:os'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import { jsonBody, listenOnLoopback } from '../../helpers/http.ts'
 
 const DATA_DIR = mkdtempSync(path.join(os.tmpdir(), 'kothai-checkpoint-test-'))
 process.env.STASH_DATA_DIR = DATA_DIR
@@ -41,8 +42,7 @@ const { createServer } = await import('../../../server/router.ts')
 await store.load()
 
 const server = createServer()
-await new Promise(r => server.listen(0, '127.0.0.1', r))
-const BASE = `http://127.0.0.1:${server.address().port}`
+const BASE = `http://127.0.0.1:${await listenOnLoopback(server)}`
 after(() => {
   server.close()
   rmSync(DATA_DIR, { recursive: true, force: true })
@@ -53,14 +53,14 @@ const checkpoint = () =>
 
 // Copy ONLY kothai.db, leaving -wal and -shm behind, and open the copy. This is
 // the whole point: if the checkpoint worked, the main file stands alone.
-function contentsOfMainFileAlone(label) {
+function contentsOfMainFileAlone(label: string): unknown[] {
   const copy = path.join(DATA_DIR, `alone-${label}.db`)
   copyFileSync(path.join(DATA_DIR, 'kothai.db'), copy)
   const db = new DatabaseSync(copy, { readOnly: true })
   return db
     .prepare('SELECT data FROM notes')
     .all()
-    .map(r => JSON.parse(r.data).content)
+    .map(r => JSON.parse(String(r.data)).content)
 }
 
 test('a batched write reaches kothai.db itself, not just the in-memory queue', async () => {
@@ -68,7 +68,7 @@ test('a batched write reaches kothai.db itself, not just the in-memory queue', a
 
   const res = await checkpoint()
   assert.equal(res.status, 200)
-  assert.equal((await res.json()).ok, true)
+  assert.equal((await jsonBody(res)).ok, true)
 
   assert.ok(contentsOfMainFileAlone('batched').includes('queued-not-yet-written'))
 })
@@ -96,7 +96,7 @@ test('it refuses while an import is running rather than committing half of one',
   try {
     const res = await checkpoint()
     assert.equal(res.status, 409)
-    assert.equal((await res.json()).code, 'import_in_progress')
+    assert.equal((await jsonBody(res)).code, 'import_in_progress')
   } finally {
     importRunning = false
   }
@@ -104,7 +104,7 @@ test('it refuses while an import is running rather than committing half of one',
 
 test('it can run repeatedly — a backup hook fires on every scheduled backup', async () => {
   await store.addNote({ type: 'text', content: 'second-run' }, { persist: false })
-  assert.equal((await (await checkpoint()).json()).ok, true)
+  assert.equal((await jsonBody(await checkpoint())).ok, true)
 
   const contents = contentsOfMainFileAlone('repeat')
   // Everything from the earlier checkpoints is still there, plus this one's.

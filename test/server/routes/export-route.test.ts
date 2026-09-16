@@ -4,6 +4,15 @@
 // data stores are mocked purely to control what handleExport sees.
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
+import { mockRes } from '../../helpers/http.ts'
+import { note } from '../../helpers/notes.ts'
+
+// One fixture behind both the mocked store and the assertion, so the test says
+// what it means: a note goes into the bundle exactly as the store handed it
+// over. handleExport copies allNotes() through verbatim — it strips nothing —
+// and pinning the whole note rather than three of its fields is what would
+// catch a future filter added there.
+const N1 = note({ id: 'n1', title: 'Note one', embedding: null })
 
 const realStore = await import('../../../server/data/notes.ts')
 const realCollections = await import('../../../server/data/collections.ts')
@@ -13,8 +22,8 @@ const realSettings = await import('../../../server/data/settings.ts')
 mock.module('../../../server/data/notes.ts', {
   namedExports: {
     ...realStore,
-    allNotes: () => [{ id: 'n1', title: 'Note one', embedding: null }],
-    getNote: id => (id === 'n1' ? { id: 'n1', title: 'Note one', embedding: null } : null),
+    allNotes: () => [N1],
+    getNote: (id: string) => (id === 'n1' ? N1 : null),
   },
 })
 mock.module('../../../server/data/collections.ts', {
@@ -39,33 +48,18 @@ mock.module('../../../server/data/settings.ts', {
 
 const { handleExport } = await import('../../../server/routes/export.ts')
 
-function fakeRes() {
-  return {
-    statusCode: null,
-    headers: null,
-    body: null,
-    writeHead(code, headers) {
-      this.statusCode = code
-      this.headers = headers
-    },
-    end(str) {
-      this.body = str
-    },
-  }
-}
-
 test('handleExport bundles notes, spaces, chats, and settings with a download header', () => {
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   handleExport(res)
 
-  assert.equal(res.statusCode, 200)
-  assert.match(res.headers['Content-Disposition'], /^attachment; filename="kothai-export-\d{4}-\d{2}-\d{2}\.json"$/)
-  assert.equal(res.headers['Content-Type'], 'application/json; charset=utf-8')
+  assert.equal(sent.code, 200)
+  assert.match(sent.headers['content-disposition'], /^attachment; filename="kothai-export-\d{4}-\d{2}-\d{2}\.json"$/)
+  assert.equal(sent.headers['content-type'], 'application/json; charset=utf-8')
 
-  const bundle = JSON.parse(res.body)
+  const bundle = sent.json()
   assert.equal(bundle.version, 1)
   assert.equal(typeof bundle.exportedAt, 'string')
-  assert.deepEqual(bundle.notes, [{ id: 'n1', title: 'Note one', embedding: null }])
+  assert.deepEqual(bundle.notes, [N1])
   assert.deepEqual(bundle.collections, [{ id: 's1', name: 'Space one', itemIds: ['n1'] }])
   assert.deepEqual(bundle.chats, [{ id: 'c1', title: 'Chat one', messages: [{ role: 'user', text: 'hi' }] }])
   assert.deepEqual(bundle.settings, { current: { llm: 'model-a' }, residency: { llm: 'always' } })

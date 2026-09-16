@@ -6,7 +6,7 @@ import { extractArticle, fetchLinkMeta } from '../../../server/ai/meta.ts'
 
 // Readability needs a real-ish document: a <title>, and enough prose in a
 // single container to beat the nav/footer noise around it.
-function articlePage(body) {
+function articlePage(body: string) {
   return `<!DOCTYPE html><html><head><title>Test Article</title></head><body>
     <nav><a href="/">Home</a><a href="/about">About</a></nav>
     <article><h1>Test Article</h1>${body}</article>
@@ -54,20 +54,21 @@ test('extractArticle: long articles are capped at 8000 chars', () => {
 
 test('extractArticle: whitespace is collapsed', () => {
   const out = extractArticle(articlePage(PARA))
+  assert.ok(out)
   assert.doesNotMatch(out, /\s{2,}/)
 })
 
 // get() calls the global fetch directly, so a stub is all that's needed.
 // The fixture deliberately carries no og:image, so saveThumb never fires and
 // a single stubbed response covers the whole call.
-function stubFetch(body, contentType) {
+function stubFetch(body: string, contentType: string) {
   const original = globalThis.fetch
-  globalThis.fetch = async () => ({
-    ok: true,
-    status: 200,
-    headers: { get: h => (h.toLowerCase() === 'content-type' ? contentType : null) },
-    text: async () => body,
-  })
+  // A real Response rather than an object literal carrying the four fields
+  // get() happens to read: the literal is not assignable to fetch's return
+  // type without a cast, and a cast would let the stub drift from what fetch
+  // really answers — which is the whole thing the content-type guard below is
+  // being tested against.
+  globalThis.fetch = async () => new Response(body, { status: 200, headers: { 'content-type': contentType } })
   return () => {
     globalThis.fetch = original
   }

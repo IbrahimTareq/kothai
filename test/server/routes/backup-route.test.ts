@@ -15,6 +15,7 @@ import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import { jsonBody, listenOnLoopback } from '../../helpers/http.ts'
 
 // Its own data directory, set before anything imports config.js (which freezes
 // its resolution at import time). The route writes a temp snapshot into
@@ -40,15 +41,14 @@ const { setAiCredentials } = await import('../../../server/config.ts')
 const { createServer } = await import('../../../server/router.ts')
 
 const server = createServer()
-await new Promise(r => server.listen(0, '127.0.0.1', r))
-const BASE = `http://127.0.0.1:${server.address().port}`
+const BASE = `http://127.0.0.1:${await listenOnLoopback(server)}`
 after(() => {
   server.close()
   rmSync(DATA_DIR, { recursive: true, force: true })
 })
 
 // Save the downloaded bytes and open them as a database.
-async function downloadAndOpen(res) {
+async function downloadAndOpen(res: Response) {
   const file = path.join(DATA_DIR, `downloaded-${Math.trunc(performance.now() * 1000)}.db`)
   writeFileSync(file, Buffer.from(await res.arrayBuffer()))
   return new DatabaseSync(file, { readOnly: true })
@@ -85,13 +85,14 @@ test('the response is a real SQLite database containing the live notes', async (
   const db = await downloadAndOpen(res)
   const rows = db.prepare('SELECT data FROM notes').all()
   assert.equal(rows.length, 1)
-  assert.equal(JSON.parse(rows[0].data).content, 'in the backup')
+  assert.equal(JSON.parse(String(rows[0].data)).content, 'in the backup')
 })
 
 test('it is served as a dated file download, not rendered inline', async () => {
   store._reset()
   const res = await backup()
   const disposition = res.headers.get('content-disposition')
+  assert.ok(disposition, 'the download header must be present at all')
   assert.match(disposition, /^attachment;/)
   assert.match(disposition, /filename="kothai-backup-\d{4}-\d{2}-\d{2}\.db"/)
   assert.doesNotMatch(res.headers.get('content-type') || '', /text|html/)
@@ -124,7 +125,7 @@ test('writes queued by a batched operation are committed first, so they are in t
   await store.addNote({ type: 'text', content: 'queued not yet written' }, { persist: false })
   const res = await backup()
   const db = await downloadAndOpen(res)
-  assert.equal(db.prepare('SELECT count(*) n FROM notes').get().n, 1)
+  assert.equal(db.prepare('SELECT count(*) n FROM notes').get()?.n, 1)
 })
 
 test('it refuses while an import is running rather than snapshotting a half-written library', async () => {
@@ -133,7 +134,7 @@ test('it refuses while an import is running rather than snapshotting a half-writ
   try {
     const res = await backup()
     assert.equal(res.status, 409)
-    assert.equal((await res.json()).code, 'import_in_progress')
+    assert.equal((await jsonBody(res)).code, 'import_in_progress')
   } finally {
     importRunning = false
   }

@@ -52,12 +52,12 @@ test('collections.clearAll empties spaces, reports the count, and leaves the sto
 
 test('chats.clearAll empties history, reports the count, and leaves the store writable', async () => {
   chats._reset()
-  await chats.appendExchange('c1', { text: 'hi' }, { text: 'hello' })
-  await chats.appendExchange('c2', { text: 'yo' }, { text: 'hey' })
+  await chats.appendExchange('c1', { role: 'user', text: 'hi' }, { role: 'ai', text: 'hello' })
+  await chats.appendExchange('c2', { role: 'user', text: 'yo' }, { role: 'ai', text: 'hey' })
   assert.equal(chats.all().length, 2)
   assert.equal(await chats.clearAll(), 2)
   assert.deepEqual(chats.all(), [])
-  await chats.appendExchange('c3', { text: 'again' }, { text: 'sure' })
+  await chats.appendExchange('c3', { role: 'user', text: 'again' }, { role: 'ai', text: 'sure' })
   assert.equal(chats.all().length, 1)
 })
 

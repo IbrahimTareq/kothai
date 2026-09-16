@@ -6,22 +6,23 @@
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 
-let getImpl
+// Typed as meta.get's own signature, which forces every stub below to hand
+// back a REAL Response. The literals they used to return ({ json: async () =>
+// ... }) could only be typed by lying about what get() answers — and the case
+// that matters most here, a 200 whose body is not JSON, is only honest if
+// json() fails the way the real one does.
+let getImpl: (url: string, accept: string) => Promise<Response>
 const realMeta = await import('../../../server/ai/meta.ts')
 mock.module('../../../server/ai/meta.ts', {
-  namedExports: { ...realMeta, get: (...a) => getImpl(...a) },
+  namedExports: { ...realMeta, get: (url: string, accept: string) => getImpl(url, accept) },
 })
 const { checkAvailability, isCheckable, ALIVE, DEAD, UNKNOWN } = await import('../../../server/ai/availability.ts')
 
 const TT = 'https://www.tiktok.com/video/7325881953608158497'
-const httpError = status => {
-  const e = new Error(`HTTP ${status}`)
-  e.status = status
-  return e
-}
+const httpError = (status: number) => Object.assign(new Error(`HTTP ${status}`), { status })
 
 test('a 200 with a JSON body means the content is alive', async () => {
-  getImpl = async () => ({ json: async () => ({ title: 'a caption' }) })
+  getImpl = async () => new Response(JSON.stringify({ title: 'a caption' }))
   assert.equal(await checkAvailability(TT), ALIVE)
 })
 
@@ -52,11 +53,7 @@ test('a network failure with no status is not a verdict', async () => {
 })
 
 test('a 200 that is not JSON proves nothing — an error page would pass on status alone', async () => {
-  getImpl = async () => ({
-    json: async () => {
-      throw new Error('not json')
-    },
-  })
+  getImpl = async () => new Response('<html>an error page</html>')
   assert.equal(await checkAvailability(TT), UNKNOWN)
 })
 
