@@ -19,7 +19,7 @@ export const ALIVE = 'alive'
 export const DEAD = 'dead'
 export const UNKNOWN = 'unknown'
 
-type Availability = typeof ALIVE | typeof DEAD | typeof UNKNOWN
+export type Availability = typeof ALIVE | typeof DEAD | typeof UNKNOWN
 
 const CHECKABLE_HOST = /(^|\.)tiktok\.com$/
 

@@ -1,4 +1,4 @@
-// Tests for server/routes/availability.js — the sweep and the destructive step.
+// Tests for server/routes/availability.ts — the sweep and the destructive step.
 //
 // Both guards here exist because the failure mode is silent data loss: a user
 // sees a count, presses remove, and never learns what went with it.
@@ -49,7 +49,7 @@ mock.module('../../../server/ai/availability.ts', {
   },
 })
 
-const { handleAvailabilityScan, handleAvailabilityRemove } = await import('../../../server/routes/availability.js')
+const { handleAvailabilityScan, handleAvailabilityRemove } = await import('../../../server/routes/availability.ts')
 
 function fakeReq(payload) {
   const req = new EventEmitter()

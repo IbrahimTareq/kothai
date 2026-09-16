@@ -27,6 +27,11 @@ export interface ServerNote {
   pending?: boolean
   metaFetched?: boolean
   unavailable?: boolean
+  // Written by the availability sweep alongside `unavailable`; nothing reads
+  // it back yet. Declared rather than dropped because it is already on disk in
+  // every note an earlier scan marked, and a mark whose date has been thrown
+  // away can neither be explained to the user nor aged out later.
+  unavailableAt?: string | null
   siteTitle?: string | null
   siteDesc?: string | null
   siteName?: string | null

@@ -14,7 +14,9 @@ import * as store from '../data/notes.ts'
 import { UPLOAD_DIR } from '../config.ts'
 import * as collections from '../data/collections.ts'
 import { checkAvailability, isCheckable, DEAD, ALIVE } from '../ai/availability.ts'
+import type { Availability } from '../ai/availability.ts'
 import { json, readBody } from '../lib/http.ts'
+import type { IncomingMessage, ServerResponse } from 'node:http'
 
 const CONCURRENCY = 4
 
@@ -30,7 +32,15 @@ const RATIO_MIN_SAMPLE = 20
 
 let scanInProgress = false
 
-export async function handleAvailabilityScan(_req, res) {
+// readBody hands back `unknown`, and the count below is the only thing
+// standing between a stale tab and a bulk delete. Local rather than lifted
+// into server/lib/: that is the security floor, and a guard there needs a test
+// that fails without it.
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null
+}
+
+export async function handleAvailabilityScan(_req: IncomingMessage, res: ServerResponse) {
   if (scanInProgress) {
     return json(res, 409, { error: 'A scan is already running.', code: 'scan_in_progress' })
   }
@@ -45,7 +55,7 @@ export async function handleAvailabilityScan(_req, res) {
     // the implausibility guard below can see the shape of the run and refuse to
     // write at all. Marking as we went would leave a half-marked library behind
     // when the guard trips.
-    const verdicts = []
+    const verdicts: { note: (typeof candidates)[number]; verdict: Availability }[] = []
     let cursor = 0
     await Promise.all(
       Array.from({ length: Math.min(CONCURRENCY, candidates.length) }, async () => {
@@ -105,12 +115,12 @@ export async function handleAvailabilityScan(_req, res) {
   }
 }
 
-function countUnavailable() {
+function countUnavailable(): number {
   return store.allNotes().filter(n => n.unavailable).length
 }
 
-export async function handleAvailabilityRemove(req, res) {
-  let body
+export async function handleAvailabilityRemove(req: IncomingMessage, res: ServerResponse) {
+  let body: unknown
   try {
     body = await readBody(req)
   } catch {
@@ -121,7 +131,7 @@ export async function handleAvailabilityRemove(req, res) {
   // (a scan cleared a mark, another tab deleted something), the number in front
   // of them was not the number about to be deleted — so refuse rather than
   // delete a different set than the one they agreed to.
-  if (!body || typeof body !== 'object' || body.expected !== targets.length) {
+  if (!isRecord(body) || body.expected !== targets.length) {
     return json(res, 409, {
       error: `That list has changed — ${targets.length} item(s) are marked unavailable now. Scan again and review before removing.`,
       code: 'count_mismatch',

@@ -13,7 +13,7 @@ import {
   handleRetagNote,
 } from './routes/notes.js'
 import { handleImport } from './routes/import.js'
-import { handleAvailabilityScan, handleAvailabilityRemove } from './routes/availability.js'
+import { handleAvailabilityScan, handleAvailabilityRemove } from './routes/availability.ts'
 import { handleExport } from './routes/export.ts'
 import { handleBackup } from './routes/backup.ts'
 import { handleCheckpoint } from './routes/checkpoint.ts'

@@ -28,6 +28,9 @@ export interface ServerNote {
   pending?: boolean
   metaFetched?: boolean
   unavailable?: boolean
+  // Written by the availability sweep next to `unavailable`; nothing in the UI
+  // reads it — here so both sides keep describing the same wire shape.
+  unavailableAt?: string | null
   siteTitle?: string | null
   siteDesc?: string | null
   siteName?: string | null
@@ -56,7 +59,7 @@ export interface UIItem {
    *  is all the content there will be". See isAwaitingContent in Cards.tsx. */
   metaFetched?: boolean
   /** The link was checked and its content is gone. A reversible mark, never a
-   *  deletion — see server/routes/availability.js. */
+   *  deletion — see server/routes/availability.ts. */
   unavailable?: boolean
   url?: string | null
   host?: string
