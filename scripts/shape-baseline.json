@@ -32,7 +32,7 @@
     "exports": 1
   },
   "client/views/Expanded.tsx": {
-    "lines": 592,
+    "lines": 588,
     "exports": 1
   },
   "client/views/Settings.tsx": {
@@ -52,7 +52,7 @@
     "exports": 29
   },
   "server/ai/meta.js": {
-    "lines": 821,
+    "lines": 819,
     "exports": 25
   },
   "server/ai/prompts.js": {

@@ -7,6 +7,7 @@ recipes for the common extensions.
 - [Commands](#commands)
 - [The two ports](#the-two-ports)
 - [The test suite](#the-test-suite)
+- [Governance](#governance)
 - [Conventions](#conventions)
 - [Recipes](#recipes)
 - [CI](#ci)
@@ -40,13 +41,20 @@ every OS and arch.
 |---|---|
 | `pnpm dev` | Node server on `:5173` **and** Vite with HMR on `:5174`, concurrently. **This is the one you want.** |
 | `pnpm start` | Full build, then serve on `:5173`. What production does. |
-| `pnpm build` | Token lint → `tsc --noEmit` → Vite build. |
-| `pnpm test` | Token lint → 789 tests. ~4s. |
-| `pnpm typecheck` | `tsc --noEmit` alone. |
+| `pnpm build` | Biome → token lint → typecheck (client + server) → Vite build. |
+| `pnpm test` | Biome → token lint → shape lint → 1114 tests. ~5s. |
+| `pnpm typecheck` | `tsc --noEmit` alone (client). |
+| `pnpm typecheck:server` | `tsc -p tsconfig.server.json` alone (server). |
+| `pnpm lint` | Biome check alone. |
+| `pnpm format` | Apply formatting. Biome decides style; do not argue with it. |
 | `pnpm lint:tokens` | The design-token linter alone. |
+| `pnpm lint:shape` | The file-shape ratchet alone — see [Governance](#governance). |
 
-Note that `build` runs the token lint and typecheck, which is why CI has no
-separate typecheck step.
+Note that `build` runs Biome, the token lint, and both typechecks (client and
+server), which is why CI has no separate lint or typecheck step. `test` runs
+that same Biome and token-lint pass plus the shape ratchet before the suite,
+so a red `pnpm test` can mean a lint or shape failure, not just a failing
+test.
 
 ## The two ports
 
@@ -65,7 +73,7 @@ actually looks like.
 
 ## The test suite
 
-789 tests, `node:test`, about four seconds, no browser and no running server.
+1114 tests, `node:test`, about five seconds, no browser and no running server.
 
 ```bash
 pnpm test                                     # everything
@@ -108,6 +116,64 @@ step. Two consequences:
 `test/server/ai/providers/provider-contract.test.js` asserts both providers
 expose the same surface. If you add a method to one, add it to the other or the
 test tells you.
+
+## Governance
+
+Four tiers hold the rules that keep this codebase from drifting, cheapest and
+most mechanical first:
+
+1. **`pnpm test` / `pnpm build`** — everything a checker can verify: Biome,
+   the token lint, the shape ratchet, both typechecks, the test suite itself.
+2. **The `Stop` hook** (`.claude/hooks/verify.sh`) — runs `pnpm test` on Node
+   22 before an agent's turn can end, so a red suite never survives past the
+   turn that broke it.
+3. **`.claude/skills/`** — procedures, loaded on demand rather than kept in
+   context all the time (`add-route`, `amend`, `split-module`).
+4. **`CLAUDE.md` + `.claude/clean-code-rules.md`** — the rules no checker can
+   verify at all.
+
+The governing rule: **push every rule as far down as it goes.** A rule
+belongs at the cheapest tier that can hold it — Biome over a script, a script
+over a test, a test over prose. Prose that duplicates a check is dead weight:
+it dilutes the rules still doing real work. `.claude/skills/amend/` has the
+ordered test a candidate rule walks before it's allowed to become prose.
+
+`CLAUDE.md` and `.claude/clean-code-rules.md` are meant to **shrink**, not
+grow. `/amend` is the procedure for changing either — adding a rule requires
+citing the violation that earned it, and removing one is mandatory the moment
+a mechanical check takes over enforcing it.
+
+### The shape ratchet
+
+`scripts/lint-shape.mjs` (wired into `pnpm test`) caps file size and export
+count. 23 files currently carry budget debt in `scripts/shape-baseline.json`
+— they were over budget when the ratchet was introduced and are grandfathered
+at their recorded size. `--update` can only tighten a baselined number down
+to a smaller measurement; it can never raise one. Raising a baseline takes a
+hand-edit to `shape-baseline.json`, which shows up in a diff and can be
+argued with in review.
+
+**Known gap:** the ratchet reads `git ls-files`, so a brand-new **untracked**
+file that's already oversized is invisible to it until staged. CI still
+catches it — nothing reaches CI unstaged — so this is a known gap in local
+feedback, not a bug to fix now.
+
+### Baseline (2026-09-16)
+
+Recorded so the governance system's own health can be judged later, not
+asserted:
+
+| | |
+|---|---|
+| Tests | 1114, ~5s (Node 22) |
+| `CLAUDE.md` | 45 lines |
+| `.claude/clean-code-rules.md` | 41 lines |
+| `scripts/shape-baseline.json` | 23 entries |
+| Export statements (`client/` + `server/`) | 562 |
+| Source files (`.js`/`.ts`/`.tsx`, `client/` + `server/`) | 104 |
+
+The prose files should not grow past this. The debt register should not gain
+entries. Total exports should trend down.
 
 ## Conventions
 
