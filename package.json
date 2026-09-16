@@ -1,6 +1,6 @@
 {
   "name": "kothai",
-  "version": "1.0.1",
+  "version": "1.3.0",
   "description": "Kothai every thought, picture, link or file",
   "main": "server/index.js",
   "type": "module",
