@@ -42,6 +42,7 @@
   // anyone noticed on 2026-09-17.
   "include": [
     "server/**/*.ts",
+    "test/*.ts",
     "test/server/**/*.ts",
     "test/helpers/**/*.ts",
     "test/scripts/**/*.ts",

@@ -36,8 +36,13 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store,sharing=locked \
 COPY tsconfig.json vite.config.ts index.html ./
 COPY client ./client
 COPY public ./public
-COPY scripts ./scripts
-RUN pnpm run build         # → /app/dist (index.html + hashed assets + fonts/logos)
+# build:client is the bundler alone; `pnpm run build` is the full gate (biome,
+# token lint, both typechecks) and must never run here. It has broken the image
+# twice: 8ca5afb had to ship scripts/ in for lint-tokens.mjs, and 765cbf4 added
+# `biome check .` — which then failed on 295 files because biome.json is not in
+# this stage, and would have failed again on tsconfig.server.json/server/.
+# CI (ci.yml) and `pnpm test` own the gate; the image only needs a bundle.
+RUN pnpm run build:client  # → /app/dist (index.html + hashed assets + fonts/logos)
 
 # ─────────────────────────── Stage 2: runtime ────────────────────────────────
 # NAMED, and every build of it must pass `--target runtime`. Docker builds the

@@ -10,7 +10,8 @@
   },
   "scripts": {
     "dev": "concurrently -k -n server,vite -c blue,magenta \"node server/index.ts\" \"vite\"",
-    "build": "biome check . && node scripts/lint-tokens.ts && pnpm run typecheck && vite build",
+    "build": "biome check . && node scripts/lint-tokens.ts && pnpm run typecheck && pnpm run build:client",
+    "build:client": "vite build",
     "start": "npm run build && node server/index.ts",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.server.json --noEmit",
