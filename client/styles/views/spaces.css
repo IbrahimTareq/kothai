@@ -24,7 +24,8 @@
 .coll-pop { position: absolute; bottom: 40px; right: 6px; z-index:var(--z-popover); width: 190px; max-height: 240px; overflow-y: auto; background: var(--surface-popover); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-6); box-shadow: var(--shadow-popover); }
 .coll-pop-h { font-size:var(--text-xs); letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.6; padding: var(--space-4) var(--space-6) var(--space-6); }
 .coll-pop-empty { font-size:var(--text-xs); opacity: 0.6; padding: var(--space-4) var(--space-6); }
-.coll-pop-row { display: flex; align-items: center; gap: var(--space-8); width: 100%; background: none; border: none; color: var(--ink); border-radius: var(--radius-md); padding: var(--space-8) var(--space-6); cursor: pointer; font-size:var(--text-sm); text-align: left; }
+.coll-pop-row { display: flex; align-items: center; gap: var(--space-8); width: 100%; background: none; border: none; color: var(--ink); border-radius: var(--radius-md); padding: var(--space-8) var(--space-6); cursor: pointer; font-size:var(--text-sm); text-align: left; } /* token-lint-ignore: space-picker popover row, toggled on/off — not a
+   standalone button */
 .coll-pop-row:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }
 .coll-pop-check { width: 12px; display: inline-flex; justify-content: center; opacity: 0.85; }
 .coll-pop-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -71,7 +72,8 @@
 .coll-tools-sep { width: 1px; height: 18px; background: var(--line); }
 /* Delete is the quietest thing on the bar until you reach for it, and it arms
    before it fires — one click on a bare icon should not lose a space. */
-.coll-del { display: grid; place-items: center; height: var(--control-md); min-width: var(--control-md); padding: 0; background: transparent; border: 0; border-radius: var(--radius-md); color: var(--ink-faint); font: inherit; font-size:var(--text-xs); cursor: pointer; transition: var(--dur-fast); }
+.coll-del { display: grid; place-items: center; height: var(--control-md); min-width: var(--control-md); padding: 0; background: transparent; border: 0; border-radius: var(--radius-md); color: var(--ink-faint); font: inherit; font-size:var(--text-xs); cursor: pointer; transition: var(--dur-fast); } /* token-lint-ignore: icon-only delete with a two-step armed state, like the
+   wipe control — not a .btn box */
 .coll-del:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
 .coll-del.armed { padding: 0 var(--space-12); color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
 .coll-smart { position: relative; display: inline-flex; flex: none; color: var(--ink-mute); cursor: help; }
@@ -94,7 +96,7 @@
 .rulepop-input { width: 100%; box-sizing: border-box; background: transparent; border: 1px solid var(--line); color: var(--ink); border-radius: var(--radius-md); padding: var(--space-6) var(--space-10); font-size:var(--text-xs); }
 .rulepop-input:focus { outline: none; border-color: var(--ink-dim); }
 .rulepop-list { display: flex; flex-direction: column; gap: var(--space-2); max-height: 210px; overflow-y: auto; }
-.rulepop-item { display: flex; align-items: center; justify-content: space-between; gap: var(--space-10); background: transparent; border: 0; color: var(--ink); font: inherit; font-size:var(--text-sm); text-align: left; padding: var(--space-8) var(--space-8); border-radius: var(--radius); cursor: pointer; }
+.rulepop-item { display: flex; align-items: center; justify-content: space-between; gap: var(--space-10); background: transparent; border: 0; color: var(--ink); font: inherit; font-size:var(--text-sm); text-align: left; padding: var(--space-8) var(--space-8); border-radius: var(--radius); cursor: pointer; } /* token-lint-ignore: rule-tag popover list item — not a standalone button */
 .rulepop-item:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }
 .rulepop-tag { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rulepop-count { flex: none; font-size:var(--text-xs); color: var(--ink-dim); font-variant-numeric: tabular-nums; }
@@ -117,9 +119,10 @@
    upward: Spaces is the last section, and .exp-side-scroll would otherwise have
    to scroll to reveal it. */
 .exp-coll-add { position: relative; }
-.exp-coll-plus { display: flex; align-items: center; justify-content: center; gap: var(--space-6); width: 100%; padding: var(--space-8) var(--space-10); border: 1px dashed var(--line); border-radius: var(--radius-md); background: transparent; color: var(--ink-mute); font: inherit; font-size:var(--text-sm); cursor: pointer; transition: var(--dur-fast); }
+.exp-coll-plus { display: flex; align-items: center; justify-content: center; gap: var(--space-6); width: 100%; padding: var(--space-8) var(--space-10); border: 1px dashed var(--line); border-radius: var(--radius-md); background: transparent; color: var(--ink-mute); font: inherit; font-size:var(--text-sm); cursor: pointer; transition: var(--dur-fast); } /* token-lint-ignore: dashed empty-state add affordance, full width — not a
+   .btn box */
 .exp-coll-plus:hover, .exp-coll-plus.open { border-color: var(--ink-faint); color: var(--ink); }
 .exp-coll-menu { position: absolute; left: 0; right: 0; bottom: calc(100% + var(--space-6)); z-index: var(--z-sticky); display: flex; flex-direction: column; gap: var(--space-2); max-height: 216px; overflow-y: auto; padding: var(--space-6); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg-raise); box-shadow: 0 12px 32px rgba(0,0,0,.35); }
-.exp-coll-opt { display: flex; align-items: center; gap: var(--space-8); width: 100%; padding: var(--space-8); border: 0; border-radius: var(--radius); background: transparent; color: var(--ink-dim); font: inherit; font-size:var(--text-sm); text-align: left; cursor: pointer; }
+.exp-coll-opt { display: flex; align-items: center; gap: var(--space-8); width: 100%; padding: var(--space-8); border: 0; border-radius: var(--radius); background: transparent; color: var(--ink-dim); font: inherit; font-size:var(--text-sm); text-align: left; cursor: pointer; } /* token-lint-ignore: collection-picker list option — not a standalone button */
 .exp-coll-opt:hover { background: var(--panel-2); color: var(--ink); }
 .exp-coll-menu-empty { display: block; padding: var(--space-8); font-size:var(--text-xs); }

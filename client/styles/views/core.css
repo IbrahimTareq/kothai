@@ -25,7 +25,7 @@
 .mode-toggle button{display:flex;align-items:center;gap:var(--space-8);border:0;background:transparent;
   color:var(--ink-mute);font-size:var(--text-sm);font-weight:var(--fw-medium);
   letter-spacing:var(--tracking-tight);padding:var(--space-8) var(--space-16);border-radius:var(--radius-full);
-  cursor:pointer;transition:var(--dur-fast)}
+  cursor:pointer;transition:var(--dur-fast)} /* token-lint-ignore: segment inside a control trough, sized by the trough */
 .mode-toggle button.on{background:var(--accent);color:var(--on-accent)}
 .mode-toggle button:not(.on):hover{color:var(--ink)}
 
@@ -126,7 +126,7 @@
 .cite-ref{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 var(--space-4);
   margin:0 var(--space-2);border-radius:var(--radius-sm);font-size:var(--text-2xs);cursor:pointer;
   vertical-align:text-bottom;background:var(--panel-2);border:1px solid var(--line);
-  color:var(--ink);transition:var(--dur-fast)}
+  color:var(--ink);transition:var(--dur-fast)} /* token-lint-ignore: inline citation reference set in running text */
 .cite-ref:hover{background:var(--panel-3)}
 
 /* ── citation tiles ────────────────────────────────────────────────────────
@@ -286,7 +286,7 @@
   padding:var(--space-6) var(--space-14) var(--space-6) var(--space-10);border-radius:var(--radius-full);cursor:pointer;
   background:var(--bg-raise);border:1px solid var(--line);color:var(--ink-dim);
   font-size:var(--text-xs);letter-spacing:var(--tracking-tight);
-  box-shadow:var(--shadow-float);transition:color var(--dur-fast), border-color var(--dur-fast)}
+  box-shadow:var(--shadow-float);transition:color var(--dur-fast), border-color var(--dur-fast)} /* token-lint-ignore: floating scroll affordance, sized to its own pill */
 .core .jump-latest:hover{color:var(--ink);border-color:var(--ink-faint)}
 
 /* The delete control is a real button now, so it must shed .card-del's

@@ -279,7 +279,9 @@
   letter-spacing: var(--tracking-tight);
   cursor: pointer;
   transition: var(--dur-fast);
-}
+} /* token-lint-ignore: solid danger-zone action, filled with --danger; pairs with
+   .danger-cancel and .danger-input as one arm/confirm row — .btn has no
+   filled-danger tone */
 .danger-go:disabled { background: none; color: var(--ink-faint); border-color: var(--line); cursor: default; }
 .danger-cancel {
   padding: var(--space-8) var(--space-14);
@@ -291,7 +293,8 @@
   font-size: var(--text-sm);
   letter-spacing: var(--tracking-tight);
   cursor: pointer;
-}
+} /* token-lint-ignore: ghost half of the danger-zone arm/confirm pair — see
+   .danger-go */
 .danger-cancel:hover:not(:disabled) { color: var(--ink); border-color: var(--ink-faint); }
 
 /* Endpoint model field — a combobox, not a native datalist. The browser's own
@@ -346,7 +349,7 @@
   background: none; border: 0;
   border-radius: var(--radius-sm);
   cursor: pointer;
-}
+} /* token-lint-ignore: combobox list option, not a standalone button */
 .remote-model-opt.active { color: var(--ink); background: var(--panel-3); }
 .remote-model-opt.picked { color: var(--accent); }
 .remote-model-empty { padding: var(--space-8) var(--space-10); font-size: var(--text-3xs); color: var(--ink-faint); }
@@ -378,7 +381,8 @@
   letter-spacing: var(--tracking-tight);
   cursor: pointer;
   transition: var(--dur-fast);
-}
+} /* token-lint-ignore: same arm/confirm shape as the danger zone, filled with
+   --ink instead of --danger — see .danger-go */
 .retag-go:disabled { background: none; color: var(--ink-faint); border-color: var(--line); cursor: default; }
 /* Layout is shared with .danger-confirm; only the accent differs. */
 .danger-confirm.retag-confirm { border-color: var(--line); }

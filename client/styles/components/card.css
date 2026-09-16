@@ -114,7 +114,7 @@
 .fab{position:absolute;bottom:28px;right:30px;z-index:var(--z-float);display:flex;align-items:center;gap:var(--space-10);
   background:var(--accent);border:0;border-radius:var(--radius-full);padding:var(--space-14) var(--space-28) var(--space-14) var(--space-20);
   color:var(--on-accent);cursor:pointer;box-shadow:0 22px 50px -14px rgba(0,0,0,.85);
-  transition:var(--dur-fast);font-size:var(--text-base);font-weight:600;letter-spacing:var(--tracking-tight)}
+  transition:var(--dur-fast);font-size:var(--text-base);font-weight:600;letter-spacing:var(--tracking-tight)} /* token-lint-ignore: floating action circle, not a .btn box */
 .fab:hover{transform:translateY(-2px);background:var(--accent-hover);box-shadow:0 26px 58px -14px rgba(0,0,0,.9)}
 /* light mode: --line renders as a dark hairline against the pale bg — drop it on item tiles */
 :root[data-theme="light"] .card-favi,
