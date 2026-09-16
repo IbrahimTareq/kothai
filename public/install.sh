@@ -90,6 +90,30 @@ esac
 [ "$LITE" = 1 ] && [ "$LOCAL" = 1 ] && die "--lite and --local are opposites. Pick one."
 [ "$LITE" = 1 ] && TAG=lite
 
+# ---- the banner -----------------------------------------------------------
+# Embedded rather than fetched: this script is the entire download, and a second
+# request for decoration is a second thing that can hang, 404 or arrive empty.
+#
+# The blocks are U+2593, so this only prints where the locale says the terminal
+# can render them. Everywhere else it prints nothing — a wall of mojibake above
+# the first question is worse than no banner at all.
+banner() {
+  case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
+    *[Uu][Tt][Ff]8*|*[Uu][Tt][Ff]-8*) ;;
+    *) return 0 ;;
+  esac
+  printf '\n'
+  cat <<'ART'
+  ▓   ▓  ▓▓▓  ▓▓▓▓▓ ▓   ▓  ▓▓▓  ▓▓▓
+  ▓  ▓  ▓   ▓   ▓   ▓   ▓ ▓   ▓  ▓
+  ▓▓▓   ▓   ▓   ▓   ▓▓▓▓▓ ▓▓▓▓▓  ▓
+  ▓  ▓  ▓   ▓   ▓   ▓   ▓ ▓   ▓  ▓
+  ▓   ▓  ▓▓▓    ▓   ▓   ▓ ▓   ▓ ▓▓▓
+ART
+}
+
+banner
+
 # ---- the two questions ----------------------------------------------------
 # Read from /dev/tty rather than stdin, because stdin is the script itself when
 # this arrives through a pipe. Anything that makes asking impossible — no
