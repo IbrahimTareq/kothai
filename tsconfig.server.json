@@ -34,5 +34,5 @@
     "skipLibCheck": true,
     "resolveJsonModule": true
   },
-  "include": ["server/**/*.ts", "test/server/**/*.ts", "scripts/**/*.ts", "docker/**/*.ts"]
+  "include": ["server/**/*.ts", "test/server/**/*.ts", "test/helpers/**/*.ts", "scripts/**/*.ts", "docker/**/*.ts"]
 }
