@@ -126,7 +126,7 @@ const realTags = await import('../../../server/lib/tags.ts')
 const realTagvocab = await import('../../../server/data/tagvocab.js')
 const realNormalise = await import('../../../server/ai/normalise.ts')
 const realCollections = await import('../../../server/data/collections.js')
-const realSettings = await import('../../../server/data/settings.js')
+const realSettings = await import('../../../server/data/settings.ts')
 
 let residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
 
@@ -170,7 +170,7 @@ mock.module('../../../server/ai/index.js', {
   },
 })
 mock.module('../../../server/data/collections.js', { namedExports: { ...realCollections, autoAdd: async () => {} } })
-mock.module('../../../server/data/settings.js', {
+mock.module('../../../server/data/settings.ts', {
   namedExports: { ...realSettings, getResidency: () => residencyImpl() },
 })
 

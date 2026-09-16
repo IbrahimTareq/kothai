@@ -2,16 +2,72 @@
 // vision), the residency map controlling whether each role is off / on-demand
 // / always-loaded, and a `configured` flag marking that the first-run picker
 // has been completed. Single row (id = 1) in the `settings` table.
+import type { SQLOutputValue } from 'node:sqlite'
 import { getDb } from './db.ts'
+import type { SettingsRow } from './db.ts'
 import { DEFAULTS } from '../ai/presets.ts'
-import { ROLES, POLICIES, resolveResidency } from '../ai/roles.ts'
+import { ROLES, POLICIES, FRESH_RESIDENCY, resolveResidency } from '../ai/roles.ts'
+import type { Policy, Residency, Role } from '../ai/roles.ts'
 
-let settings = { ...DEFAULTS }
-let residency = resolveResidency({})
-let remote = { llm: '', embed: '', vision: '' }
+// What save() accepts. Model keys and residency values are plain strings, not
+// the narrow unions: a patch arrives from an HTTP body and has proved nothing
+// yet — see the note on save() for what happens to a value that fails.
+export interface SettingsPatch {
+  llm?: string
+  embed?: string
+  vision?: string
+  configured?: boolean
+  residency?: Partial<Record<Role, string>> | null
+  remote?: Partial<Record<Role, string>> | null
+  embedRecipe?: string | null
+  embedProvider?: string | null
+}
+
+// node:sqlite types every column as SQLOutputValue: the connection carries no
+// knowledge of the CREATE TABLE, so the row read below proves nothing about
+// what it holds. db.ts's SettingsRow is that knowledge written down, and this
+// is the one place the two meet — get a column wrong there and this stops
+// compiling.
+//
+// Coercion, not validation: save() at the bottom of this file is the only
+// writer of any of these columns, so a value of another type cannot occur, and
+// turning that impossibility into a throw would trade a readable install for a
+// boot failure.
+const text = (v: SQLOutputValue): string => String(v)
+const nullableText = (v: SQLOutputValue): string | null => (typeof v === 'string' ? v : null)
+
+function readRow(row: Record<string, SQLOutputValue>): SettingsRow {
+  return {
+    id: Number(row.id),
+    llm: text(row.llm),
+    embed: text(row.embed),
+    vision: text(row.vision),
+    residency_llm: text(row.residency_llm),
+    residency_embed: text(row.residency_embed),
+    residency_vision: text(row.residency_vision),
+    configured: Number(row.configured),
+    remote_llm: nullableText(row.remote_llm),
+    remote_embed: nullableText(row.remote_embed),
+    remote_vision: nullableText(row.remote_vision),
+    embed_recipe: nullableText(row.embed_recipe),
+    embed_provider: nullableText(row.embed_provider),
+  }
+}
+
+// The residency columns are NOT NULL TEXT that only save() below writes, and
+// it only ever stores a POLICIES member — but the column's declared type is
+// `string`, so the stored value still has to prove itself here. find(), not
+// includes(): it hands back the Policy-typed member, so nothing is asserted
+// afterwards (the same trick resolveResidency plays on the JSON side). The
+// fallback is unreachable.
+const policy = (role: Role, stored: string): Policy => POLICIES.find(p => p === stored) ?? FRESH_RESIDENCY[role]
+
+let settings: Record<Role, string> = { ...DEFAULTS }
+let residency: Residency = resolveResidency({})
+let remote: Record<Role, string> = { llm: '', embed: '', vision: '' }
 let configured = false
-let embedRecipe = null
-let embedProvider = null
+let embedRecipe: string | null = null
+let embedProvider: string | null = null
 let loaded = false
 // Whether this install carried endpoint model names BEFORE the first-run gate
 // existed. Captured once, at load, precisely because it must not be re-derived
@@ -20,13 +76,18 @@ let loaded = false
 // read that as "already configured" and refuse to let first run finish.
 let preGate = false
 
-export async function load() {
+export async function load(): Promise<void> {
   if (loaded) return
   const db = await getDb()
-  const row = db.prepare('SELECT * FROM settings WHERE id = 1').get()
-  if (row) {
+  const raw = db.prepare('SELECT * FROM settings WHERE id = 1').get()
+  if (raw) {
+    const row = readRow(raw)
     configured = !!row.configured
-    residency = { llm: row.residency_llm, embed: row.residency_embed, vision: row.residency_vision }
+    residency = {
+      llm: policy('llm', row.residency_llm),
+      embed: policy('embed', row.residency_embed),
+      vision: policy('vision', row.residency_vision),
+    }
     settings = { llm: row.llm, embed: row.embed, vision: row.vision }
     remote = { llm: row.remote_llm || '', embed: row.remote_embed || '', vision: row.remote_vision || '' }
     embedRecipe = row.embed_recipe || null
@@ -46,11 +107,11 @@ export async function load() {
   loaded = true
 }
 
-export function get() {
+export function get(): Record<Role, string> {
   return { ...settings }
 }
 
-export function getResidency() {
+export function getResidency(): Residency {
   return { ...residency }
 }
 
@@ -59,35 +120,35 @@ export function getResidency() {
 // True only for installs that had endpoint model names before the first-run
 // gate existed — see the note on `preGate`. Never becomes true because first
 // run wrote names.
-export function isPreGate() {
+export function isPreGate(): boolean {
   return preGate
 }
 
-export function getRemote() {
+export function getRemote(): Record<Role, string> {
   return { ...remote }
 }
 
 // test-only: drop cached module state so a fresh load() re-reads the database.
-export function _reset() {
+export function _reset(): void {
   loaded = false
 }
 
 // Which embedding recipe the stored vectors were built under (see prompts.js's
 // EMBED_RECIPE). null on an install that predates the marker — indistinguishable
 // from a stale recipe, and treated the same way: re-embed once.
-export function getEmbedRecipe() {
+export function getEmbedRecipe(): string | null {
   return embedRecipe
 }
 
 // Which provider produced the stored vectors ('local' | 'remote'). null on an
 // install that predates the marker — see enrich.embedProviderChanged, which
 // infers the answer from how that install was configured.
-export function getEmbedProvider() {
+export function getEmbedProvider(): string | null {
   return embedProvider
 }
 
 // Has the user completed the first-run model picker? Gates the initial download.
-export function isConfigured() {
+export function isConfigured(): boolean {
   return configured
 }
 
@@ -96,7 +157,7 @@ export function isConfigured() {
 // (routes/settings.js does), but an invalid value here is ignored — kept at
 // its current value — rather than silently reset to a fresh-install default,
 // which resolveResidency's migration semantics would otherwise produce.
-export async function save(patch) {
+export async function save(patch: SettingsPatch): Promise<Record<Role, string>> {
   const {
     residency: rPatch,
     remote: remotePatch,
@@ -110,7 +171,12 @@ export async function save(patch) {
   if (providerPatch !== undefined) embedProvider = providerPatch
   if (rPatch) {
     const merged = { ...residency }
-    for (const role of ROLES) if (POLICIES.includes(rPatch[role])) merged[role] = rPatch[role]
+    // find(), not includes(): a patch value is an unproved string, and find
+    // both rejects a bad one and hands back the Policy-typed member.
+    for (const role of ROLES) {
+      const p = POLICIES.find(candidate => candidate === rPatch[role])
+      if (p) merged[role] = p
+    }
     residency = merged
   }
   if (remotePatch) {

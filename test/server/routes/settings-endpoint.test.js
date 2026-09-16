@@ -11,7 +11,7 @@ import { Readable } from 'node:stream'
 import { _reset, initProvider } from '../../../server/ai/index.js'
 import { handleSaveEndpoint, handleClearEndpoint, handleGetSettings } from '../../../server/routes/settings.js'
 import { _resetDb } from '../../../server/data/db.ts'
-import * as settings from '../../../server/data/settings.js'
+import * as settings from '../../../server/data/settings.ts'
 import { setAiCredentials, getAiConfig } from '../../../server/config.ts'
 import { readCredentials, writeCredentials } from '../../../server/data/credentials.ts'
 

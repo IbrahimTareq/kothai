@@ -45,7 +45,7 @@ const realTags = await import('../../../server/lib/tags.ts')
 const realTagvocab = await import('../../../server/data/tagvocab.js')
 const realNormalise = await import('../../../server/ai/normalise.ts')
 const realCollections = await import('../../../server/data/collections.js')
-const realSettings = await import('../../../server/data/settings.js')
+const realSettings = await import('../../../server/data/settings.ts')
 
 mock.module('../../../server/ai/meta.ts', {
   namedExports: { ...realMeta, fetchLinkMeta: async (url, id) => fetchLinkMetaImpl(url, id) },
@@ -78,7 +78,7 @@ mock.module('../../../server/data/collections.js', {
     },
   },
 })
-mock.module('../../../server/data/settings.js', {
+mock.module('../../../server/data/settings.ts', {
   namedExports: { ...realSettings, getResidency: () => residencyImpl() },
 })
 

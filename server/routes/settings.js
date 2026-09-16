@@ -1,6 +1,6 @@
 import * as ai from '../ai/index.js'
 import * as store from '../data/notes.js'
-import * as settings from '../data/settings.js'
+import * as settings from '../data/settings.ts'
 import * as tagvocab from '../data/tagvocab.js'
 import * as enrich from '../ai/enrich.js'
 import { ROLES, POLICIES, OFF_RESIDENCY } from '../ai/roles.ts'

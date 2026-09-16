@@ -2,7 +2,7 @@
 // to the answer prompt and to the retrieval query.
 import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
-import * as chats from '../../../server/data/chats.js'
+import * as chats from '../../../server/data/chats.ts'
 
 beforeEach(() => chats._reset())
 

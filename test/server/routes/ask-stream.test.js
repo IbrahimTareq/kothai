@@ -25,7 +25,7 @@ mock.module('../../../server/ai/index.js', {
     describeImage: async () => 'an image',
   },
 })
-mock.module('../../../server/data/settings.js', {
+mock.module('../../../server/data/settings.ts', {
   namedExports: { getResidency: () => ({ llm: 'ondemand', embed: 'ondemand', vision: 'ondemand' }) },
 })
 mock.module('../../../server/data/notes.js', {
@@ -40,7 +40,7 @@ let server, base, handleAsk, chats
 
 before(async () => {
   ;({ handleAsk } = await import('../../../server/routes/ask.js'))
-  chats = await import('../../../server/data/chats.js')
+  chats = await import('../../../server/data/chats.ts')
   server = createServer((req, res) => {
     handleAsk(req, res).catch(() => {
       if (!res.writableEnded) res.end()

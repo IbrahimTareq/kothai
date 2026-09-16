@@ -14,7 +14,7 @@
 // the current selection depends on. That check lives here rather than in the
 // client: the UI's "in use" badge is a hint, this is the enforcement.
 import * as ai from '../ai/index.js'
-import * as settings from '../data/settings.js'
+import * as settings from '../data/settings.ts'
 import { scanWeights, removeWeight, isSafeEntryName } from '../lib/weights.ts'
 import { json } from '../lib/http.ts'
 import { MODELS_DIR } from '../config.ts'

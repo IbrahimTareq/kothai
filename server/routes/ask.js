@@ -1,7 +1,7 @@
 import * as ai from '../ai/index.js'
 import * as store from '../data/notes.js'
-import * as chats from '../data/chats.js'
-import * as settings from '../data/settings.js'
+import * as chats from '../data/chats.ts'
+import * as settings from '../data/settings.ts'
 import * as prompts from '../ai/prompts.ts'
 import { json, readBody, saveImage } from '../lib/http.ts'
 

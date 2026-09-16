@@ -12,9 +12,9 @@ const calls = []
 
 const realStore = await import('../../../server/data/notes.js')
 const realCollections = await import('../../../server/data/collections.js')
-const realChats = await import('../../../server/data/chats.js')
+const realChats = await import('../../../server/data/chats.ts')
 const realTagVocab = await import('../../../server/data/tagvocab.js')
-const realSettings = await import('../../../server/data/settings.js')
+const realSettings = await import('../../../server/data/settings.ts')
 
 mock.module('../../../server/data/notes.js', {
   namedExports: {
@@ -39,7 +39,7 @@ mock.module('../../../server/data/collections.js', {
     },
   },
 })
-mock.module('../../../server/data/chats.js', {
+mock.module('../../../server/data/chats.ts', {
   namedExports: {
     ...realChats,
     clearAll: async () => {
@@ -57,7 +57,7 @@ mock.module('../../../server/data/tagvocab.js', {
     },
   },
 })
-mock.module('../../../server/data/settings.js', {
+mock.module('../../../server/data/settings.ts', {
   namedExports: {
     ...realSettings,
     clearAll: async () => {

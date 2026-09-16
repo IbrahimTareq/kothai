@@ -7,8 +7,8 @@ import assert from 'node:assert/strict'
 
 const realStore = await import('../../../server/data/notes.js')
 const realCollections = await import('../../../server/data/collections.js')
-const realChats = await import('../../../server/data/chats.js')
-const realSettings = await import('../../../server/data/settings.js')
+const realChats = await import('../../../server/data/chats.ts')
+const realSettings = await import('../../../server/data/settings.ts')
 
 mock.module('../../../server/data/notes.js', {
   namedExports: {
@@ -23,13 +23,13 @@ mock.module('../../../server/data/collections.js', {
     all: () => [{ id: 's1', name: 'Space one', itemIds: ['n1'] }],
   },
 })
-mock.module('../../../server/data/chats.js', {
+mock.module('../../../server/data/chats.ts', {
   namedExports: {
     ...realChats,
     all: () => [{ id: 'c1', title: 'Chat one', messages: [{ role: 'user', text: 'hi' }] }],
   },
 })
-mock.module('../../../server/data/settings.js', {
+mock.module('../../../server/data/settings.ts', {
   namedExports: {
     ...realSettings,
     get: () => ({ llm: 'model-a' }),

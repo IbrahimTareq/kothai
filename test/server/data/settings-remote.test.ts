@@ -4,7 +4,7 @@
 import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { _resetDb } from '../../../server/data/db.ts'
-import * as settings from '../../../server/data/settings.js'
+import * as settings from '../../../server/data/settings.ts'
 
 beforeEach(async () => {
   _resetDb()

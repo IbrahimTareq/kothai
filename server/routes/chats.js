@@ -1,4 +1,4 @@
-import * as chats from '../data/chats.js'
+import * as chats from '../data/chats.ts'
 import { json, readBody } from '../lib/http.ts'
 
 const MAX_PAGE = 200

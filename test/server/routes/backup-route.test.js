@@ -34,7 +34,7 @@ mock.module('../../../server/data/import-lock.ts', {
 })
 
 const store = await import('../../../server/data/notes.js')
-const settings = await import('../../../server/data/settings.js')
+const settings = await import('../../../server/data/settings.ts')
 const { writeCredentials, readCredentials } = await import('../../../server/data/credentials.ts')
 const { setAiCredentials } = await import('../../../server/config.ts')
 const { createServer } = await import('../../../server/router.js')

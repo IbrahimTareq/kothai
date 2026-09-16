@@ -7,7 +7,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import * as store from '../../../server/data/notes.js'
 import * as collections from '../../../server/data/collections.js'
-import * as chats from '../../../server/data/chats.js'
+import * as chats from '../../../server/data/chats.ts'
 import * as tagvocab from '../../../server/data/tagvocab.js'
 
 test('notes.clearAll empties the store, reports the count, and leaves it writable', async () => {
