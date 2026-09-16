@@ -7,7 +7,7 @@
 // (from content and from tags, respectively — see tagvocab.js), so they're
 // left out to keep the file small and human-readable; a restore just re-runs
 // enrichment.
-import * as store from '../data/notes.js'
+import * as store from '../data/notes.ts'
 import * as collections from '../data/collections.js'
 import * as chats from '../data/chats.ts'
 import * as settings from '../data/settings.ts'

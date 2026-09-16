@@ -8,8 +8,8 @@
 // is the larger one.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import * as store from '../../../server/data/notes.js'
-import { encodeEmbedding, decodeEmbedding } from '../../../server/data/notes.js'
+import * as store from '../../../server/data/notes.ts'
+import { encodeEmbedding, decodeEmbedding } from '../../../server/data/notes.ts'
 import { cosine } from '../../../server/data/embedding.ts'
 import { getDb } from '../../../server/data/db.ts'
 import { deriveAiMarkers } from '../../../server/ai/backlog.ts'

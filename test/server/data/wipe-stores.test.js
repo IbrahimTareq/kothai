@@ -5,7 +5,7 @@
 // leave a working empty store, not a half-loaded one).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import * as store from '../../../server/data/notes.js'
+import * as store from '../../../server/data/notes.ts'
 import * as collections from '../../../server/data/collections.js'
 import * as chats from '../../../server/data/chats.ts'
 import * as tagvocab from '../../../server/data/tagvocab.js'

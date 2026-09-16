@@ -12,7 +12,7 @@ import {
   queueMetaBackfill,
   _igQueueState,
 } from '../../../server/ai/enrich.js'
-import * as store from '../../../server/data/notes.js'
+import * as store from '../../../server/data/notes.ts'
 
 test('metaRetryDelay backs off 10min * 4^n capped at 24h', () => {
   assert.equal(metaRetryDelay(0), 600_000)

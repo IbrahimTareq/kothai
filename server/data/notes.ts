@@ -6,13 +6,56 @@
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 import { readdir, rm } from 'node:fs/promises'
+import type { DatabaseSync, SQLOutputValue } from 'node:sqlite'
 import { UPLOAD_DIR } from '../config.ts'
-import { getDb, _resetDb } from './db.ts'
-import { encodeEmbedding, decodeEmbedding, cosine } from './embedding.ts'
 import { deriveAiMarkers } from '../ai/backlog.ts'
+import type { AiMarkers } from '../ai/backlog.ts'
 import { deriveAccountFromTitle } from '../import/instagram.ts'
+import type { ServerNote } from '../types.ts'
+import { getDb, _resetDb } from './db.ts'
+import type { NoteRow } from './db.ts'
+import { encodeEmbedding, decodeEmbedding, cosine } from './embedding.ts'
 
-let notes = []
+// The record as it lives in the in-memory array: the wire shape plus the
+// fields that never reach a client. `_rev` is delta-sync bookkeeping (see
+// below); `ai`, `article` and `thumbDescription` are written by ai/enrich.js
+// and read here — the first to gate the enrichment backlog, the other two
+// because textSearch's haystack covers them.
+//
+// Extended here rather than in types.ts because ServerNote describes what
+// crosses the HTTP boundary and none of these four do.
+interface NoteRecord extends ServerNote {
+  _rev?: number
+  ai?: AiMarkers
+  article?: string | null
+  thumbDescription?: string | null
+}
+
+// What every read path hands back — see stripEmbedding at the bottom for why
+// those two fields never leave this module.
+type PublicNote = Omit<NoteRecord, 'embedding' | '_rev'>
+
+// A retrieval result: a note plus the score the retriever gave it. Both
+// retrievers return this shape so Ask can use either (see textSearch).
+type ScoredNote = PublicNote & { score: number }
+
+// An embedding as it exists in memory, which is genuinely three things — see
+// the `embedding` field in server/types.ts. NOT db.ts's NoteRow['embedding'],
+// which is the narrower "bytes off disk" the column actually holds.
+type Embedding = ServerNote['embedding']
+
+// node:sqlite types every column as SQLOutputValue: the connection carries no
+// knowledge of the CREATE TABLE, so a row read back proves nothing about what
+// it holds. db.ts's NoteRow is that knowledge written down, and load() below
+// is where a raw value meets it. Both of these narrow rather than validate,
+// exactly like chats.ts's rowData — insertRow/updateRow are the only writers
+// of either column, and both go through JSON.stringify and encodeEmbedding
+// respectively, so no other type can occur. Turning that impossibility into a
+// throw would trade a readable install for a boot failure.
+const rowData = (v: SQLOutputValue): NoteRow['data'] => String(v)
+const rowEmbedding = (v: SQLOutputValue): NoteRow['embedding'] => (v instanceof Uint8Array ? v : null)
+
+let notes: NoteRecord[] = []
 let loaded = false
 
 // ---- delta sync ---------------------------------------------------------
@@ -21,30 +64,30 @@ let loaded = false
 // starts a new bootId and clients resync their loaded pages.
 let rev = 0
 const bootId = randomUUID()
-let tombstones = [] // [{ id, rev }] for deletions, newest last
+let tombstones: { id: string; rev: number }[] = [] // [{ id, rev }] for deletions, newest last
 let tombstoneFloor = 0 // highest rev discarded from the tombstone window
 let TOMBSTONE_CAP = 1000
 
-function bump(record) {
+function bump(record: NoteRecord): void {
   rev++
   if (record) record._rev = rev
 }
 
-export function revState() {
+export function revState(): { rev: number; bootId: string } {
   return { rev, bootId }
 }
-export function changedSince(since) {
+export function changedSince(since: number): PublicNote[] {
   return notes.filter(n => (n._rev || 0) > since).map(stripEmbedding)
 }
-export function deletedSince(since) {
+export function deletedSince(since: number): string[] {
   return tombstones.filter(t => t.rev > since).map(t => t.id)
 }
 // False when `since` predates trimmed tombstones — deletions may be missing,
 // so the client must refetch instead of applying a delta.
-export function deltaOk(since) {
+export function deltaOk(since: number): boolean {
   return since >= tombstoneFloor
 }
-export function _setTombstoneCap(n) {
+export function _setTombstoneCap(n: number): void {
   TOMBSTONE_CAP = n
 } // test-only
 
@@ -53,7 +96,7 @@ export function _setTombstoneCap(n) {
 // entry is a closure over the row it writes; import.js's rollback path
 // (removeMany) never has to touch these because by the time it runs, flush()
 // has already drained (and either committed or discarded) the queue.
-let pendingWrites = []
+let pendingWrites: ((db: DatabaseSync) => void)[] = []
 
 // ---- embedding storage --------------------------------------------------
 // The vector lives in its own BLOB column, not in the note's JSON. As decimal
@@ -69,7 +112,7 @@ export { encodeEmbedding, decodeEmbedding }
 // Deliberately non-fatal — a database that cannot be migrated should still
 // boot and serve, with the vectors read from JSON as before and the migration
 // retried on the next start.
-function migrateEmbeddings(db, records) {
+function migrateEmbeddings(db: DatabaseSync, records: NoteRecord[]): void {
   console.log(`[notes] moving ${records.length} embeddings into the blob column…`)
   db.exec('BEGIN')
   try {
@@ -82,20 +125,20 @@ function migrateEmbeddings(db, records) {
     db.exec('COMMIT')
   } catch (e) {
     db.exec('ROLLBACK')
-    console.warn('[notes] embedding migration deferred:', e.message)
+    console.warn('[notes] embedding migration deferred:', e instanceof Error ? e.message : e)
   }
 }
 
-export async function load() {
+export async function load(): Promise<void> {
   if (loaded) return
   const db = await getDb()
   const rows = db.prepare('SELECT data, embedding FROM notes ORDER BY seq DESC').all()
   // Rows written before the embedding column existed still carry the vector
   // inside `data`; they are collected here and rewritten once, below.
-  const legacy = []
+  const legacy: NoteRecord[] = []
   notes = rows.map(r => {
-    const note = JSON.parse(r.data)
-    const embedding = decodeEmbedding(r.embedding)
+    const note: NoteRecord = JSON.parse(rowData(r.data))
+    const embedding = decodeEmbedding(rowEmbedding(r.embedding))
     if (embedding) note.embedding = embedding
     else if (note.embedding?.length) legacy.push(note)
     return note
@@ -117,12 +160,12 @@ export async function load() {
 // truth for "what rev is this record at", not a stale persisted number.
 // `embedding` is dropped alongside `_rev` because it has its own column now —
 // leaving it here would store every vector twice and undo the whole point.
-function rowJson(record) {
+function rowJson(record: NoteRecord): string {
   const { _rev, embedding, ...rest } = record
   return JSON.stringify(rest)
 }
 
-function insertRow(db, record) {
+function insertRow(db: DatabaseSync, record: NoteRecord): void {
   db.prepare('INSERT INTO notes (id, data, embedding) VALUES (?, ?, ?)').run(
     record.id,
     rowJson(record),
@@ -134,7 +177,7 @@ function insertRow(db, record) {
 // The vector is ~3 KB against ~1 KB for every other field of a note combined,
 // and enrichment patches one field at a time — so for the common update this
 // is the difference between writing a page and writing four.
-function updateRow(db, record, writeEmbedding = true) {
+function updateRow(db: DatabaseSync, record: NoteRecord, writeEmbedding = true): void {
   if (!writeEmbedding) {
     db.prepare('UPDATE notes SET data = ? WHERE id = ?').run(rowJson(record), record.id)
     return
@@ -150,8 +193,11 @@ function updateRow(db, record, writeEmbedding = true) {
 // end — a bulk import (hundreds/thousands of items) would otherwise cost one
 // disk write per item. flush() wraps the whole queued batch in a single
 // transaction, so it's both one write AND atomic (all rows land or none do).
-export async function addNote(note, { persist: doPersist = true } = {}) {
-  const record = {
+export async function addNote(
+  note: Partial<NoteRecord>,
+  { persist: doPersist = true }: { persist?: boolean } = {},
+): Promise<PublicNote> {
+  const record: NoteRecord = {
     id: randomUUID(),
     createdAt: new Date().toISOString(),
     type: 'text',
@@ -176,7 +222,11 @@ export async function addNote(note, { persist: doPersist = true } = {}) {
 // Pass { persist: false } to batch a run of updates and call flush() once at
 // the end — the settings re-embed does this so it writes once instead of
 // once per note.
-export async function updateNote(id, patch, { persist: doPersist = true } = {}) {
+export async function updateNote(
+  id: string,
+  patch: Partial<NoteRecord>,
+  { persist: doPersist = true }: { persist?: boolean } = {},
+): Promise<PublicNote | null> {
   const note = notes.find(n => n.id === id)
   if (!note) return null
   Object.assign(note, patch)
@@ -194,7 +244,7 @@ export async function updateNote(id, patch, { persist: doPersist = true } = {}) 
 // Throws (and leaves nothing committed — SQLite rolls the whole transaction
 // back) if any statement in the batch fails, so a caller can treat "flush
 // threw" as "none of this batch reached disk" without checking row by row.
-export async function flush() {
+export async function flush(): Promise<void> {
   if (!pendingWrites.length) return
   const db = await getDb()
   const ops = pendingWrites
@@ -213,13 +263,13 @@ export async function flush() {
 // rollback when a batched flush() fails. Nothing here needs a DB call: a
 // failed flush() already rolled its whole transaction back, so these ids
 // were never actually written; this just undoes the in-memory unshift()s.
-export async function removeMany(ids) {
+export async function removeMany(ids: string[]): Promise<void> {
   const idSet = new Set(ids)
   if (!idSet.size) return
   notes = notes.filter(n => !idSet.has(n.id))
 }
 
-export async function deleteNote(id) {
+export async function deleteNote(id: string): Promise<boolean> {
   const before = notes.length
   notes = notes.filter(n => n.id !== id)
   const changed = notes.length !== before
@@ -227,7 +277,9 @@ export async function deleteNote(id) {
     ;(await getDb()).prepare('DELETE FROM notes WHERE id = ?').run(id)
     rev++
     tombstones.push({ id, rev })
-    while (tombstones.length > TOMBSTONE_CAP) tombstoneFloor = tombstones.shift().rev
+    // `?.` only because Array.shift() is declared possibly-undefined for an
+    // empty array; the loop condition is what rules that out here.
+    while (tombstones.length > TOMBSTONE_CAP) tombstoneFloor = tombstones.shift()?.rev ?? tombstoneFloor
   }
   return changed
 }
@@ -237,7 +289,7 @@ export async function deleteNote(id) {
 // `pendingWrites` matters: a { persist: false } batch still in the queue would
 // otherwise be written by the NEXT flush(), quietly resurrecting notes the
 // user just deleted. Returns how many notes went, for the confirmation copy.
-export async function clearAll() {
+export async function clearAll(): Promise<number> {
   const removed = notes.length
   notes = []
   pendingWrites = []
@@ -256,9 +308,9 @@ export async function clearAll() {
 // only the wipe route calls this. Individual failures are swallowed: an
 // undeletable leftover file is cosmetic, and must not fail a wipe whose
 // database half already succeeded.
-export async function clearUploads() {
+export async function clearUploads(): Promise<number> {
   let removed = 0
-  let entries = []
+  let entries: string[] = []
   try {
     entries = await readdir(UPLOAD_DIR)
   } catch {
@@ -277,16 +329,16 @@ export async function clearUploads() {
 
 // One note by id, embedding stripped like every other read path. Used by the
 // single-note API route that hydrates a deep-linked expanded item.
-export function getNote(id) {
+export function getNote(id: string): PublicNote | null {
   const note = notes.find(n => n.id === id)
   return note ? stripEmbedding(note) : null
 }
 
-export function allNotes() {
+export function allNotes(): PublicNote[] {
   return notes.map(stripEmbedding)
 }
 
-export function count() {
+export function count(): number {
   return notes.length
 }
 
@@ -332,7 +384,11 @@ const SIM_FLOOR = 0.44
 
 // Top-K notes by cosine similarity to a query embedding, above the floor.
 // `floor: 0` disables it, for callers that want raw ranking.
-export function search(queryEmbedding, k = TOP_K, { floor = SIM_FLOOR } = {}) {
+export function search(
+  queryEmbedding: Embedding,
+  k = TOP_K,
+  { floor = SIM_FLOOR }: { floor?: number } = {},
+): ScoredNote[] {
   const scored = notes
     .filter(n => n.embedding?.length) // Float32Array off disk, plain Array fresh from the model
     .map(n => ({ note: n, score: cosine(queryEmbedding, n.embedding) }))
@@ -381,22 +437,31 @@ const CANDIDATE_DEPTH = 3
 
 // Pure: several ranked lists → one, ordered by summed reciprocal rank.
 // Exported for tests; no store access, no I/O.
-export function reciprocalRankFusion(lists, { k = RRF_K } = {}) {
-  const scores = new Map()
-  const byId = new Map()
+// Generic over the item rather than tied to a note: the only field it reads
+// is `id`, and the two retrievers it fuses hand it the same shape anyway.
+export function reciprocalRankFusion<T extends { id: string }>(
+  lists: T[][],
+  { k = RRF_K }: { k?: number } = {},
+): (T & { score: number })[] {
+  // One map, where this used to keep a score map and an id→item map side by
+  // side. They were always written under the same key in the same pass, and
+  // only one of them could hand the item back at the end without an
+  // assertion. Insertion order, arithmetic and (stable) sort are unchanged.
+  const fused = new Map<string, { item: T; score: number }>()
   for (const list of lists) {
     list.forEach((item, i) => {
-      if (!byId.has(item.id)) byId.set(item.id, item)
-      scores.set(item.id, (scores.get(item.id) || 0) + 1 / (k + i + 1))
+      const seen = fused.get(item.id)
+      if (seen) seen.score += 1 / (k + i + 1)
+      else fused.set(item.id, { item, score: 1 / (k + i + 1) })
     })
   }
-  return [...scores].sort((a, b) => b[1] - a[1]).map(([id, score]) => ({ ...byId.get(id), score }))
+  return [...fused.values()].sort((a, b) => b.score - a.score).map(({ item, score }) => ({ ...item, score }))
 }
 
 // What Ask actually calls when an embedding model is available. Falls back to
 // keyword-only results when there is no query embedding, so a caller never
 // has to branch.
-export function hybridSearch(queryEmbedding, query, k = TOP_K) {
+export function hybridSearch(queryEmbedding: Embedding, query: string, k = TOP_K): ScoredNote[] {
   const depth = k * CANDIDATE_DEPTH
   const lists = [queryEmbedding ? search(queryEmbedding, depth) : [], textSearch(query, depth)]
   return reciprocalRankFusion(lists).slice(0, k)
@@ -512,7 +577,7 @@ const MIN_LIBRARY_FOR_SHARE = 20
 //
 // Terms come from a \W+ split, so they are [A-Za-z0-9_] only and cannot carry
 // a regex metacharacter — no escaping needed.
-function termMatcher(term) {
+function termMatcher(term: string): RegExp {
   return new RegExp(`\\b${term}`)
 }
 
@@ -520,7 +585,7 @@ function termMatcher(term) {
 // its matcher. Exported for tests. Falls back to the unfiltered terms when
 // filtering removes everything, so a query made entirely of common words
 // still returns its best-effort matches rather than nothing at all.
-export function queryTerms(query, haystacks = []) {
+export function queryTerms(query: string, haystacks: string[] = []): string[] {
   const raw = [
     ...new Set(
       (query || '')
@@ -553,7 +618,7 @@ export function queryTerms(query, haystacks = []) {
 // embedding model is available (embed role off): token-overlap scoring over
 // title/tags/summary/content. Same result shape as search() so Ask can use
 // either. `list` is injectable for tests.
-export function textSearch(query, k = TOP_K, list = notes) {
+export function textSearch(query: string, k = TOP_K, list: NoteRecord[] = notes): ScoredNote[] {
   const haystacks = list.map(haystackFor)
   const terms = queryTerms(query, haystacks)
   if (!terms.length) return []
@@ -586,7 +651,7 @@ export function textSearch(query, k = TOP_K, list = notes) {
 
 // test-only: clean in-memory slate against a fresh in-memory database,
 // mirroring collections.js / tagvocab.js's own _reset() helpers.
-export function _reset({ loaded: isLoaded = true, keepDb = false } = {}) {
+export function _reset({ loaded: isLoaded = true, keepDb = false }: { loaded?: boolean; keepDb?: boolean } = {}): void {
   if (!keepDb) _resetDb()
   notes = []
   pendingWrites = []
@@ -598,7 +663,7 @@ export function _reset({ loaded: isLoaded = true, keepDb = false } = {}) {
 
 // The searchable text of one note, lowercased — the same field list the
 // embedding is built from, so both retrievers see the same note.
-function haystackFor(n) {
+function haystackFor(n: NoteRecord): string {
   return [
     n.title,
     n.summary,
@@ -614,7 +679,7 @@ function haystackFor(n) {
     .toLowerCase()
 }
 
-function stripEmbedding(n) {
+function stripEmbedding(n: NoteRecord): PublicNote {
   const { embedding, _rev, ...rest } = n
   return rest
 }

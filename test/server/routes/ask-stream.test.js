@@ -28,7 +28,7 @@ mock.module('../../../server/ai/index.js', {
 mock.module('../../../server/data/settings.ts', {
   namedExports: { getResidency: () => ({ llm: 'ondemand', embed: 'ondemand', vision: 'ondemand' }) },
 })
-mock.module('../../../server/data/notes.js', {
+mock.module('../../../server/data/notes.ts', {
   namedExports: {
     count: () => 3,
     hybridSearch: () => SOURCES,

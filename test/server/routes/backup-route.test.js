@@ -33,7 +33,7 @@ mock.module('../../../server/data/import-lock.ts', {
   namedExports: { ...realLock, isImportInProgress: () => importRunning },
 })
 
-const store = await import('../../../server/data/notes.js')
+const store = await import('../../../server/data/notes.ts')
 const settings = await import('../../../server/data/settings.ts')
 const { writeCredentials, readCredentials } = await import('../../../server/data/credentials.ts')
 const { setAiCredentials } = await import('../../../server/config.ts')

@@ -65,8 +65,8 @@ function reset() {
   _igQueueState.pause()
 }
 
-const realStore = await import('../../../server/data/notes.js')
-mock.module('../../../server/data/notes.js', {
+const realStore = await import('../../../server/data/notes.ts')
+mock.module('../../../server/data/notes.ts', {
   namedExports: { ...realStore, allNotes: () => notes, getNote: id => notes.find(n => n.id === id) ?? null },
 })
 

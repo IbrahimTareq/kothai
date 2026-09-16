@@ -18,7 +18,7 @@ import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 import { DATA_DIR } from '../config.ts'
 import { getDb } from '../data/db.ts'
-import * as store from '../data/notes.js'
+import * as store from '../data/notes.ts'
 import { isImportInProgress, IMPORT_BUSY } from '../data/import-lock.ts'
 import { json } from '../lib/http.ts'
 

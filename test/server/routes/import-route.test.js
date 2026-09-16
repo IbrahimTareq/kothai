@@ -127,12 +127,12 @@ function reset() {
 }
 reset()
 
-const realStore = await import('../../../server/data/notes.js')
+const realStore = await import('../../../server/data/notes.ts')
 const realCollections = await import('../../../server/data/collections.js')
 const realEnrich = await import('../../../server/ai/enrich.js')
 const realImportIndex = await import('../../../server/import/index.ts')
 
-mock.module('../../../server/data/notes.js', {
+mock.module('../../../server/data/notes.ts', {
   namedExports: {
     ...realStore,
     allNotes: () => fakeAllNotes(),

@@ -1,5 +1,5 @@
 import * as ai from '../ai/index.js'
-import * as store from '../data/notes.js'
+import * as store from '../data/notes.ts'
 import * as chats from '../data/chats.ts'
 import * as settings from '../data/settings.ts'
 import * as prompts from '../ai/prompts.ts'

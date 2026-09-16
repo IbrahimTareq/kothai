@@ -8,9 +8,9 @@
 // resurface the next time the embedding model changes.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { reciprocalRankFusion } from '../../../server/data/notes.js'
+import { reciprocalRankFusion } from '../../../server/data/notes.ts'
 
-const ids = out => out.map(n => n.id)
+const ids = (out: { id: string }[]) => out.map(n => n.id)
 
 test('a note both retrievers rank well beats a note only one of them ranks first', () => {
   const dense = [{ id: 'a' }, { id: 'b' }, { id: 'c' }]
@@ -73,7 +73,7 @@ test('a smaller K sharpens the advantage of a first-place rank; the default damp
   // At K=60 the gap between rank 1 and rank 3 is tiny; at K=1 it is large.
   const damped = reciprocalRankFusion(lists)
   const sharp = reciprocalRankFusion(lists, { k: 1 })
-  const gap = out => out[0].score / out[out.length - 1].score
+  const gap = (out: { score: number }[]) => out[0].score / out[out.length - 1].score
   assert.ok(gap(sharp) > gap(damped))
 })
 

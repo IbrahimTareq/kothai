@@ -8,7 +8,7 @@
 // confirmation is enforced HERE and not just in the UI — a mis-fired fetch(),
 // a stale tab, or a page-embedded script must not be able to erase anything
 // without the exact token. The client's type-to-confirm box produces it.
-import * as store from '../data/notes.js'
+import * as store from '../data/notes.ts'
 import * as collections from '../data/collections.js'
 import * as chats from '../data/chats.ts'
 import * as tagvocab from '../data/tagvocab.js'

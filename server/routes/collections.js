@@ -1,5 +1,5 @@
 import { normalizeTags } from '../lib/tags.ts'
-import * as store from '../data/notes.js'
+import * as store from '../data/notes.ts'
 import * as collections from '../data/collections.js'
 import { json, readBody } from '../lib/http.ts'
 import { sanitizeCanvas } from '../lib/canvas.ts'

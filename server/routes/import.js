@@ -1,7 +1,7 @@
 // POST /api/import — ties together the ZIP reader, the importer registry, and
 // the phase-one save + background-enrich pattern used by handleSave. This is
 // the ONLY consumer of server/import/* today.
-import * as store from '../data/notes.js'
+import * as store from '../data/notes.ts'
 import * as collections from '../data/collections.js'
 import * as enrich from '../ai/enrich.js'
 import { findImporter, getImporter, importerNames } from '../import/index.ts'

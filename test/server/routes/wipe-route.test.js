@@ -10,13 +10,13 @@ import { Readable } from 'node:stream'
 
 const calls = []
 
-const realStore = await import('../../../server/data/notes.js')
+const realStore = await import('../../../server/data/notes.ts')
 const realCollections = await import('../../../server/data/collections.js')
 const realChats = await import('../../../server/data/chats.ts')
 const realTagVocab = await import('../../../server/data/tagvocab.js')
 const realSettings = await import('../../../server/data/settings.ts')
 
-mock.module('../../../server/data/notes.js', {
+mock.module('../../../server/data/notes.ts', {
   namedExports: {
     ...realStore,
     clearAll: async () => {

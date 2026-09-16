@@ -1,5 +1,5 @@
 import * as ai from '../ai/index.js'
-import * as store from '../data/notes.js'
+import * as store from '../data/notes.ts'
 import * as settings from '../data/settings.ts'
 import * as tagvocab from '../data/tagvocab.js'
 import * as enrich from '../ai/enrich.js'

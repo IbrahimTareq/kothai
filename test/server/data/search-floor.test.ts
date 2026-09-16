@@ -8,17 +8,17 @@
 // tests pin the BEHAVIOUR, using vectors constructed to sit either side of it.
 import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
-import * as store from '../../../server/data/notes.js'
+import * as store from '../../../server/data/notes.ts'
 
 // Two orthogonal axes plus a blend, so similarity to [1,0] is exactly the
 // first component of a unit vector — cosine scores that are readable by eye.
-const unit = angle => [Math.cos(angle), Math.sin(angle)]
+const unit = (angle: number) => [Math.cos(angle), Math.sin(angle)]
 const QUERY = [1, 0]
-const at = sim => unit(Math.acos(sim))
+const at = (sim: number) => unit(Math.acos(sim))
 
 beforeEach(() => store._reset())
 
-async function seed(sims) {
+async function seed(sims: number[]) {
   for (const [i, sim] of sims.entries()) {
     await store.addNote({ title: `note ${i}`, content: `note ${i}`, embedding: at(sim) })
   }

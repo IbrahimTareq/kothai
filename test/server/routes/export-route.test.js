@@ -5,12 +5,12 @@
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 
-const realStore = await import('../../../server/data/notes.js')
+const realStore = await import('../../../server/data/notes.ts')
 const realCollections = await import('../../../server/data/collections.js')
 const realChats = await import('../../../server/data/chats.ts')
 const realSettings = await import('../../../server/data/settings.ts')
 
-mock.module('../../../server/data/notes.js', {
+mock.module('../../../server/data/notes.ts', {
   namedExports: {
     ...realStore,
     allNotes: () => [{ id: 'n1', title: 'Note one', embedding: null }],

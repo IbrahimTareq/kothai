@@ -14,7 +14,7 @@
 // hands you a consistent copy and costs a second copy's worth of disk; this one
 // costs nothing extra but only settles what is already there.
 import { getDb } from '../data/db.ts'
-import * as store from '../data/notes.js'
+import * as store from '../data/notes.ts'
 import { isImportInProgress, IMPORT_BUSY } from '../data/import-lock.ts'
 import { json } from '../lib/http.ts'
 

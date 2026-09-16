@@ -20,7 +20,7 @@ let persisted = [] // ids written with { persist: false }
 let flushes = 0
 let availableImpl = () => true
 
-const realStore = await import('../../../server/data/notes.js')
+const realStore = await import('../../../server/data/notes.ts')
 const realTags = await import('../../../server/lib/tags.ts')
 const realTagvocab = await import('../../../server/data/tagvocab.js')
 const realNormalise = await import('../../../server/ai/normalise.ts')
@@ -40,7 +40,7 @@ mock.module('../../../server/ai/meta.ts', {
     }),
   },
 })
-mock.module('../../../server/data/notes.js', {
+mock.module('../../../server/data/notes.ts', {
   namedExports: {
     ...realStore,
     allNotes: () => notes,

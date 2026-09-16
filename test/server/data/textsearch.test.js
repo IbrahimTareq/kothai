@@ -2,7 +2,7 @@
 // embedding model is off. The note list is passed explicitly (no disk).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { textSearch, queryTerms } from '../../../server/data/notes.js'
+import { textSearch, queryTerms } from '../../../server/data/notes.ts'
 
 const NOTES = [
   {

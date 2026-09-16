@@ -7,7 +7,7 @@
 // while models are still loading get enriched as soon as they're ready instead
 // of staying heuristic forever. Any failure just leaves the heuristic version.
 import path from 'node:path'
-import * as store from '../data/notes.js'
+import * as store from '../data/notes.ts'
 import * as tags from '../lib/tags.ts'
 import * as tagvocab from '../data/tagvocab.js'
 import * as inference from './index.js'

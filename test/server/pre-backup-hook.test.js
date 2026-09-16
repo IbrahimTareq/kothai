@@ -28,7 +28,7 @@ mock.module('../../server/data/import-lock.ts', {
   namedExports: { ...realLock, isImportInProgress: () => importRunning },
 })
 
-const store = await import('../../server/data/notes.js')
+const store = await import('../../server/data/notes.ts')
 const { createServer } = await import('../../server/router.js')
 await store.load()
 

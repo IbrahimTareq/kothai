@@ -10,11 +10,11 @@ let notes = []
 let deleted = []
 let verdicts = {} // url -> 'alive' | 'dead' | 'unknown'
 
-const realStore = await import('../../../server/data/notes.js')
+const realStore = await import('../../../server/data/notes.ts')
 const realCollections = await import('../../../server/data/collections.js')
 const realAvail = await import('../../../server/ai/availability.ts')
 
-mock.module('../../../server/data/notes.js', {
+mock.module('../../../server/data/notes.ts', {
   namedExports: {
     ...realStore,
     allNotes: () => notes.map(n => ({ ...n })),

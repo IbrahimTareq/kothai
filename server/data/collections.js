@@ -8,7 +8,7 @@
 import { randomUUID } from 'node:crypto'
 import { getDb, _resetDb } from './db.ts'
 import { normalizeTag } from '../lib/tags.ts'
-import * as notesStore from './notes.js'
+import * as notesStore from './notes.ts'
 
 let collections = []
 let loaded = false

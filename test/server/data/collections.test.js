@@ -6,7 +6,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 // Relative specifier → resolved against THIS file's location, not cwd.
 import * as collections from '../../../server/data/collections.js'
-import * as store from '../../../server/data/notes.js'
+import * as store from '../../../server/data/notes.ts'
 
 test('manual collection: add/remove items, newest-first, removal sticks', async () => {
   collections._reset()
