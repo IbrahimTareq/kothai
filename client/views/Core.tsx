@@ -151,74 +151,74 @@ export function CoreView({ focus, onFocus, onBlur, onKey, text, setText, submit,
 
         {hasThread && (
           <div className="thread-wrap">
-          <div className="thread" ref={threadRef} onScroll={onThreadScroll}
-            onWheel={noteGesture} onTouchMove={noteGesture} onPointerDown={noteGesture}
-            role="log" aria-live="polite" aria-relevant="additions text" aria-label="Conversation">
-            {thread.map((m, i) => m.role === 'user'
-              ? <div key={i} className="msg-user-row">
+            <div className="thread" ref={threadRef} onScroll={onThreadScroll}
+              onWheel={noteGesture} onTouchMove={noteGesture} onPointerDown={noteGesture}
+              role="log" aria-live="polite" aria-relevant="additions text" aria-label="Conversation">
+              {thread.map((m, i) => m.role === 'user'
+                ? <div key={i} className="msg-user-row">
                   <div className="msg-user">{m.img && <img className="msg-img" src={m.img} alt="attachment" />}{m.text}</div>
                   {m.ts ? <div className="msg-time mono">{clockTime(m.ts)}</div> : null}
                 </div>
-              : <div key={i} className="msg-ai">
+                : <div key={i} className="msg-ai">
                   <div className="ai-body">
                     {m.pending
                       ? <div className="thinking"><span></span><span></span><span></span>
-                          {warming && <span className="warming mono">{warming}</span>}
-                        </div>
+                        {warming && <span className="warming mono">{warming}</span>}
+                      </div>
                       : m.stopped && !m.lead
-                      // Stopped before it said anything: a state, not a reply,
-                      // so none of the answer furniture applies.
-                      ? <div className="msg-stopped">
+                        // Stopped before it said anything: a state, not a reply,
+                        // so none of the answer furniture applies.
+                        ? <div className="msg-stopped">
                           <span>Stopped.</span>
                           {m.ts ? <span className="msg-time mono">{clockTime(m.ts)}</span> : null}
                         </div>
-                      : <AiAnswer m={m} jumpTo={jumpTo} />}
+                        : <AiAnswer m={m} jumpTo={jumpTo} />}
                   </div>
                 </div>,
+              )}
+            </div>
+            {!pinned && (
+              <button className="jump-latest" onClick={jumpToLatest} aria-label="Jump to the latest message">
+                <Icon name="chevron" size={14} /> Latest
+              </button>
             )}
-          </div>
-          {!pinned && (
-            <button className="jump-latest" onClick={jumpToLatest} aria-label="Jump to the latest message">
-              <Icon name="chevron" size={14} /> Latest
-            </button>
-          )}
           </div>
         )}
 
-        {llmOff && (
+        {llmOff ? (
           <div className="ask-off">
             <span className="mono">ASK IS OFF</span>
             <span>The language model is disabled, so questions can't be answered. Turn it on under Settings → Model Cores.</span>
           </div>
-        )}
-
-        <div className={'input-shell' + (focus ? ' focus' : '')}>
-          {pendingImg && (
-            <span className="attach-preview">
-              <img src={pendingImg} alt="attachment" />
-              <button className="attach-x" aria-label="Remove attached image" title="Remove attached image" onClick={clearImg}>✕</button>
-            </span>
-          )}
-          <textarea ref={taRef} rows={1} value={text} disabled={llmOff}
-            aria-label="Ask a question about your vault"
-            placeholder={'Ask anything...'}
-            onChange={(e) => setText(e.target.value)} onFocus={onFocus} onBlur={onBlur} onKeyDown={onKeyDown}
-            onPaste={(e) => { const it = Array.from(e.clipboardData?.items || []).find((x) => x.type.startsWith('image/')); if (it) { e.preventDefault(); onImageFile(it.getAsFile()) } }} />
-          <input type="file" accept="image/*" ref={fileRef} style={{ display: 'none' }} onChange={(e) => { onImageFile(e.target.files?.[0]); e.target.value = '' }} />
-          <button className="attach-btn" aria-label="Attach an image" title="Attach an image" onClick={() => fileRef.current && fileRef.current.click()}>
-            <Icon name="image" size={17} />
-          </button>
-          {/* One control in one place: while an answer is in flight the send
+        ) : (
+          <div className={'input-shell' + (focus ? ' focus' : '')}>
+            {pendingImg && (
+              <span className="attach-preview">
+                <img src={pendingImg} alt="attachment" />
+                <button className="attach-x" aria-label="Remove attached image" title="Remove attached image" onClick={clearImg}>✕</button>
+              </span>
+            )}
+            <textarea ref={taRef} rows={1} value={text} disabled={llmOff}
+              aria-label="Ask a question about your vault"
+              placeholder={'Ask anything...'}
+              onChange={(e) => setText(e.target.value)} onFocus={onFocus} onBlur={onBlur} onKeyDown={onKeyDown}
+              onPaste={(e) => { const it = Array.from(e.clipboardData?.items || []).find((x) => x.type.startsWith('image/')); if (it) { e.preventDefault(); onImageFile(it.getAsFile()) } }} />
+            <input type="file" accept="image/*" ref={fileRef} style={{ display: 'none' }} onChange={(e) => { onImageFile(e.target.files?.[0]); e.target.value = '' }} />
+            <button className="attach-btn" aria-label="Attach an image" title="Attach an image" onClick={() => fileRef.current && fileRef.current.click()}>
+              <Icon name="image" size={17} />
+            </button>
+            {/* One control in one place: while an answer is in flight the send
               button becomes the way to abandon it, rather than a second button
               appearing next to a dead one. */}
-          {busy
-            ? <button className="send-btn stop" aria-label="Stop generating" title="Stop generating" onClick={stop}>
+            {busy
+              ? <button className="send-btn stop" aria-label="Stop generating" title="Stop generating" onClick={stop}>
                 <Icon name="stop" size={18} />
               </button>
-            : <button className="send-btn" aria-label="Send question" disabled={llmOff || (!text.trim() && !pendingImg)} onClick={send}>
+              : <button className="send-btn" aria-label="Send question" disabled={llmOff || (!text.trim() && !pendingImg)} onClick={send}>
                 <Icon name="ask" size={18} />
               </button>}
-        </div>
+          </div>
+        )}
       </div>
 
       {!hasThread && chatList.length > 0 && (

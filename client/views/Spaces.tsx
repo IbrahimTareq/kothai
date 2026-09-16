@@ -60,7 +60,7 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
 
       <div className="spaces-scroll">
         {collections.length === 0 && !creating
-          ? <div className="empty"><Icon name="spark" size={40} /><p>NO SPACES YET</p></div>
+          ? <div className="empty"><img src="/empty.svg" alt="" width={60} height={60} /><p>NO SPACES ADDED YET</p></div>
           : <div className="spaces-grid">
               {collections.map((c) => {
                 const cover = coverFor(c)

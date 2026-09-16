@@ -11,9 +11,9 @@ const repoRoot = fileURLToPath(new URL('../..', import.meta.url))
 const docsDir = join(repoRoot, 'docs')
 const srcDir = fileURLToPath(new URL('../src', import.meta.url))
 const REPO = 'https://github.com/IbrahimTareq/kothai'
-// Project page, so everything is served under /kothai/. A custom domain later
-// means changing this one line and adding a CNAME to public/.
-const BASE = '/kothai/'
+// Served at the apex of getkothai.com, so everything sits at the root. The
+// CNAME that points GitHub Pages here lives in public/.
+const BASE = '/'
 const BLOB = `${REPO}/blob/main/`
 
 // Runs while this config is evaluated, which is before VitePress enumerates

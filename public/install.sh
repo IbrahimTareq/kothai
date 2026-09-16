@@ -18,8 +18,8 @@
 # What it will not do is guess about your data — an existing container is
 # reported, never replaced, unless you say --replace.
 #
-#   curl -fsSL https://ibrahimtareq.github.io/kothai/install.sh | sh
-#   curl -fsSL https://ibrahimtareq.github.io/kothai/install.sh | sh -s -- --port 8080
+#   curl -fsSL https://getkothai.com/install.sh | sh
+#   curl -fsSL https://getkothai.com/install.sh | sh -s -- --port 8080
 set -eu
 
 IMAGE=ghcr.io/ibrahimtareq/kothai

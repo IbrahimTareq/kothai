@@ -20,7 +20,7 @@ and the only thing that leaves your machine is the inference.
 ## Quick start
 
 ```bash
-curl -fsSL https://ibrahimtareq.github.io/kothai/install.sh | sh
+curl -fsSL https://getkothai.com/install.sh | sh
 ```
 
 It starts the container, waits until it serves, and prints the URL — `--help`

@@ -56,7 +56,7 @@ when you're trying to find something which is the problem this is built around.
 ## Quick start
 
 ```bash
-curl -fsSL https://ibrahimtareq.github.io/kothai/install.sh | sh
+curl -fsSL https://getkothai.com/install.sh | sh
 ```
 
 It asks two questions, pulls the right image, waits until it actually answers,
@@ -139,7 +139,7 @@ only endpoints of that kind, and picks the image for you.
 For anything else, name it yourself:
 
 ```bash
-curl -fsSL https://ibrahimtareq.github.io/kothai/install.sh | sh -s -- \
+curl -fsSL https://getkothai.com/install.sh | sh -s -- \
   --endpoint https://api.groq.com/openai/v1 --key …
 ```
 

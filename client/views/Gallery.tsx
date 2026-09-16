@@ -142,7 +142,12 @@ export function GalleryView({ nav, view, setView, search, setSearch, searchFocus
 
       <div className="gal-scroll" ref={scrollRef}>
         {total === 0 && ready
-          ? <div className="empty"><Icon name={cat.glyph} size={40} /><p>{`NO ${cat.label.toUpperCase()} ${search ? 'MATCH FILTER' : 'YET'}`}</p></div>
+          ? <div className="empty">
+              {nav === 'all'
+                ? <img src="/empty-2.svg" alt="" width={80} height={80} />
+                : <Icon name={cat.glyph} size={40} />}
+              {search ? <p>{`NO ${cat.label.toUpperCase()} MATCH FILTER`}</p> : <p>{`NOTHING ADDED YET`}</p>}
+            </div>
           : <WindowedBoard items={slots} view={view} scroller={scrollRef} onWindow={onWindow}
               renderItem={(it) => (
                 <ItemCard item={it} onDelete={deleteItem} onExpand={onExpand} collections={collections} onAddTo={addToCollection} onRemoveFrom={removeFromCollection} />
