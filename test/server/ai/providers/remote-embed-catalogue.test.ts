@@ -8,28 +8,35 @@
 import { test, before, after, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
+import type { IncomingMessage, Server, ServerResponse } from 'node:http'
 import { createRemoteProvider } from '../../../../server/ai/providers/remote.ts'
+import { listenOnLoopback } from '../../../helpers/http.ts'
 
-let server, base, routes
+type Route = (req: IncomingMessage, res: ServerResponse) => void
+
+let server: Server
+let base: string
+let routes: Record<string, Route>
 before(async () => {
   server = createServer((req, res) => {
-    const fn = routes[req.url]
+    const fn = routes[req.url || '']
     if (!fn) {
       res.writeHead(404, { 'content-type': 'application/json' })
       return res.end('{}')
     }
     fn(req, res)
   })
-  await new Promise(r => server.listen(0, '127.0.0.1', r))
-  base = `http://127.0.0.1:${server.address().port}/v1`
+  base = `http://127.0.0.1:${await listenOnLoopback(server)}/v1`
 })
 after(() => server.close())
 
-const json = body => (_req, res) => {
-  res.writeHead(200, { 'content-type': 'application/json' })
-  res.end(JSON.stringify(body))
-}
-const ids = list => ({ data: list.map(id => ({ id })) })
+const json =
+  (body: unknown): Route =>
+  (_req, res) => {
+    res.writeHead(200, { 'content-type': 'application/json' })
+    res.end(JSON.stringify(body))
+  }
+const ids = (list: string[]) => ({ data: list.map(id => ({ id })) })
 
 beforeEach(() => {
   routes = {
@@ -81,6 +88,7 @@ test('an embedding id in neither list still only warns, never rejects', async ()
   await p.init()
   const r = p.validateModel('embed', 'something-else')
   assert.equal(r.ok, true)
+  assert.ok(r.warning, 'an unlisted id must carry a warning to show')
   assert.match(r.warning, /not listed/)
 })
 
@@ -88,7 +96,9 @@ test('a chat id is still checked against the chat list', async () => {
   const p = createRemoteProvider({ baseUrl: base, apiKey: null, models: {}, embeddingsPath: '/embeddings/models' })
   await p.init()
   assert.deepEqual(p.validateModel('llm', 'chat-a'), { ok: true })
-  assert.match(p.validateModel('llm', 'vec-small').warning, /not listed/)
+  const embedInChat = p.validateModel('llm', 'vec-small')
+  assert.ok(embedInChat.warning, 'an embedding id in the chat role must be warned about')
+  assert.match(embedInChat.warning, /not listed/)
 })
 
 // The second probe is a nicety. If it fails the provider must still come up —

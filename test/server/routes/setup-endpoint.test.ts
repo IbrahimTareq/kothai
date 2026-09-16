@@ -6,28 +6,17 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, existsSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { Readable } from 'node:stream'
 import { _reset, initProvider } from '../../../server/ai/index.ts'
+import type { ProviderKind } from '../../../server/ai/routing.ts'
 import { handleSetup, handleSetupEndpoint, handleGetSettings } from '../../../server/routes/settings.ts'
 import { _resetDb } from '../../../server/data/db.ts'
 import * as settings from '../../../server/data/settings.ts'
 import { setAiCredentials, getAiConfig } from '../../../server/config.ts'
 import { readCredentials } from '../../../server/data/credentials.ts'
+import { mockReq, mockRes, record, records } from '../../helpers/http.ts'
+import { loader, provider } from '../../helpers/providers.ts'
 
-function fakeRes() {
-  return {
-    statusCode: 0,
-    body: null,
-    writeHead(code) {
-      this.statusCode = code
-    },
-    end(body) {
-      this.body = JSON.parse(body)
-    },
-  }
-}
-
-const fakeReq = body => Readable.from([Buffer.from(JSON.stringify(body))])
+const fakeReq = (body: unknown) => mockReq({ body: JSON.stringify(body) })
 const dir = () => mkdtempSync(path.join(tmpdir(), 'kothai-setup-'))
 
 // A stand-in provider. Without this, initProvider('local') resolves the REAL
@@ -35,16 +24,11 @@ const dir = () => mkdtempSync(path.join(tmpdir(), 'kothai-setup-'))
 // of weights — which is what hung an earlier version of this file. The facade
 // reaches local-only calls through L()?.boot?.() and friends, so a fake that
 // omits them is fine: those resolve to Promise.resolve().
-const fakeProvider = kind => ({
-  init: async () => {},
-  capabilities: () => ({ kind, managesResidency: kind === 'local', downloadsWeights: kind === 'local' }),
-  statusSnapshot: () => ({ roles: {}, aggregate: { state: 'ready', progress: 100, message: 'Ready' } }),
-  listModels: async () => ({ llm: [], embed: [], vision: [] }),
-  validateModel: () => ({ ok: true }),
-  applySettings: async () => {},
-  shutdown: async () => {},
-})
-const load = kind => Promise.resolve(fakeProvider(kind))
+const fakeProvider = (kind: ProviderKind) =>
+  provider({
+    capabilities: () => ({ kind, managesResidency: kind === 'local', downloadsWeights: kind === 'local' }),
+  })
+const load = loader(fakeProvider)
 
 // Unreachable on purpose: remote.init() probes /models best-effort and
 // swallows the failure, so a refused connection settles instantly instead of
@@ -62,7 +46,7 @@ beforeEach(async () => {
 test('an endpoint posted at first run is stored and takes effect immediately', async () => {
   const d = dir()
   await initProvider('local', {}, { load, localAvailable: true })
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleSetup(
     fakeReq({
       endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-wizard' },
@@ -71,7 +55,7 @@ test('an endpoint posted at first run is stored and takes effect immediately', a
     res,
     { dir: d },
   )
-  assert.equal(res.statusCode, 200)
+  assert.equal(sent.code, 200)
   assert.deepEqual(readCredentials(d), { baseUrl: ENDPOINT, apiKey: 'sk-wizard', providerId: 'openai' })
   assert.equal(getAiConfig().provider, 'remote', 'the running process must be remote now')
 })
@@ -79,7 +63,7 @@ test('an endpoint posted at first run is stored and takes effect immediately', a
 test('the credential file is 0600', async () => {
   const d = dir()
   await initProvider('local', {}, { load, localAvailable: true })
-  await handleSetup(fakeReq({ endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-x' } }), fakeRes(), {
+  await handleSetup(fakeReq({ endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-x' } }), mockRes().res, {
     dir: d,
   })
   assert.equal(statSync(path.join(d, 'credentials.json')).mode & 0o777, 0o600)
@@ -88,33 +72,33 @@ test('the credential file is 0600', async () => {
 test('a setup with no endpoint writes no credential file at all', async () => {
   const d = dir()
   await initProvider('local', {}, { load, localAvailable: true })
-  await handleSetup(fakeReq({ llm: 'QWEN3_1_7B_INST_Q4' }), fakeRes(), { dir: d })
+  await handleSetup(fakeReq({ llm: 'QWEN3_1_7B_INST_Q4' }), mockRes().res, { dir: d })
   assert.equal(existsSync(path.join(d, 'credentials.json')), false)
 })
 
 test('an endpoint with no base URL is rejected before anything is written', async () => {
   const d = dir()
   await initProvider('local', {}, { load, localAvailable: true })
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleSetup(fakeReq({ endpoint: { providerId: 'openai', apiKey: 'sk-x' } }), res, { dir: d })
-  assert.equal(res.statusCode, 400)
+  assert.equal(sent.code, 400)
   assert.equal(existsSync(path.join(d, 'credentials.json')), false)
 })
 
 test('GET /api/settings offers the catalogue so the wizard can render tiles', async () => {
   await initProvider('local', {}, { load, localAvailable: true })
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleGetSettings(res)
-  assert.ok(Array.isArray(res.body.endpoints))
-  assert.ok(res.body.endpoints.some(e => e.id === 'openai'))
+  const endpoints = records(sent.json().endpoints)
+  assert.ok(endpoints.some(e => e.id === 'openai'))
 })
 
 test('GET /api/settings still never echoes a credential', async () => {
   setAiCredentials({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-secret' })
   await initProvider('remote', {}, { load, localAvailable: false })
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleGetSettings(res)
-  assert.ok(!JSON.stringify(res.body).includes('sk-secret'))
+  assert.ok(!JSON.stringify(sent.json()).includes('sk-secret'))
 })
 
 // The ordering bug this route exists to prevent: the model picker asks about
@@ -124,11 +108,11 @@ test('GET /api/settings still never echoes a credential', async () => {
 test('applying an endpoint mid-first-run does not mark the install configured', async () => {
   const d = dir()
   await initProvider('local', {}, { load, localAvailable: true })
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleSetupEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-mid' } }), res, {
     dir: d,
   })
-  assert.equal(res.statusCode, 200)
+  assert.equal(sent.code, 200)
   assert.deepEqual(readCredentials(d), { baseUrl: ENDPOINT, apiKey: 'sk-mid', providerId: 'openai' })
   assert.equal(settings.isConfigured(), false, 'first run must still be open')
 })
@@ -136,29 +120,31 @@ test('applying an endpoint mid-first-run does not mark the install configured', 
 test('applying an endpoint reports the capabilities the picker should draw against', async () => {
   const d = dir()
   await initProvider('local', {}, { load, localAvailable: true })
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleSetupEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-mid' } }), res, {
     dir: d,
   })
-  assert.ok(res.body.capabilities, 'the client re-reads roles from this')
-  assert.equal(res.body.capabilities.roles.llm, 'remote')
+  const body = sent.json()
+  assert.ok(body.capabilities, 'the client re-reads roles from this')
+  assert.equal(record(record(body.capabilities).roles).llm, 'remote')
 })
 
 test('a request with no endpoint is rejected rather than silently doing nothing', async () => {
   await initProvider('local', {}, { load, localAvailable: true })
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleSetupEndpoint(fakeReq({}), res, { dir: dir() })
-  assert.equal(res.statusCode, 400)
+  assert.equal(sent.code, 400)
 })
 
 // The installer asks which service in the terminal, because that answer picks
 // the image. Echoing it back is what stops the wizard asking a second time.
 test('GET /api/settings reports what the installer already asked', async () => {
   await initProvider('local', {}, { load, localAvailable: true })
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleGetSettings(res)
-  assert.ok('setup' in res.body, 'the client branches on this')
-  assert.ok('providerId' in res.body.setup)
+  const body = sent.json()
+  assert.ok('setup' in body, 'the client branches on this')
+  assert.ok('providerId' in record(body.setup))
 })
 
 // The whole point of the seeding: naming an endpoint embedding model is what
@@ -167,7 +153,7 @@ test('GET /api/settings reports what the installer already asked', async () => {
 test('a provider that serves embeddings takes the embedding role too', async () => {
   const d = dir()
   await initProvider('local', {}, { load, localAvailable: true })
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleSetupEndpoint(
     fakeReq({
       endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-e' },
@@ -176,8 +162,9 @@ test('a provider that serves embeddings takes the embedding role too', async () 
     res,
     { dir: d },
   )
-  assert.equal(res.statusCode, 200)
-  assert.equal(res.body.capabilities.roles.embed, 'remote', 'no local download for a provider that serves it')
+  assert.equal(sent.code, 200)
+  const roles = record(record(sent.json().capabilities).roles)
+  assert.equal(roles.embed, 'remote', 'no local download for a provider that serves it')
   assert.equal(settings.getRemote().embed, 'text-embedding-3-small')
 })
 
@@ -187,7 +174,7 @@ test('a provider that serves embeddings takes the embedding role too', async () 
 test('an endpoint with no embedding model named leaves that role on this machine', async () => {
   const d = dir()
   await initProvider('local', {}, { load, localAvailable: true })
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleSetupEndpoint(
     fakeReq({
       endpoint: { providerId: null, baseUrl: ENDPOINT, apiKey: 'sk-e' },
@@ -196,8 +183,9 @@ test('an endpoint with no embedding model named leaves that role on this machine
     res,
     { dir: d },
   )
-  assert.equal(res.body.capabilities.roles.embed, 'local', 'it serves no embeddings, so we keep one here')
-  assert.equal(res.body.capabilities.roles.llm, 'remote')
+  const roles = record(record(sent.json().capabilities).roles)
+  assert.equal(roles.embed, 'local', 'it serves no embeddings, so we keep one here')
+  assert.equal(roles.llm, 'remote')
 })
 
 // The exact flow a person walks: connect a provider in the wizard, then press
@@ -207,23 +195,23 @@ test('an endpoint with no embedding model named leaves that role on this machine
 test('connecting a provider then finishing first run is not "already configured"', async () => {
   const d = dir()
   await initProvider('remote', {}, { load, localAvailable: false })
-  const applied = fakeRes()
+  const applied = mockRes()
   await handleSetupEndpoint(
     fakeReq({
       endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-flow' },
       models: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small', vision: 'gpt-4o-mini' },
     }),
-    applied,
+    applied.res,
     { dir: d },
   )
-  assert.equal(applied.statusCode, 200)
+  assert.equal(applied.sent.code, 200)
 
-  const done = fakeRes()
+  const done = mockRes()
   await handleSetup(
     fakeReq({ remote: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small', vision: 'gpt-4o-mini' } }),
-    done,
+    done.res,
     { dir: d },
   )
-  assert.equal(done.statusCode, 200, `Save & start was refused: ${JSON.stringify(done.body)}`)
+  assert.equal(done.sent.code, 200, `Save & start was refused: ${JSON.stringify(done.sent.body)}`)
   assert.equal(settings.isConfigured(), true, 'and first run is genuinely over afterwards')
 })

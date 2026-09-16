@@ -10,10 +10,13 @@ import assert from 'node:assert/strict'
 
 process.env.STASH_TEARDOWN_GRACE_MS = '300' // read at import, below
 
-const order = []
-let releaseTeardown // resolves the simulated SDK teardown
-let endEvents // ends the simulated event stream, as a real cancel does
-let cancelCalledWith = null
+const order: string[] = []
+// A no-op stand-in until the first completion() replaces it: it is assigned
+// inside the mock's factory, which the checker cannot see running, and a `!` at
+// each call site would be asserting exactly the thing this file is testing.
+let releaseTeardown: () => void = () => {} // resolves the simulated SDK teardown
+let endEvents: (() => void) | undefined // ends the simulated event stream, as a real cancel does
+let cancelCalledWith: string | null = null
 
 mock.module('@qvac/sdk', {
   namedExports: {
@@ -23,7 +26,7 @@ mock.module('@qvac/sdk', {
     embed: async () => ({ embedding: [0.1] }),
     // Cancelling ends the event stream promptly, as the real SDK does; it is
     // the run's *final* that lags behind, which is the window the bug lived in.
-    cancel: async ({ requestId }) => {
+    cancel: async ({ requestId }: { requestId: string }) => {
       cancelCalledWith = requestId
       order.push('cancel-called')
       endEvents?.()
@@ -32,8 +35,8 @@ mock.module('@qvac/sdk', {
       requestId: 'run-1',
       events: (async function* () {
         yield { type: 'contentDelta', seq: 0, text: 'partial ' }
-        await new Promise(r => {
-          endEvents = r
+        await new Promise<void>(r => {
+          endEvents = () => r()
         })
       })(),
       final: new Promise(resolve => {
@@ -50,13 +53,16 @@ mock.module('@qvac/sdk', {
   },
 })
 
-let local
+// Imported here rather than inside before(): the mock above is already
+// installed, and a module-scope binding is the only one the checker can see is
+// always assigned by the time a test body reads it.
+const local = await import('../../../../server/ai/providers/local.ts')
+
 // The provider keeps role managers alive; without this the process never exits.
 after(async () => {
-  await local?.shutdown()
+  await local.shutdown()
 })
 before(async () => {
-  local = await import('../../../../server/ai/providers/local.ts')
   await local.init({
     local: { llm: 'QWEN3_1_7B_INST_Q4', embed: 'EMBEDDINGGEMMA_300M_Q8_0', vision: 'QWEN3_5_2B_MULTIMODAL_Q4_K_M' },
   })
@@ -65,7 +71,7 @@ before(async () => {
 
 test('a cancelled answer waits for the run to be torn down before it resolves', async () => {
   const ctl = new AbortController()
-  const seen = []
+  const seen: string[] = []
   const run = local.answerStream({
     question: 'q',
     contextNotes: [],
@@ -130,7 +136,7 @@ test('completions on a role are serialised, not run concurrently', async () => {
 
   ctl.abort() // stop the first, as the composer's stop button does
   await first
-  releaseTeardown?.() // let the second run settle
+  releaseTeardown() // let the second run settle
   await new Promise(r => setTimeout(r, 50))
   assert.equal(await second, 'partial', 'the queued question runs once the model is free')
 })

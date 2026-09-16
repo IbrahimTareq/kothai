@@ -10,6 +10,11 @@
 import { test, mock, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
+import type { Server } from 'node:http'
+import { ROLES } from '../../../../server/ai/roles.ts'
+import type { ProviderKind } from '../../../../server/ai/routing.ts'
+import type { Provider } from '../../../../server/ai/providers/types.ts'
+import { listenOnLoopback, record, records } from '../../../helpers/http.ts'
 
 const CLASSIFICATION = {
   type: 'link',
@@ -20,7 +25,8 @@ const CLASSIFICATION = {
 }
 const VECTOR = [0.1, 0.2, 0.3]
 
-let server, base
+let server: Server
+let base: string
 
 before(async () => {
   server = createServer((req, res) => {
@@ -30,8 +36,13 @@ before(async () => {
       res.writeHead(200, { 'content-type': 'application/json' })
       if (req.url === '/models') return res.end(JSON.stringify({ data: [{ id: 'test-model' }] }))
       if (req.url === '/embeddings') return res.end(JSON.stringify({ data: [{ embedding: VECTOR }] }))
-      const body = JSON.parse(raw)
-      const isClassify = Boolean(body.response_format) || /return JSON only/.test(body.messages[0].content)
+      // Checked rather than read off `any`: JSON.parse answers `any`, and a
+      // request whose body is not the chat shape would otherwise be routed to
+      // the answer branch silently instead of failing here.
+      const body = record(JSON.parse(raw))
+      const firstMessage = records(body.messages)[0].content
+      const isClassify =
+        Boolean(body.response_format) || (typeof firstMessage === 'string' && /return JSON only/.test(firstMessage))
       res.end(
         JSON.stringify({
           choices: [{ message: { content: isClassify ? JSON.stringify(CLASSIFICATION) : 'An answer citing [1].' } }],
@@ -39,57 +50,58 @@ before(async () => {
       )
     })
   })
-  await new Promise(r => server.listen(0, r))
-  base = `http://127.0.0.1:${server.address().port}`
+  base = `http://127.0.0.1:${await listenOnLoopback(server)}`
 })
 
 after(async () => {
   if (localMod) await localMod.shutdown()
-  await new Promise(r => server.close(r))
+  await new Promise<void>(r => {
+    server.close(() => r())
+  })
 })
 
-let localMod = null
+let localMod: Provider | null = null
 
-async function localProvider() {
-  if (!localMod) {
-    mock.module('@qvac/sdk', {
-      namedExports: {
-        loadModel: async () => 'model-1',
-        unloadModel: async () => {},
-        close: async () => {},
-        embed: async () => ({ embedding: VECTOR }),
-        cancel: async () => {},
-        completion: ({ history }) => {
-          const text = /return JSON only/.test(history[0].content)
-            ? JSON.stringify(CLASSIFICATION)
-            : 'An answer citing [1].'
-          return {
-            requestId: 'req-1',
-            // Chunked so the streaming path is exercised across a boundary
-            // rather than handed the whole answer in one delta.
-            events: (async function* () {
-              for (const chunk of text.match(/[\s\S]{1,7}/g) || []) yield { type: 'contentDelta', seq: 0, text: chunk }
-              yield { type: 'completionDone', seq: 1, stopReason: 'eos' }
-            })(),
-            final: Promise.resolve({ contentText: text }),
-          }
-        },
-        QWEN3_1_7B_INST_Q4: { name: 'llm', expectedSize: 1 },
-        EMBEDDINGGEMMA_300M_Q8_0: { name: 'embed', expectedSize: 1 },
-        QWEN3_5_2B_MULTIMODAL_Q4_K_M: { name: 'vision', expectedSize: 1 },
-        MMPROJ_QWEN3_5_2B_MULTIMODAL_F16: { name: 'proj', expectedSize: 1 },
+async function localProvider(): Promise<Provider> {
+  if (localMod) return localMod
+  mock.module('@qvac/sdk', {
+    namedExports: {
+      loadModel: async () => 'model-1',
+      unloadModel: async () => {},
+      close: async () => {},
+      embed: async () => ({ embedding: VECTOR }),
+      cancel: async () => {},
+      completion: ({ history }: { history: { content: string }[] }) => {
+        const text = /return JSON only/.test(history[0].content)
+          ? JSON.stringify(CLASSIFICATION)
+          : 'An answer citing [1].'
+        return {
+          requestId: 'req-1',
+          // Chunked so the streaming path is exercised across a boundary
+          // rather than handed the whole answer in one delta.
+          events: (async function* () {
+            for (const chunk of text.match(/[\s\S]{1,7}/g) || []) yield { type: 'contentDelta', seq: 0, text: chunk }
+            yield { type: 'completionDone', seq: 1, stopReason: 'eos' }
+          })(),
+          final: Promise.resolve({ contentText: text }),
+        }
       },
-    })
-    localMod = await import('../../../../server/ai/providers/local.ts')
-    await localMod.init({
-      local: { llm: 'QWEN3_1_7B_INST_Q4', embed: 'EMBEDDINGGEMMA_300M_Q8_0', vision: 'QWEN3_5_2B_MULTIMODAL_Q4_K_M' },
-    })
-    await localMod.applyResidency({ llm: 'ondemand', embed: 'ondemand', vision: 'ondemand' })
-  }
-  return localMod
+      QWEN3_1_7B_INST_Q4: { name: 'llm', expectedSize: 1 },
+      EMBEDDINGGEMMA_300M_Q8_0: { name: 'embed', expectedSize: 1 },
+      QWEN3_5_2B_MULTIMODAL_Q4_K_M: { name: 'vision', expectedSize: 1 },
+      MMPROJ_QWEN3_5_2B_MULTIMODAL_F16: { name: 'proj', expectedSize: 1 },
+    },
+  })
+  const mod = await import('../../../../server/ai/providers/local.ts')
+  await mod.init({
+    local: { llm: 'QWEN3_1_7B_INST_Q4', embed: 'EMBEDDINGGEMMA_300M_Q8_0', vision: 'QWEN3_5_2B_MULTIMODAL_Q4_K_M' },
+  })
+  await mod.applyResidency({ llm: 'ondemand', embed: 'ondemand', vision: 'ondemand' })
+  localMod = mod
+  return mod
 }
 
-async function remoteProvider() {
+async function remoteProvider(): Promise<Provider> {
   const { createRemoteProvider } = await import('../../../../server/ai/providers/remote.ts')
   const p = createRemoteProvider({
     baseUrl: base,
@@ -100,7 +112,11 @@ async function remoteProvider() {
   return p
 }
 
-const PROVIDERS = [
+// Annotated rather than inferred, and that annotation is now part of what the
+// suite asserts: each builder has to hand back something the checker accepts as
+// a whole Provider, so a member missing from one module is a typecheck error
+// here as well as a failing assertion below.
+const PROVIDERS: [ProviderKind, () => Promise<Provider>][] = [
   ['local', localProvider],
   ['remote', remoteProvider],
 ]
@@ -115,7 +131,12 @@ for (const [name, build] of PROVIDERS) {
   })
 
   test(`${name}: classify returns the full normalised shape with junk filtered`, async () => {
-    const out = await (await build()).classify({ text: 'https://example.com', isUrl: true, now: '2026-01-01' })
+    const out = await (await build()).classify({
+      text: 'https://example.com',
+      hasImage: false,
+      isUrl: true,
+      now: '2026-01-01',
+    })
     assert.deepEqual(Object.keys(out).sort(), ['category', 'summary', 'tags', 'title', 'type'])
     assert.equal(out.type, 'link')
     assert.equal(out.category, 'Tech')
@@ -141,7 +162,11 @@ for (const [name, build] of PROVIDERS) {
   // route and the client never branch on which provider is configured.
   test(`${name}: answerStream emits deltas and resolves to the same text as answer`, async () => {
     const p = await build()
-    const seen = []
+    const seen: string[] = []
+    // The streaming member is optional on the contract, so asserting it is
+    // present is part of the claim this test makes: a provider that dropped it
+    // used to surface here as "p.answerStream is not a function".
+    assert.ok(p.answerStream, 'every provider must offer the streaming path')
     const out = await p.answerStream({ question: 'q', contextNotes: [], onToken: t => seen.push(t) })
     assert.equal(typeof out, 'string')
     assert.equal(out, out.trim())
@@ -162,13 +187,13 @@ for (const [name, build] of PROVIDERS) {
 
   test(`${name}: roleEnabled answers for every role without throwing`, async () => {
     const p = await build()
-    for (const role of ['llm', 'embed', 'vision']) assert.equal(typeof p.roleEnabled(role), 'boolean')
+    for (const role of ROLES) assert.equal(typeof p.roleEnabled(role), 'boolean')
   })
 
   test(`${name}: listModels returns an option list per role`, async () => {
     const m = await (await build()).listModels()
     assert.deepEqual(Object.keys(m).sort(), ['embed', 'llm', 'vision'])
-    for (const role of ['llm', 'embed', 'vision']) assert.ok(Array.isArray(m[role]))
+    for (const role of ROLES) assert.ok(Array.isArray(m[role]))
   })
 
   test(`${name}: validateModel returns an ok flag`, async () => {

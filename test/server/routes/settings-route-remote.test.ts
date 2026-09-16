@@ -6,22 +6,9 @@ import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { initProvider, _reset } from '../../../server/ai/index.ts'
 import { handleGetSettings, handleStatus, handleSetup, _validateModels } from '../../../server/routes/settings.ts'
-import { Readable } from 'node:stream'
 import { _resetDb } from '../../../server/data/db.ts'
 import * as settings from '../../../server/data/settings.ts'
-
-function fakeRes() {
-  return {
-    statusCode: 0,
-    body: null,
-    writeHead(code) {
-      this.statusCode = code
-    },
-    end(body) {
-      this.body = JSON.parse(body)
-    },
-  }
-}
+import { mockReq, mockRes, record } from '../../helpers/http.ts'
 
 beforeEach(async () => {
   _resetDb()
@@ -32,34 +19,38 @@ beforeEach(async () => {
 
 test('GET /api/settings carries capabilities so the client can pick a UI shape', async () => {
   await initProvider('local', {})
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleGetSettings(res)
-  assert.equal(res.body.capabilities.kind, 'local')
-  assert.equal(res.body.capabilities.managesResidency, true)
+  const caps = record(sent.json().capabilities)
+  assert.equal(caps.kind, 'local')
+  assert.equal(caps.managesResidency, true)
 })
 
 test('GET /api/settings keeps the fields the current client already reads', async () => {
   await initProvider('local', {})
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleGetSettings(res)
-  for (const k of ['current', 'residency', 'presets']) assert.ok(k in res.body, `missing ${k}`)
+  const body = sent.json()
+  for (const k of ['current', 'residency', 'presets']) assert.ok(k in body, `missing ${k}`)
 })
 
 test('GET /api/settings never returns an API key or a full endpoint URL', async () => {
   await initProvider('local', {})
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleGetSettings(res)
-  const serialised = JSON.stringify(res.body)
+  const body = sent.json()
+  const serialised = JSON.stringify(body)
   assert.ok(!/apiKey|api_key|Bearer/i.test(serialised), 'no credential field may appear')
-  assert.ok(!/^https?:\/\//.test(res.body.endpoint?.host || ''), 'host must be a hostname, not a URL')
+  const host = record(body.endpoint).host
+  assert.ok(!/^https?:\/\//.test(typeof host === 'string' ? host : ''), 'host must be a hostname, not a URL')
 })
 
 test('GET /api/settings includes the remote model selection', async () => {
   await settings.save({ remote: { llm: 'gpt-4o-mini' } })
   await initProvider('local', {})
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleGetSettings(res)
-  assert.equal(res.body.remote.llm, 'gpt-4o-mini')
+  assert.equal(record(sent.json().remote).llm, 'gpt-4o-mini')
 })
 
 // A pure-remote install downloads nothing, so it used to report `configured`
@@ -75,10 +66,11 @@ const LITE = { localAvailable: false }
 
 test('GET /api/status leaves first run open on a fresh pure-remote install', async () => {
   await initProvider('remote', {}, LITE)
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   handleStatus(res)
-  assert.equal(res.body.capabilities.downloadsWeights, false)
-  assert.equal(res.body.configured, false)
+  const body = sent.json()
+  assert.equal(record(body.capabilities).downloadsWeights, false)
+  assert.equal(body.configured, false)
 })
 
 test('GET /api/status leaves an install that predates the gate alone', async () => {
@@ -90,9 +82,9 @@ test('GET /api/status leaves an install that predates the gate alone', async () 
   settings._reset()
   await settings.load()
   await initProvider('remote', {}, LITE)
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   handleStatus(res)
-  assert.equal(res.body.configured, true)
+  assert.equal(sent.json().configured, true)
 })
 
 // The counterpart, and the regression that made this distinction necessary:
@@ -103,9 +95,9 @@ test('GET /api/status leaves an install that predates the gate alone', async () 
 test('names written DURING first run leave it open', async () => {
   await initProvider('remote', {}, LITE)
   await settings.save({ remote: { llm: 'gpt-oss:120b' } })
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   handleStatus(res)
-  assert.equal(res.body.configured, false, 'first run is not over until the user says so')
+  assert.equal(sent.json().configured, false, 'first run is not over until the user says so')
 })
 
 test('a mixed install is gated on the stored flag, not on endpoint ids', async () => {
@@ -113,10 +105,11 @@ test('a mixed install is gated on the stored flag, not on endpoint ids', async (
   // naming a remote model must not skip the download screen.
   await settings.save({ remote: { llm: 'gpt-oss:120b' } })
   await initProvider('remote', {}, { localAvailable: true })
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   handleStatus(res)
-  assert.equal(res.body.capabilities.kind, 'mixed')
-  assert.equal(res.body.configured, false)
+  const body = sent.json()
+  assert.equal(record(body.capabilities).kind, 'mixed')
+  assert.equal(body.configured, false)
 })
 
 // Setup used to refuse outright for a provider that downloads nothing, and to
@@ -126,17 +119,13 @@ test('a mixed install is gated on the stored flag, not on endpoint ids', async (
 // provider reads back.
 test('POST /api/setup stores endpoint ids on a pure-remote install', async () => {
   await initProvider('remote', {}, { localAvailable: false })
-  const req = Readable.from([
-    Buffer.from(
-      JSON.stringify({
-        remote: { llm: 'gpt-oss:120b', embed: 'nomic-embed-text', vision: 'llava' },
-      }),
-    ),
-  ])
-  const res = fakeRes()
+  const req = mockReq({
+    body: JSON.stringify({ remote: { llm: 'gpt-oss:120b', embed: 'nomic-embed-text', vision: 'llava' } }),
+  })
+  const { res, sent } = mockRes()
   const localBefore = settings.get()
   await handleSetup(req, res)
-  assert.equal(res.statusCode, 200)
+  assert.equal(sent.code, 200)
   assert.deepEqual(settings.getRemote(), {
     llm: 'gpt-oss:120b',
     embed: 'nomic-embed-text',
@@ -146,9 +135,9 @@ test('POST /api/setup stores endpoint ids on a pure-remote install', async () =>
   // would be read back as a QVAC registry key and resolve to nothing.
   assert.deepEqual(settings.get(), localBefore)
 
-  const status = fakeRes()
-  handleStatus(status)
-  assert.equal(status.body.configured, true)
+  const status = mockRes()
+  handleStatus(status.res)
+  assert.equal(status.sent.json().configured, true)
 })
 
 test('POST /api/setup refuses once first run is already closed', async () => {
@@ -156,10 +145,10 @@ test('POST /api/setup refuses once first run is already closed', async () => {
   // an explicit skip. Names alone no longer mean anything here.
   await settings.save({ remote: { llm: 'gpt-oss:120b' }, configured: true })
   await initProvider('remote', {}, { localAvailable: false })
-  const req = Readable.from([Buffer.from(JSON.stringify({ remote: { llm: 'other' } }))])
-  const res = fakeRes()
+  const req = mockReq({ body: JSON.stringify({ remote: { llm: 'other' } }) })
+  const { res, sent } = mockRes()
   await handleSetup(req, res)
-  assert.equal(res.statusCode, 409)
+  assert.equal(sent.code, 409)
   assert.equal(settings.getRemote().llm, 'gpt-oss:120b')
 })
 
@@ -172,6 +161,7 @@ test('a blank endpoint id is rejected, so first run omits rather than sends it',
   const local = settings.get()
 
   const withBlanks = _validateModels({ ...local, remote: { llm: '', embed: '', vision: '' } })
+  assert.ok(withBlanks.error, 'a blank endpoint id must be rejected with a message')
   assert.match(withBlanks.error, /cannot be empty/)
 
   // What a mixed first run sends once the endpoint's models are named: local

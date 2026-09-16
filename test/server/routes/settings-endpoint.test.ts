@@ -7,51 +7,45 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { Readable } from 'node:stream'
 import { _reset, initProvider } from '../../../server/ai/index.ts'
+import type { Residency } from '../../../server/ai/roles.ts'
+import type { ProviderKind } from '../../../server/ai/routing.ts'
+import type { ModelSelection } from '../../../server/ai/providers/types.ts'
 import { handleSaveEndpoint, handleClearEndpoint, handleGetSettings } from '../../../server/routes/settings.ts'
 import { _resetDb } from '../../../server/data/db.ts'
 import * as settings from '../../../server/data/settings.ts'
 import { setAiCredentials, getAiConfig } from '../../../server/config.ts'
 import { readCredentials, writeCredentials } from '../../../server/data/credentials.ts'
+import { mockReq, mockRes, record } from '../../helpers/http.ts'
+import { loader, provider } from '../../helpers/providers.ts'
 
-function fakeRes() {
-  return {
-    statusCode: 0,
-    body: null,
-    writeHead(code) {
-      this.statusCode = code
-    },
-    end(body) {
-      this.body = JSON.parse(body)
-    },
-  }
-}
-const fakeReq = body => Readable.from([Buffer.from(JSON.stringify(body))])
+const fakeReq = (body: unknown) => mockReq({ body: JSON.stringify(body) })
 const dir = () => mkdtempSync(path.join(tmpdir(), 'kothai-chg-'))
 
 // Records what the facade asks of the local provider, which is where the
 // switch back actually lands.
-const localCalls = { residency: [], models: [], boots: 0 }
-const fakeProvider = kind => ({
-  init: async () => {},
-  applyResidency: async r => {
-    if (kind === 'local') localCalls.residency.push(r)
-  },
-  configureModels: async m => {
-    if (kind === 'local') localCalls.models.push(m)
-  },
-  boot: async () => {
-    if (kind === 'local') localCalls.boots++
-  },
-  capabilities: () => ({ kind, managesResidency: kind === 'local', downloadsWeights: kind === 'local' }),
-  statusSnapshot: () => ({ roles: {}, aggregate: { state: 'ready', progress: 100, message: 'Ready' } }),
-  listModels: async () => ({ llm: [], embed: [], vision: [] }),
-  validateModel: () => ({ ok: true }),
-  applySettings: async () => {},
-  shutdown: async () => {},
-})
-const load = kind => Promise.resolve(fakeProvider(kind))
+const localCalls: { residency: Residency[]; models: ModelSelection[]; boots: number } = {
+  residency: [],
+  models: [],
+  boots: 0,
+}
+// The three optional members are stubbed here precisely because they are the
+// on-device calls a role coming home has to produce; everything else the
+// facade touches gets the fixture's empty answer.
+const fakeProvider = (kind: ProviderKind) =>
+  provider({
+    applyResidency: async r => {
+      if (kind === 'local') localCalls.residency.push(r)
+    },
+    configureModels: async m => {
+      if (kind === 'local') localCalls.models.push(m)
+    },
+    boot: async () => {
+      if (kind === 'local') localCalls.boots++
+    },
+    capabilities: () => ({ kind, managesResidency: kind === 'local', downloadsWeights: kind === 'local' }),
+  })
+const load = loader(fakeProvider)
 const A = 'http://127.0.0.1:1/v1'
 const B = 'http://127.0.0.1:2/v1'
 
@@ -73,12 +67,12 @@ test('the endpoint can be changed once first run is over', async () => {
   await settings.save({ configured: true })
   await initProvider('remote', {}, { load, localAvailable: false })
 
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleSaveEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: B, apiKey: 'new-key' } }), res, {
     dir: d,
     load,
   })
-  assert.equal(res.statusCode, 200)
+  assert.equal(sent.code, 200)
   assert.deepEqual(readCredentials(d), { baseUrl: B, apiKey: 'new-key', providerId: 'openai' })
   assert.equal(getAiConfig().baseUrl, B, 'and the running process follows')
 })
@@ -90,10 +84,11 @@ test('rotating just the key keeps the endpoint', async () => {
   await settings.save({ configured: true })
   await initProvider('remote', {}, { load, localAvailable: false })
 
-  await handleSaveEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: A, apiKey: 'rotated' } }), fakeRes(), {
-    dir: d,
-    load,
-  })
+  await handleSaveEndpoint(
+    fakeReq({ endpoint: { providerId: 'openai', baseUrl: A, apiKey: 'rotated' } }),
+    mockRes().res,
+    { dir: d, load },
+  )
   assert.deepEqual(readCredentials(d), { baseUrl: A, apiKey: 'rotated', providerId: 'openai' })
 })
 
@@ -104,12 +99,12 @@ test('disconnecting removes the credential and takes the roles back on-device', 
   await settings.save({ configured: true, remote: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small' } })
   await initProvider('remote', {}, { load, localAvailable: true })
 
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleClearEndpoint(fakeReq({}), res, { dir: d, load })
-  assert.equal(res.statusCode, 200)
+  assert.equal(sent.code, 200)
   assert.equal(existsSync(path.join(d, 'credentials.json')), false, 'the key is gone from disk')
   assert.equal(getAiConfig().provider, 'local')
-  assert.equal(res.body.capabilities.roles.llm, 'local')
+  assert.equal(record(record(sent.json().capabilities).roles).llm, 'local')
 })
 
 // The endpoint's model names are deliberately left alone on disconnect: they
@@ -121,7 +116,7 @@ test('disconnecting keeps the endpoint model names for next time', async () => {
   setAiCredentials(readCredentials(d))
   await settings.save({ configured: true, remote: { llm: 'gpt-4o-mini' } })
   await initProvider('remote', {}, { load, localAvailable: true })
-  await handleClearEndpoint(fakeReq({}), fakeRes(), { dir: d, load })
+  await handleClearEndpoint(fakeReq({}), mockRes().res, { dir: d, load })
   assert.equal(settings.getRemote().llm, 'gpt-4o-mini')
 })
 
@@ -132,17 +127,17 @@ test('a malformed endpoint is refused and the working one survives', async () =>
   await settings.save({ configured: true })
   await initProvider('remote', {}, { load, localAvailable: false })
 
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleSaveEndpoint(fakeReq({ endpoint: { providerId: null, baseUrl: 'not a url' } }), res, { dir: d, load })
-  assert.equal(res.statusCode, 400)
+  assert.equal(sent.code, 400)
   assert.deepEqual(readCredentials(d), { baseUrl: A, apiKey: 'good', providerId: null }, 'the old one is untouched')
 })
 
 test('GET /api/settings says whether this image could run models locally', async () => {
   await initProvider('remote', {}, { load, localAvailable: false })
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleGetSettings(res)
-  assert.ok('localSupported' in res.body, 'Settings needs it to know whether to offer the switch')
+  assert.ok('localSupported' in sent.json(), 'Settings needs it to know whether to offer the switch')
 })
 
 // Disconnecting moved the roles back on paper and left them dead in practice.
@@ -157,7 +152,7 @@ test('switching back to local turns the returning roles on', async () => {
   await settings.save({ configured: true, residency: { llm: 'ondemand', embed: 'always', vision: 'ondemand' } })
   await initProvider('remote', {}, { load, localAvailable: true })
 
-  await handleClearEndpoint(fakeReq({}), fakeRes(), { dir: d, load })
+  await handleClearEndpoint(fakeReq({}), mockRes().res, { dir: d, load })
 
   const last = localCalls.residency.at(-1)
   assert.ok(last, 'residency must be re-applied when the role map changes')
@@ -173,7 +168,7 @@ test('switching back to local hands the local provider its own model names', asy
   await settings.save({ configured: true })
   await initProvider('remote', {}, { load, localAvailable: true })
 
-  await handleClearEndpoint(fakeReq({}), fakeRes(), { dir: d, load })
+  await handleClearEndpoint(fakeReq({}), mockRes().res, { dir: d, load })
   const names = localCalls.models.at(-1)
   assert.ok(names, 'the roles it now serves need models configured')
   assert.ok(names.llm, `expected a language model, got ${JSON.stringify(names)}`)
@@ -191,7 +186,7 @@ test('switching to a service releases the roles it takes over', async () => {
       endpoint: { providerId: 'openai', baseUrl: A, apiKey: 'k' },
       models: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small' },
     }),
-    fakeRes(),
+    mockRes().res,
     { dir: d },
   )
   const last = localCalls.residency.at(-1)
@@ -208,9 +203,9 @@ test('disconnecting can choose the on-device models in the same request', async 
   await settings.save({ configured: true })
   await initProvider('remote', {}, { load, localAvailable: true })
 
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleClearEndpoint(fakeReq({ models: { llm: 'QWEN3_4B_INST_Q4_K_M' } }), res, { dir: d, load })
-  assert.equal(res.statusCode, 200)
+  assert.equal(sent.code, 200)
   assert.equal(settings.get().llm, 'QWEN3_4B_INST_Q4_K_M', 'the choice made during the switch sticks')
 })
 
@@ -221,13 +216,13 @@ test('disconnecting with no choice keeps what was already stored', async () => {
   await settings.save({ configured: true, llm: 'QWEN3_1_7B_INST_Q4' })
   await initProvider('remote', {}, { load, localAvailable: true })
 
-  await handleClearEndpoint(fakeReq({}), fakeRes(), { dir: d, load })
+  await handleClearEndpoint(fakeReq({}), mockRes().res, { dir: d, load })
   assert.equal(settings.get().llm, 'QWEN3_1_7B_INST_Q4')
 })
 
 test('GET /api/settings carries on-device presets with sizes while a service is connected', async () => {
   await initProvider('remote', {}, { load, localAvailable: true })
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleGetSettings(res)
-  assert.ok('localPresets' in res.body, 'Settings cannot price the switch without them')
+  assert.ok('localPresets' in sent.json(), 'Settings cannot price the switch without them')
 })
