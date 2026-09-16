@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import * as store from '../../../server/data/notes.ts'
 import * as collections from '../../../server/data/collections.ts'
-import { handleNotes } from '../../../server/routes/notes.js'
+import { handleNotes, handleDeleteNote } from '../../../server/routes/notes.js'
 
 function mockRes() {
   const r = { code: 0, body: null }
@@ -77,4 +77,26 @@ test('?collection=<id> narrows to only the notes added to that collection', asyn
   handleNotes(missing, urlOf('?collection=does-not-exist&limit=10'))
   assert.equal(missing.body.total, 0, 'unknown collection id falls back to empty, not the full list')
   assert.equal(missing.body.notes.length, 0)
+})
+
+test('deleting a note that owns uploaded files still removes the note', async () => {
+  // The single-note delete path cleans up the note's uploads on the way out.
+  // No fixture here ever carried an image, so that block never ran and a
+  // broken UPLOAD_DIR read inside it stayed invisible — the note vanishes from
+  // the store first, so a throw there is reported to the user as a 500 on a
+  // delete that already happened.
+  store._reset()
+  collections._reset()
+  const note = await store.addNote({
+    type: 'image',
+    content: 'has uploads',
+    image: '/uploads/notes-route-image.png',
+    thumb: '/uploads/notes-route-thumb.png',
+    slides: ['/uploads/notes-route-slide-1.png'],
+  })
+  const res = mockRes()
+  await handleDeleteNote(res, note.id)
+  assert.equal(res.code, 200)
+  assert.deepEqual(res.body, { ok: true })
+  assert.equal(store.allNotes().length, 0)
 })

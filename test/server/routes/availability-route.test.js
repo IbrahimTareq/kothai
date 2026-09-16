@@ -162,3 +162,32 @@ test('remove with no marked items deletes nothing', async () => {
   assert.equal(res.body.removed, 0)
   assert.equal(deleted.length, 0)
 })
+
+test('remove clears the whole marked set when the notes carry uploaded files', async () => {
+  // Every fixture above builds notes as {id, url} only, so the uploaded-file
+  // cleanup in handleAvailabilityRemove was never entered and a broken
+  // UPLOAD_DIR read there went unnoticed. These notes carry files precisely so
+  // that block runs: if it throws, the loop dies after the first delete and
+  // the rest of the marked set survives while its notes are already gone.
+  seed(4, n => (n.id === 'n0' || n.id === 'n2' ? 'dead' : 'alive'))
+  Object.assign(
+    notes.find(n => n.id === 'n0'),
+    {
+      image: '/uploads/availability-image.png',
+      thumb: '/uploads/availability-thumb.png',
+    },
+  )
+  Object.assign(
+    notes.find(n => n.id === 'n2'),
+    {
+      slides: ['/uploads/availability-slide-1.png', '/uploads/availability-slide-2.png'],
+    },
+  )
+  await handleAvailabilityScan(fakeReq({}), fakeRes())
+  const res = fakeRes()
+  await handleAvailabilityRemove(fakeReq({ expected: 2 }), res)
+  assert.equal(res.statusCode, 200)
+  assert.deepEqual(res.body, { removed: 2, unavailable: 0 })
+  assert.deepEqual(deleted.sort(), ['n0', 'n2'], 'the second marked note must go too, not just the first')
+  assert.equal(notes.length, 2)
+})

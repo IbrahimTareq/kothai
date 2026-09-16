@@ -11,6 +11,7 @@
 import { unlink } from 'node:fs/promises'
 import path from 'node:path'
 import * as store from '../data/notes.ts'
+import { UPLOAD_DIR } from '../config.ts'
 import * as collections from '../data/collections.ts'
 import { checkAvailability, isCheckable, DEAD, ALIVE } from '../ai/availability.ts'
 import { json, readBody } from '../lib/http.ts'
@@ -139,7 +140,7 @@ export async function handleAvailabilityRemove(req, res) {
     // outlives the note otherwise.
     for (const f of [note.image, note.thumb, ...(note.slides || [])]) {
       if (f && typeof f === 'string' && f.startsWith('/uploads/')) {
-        unlink(path.join(store.UPLOAD_DIR, path.basename(f))).catch(() => {})
+        unlink(path.join(UPLOAD_DIR, path.basename(f))).catch(() => {})
       }
     }
   }

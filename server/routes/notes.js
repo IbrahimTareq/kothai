@@ -2,6 +2,7 @@ import path from 'node:path'
 import { unlink } from 'node:fs/promises'
 import { normalizeTags } from '../lib/tags.ts'
 import * as store from '../data/notes.ts'
+import { UPLOAD_DIR } from '../config.ts'
 import * as ai from '../ai/index.ts'
 import * as enrich from '../ai/enrich.js'
 import { isInstagramPost } from '../ai/meta.ts'
@@ -155,7 +156,7 @@ export async function handleDeleteNote(res, id) {
   if (ok && note) {
     for (const f of [note.image, note.thumb, ...(note.slides || [])]) {
       if (f?.startsWith('/uploads/')) {
-        unlink(path.join(store.UPLOAD_DIR, path.basename(f))).catch(() => {})
+        unlink(path.join(UPLOAD_DIR, path.basename(f))).catch(() => {})
       }
     }
   }
