@@ -1,4 +1,4 @@
-// The two primitives the settings surface is built from, lifted out of
+// The primitives the settings surface is built from, lifted out of
 // Settings.tsx so per-section components (see ImportSection.tsx) can use them
 // without importing the view that renders them.
 import type { HTMLAttributes, ReactNode } from 'react'
@@ -46,6 +46,30 @@ export function SettingsRow({ title, desc, action, hint, danger, children, ...re
         )}
       </div>
       {children}
+    </div>
+  )
+}
+
+// How a settings row reports the outcome of something it just did.
+//
+// This markup was written out eleven times across five files — every row that
+// finishes a job ends with the same wrapper, the same pair of classes and the
+// same two ARIA attributes. Those attributes are the reason this is a
+// component rather than a convention: role="status" + aria-live="polite" is
+// what makes the outcome reach a screen reader at all, and a hand-copied block
+// that omits them looks perfectly correct on screen. There is now one place
+// that cannot forget them.
+//
+// The classes used to be .import-result / .import-error, named for the first
+// row that needed them and then borrowed by re-tag, erase, availability and
+// model files — four features whose results are not imports. Renamed to
+// .row-result / .row-error now that exactly one file refers to them.
+export function RowStatus({ tone = 'ok', children }: { tone?: 'ok' | 'error'; children: ReactNode }) {
+  return (
+    <div className="settings-row-extra">
+      <div className={tone === 'error' ? 'row-error' : 'row-result'} role="status" aria-live="polite">
+        {children}
+      </div>
     </div>
   )
 }

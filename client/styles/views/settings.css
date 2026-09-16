@@ -200,7 +200,7 @@
   .settings-row-action .seg-btn { flex: 1; }
 }
 
-.import-result {
+.row-result {
   margin-top: var(--space-10);
   padding: var(--space-10) var(--space-14);
   border: 1px solid var(--line);
@@ -212,7 +212,7 @@
 }
 .import-warnings { margin: var(--space-6) 0 0; padding-left: var(--space-18); color: var(--ink-dim); font-size: var(--text-xs); line-height: 1.5; }
 .import-warnings li { margin-top: var(--space-2); }
-.import-error {
+.row-error {
   margin-top: var(--space-10);
   padding: var(--space-10) var(--space-14);
   border: 1px solid var(--line);

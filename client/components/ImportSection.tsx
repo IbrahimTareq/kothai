@@ -12,7 +12,7 @@
 // instructions below, and a parser in server/import/.
 import { useState, useRef } from 'react'
 import type { ChangeEvent, DragEvent, ReactNode } from 'react'
-import { SettingsGroup, SettingsRow } from './SettingsRow'
+import { SettingsGroup, SettingsRow, RowStatus } from './SettingsRow'
 import { API } from '../data/api'
 import { IMPORT_SOURCES, validateImportFiles, type ImportSource } from '../domain/importFile'
 
@@ -145,21 +145,17 @@ function ImportSourceRow({ source }: { source: ImportSource }) {
       }
       hint={<>or drop here</>}>
       {result && (
-        <div className="settings-row-extra">
-          <div className="import-result" role="status" aria-live="polite">
-            <div>{summarizeImport(result)}</div>
-            {result.warnings.length > 0 && (
-              <ul className="import-warnings">
-                {result.warnings.map((w, i) => <li key={i}>{w}</li>)}
-              </ul>
-            )}
-          </div>
-        </div>
+        <RowStatus>
+          <div>{summarizeImport(result)}</div>
+          {result.warnings.length > 0 && (
+            <ul className="import-warnings">
+              {result.warnings.map((w, i) => <li key={i}>{w}</li>)}
+            </ul>
+          )}
+        </RowStatus>
       )}
       {error && (
-        <div className="settings-row-extra">
-          <div className="import-error" role="status" aria-live="polite">{error}</div>
-        </div>
+        <RowStatus tone="error">{error}</RowStatus>
       )}
     </SettingsRow>
   )

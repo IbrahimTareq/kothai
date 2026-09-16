@@ -8,7 +8,7 @@
 // API. A dead tile left in place costs a grid cell. A live save deleted costs
 // something you chose to keep, silently and permanently.
 import { useState } from 'react'
-import { SettingsRow } from './SettingsRow'
+import { SettingsRow, RowStatus } from './SettingsRow'
 import { API } from '../data/api'
 
 type Scan = Awaited<ReturnType<typeof API.scanAvailability>>
@@ -73,18 +73,16 @@ export function AvailabilityRow() {
       desc={<>Check saved links and mark the ones whose content has been deleted, so you can clear them out. Only <b>TikTok</b> links can be verified — Instagram gives no reliable way to ask, and guessing there would mean deleting posts that are merely private or rate-limited. Nothing is removed until you say so.</>}
       action={<button className="btn" onClick={run} disabled={scanning || removing}>{scanning ? 'Checking…' : 'Check links'}</button>}>
       {scan && (
-        <div className="settings-row-extra">
-          <div className={scan.aborted ? 'import-error' : 'import-result'} role="status" aria-live="polite">
-            <div>{summary(scan)}</div>
-            {!scan.aborted && scan.unavailable > 0 && !armed && (
-              <div className="avail-actions">
-                <button className="btn btn--danger" onClick={() => { setArmed(true); setError(null) }} disabled={removing}>
-                  Remove {scan.unavailable} unavailable item{scan.unavailable === 1 ? '' : 's'}…
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        <RowStatus tone={scan.aborted ? 'error' : 'ok'}>
+          <div>{summary(scan)}</div>
+          {!scan.aborted && scan.unavailable > 0 && !armed && (
+            <div className="avail-actions">
+              <button className="btn btn--danger" onClick={() => { setArmed(true); setError(null) }} disabled={removing}>
+                Remove {scan.unavailable} unavailable item{scan.unavailable === 1 ? '' : 's'}…
+              </button>
+            </div>
+          )}
+        </RowStatus>
       )}
       {armed && scan && (
         <div className="settings-row-extra">
@@ -100,16 +98,10 @@ export function AvailabilityRow() {
         </div>
       )}
       {removed !== null && (
-        <div className="settings-row-extra">
-          <div className="import-result" role="status" aria-live="polite">
-            Removed {removed} item{removed === 1 ? '' : 's'}.
-          </div>
-        </div>
+        <RowStatus>Removed {removed} item{removed === 1 ? '' : 's'}.</RowStatus>
       )}
       {error && (
-        <div className="settings-row-extra">
-          <div className="import-error" role="status" aria-live="polite">{error}</div>
-        </div>
+        <RowStatus tone="error">{error}</RowStatus>
       )}
     </SettingsRow>
   )

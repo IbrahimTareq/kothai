@@ -13,7 +13,7 @@
 // running install offline: files the current selection needs carry a badge
 // instead of a button, and the server refuses them regardless (409 `in_use`).
 import { useState, useEffect } from 'react'
-import { SettingsRow } from './SettingsRow'
+import { SettingsRow, RowStatus } from './SettingsRow'
 import { API } from '../data/api'
 import { fileLabel, fmtSize, storageSummary } from '../domain/modelFiles'
 import { ROLE_META } from './ModelPicker'
@@ -58,9 +58,7 @@ export function ModelFilesRow() {
         </button>
       )}>
       {data && (
-        <div className="settings-row-extra">
-          <div className="import-result" role="status" aria-live="polite">{storageSummary(data)}</div>
-        </div>
+        <RowStatus>{storageSummary(data)}</RowStatus>
       )}
       {open && data && (
         <div className="settings-row-extra">
@@ -98,14 +96,10 @@ export function ModelFilesRow() {
         </div>
       )}
       {freed !== null && (
-        <div className="settings-row-extra">
-          <div className="import-result" role="status" aria-live="polite">Freed {fmtSize(freed)}.</div>
-        </div>
+        <RowStatus>Freed {fmtSize(freed)}.</RowStatus>
       )}
       {error && (
-        <div className="settings-row-extra">
-          <div className="import-error" role="status" aria-live="polite">{error}</div>
-        </div>
+        <RowStatus tone="error">{error}</RowStatus>
       )}
     </SettingsRow>
   )

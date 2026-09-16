@@ -12,7 +12,7 @@
 import { useState, useEffect } from 'react'
 import { Icon } from '../components/icons'
 import { RoleAccordion, RemoteModelField, ROLE_META, fmtGB, type Role } from '../components/ModelPicker'
-import { SettingsGroup, SettingsRow } from '../components/SettingsRow'
+import { SettingsGroup, SettingsRow, RowStatus } from '../components/SettingsRow'
 import { EndpointPicker, type EndpointChoice } from '../components/EndpointPicker'
 import { ImportSection } from '../components/ImportSection'
 import { AvailabilityRow } from '../components/AvailabilityRow'
@@ -455,16 +455,12 @@ export function SettingsView({ vault, theme, setTheme }: {
                     </div>
                   )}
                   {retagQueued !== null && (
-                    <div className="settings-row-extra">
-                      <div className="import-result" role="status" aria-live="polite">
-                        Queued {retagQueued} note{retagQueued === 1 ? '' : 's'}. They'll re-tag in the background — you can keep using the app.
-                      </div>
-                    </div>
+                    <RowStatus>
+                      Queued {retagQueued} note{retagQueued === 1 ? '' : 's'}. They'll re-tag in the background — you can keep using the app.
+                    </RowStatus>
                   )}
                   {retagError && (
-                    <div className="settings-row-extra">
-                      <div className="import-error" role="status" aria-live="polite">{retagError}</div>
-                    </div>
+                    <RowStatus tone="error">{retagError}</RowStatus>
                   )}
                 </SettingsRow>
 
@@ -495,14 +491,10 @@ export function SettingsView({ vault, theme, setTheme }: {
                     </div>
                   )}
                   {wipeResult && (
-                    <div className="settings-row-extra">
-                      <div className="import-result" role="status" aria-live="polite">{summarizeWipe(wipeResult)}</div>
-                    </div>
+                    <RowStatus>{summarizeWipe(wipeResult)}</RowStatus>
                   )}
                   {wipeError && (
-                    <div className="settings-row-extra">
-                      <div className="import-error" role="status" aria-live="polite">{wipeError}</div>
-                    </div>
+                    <RowStatus tone="error">{wipeError}</RowStatus>
                   )}
                 </SettingsRow>
               </div>
