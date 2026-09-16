@@ -15,7 +15,7 @@ import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { loadThemes, pairContrast } from '../../scripts/token-colors.mjs'
+import { loadThemes, pairContrast } from '../../scripts/token-colors.ts'
 
 const STYLES = fileURLToPath(new URL('../../client/styles/', import.meta.url))
 const TOKENS = new URL('../../client/styles/foundation/tokens.css', import.meta.url)

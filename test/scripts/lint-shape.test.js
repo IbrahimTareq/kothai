@@ -8,7 +8,7 @@ import {
   checkGovernance,
   nextGovernance,
   checkAgainstHead,
-} from '../../scripts/lint-shape.mjs'
+} from '../../scripts/lint-shape.ts'
 
 const BUDGET = { lines: 400, exports: 12 }
 

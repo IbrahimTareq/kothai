@@ -16,7 +16,7 @@
 // the answer is identical on a laptop and in CI.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { loadThemes, resolve, pairContrast, contrast } from '../../scripts/token-colors.mjs'
+import { loadThemes, resolve, pairContrast, contrast } from '../../scripts/token-colors.ts'
 
 const TOKENS = new URL('../../client/styles/foundation/tokens.css', import.meta.url)
 const { dark, light } = loadThemes(TOKENS)

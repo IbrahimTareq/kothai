@@ -7,7 +7,7 @@
 // which is exactly how .conn-btn and .wizard-test came to exist.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { findButtonChrome } from '../../scripts/button-chrome.mjs'
+import { findButtonChrome } from '../../scripts/button-chrome.ts'
 
 test('flags a rule that builds a whole button box', () => {
   const css = `.my-btn{padding:var(--space-8) var(--space-14);border-radius:var(--radius-md);

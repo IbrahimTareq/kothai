@@ -14,7 +14,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, dirname, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { findButtonChrome } from './button-chrome.mjs'
+import { findButtonChrome } from './button-chrome.ts'
 
 const CLIENT = join(dirname(fileURLToPath(import.meta.url)), '..', 'client')
 const STYLES = join(CLIENT, 'styles')
@@ -24,7 +24,7 @@ const SKIP = new Set(['tokens.css', 'tweaks.css'])
 // Stylesheets are grouped into foundation/, components/ and views/, so walk
 // the tree rather than reading one flat directory. Paths stay relative to
 // STYLES, which keeps report lines readable as e.g. views/gallery.css:12.
-const walkStyles = (rel = '') =>
+const walkStyles = (rel = ''): string[] =>
   readdirSync(join(STYLES, rel), { withFileTypes: true }).flatMap(e =>
     e.isDirectory() ? walkStyles(join(rel, e.name)) : [join(rel, e.name)],
   )
@@ -83,7 +83,7 @@ const RULES = [
 ]
 
 let failures = 0
-const report = []
+const report: string[] = []
 
 for (const file of files) {
   const lines = readFileSync(join(STYLES, file), 'utf8').split('\n')
@@ -137,7 +137,7 @@ const SKIP_TSX = new Set(['Tweaks.tsx'])
 const LAYOUT_PROP =
   /^(padding|margin|gap|inset|top|right|bottom|left|width|height|minWidth|minHeight|maxWidth|maxHeight|fontSize|borderRadius|zIndex|letterSpacing|lineHeight)/
 
-function walk(dir) {
+function walk(dir: string): string[] {
   return readdirSync(dir).flatMap(name => {
     const full = join(dir, name)
     if (statSync(full).isDirectory()) return walk(full)
@@ -172,7 +172,7 @@ for (const full of walk(CLIENT)) {
     // ${...} contents are computed at runtime — not literals
     const body = raw.replace(/\$\{[^}]*\}/g, '@')
 
-    const say = msg => {
+    const say = (msg: string) => {
       report.push(`  ${rel}:${line}  [inline-style] ${msg}\n      ${raw.split('\n')[0].trim().slice(0, 72)}`)
       failures++
     }

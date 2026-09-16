@@ -42,6 +42,22 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const BASELINE = join(ROOT, 'scripts', 'shape-baseline.json')
+type Shape = { lines: number; exports: number }
+type Governance = {
+  claudeMdLines: number
+  cleanCodeRulesLines: number
+  baselineEntries: number
+  exportTotal: number
+}
+// shape-baseline.json holds per-file entries keyed by path plus the single
+// `_governance` key, which is why the two are spelled as an intersection
+// rather than one record: they share a namespace but not a shape.
+type Baseline = Record<string, Shape> & { _governance?: Governance }
+// checkAgainstHead treats every entry alike — a file's lines/exports and a
+// `_governance` field are the same question ("did this number grow?") — so it
+// reads the baseline as nested numbers rather than as either named shape.
+type NumberBag = Record<string, Record<string, number>>
+
 const BUDGET = { lines: 400, exports: 12 }
 // Slack for baselined files only — see header. Not applied to files absent
 // from the baseline; those must fit BUDGET exactly.
@@ -56,12 +72,12 @@ export const HEADROOM = { lines: 5, exports: 1 }
 // Counting them made the total un-satisfiable for a repo migrating to
 // TypeScript — server/types.ts tripped the ratchet in 45f7fd6 purely by
 // naming two types.
-export const measure = src => ({
+export const measure = (src: string) => ({
   lines: src.split('\n').length,
   exports: (src.match(/^export (?!type\b|interface\b)/gm) || []).length,
 })
 
-export function checkFile(path, got, baseline, budget, headroom) {
+export function checkFile(path: string, got: Shape, baseline: Record<string, Shape>, budget: Shape, headroom: Shape) {
   const base = baseline[path]
   if (!base) {
     if (got.lines > budget.lines) return `${path}: ${got.lines} lines, budget is ${budget.lines}`
@@ -80,8 +96,12 @@ export function checkFile(path, got, baseline, budget, headroom) {
 // current values; a file that falls back under the flat budget is dropped
 // (the flat budget governs it from here, which is still tighter than its old,
 // larger baseline entry).
-export function nextBaseline(baseline, measurements, budget) {
-  const next = {}
+export function nextBaseline(
+  baseline: Record<string, Shape>,
+  measurements: Record<string, Shape>,
+  budget: Shape,
+): Baseline {
+  const next: Baseline = {}
   for (const [path, got] of Object.entries(measurements)) {
     const overBudget = got.lines > budget.lines || got.exports > budget.exports
     if (!overBudget) continue
@@ -91,19 +111,22 @@ export function nextBaseline(baseline, measurements, budget) {
   return next
 }
 
+// `.js` is deliberately absent: client/ and server/ are wholly TypeScript, and
+// matching it would silently re-admit a .js file to the measured set — the one
+// thing the CI guard in ci.yml exists to make impossible.
 const sourceFiles = () =>
   execFileSync('git', ['ls-files', 'client', 'server'], { cwd: ROOT, encoding: 'utf8' })
     .split('\n')
-    .filter(f => /\.(js|ts|tsx)$/.test(f))
+    .filter(f => /\.(ts|tsx)$/.test(f))
 
 // `_governance` is metadata about the governance system, not a file's shape —
 // every place that walks the baseline as a set of files must ignore it.
-const fileEntries = baseline => Object.keys(baseline).filter(k => k !== '_governance')
+const fileEntries = (baseline: Baseline) => Object.keys(baseline).filter(k => k !== '_governance')
 
 // The four governance numbers, measured fresh: CLAUDE.md's and
 // clean-code-rules.md's line counts, the debt register's own entry count,
 // and the total export statements across every measured client/+server file.
-function measureGovernance(measurements, baselineEntryCount) {
+function measureGovernance(measurements: Record<string, Shape>, baselineEntryCount: number): Governance {
   return {
     claudeMdLines: readFileSync(join(ROOT, 'CLAUDE.md'), 'utf8').split('\n').length,
     cleanCodeRulesLines: readFileSync(join(ROOT, '.claude', 'clean-code-rules.md'), 'utf8').split('\n').length,
@@ -112,12 +135,17 @@ function measureGovernance(measurements, baselineEntryCount) {
   }
 }
 
+// `gov` below is a bag of numbers rather than a `Governance`: main passes `{}`
+// when shape-baseline.json carries no `_governance` key yet, and each
+// comparison then reads undefined, compares false, and lets that first run
+// pass instead of failing four times over numbers nobody has recorded.
+//
 // CLAUDE.md and clean-code-rules.md get the same line headroom a baselined
 // file gets, for the same reason (room for the explanatory comment this
 // change itself needs). The debt register's entry count and the export total
 // get none — "should not gain entries" and "should trend down" are absolute,
 // not slack-bearing, per docs/development.md's Baseline section.
-export function checkGovernance(gov, current, headroom) {
+export function checkGovernance(gov: Record<string, number>, current: Governance, headroom: Shape) {
   const failures = []
   if (current.claudeMdLines > gov.claudeMdLines + headroom.lines)
     failures.push(`CLAUDE.md: grew to ${current.claudeMdLines} lines, baseline is ${gov.claudeMdLines}`)
@@ -137,9 +165,9 @@ export function checkGovernance(gov, current, headroom) {
 // Same tighten-only rule as nextBaseline, applied to the four governance
 // numbers instead of a per-file entry. Missing/first-run values bootstrap at
 // whatever is currently true rather than failing.
-export function nextGovernance(gov, current) {
-  const g = gov || {}
-  const min = (a, b) => Math.min(a ?? Number.POSITIVE_INFINITY, b)
+export function nextGovernance(gov: Partial<Governance> | undefined, current: Governance): Governance {
+  const g: Partial<Governance> = gov || {}
+  const min = (a: number | undefined, b: number) => Math.min(a ?? Number.POSITIVE_INFINITY, b)
   return {
     claudeMdLines: min(g.claudeMdLines, current.claudeMdLines),
     cleanCodeRulesLines: min(g.cleanCodeRulesLines, current.cleanCodeRulesLines),
@@ -155,7 +183,7 @@ export function nextGovernance(gov, current) {
 // else in this file checks the JSON against anything but itself, so a direct
 // edit of shape-baseline.json (skipping --update entirely) would otherwise
 // sail through.
-export function checkAgainstHead(working, head) {
+export function checkAgainstHead(working: NumberBag, head: NumberBag) {
   const failures = []
   for (const [key, val] of Object.entries(working)) {
     if (!val || typeof val !== 'object') continue
@@ -175,7 +203,7 @@ export function checkAgainstHead(working, head) {
   return failures
 }
 
-function readHeadBaseline() {
+function readHeadBaseline(): NumberBag {
   try {
     return JSON.parse(
       execFileSync('git', ['show', 'HEAD:scripts/shape-baseline.json'], { cwd: ROOT, encoding: 'utf8' }),
@@ -189,7 +217,7 @@ function readHeadBaseline() {
 
 function main() {
   const update = process.argv.includes('--update')
-  let baseline = {}
+  let baseline: Baseline = {}
   try {
     baseline = JSON.parse(readFileSync(BASELINE, 'utf8'))
   } catch {
@@ -197,7 +225,7 @@ function main() {
     if (!update) console.error('no baseline found — run with --update to create it')
   }
 
-  const measurements = {}
+  const measurements: Record<string, Shape> = {}
   for (const path of sourceFiles()) measurements[path] = measure(readFileSync(join(ROOT, path), 'utf8'))
 
   if (update) {
@@ -209,8 +237,8 @@ function main() {
     return
   }
 
-  const failures = []
-  const loosened = []
+  const failures: string[] = []
+  const loosened: string[] = []
 
   for (const [path, got] of Object.entries(measurements)) {
     const fail = checkFile(path, got, baseline, BUDGET, HEADROOM)
@@ -242,4 +270,4 @@ function main() {
 }
 
 // Only run the CLI when invoked directly, so the test can import checkFile.
-if (process.argv[1]?.endsWith('lint-shape.mjs')) main()
+if (process.argv[1]?.endsWith('lint-shape.ts')) main()

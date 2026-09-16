@@ -9,16 +9,19 @@ import { readFileSync } from 'node:fs'
 
 const DECL = /(--[a-z0-9-]+)\s*:\s*([^;]+);/g
 
-export function loadThemes(cssPath) {
+type Theme = Record<string, string>
+
+export function loadThemes(cssPath: string): { dark: Theme; light: Theme } {
   const src = readFileSync(cssPath, 'utf8')
-  const block = re => Object.fromEntries([...(src.match(re)?.[1] ?? '').matchAll(DECL)].map(m => [m[1], m[2].trim()]))
+  const block = (re: RegExp): Theme =>
+    Object.fromEntries([...(src.match(re)?.[1] ?? '').matchAll(DECL)].map(m => [m[1], m[2].trim()]))
   const dark = block(/:root\{([\s\S]*?)\n\}/)
   // light only overrides; anything it does not restate is inherited from :root
   return { dark, light: { ...dark, ...block(/:root\[data-theme="light"\]\{([\s\S]*?)\n\}/) } }
 }
 
 /** [r, g, b, a] or null if the value is not a literal colour. */
-export function parseColor(value) {
+export function parseColor(value: string): number[] | null {
   const v = value.trim()
   const hex = v.match(/^#([0-9a-f]{3,8})$/i)
   if (hex) {
@@ -40,7 +43,7 @@ export function parseColor(value) {
 }
 
 /** Follow var() chains and color-mix() to a literal colour. */
-export function resolve(name, theme, depth = 0) {
+export function resolve(name: string, theme: Theme, depth = 0): number[] | null {
   if (depth > 8) return null
   const v = theme[name]
   if (!v) return null
@@ -58,9 +61,9 @@ export function resolve(name, theme, depth = 0) {
 }
 
 /** Composite a possibly-translucent colour over an opaque one. */
-export const flatten = (fg, bg) => fg.slice(0, 3).map((c, i) => c * fg[3] + bg[i] * (1 - fg[3]))
+export const flatten = (fg: number[], bg: number[]) => fg.slice(0, 3).map((c, i) => c * fg[3] + bg[i] * (1 - fg[3]))
 
-const luminance = rgb => {
+const luminance = (rgb: number[]) => {
   const [r, g, b] = rgb.map(c => {
     const s = c / 255
     return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
@@ -69,14 +72,14 @@ const luminance = rgb => {
 }
 
 /** WCAG 2.1 contrast ratio. Both arguments must already be opaque. */
-export function contrast(a, b) {
+export function contrast(a: number[], b: number[]) {
   const l1 = luminance(a)
   const l2 = luminance(b)
   return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)
 }
 
 /** Contrast of token `fg` over token `bg`, itself composited over --bg. */
-export function pairContrast(fg, bg, theme) {
+export function pairContrast(fg: string, bg: string, theme: Theme) {
   const base = resolve('--bg', theme)
   const surface = resolve(bg, theme)
   const ink = resolve(fg, theme)
