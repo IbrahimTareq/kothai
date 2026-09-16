@@ -45,13 +45,13 @@ export function SetupWizard({
 
           <div className="wizard-choices">
             <button className="wizard-choice" onClick={() => setConnecting(true)}>
-              <span className="wizard-choice-title mono">A cloud service</span>
+              <span className="wizard-choice-title">A cloud service</span>
               <span className="wizard-choice-desc">
                 Nothing to download. You paste an API key and pay the provider for what you use.
               </span>
             </button>
             <button className="wizard-choice" onClick={onLocal}>
-              <span className="wizard-choice-title mono">On this machine</span>
+              <span className="wizard-choice-title">On this machine</span>
               <span className="wizard-choice-desc">
                 Nothing leaves the box, no key, no bills. Downloads a few GB of models.
               </span>

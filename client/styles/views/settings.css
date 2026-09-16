@@ -37,6 +37,8 @@
 .model-desc,
 .wizard-choice-desc,
 .wizard-note,
+.wizard-field-label,
+.wizard-probe-msg,
 .residency-desc,
 .remote-model-desc {
   font-size: var(--text-xs);
@@ -58,6 +60,17 @@
   font-size: var(--text-2xs);
   color: var(--ink-dim);
 }
+
+/* Every field on this surface is one box. They differ only where they must:
+   .danger-input focuses red because it sits in the red confirm, and the
+   combobox stays --text-xs because it lists seventy model ids at a time. */
+.wizard-input,
+.remote-model-input,
+.danger-input{padding:var(--space-8) var(--space-12);font-size:var(--text-sm);color:var(--ink);
+  background:var(--panel-3);border:1px solid var(--line);border-radius:var(--radius-md)}
+.wizard-input{width:100%}
+.wizard-input:focus,
+.remote-model-input:focus{border-color:var(--line-focus);outline:none}
 
 .settings-loading{font-family:var(--font-mono);color:var(--ink-faint);font-size:var(--text-xs);
   letter-spacing:var(--tracking-mono);padding:var(--space-32) 0}
@@ -296,14 +309,7 @@
 .danger-input {
   flex: 1 1 140px;
   min-width: 0;
-  padding: var(--space-8) var(--space-12);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
   background: var(--bg);
-  color: var(--ink);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  letter-spacing: var(--tracking-mono);
 }
 .danger-input:focus { outline: none; border-color: var(--danger); }
 .danger-input::placeholder { color: var(--ink-faint); }
@@ -497,21 +503,15 @@
   background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-full);cursor:pointer}
 .wizard-provider:hover{border-color:var(--line-hover)}
 .wizard-provider.picked{border-color:var(--accent)}
-/* Carries .mono in markup, so it keeps --tracking-mono — adding tracking-tight
-   here would recreate the mono-face/tight-tracking mismatch this pass removed. */
-.wizard-provider-label{font-size:var(--text-xs);color:var(--ink)}
+.wizard-provider-label{font-size:var(--text-xs);color:var(--ink);letter-spacing:var(--tracking-tight)}
 .wizard-provider-tag{font-size:var(--text-3xs);color:var(--ink-faint)}
 .wizard-note{margin:0 0 var(--space-20)}
 
 .wizard-field{display:block;margin-bottom:var(--space-14)}
-.wizard-field-label{display:block;font-size:var(--text-3xs);color:var(--ink-faint);margin-bottom:var(--space-6)}
+.wizard-field-label{display:block;margin-bottom:var(--space-6)}
 .wizard-optional{color:var(--ink-faint)}
-.wizard-input{width:100%;padding:var(--space-10) var(--space-12);font-size:var(--text-xs);color:var(--ink);
-  background:var(--panel-3);border:1px solid var(--line);border-radius:var(--radius-md)}
-.wizard-input:focus{border-color:var(--line-focus);outline:none}
 
 .wizard-probe{display:flex;align-items:center;gap:var(--space-12);margin-bottom:var(--space-20)}
-.wizard-probe-msg{font-size:var(--text-xs)}
 .wizard-probe-msg.ok{color:var(--accent)}
 .wizard-probe-msg.fail{color:var(--ink-mute)}
 
@@ -522,8 +522,24 @@
 .conn-actions{display:flex;flex-wrap:wrap;gap:var(--space-8);flex-shrink:0}
 /* Two-step, like the wipe control: the second press is the one that acts. */
 .conn-armed{color:var(--ink);border-color:var(--line-focus)}
-.conn-edit{margin-top:var(--space-16);padding:var(--space-16);
+/* The panel is a stack of five loosely-related blocks — provider pills, a
+   note, the key field, the probe, a warning — each of which used to carry its
+   own margin, so the spacing between them ran 36/20/14/20/0 down the card and
+   the Save row ended up flush against the warning above it. One gap here, and
+   the blocks' own margins off, is the whole fix; the classes keep those
+   margins for first run, where they are not in a card. */
+.conn-edit{display:flex;flex-direction:column;gap:var(--space-16);
+  margin-top:var(--space-16);padding:var(--space-16);
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg)}
+.conn-edit > .wizard-providers,
+.conn-edit > .wizard-note,
+.conn-edit > .wizard-field,
+.conn-edit > .wizard-probe,
+.conn-edit > .conn-warn,
+.conn-edit > .role-acc{margin:0}
+/* Reads as the panel's footer rather than another line of its body — the same
+   move the settings rows make with their own divider. */
+.conn-edit > .conn-actions{padding-top:var(--space-16);border-top:1px solid var(--line)}
 .conn-warn{margin:var(--space-12) 0 0}
 /* Full --ink, not the desc role's --ink-dim: this is the failure the user
    has to read before the field above it means anything. */

@@ -332,7 +332,7 @@ export function SettingsView({ vault, theme, setTheme }: {
                       <div className="danger-confirm">
                         <label htmlFor="wipe-confirm">Type <b>{WIPE_TOKEN}</b> to confirm.</label>
                         <div className="danger-confirm-row">
-                          <input id="wipe-confirm" className="danger-input" value={wipeConfirm} autoFocus
+                          <input id="wipe-confirm" className="danger-input mono" value={wipeConfirm} autoFocus
                             disabled={wiping} spellCheck={false} autoComplete="off" placeholder={WIPE_TOKEN}
                             onChange={(e) => setWipeConfirm(e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') wipeAll(); if (e.key === 'Escape') { setWipeArmed(false); setWipeConfirm('') } }} />

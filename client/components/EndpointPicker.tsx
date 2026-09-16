@@ -82,7 +82,7 @@ export function EndpointPicker({
             className={`wizard-provider${picked?.id === e.id ? ' picked' : ''}`}
             onClick={() => pick(e)}
           >
-            <span className="wizard-provider-label mono">{e.label}</span>
+            <span className="wizard-provider-label">{e.label}</span>
             {!e.servesEmbeddings && <span className="wizard-provider-tag mono">chat only</span>}
           </button>
         ))}
@@ -92,7 +92,7 @@ export function EndpointPicker({
 
       {picked && (
         <label className="wizard-field">
-          <span className="wizard-field-label mono">
+          <span className="wizard-field-label">
             API key{!picked.needsKey && <span className="wizard-optional"> — not needed for this one</span>}
           </span>
           <input
@@ -107,12 +107,12 @@ export function EndpointPicker({
 
       {picked && (
         <div className="wizard-probe">
-          <button className="btn btn--sm" type="button" onClick={test}
+          <button className="btn" type="button" onClick={test}
             disabled={!baseUrl || probe.state === 'testing'}>
             {probe.state === 'testing' ? 'Checking…' : 'Test connection'}
           </button>
           {probe.state !== 'idle' && probe.state !== 'testing' && (
-            <span className={`wizard-probe-msg mono ${probe.state}`}>{probe.message}</span>
+            <span className={`wizard-probe-msg ${probe.state}`}>{probe.message}</span>
           )}
         </div>
       )}

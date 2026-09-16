@@ -96,11 +96,11 @@ export function ConnectionPanel({ cfg, onChanged }: {
         </div>
         {!editing && !leaving && (
           <div className="conn-actions">
-            <button className="btn btn--sm mono" onClick={() => { setEditing(true); setErr(null) }}>
+            <button className="btn" onClick={() => { setEditing(true); setErr(null) }}>
               {cfg.endpoint.configured ? 'Change' : 'Connect a service'}
             </button>
             {cfg.endpoint.configured && cfg.localSupported && (
-              <button className="btn btn--sm mono" disabled={busy}
+              <button className="btn" disabled={busy}
                 onClick={() => { setLeaving(true); setLeaveSel({ ...cfg.current }); setErr(null) }}>
                 Disconnect
               </button>
@@ -126,10 +126,10 @@ export function ConnectionPanel({ cfg, onChanged }: {
               onPick={(key) => setLeaveSel((sel) => (sel ? { ...sel, [role]: key } : sel))} />
           ))}
           <div className="conn-actions">
-            <button className="btn btn--sm btn--primary mono" disabled={busy} onClick={disconnect}>
+            <button className="btn btn--solid" disabled={busy} onClick={disconnect}>
               {busy ? 'Switching…' : `Switch — up to ${fmtGB(leaveBytes)} to download`}
             </button>
-            <button className="btn btn--sm mono" disabled={busy}
+            <button className="btn" disabled={busy}
               onClick={() => { setLeaving(false); setLeaveSel(null) }}>
               Cancel
             </button>
@@ -137,7 +137,7 @@ export function ConnectionPanel({ cfg, onChanged }: {
         </div>
       )}
 
-      {err && <div className="conn-err mono">{err}</div>}
+      {err && <div className="conn-err">{err}</div>}
 
       {editing && (
         <div className="conn-edit">
@@ -157,10 +157,10 @@ export function ConnectionPanel({ cfg, onChanged }: {
             </p>
           )}
           <div className="conn-actions">
-            <button className="btn btn--sm btn--solid mono" disabled={!choice || busy} onClick={saveEndpoint}>
+            <button className="btn btn--solid" disabled={!choice || busy} onClick={saveEndpoint}>
               {busy ? 'Saving…' : 'Save'}
             </button>
-            <button className="btn btn--sm mono" disabled={busy}
+            <button className="btn" disabled={busy}
               onClick={() => { setEditing(false); setChoice(null); setErr(null) }}>
               Cancel
             </button>
