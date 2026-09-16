@@ -14,7 +14,7 @@ import {
   YoutubeTranscriptNotAvailableLanguageError,
   YoutubeTranscriptVideoUnavailableError,
 } from 'youtube-transcript'
-import { UPLOAD_DIR } from '../data/notes.js'
+import { UPLOAD_DIR } from '../config.js'
 import { safeFetch } from '../lib/ssrf.js'
 
 const FETCH_TIMEOUT_MS = 8000
@@ -332,13 +332,7 @@ async function fetchInstagramMeta(url, noteId) {
     meta.siteDesc = captionToMeta(caption).siteDesc
   }
   meta = withLocation(meta, location)
-  if (thumbUrl) {
-    try {
-      meta.thumb = await saveThumb(new URL(thumbUrl, url).href, noteId)
-    } catch {
-      /* no thumbnail is fine */
-    }
-  }
+  if (thumbUrl) meta.thumb = await saveThumbSafe(thumbUrl, url, noteId)
   return meta
 }
 
@@ -507,13 +501,7 @@ async function fetchRedditMeta(url, noteId) {
 
   const { thumbUrl, ...meta } = parsed
   const out = { ...meta, thumb: null }
-  if (thumbUrl) {
-    try {
-      out.thumb = await saveThumb(new URL(thumbUrl, url).href, noteId)
-    } catch {
-      /* no thumbnail is fine */
-    }
-  }
+  if (thumbUrl) out.thumb = await saveThumbSafe(thumbUrl, url, noteId)
   return out
 }
 
@@ -725,19 +713,28 @@ export async function fetchLinkMeta(rawUrl, noteId) {
     meta.siteDesc = oembedDesc
   }
 
-  if (thumbUrl) {
-    try {
-      meta.thumb = await saveThumb(new URL(thumbUrl, url).href, noteId)
-    } catch (e) {
-      /* no thumbnail is fine */
-    }
-  }
+  if (thumbUrl) meta.thumb = await saveThumbSafe(thumbUrl, url, noteId)
   return meta
 }
 
 // `key` names the file, not just the note: a note's own thumbnail keys off the
 // bare note id, its carousel slides off `<noteId>-<i>`. Every file still starts
 // `meta-` so the uploads wipe and the per-note delete sweep keep matching them.
+// saveThumb behind the "a missing thumbnail is not a failure" policy its three
+// callers each wrote out for themselves — resolve against the page URL, swallow
+// anything that goes wrong, answer null. saveThumb already returns null for a
+// non-image or oversized body, so null was the existing failure value at all
+// three; this only stops the policy being re-decided per call site. (The
+// carousel loop below deliberately stays open-coded: it needs to tell a failed
+// slide from a skipped one to keep the rest of the deck.)
+async function saveThumbSafe(thumbUrl, base, key) {
+  try {
+    return await saveThumb(new URL(thumbUrl, base).href, key)
+  } catch {
+    return null
+  }
+}
+
 async function saveThumb(url, key) {
   const res = await get(url, 'image/*')
   const ct = res.headers.get('content-type') || ''

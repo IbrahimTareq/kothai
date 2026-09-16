@@ -114,7 +114,7 @@ export async function handleUpdateNote(req, res, id) {
     // protection) never silently overwrites them with AI-suggested ones.
     // Merge onto the note's existing `ai` markers, not replace — this patch
     // must not wipe out classify/embed/vision markers already set.
-    const existing = store.allNotes().find((n) => n.id === id)
+    const existing = store.getNote(id)
     patch.ai = { ...existing?.ai, tagsEdited: true }
   }
   if (typeof body.mindNote === 'string') patch.mindNote = body.mindNote.slice(0, 4000)
@@ -148,7 +148,7 @@ export async function handleRetagNote(res, id) {
 }
 
 export async function handleDeleteNote(res, id) {
-  const note = store.allNotes().find((n) => n.id === id)
+  const note = store.getNote(id)
   const ok = await store.deleteNote(id)
   if (ok) await collections.deleteItemEverywhere(id)
   if (ok && note) {

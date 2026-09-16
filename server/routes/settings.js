@@ -126,7 +126,10 @@ function validateResidency(body) {
 //
 // `dir` is threaded through for tests only — production passes nothing and
 // the credential store falls back to DATA_DIR.
-async function applyEndpointFromSetup(endpoint, dir, models = null, load = null) {
+// `opts` is the route's own options object throughout — it was being unpacked
+// into two positional arguments at every call site, which is what put a bare
+// `null` in the middle of the list.
+async function applyEndpointFromSetup(endpoint, opts = {}, models = null) {
   const baseUrl = typeof endpoint.baseUrl === 'string' ? endpoint.baseUrl.trim().replace(/\/+$/, '') : ''
   if (!baseUrl) return { error: 'An endpoint needs a base URL.' }
   try {
@@ -137,9 +140,7 @@ async function applyEndpointFromSetup(endpoint, dir, models = null, load = null)
   }
   const apiKey = typeof endpoint.apiKey === 'string' && endpoint.apiKey.trim() ? endpoint.apiKey.trim() : null
   const providerId = typeof endpoint.providerId === 'string' ? endpoint.providerId : null
-  const creds = dir
-    ? writeCredentials({ baseUrl, apiKey, providerId }, dir)
-    : writeCredentials({ baseUrl, apiKey, providerId })
+  const creds = writeCredentials({ baseUrl, apiKey, providerId }, opts.dir)
   setAiCredentials(creds)
 
   // Seed the endpoint's model names BEFORE reconfiguring. Which provider serves
@@ -156,7 +157,7 @@ async function applyEndpointFromSetup(endpoint, dir, models = null, load = null)
     if (Object.keys(patch).length) await settings.save({ remote: patch })
   }
 
-  await ai.reconfigure({ local: settings.get(), remote: settings.getRemote() }, load ? { load } : {})
+  await ai.reconfigure({ local: settings.get(), remote: settings.getRemote() }, { load: opts.load })
   await settleRoleMap()
   return {}
 }
@@ -179,7 +180,7 @@ export async function handleSetupEndpoint(req, res, opts = {}) {
   }
   const body = await readBody(req)
   if (!body.endpoint) return json(res, 400, { error: 'an endpoint is required' })
-  const { error } = await applyEndpointFromSetup(body.endpoint, opts.dir, body.models, opts.load)
+  const { error } = await applyEndpointFromSetup(body.endpoint, opts, body.models)
   if (error) return json(res, 400, { error })
   const caps = ai.capabilities()
   json(res, 200, { ok: true, capabilities: caps, endpoint: endpointInfo() })
@@ -209,7 +210,7 @@ export async function handleSetup(req, res, opts = {}) {
   // each provider serves, and connecting an endpoint is exactly what changes
   // the answer. Validating first would check the model ids against the old map.
   if (body.endpoint) {
-    const { error: endpointError } = await applyEndpointFromSetup(body.endpoint, opts.dir, null, opts.load)
+    const { error: endpointError } = await applyEndpointFromSetup(body.endpoint, opts)
     if (endpointError) return json(res, 400, { error: endpointError })
   }
 
@@ -271,7 +272,7 @@ async function settleRoleMap() {
 export async function handleSaveEndpoint(req, res, opts = {}) {
   const body = await readBody(req)
   if (!body.endpoint) return json(res, 400, { error: 'an endpoint is required' })
-  const { error } = await applyEndpointFromSetup(body.endpoint, opts.dir, body.models, opts.load)
+  const { error } = await applyEndpointFromSetup(body.endpoint, opts, body.models)
   if (error) return json(res, 400, { error })
   json(res, 200, { ok: true, capabilities: ai.capabilities(), endpoint: endpointInfo() })
 }
@@ -287,10 +288,9 @@ export async function handleClearEndpoint(req, res, opts = {}) {
   // because _validateModels asks which provider serves each role and the answer
   // is only right once the endpoint is gone.
   const body = await readBody(req).catch(() => ({}))
-  if (opts.dir) clearCredentials(opts.dir)
-  else clearCredentials()
+  clearCredentials(opts.dir)
   setAiCredentials(null)
-  await ai.reconfigure({ local: settings.get(), remote: settings.getRemote() }, opts.load ? { load: opts.load } : {})
+  await ai.reconfigure({ local: settings.get(), remote: settings.getRemote() }, { load: opts.load })
 
   if (body?.models) {
     const { local, error } = _validateModels(body.models)
@@ -372,9 +372,18 @@ export function handleBacklog(res) {
   json(res, 200, { count: backlogCount(store.allNotes(), settings.getResidency()) })
 }
 
+// Both bulk-enrichment routes refuse the same way when there is no reachable
+// provider, and the string is user-facing — two copies is two things to keep
+// in step with each other and with the client that matches on the code.
+const providerDown = (res) =>
+  json(res, 503, {
+    error: 'Inference endpoint is unavailable — check the connection and try again.',
+    code: 'provider_unavailable',
+  })
+
 export function handleEnrichBacklog(res) {
   if (!ai.available()) {
-    return json(res, 503, { error: 'Inference endpoint is unavailable — check the connection and try again.', code: 'provider_unavailable' })
+    return providerDown(res)
   }
   const queued = enrich.queueBacklog()
   json(res, 200, { ok: true, queued })
@@ -387,7 +396,7 @@ export function handleEnrichBacklog(res) {
 // survive — see enrich.retagAll.
 export async function handleRetagAll(res) {
   if (!ai.available()) {
-    return json(res, 503, { error: 'Inference endpoint is unavailable — check the connection and try again.', code: 'provider_unavailable' })
+    return providerDown(res)
   }
   if (settings.getResidency().llm === 'off') {
     return json(res, 409, { error: 'Re-tagging needs the language model — enable it above.', code: 'llm_off' })

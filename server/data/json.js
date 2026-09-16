@@ -6,10 +6,6 @@ import { readFile, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { DATA_DIR, UPLOAD_DIR } from '../config.js'
 
-// Paths are resolved centrally (env-configurable) and re-exported here so every
-// store module keeps importing them from one place.
-export { DATA_DIR, UPLOAD_DIR }
-
 // Ensure data/ exists (and uploads/ when asked).
 export async function ensureDataDir({ uploads = false } = {}) {
   if (!existsSync(DATA_DIR)) await mkdir(DATA_DIR, { recursive: true })

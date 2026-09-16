@@ -12,7 +12,7 @@ import * as store from '../data/notes.js'
 import * as collections from '../data/collections.js'
 import * as chats from '../data/chats.js'
 import * as tagvocab from '../data/tagvocab.js'
-import { isImportInProgress } from './import.js'
+import { isImportInProgress, IMPORT_BUSY } from '../data/import-lock.js'
 import { json, readBody } from '../lib/http.js'
 
 export const CONFIRM_TOKEN = 'DELETE'
@@ -36,7 +36,7 @@ export async function handleWipe(req, res) {
   // wipe landing mid-import would clear the table and then have that batch
   // flushed on top of it, leaving exactly the notes the user asked to erase.
   if (isImportInProgress()) {
-    return json(res, 409, { error: 'An import is running — wait for it to finish, then try again.', code: 'import_in_progress' })
+    return json(res, 409, IMPORT_BUSY)
   }
 
   // Ordered notes-first so that if a later step throws, what's left behind is

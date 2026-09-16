@@ -66,7 +66,7 @@ function reset() {
 }
 
 const realStore = await import('../../../server/data/notes.js')
-mock.module('../../../server/data/notes.js', { namedExports: { ...realStore, allNotes: () => notes } })
+mock.module('../../../server/data/notes.js', { namedExports: { ...realStore, allNotes: () => notes, getNote: (id) => notes.find((n) => n.id === id) ?? null } })
 
 const { handlePrioritize } = await import('../../../server/routes/settings.js')
 

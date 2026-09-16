@@ -1,12 +1,12 @@
 // Gallery.tsx — the Everything grid: search box, type/source filter chips,
 // column toggle, item board, and capture FAB.
-import { useRef, useState, useEffect } from 'react'
+import { useRef } from 'react'
 import { Icon, CAT } from '../components/icons'
 import { ItemCard } from '../components/Cards'
 import { WindowedBoard } from '../components/Board'
 import type { Collection, UIItem, UIType, ViewMode } from '../types'
 import type { Slot } from '../data/pager'
-import { scrollEdges, edgeClass } from '../layout/overflow'
+import { useScrollEdges } from '../layout/useScrollEdges'
 
 interface GalleryViewProps {
   nav: string
@@ -57,22 +57,10 @@ export function GalleryView({ nav, view, setView, search, setSearch, searchFocus
   // and did so with no sign that it could: the only hint was a chip clipped
   // mid-word at the edge, which reads as a layout bug rather than an
   // invitation. Fade whichever edge still has chips beyond it.
-  const filtersRef = useRef<HTMLDivElement>(null)
-  const [edges, setEdges] = useState({ left: false, right: false })
+  // A change to the chips themselves comes through chipCount, since that
+  // leaves the container's own box alone and so fires no ResizeObserver.
   const chipCount = typeChips.length + sourceChips.length + (unavailableCount > 0 ? 1 : 0)
-  useEffect(() => {
-    const el = filtersRef.current
-    if (!el) return setEdges({ left: false, right: false })
-    const read = () => setEdges(scrollEdges(el.scrollLeft, el.scrollWidth, el.clientWidth))
-    read()
-    el.addEventListener('scroll', read, { passive: true })
-    // Catches the container being resized; a change to the chips themselves
-    // comes through chipCount below, since that leaves the container's own
-    // box alone.
-    const ro = new ResizeObserver(read)
-    ro.observe(el)
-    return () => { el.removeEventListener('scroll', read); ro.disconnect() }
-  }, [chipCount, nav])
+  const { ref: filtersRef, className: filtersFade } = useScrollEdges('x', [chipCount, nav])
 
   return (
     <div className="gallery-view">
@@ -86,7 +74,7 @@ export function GalleryView({ nav, view, setView, search, setSearch, searchFocus
 
       <div className="gal-controls">
         {nav === 'all' && (typeChips.length > 0 || sourceChips.length > 0 || unavailableCount > 0)
-          ? <div className={'gal-filters' + edgeClass(edges)} ref={filtersRef}>
+          ? <div className={'gal-filters' + filtersFade} ref={filtersRef}>
               <button className={'chip filter-chip' + (galFilter.length === 0 ? ' on' : '')}
                 onClick={() => setGalFilter([])}>All</button>
               {typeChips.map((c) => (

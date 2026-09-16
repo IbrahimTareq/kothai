@@ -9,7 +9,7 @@
 // something you chose to keep, silently and permanently.
 import { useState } from 'react'
 import { SettingsRow, RowStatus } from './SettingsRow'
-import { API } from '../data/api'
+import { API, apiError } from '../data/api'
 
 type Scan = Awaited<ReturnType<typeof API.scanAvailability>>
 
@@ -29,9 +29,9 @@ export function AvailabilityRow() {
     try {
       setScan(await API.scanAvailability())
     } catch (e) {
-      const err = e instanceof Error ? (e as Error & { code?: string }) : null
-      setError(err?.code === 'scan_in_progress' ? 'A scan is already running — wait for it to finish.'
-        : err?.message || 'Could not check your links — is the server reachable?')
+      setError(apiError(e, 'Could not check your links — is the server reachable?', {
+        scan_in_progress: 'A scan is already running — wait for it to finish.',
+      }))
       setScan(null)
     }
     setScanning(false)
@@ -47,10 +47,9 @@ export function AvailabilityRow() {
       setScan({ ...scan, unavailable: r.unavailable })
       setArmed(false)
     } catch (e) {
-      const err = e instanceof Error ? (e as Error & { code?: string }) : null
       // The server refuses when the count moved since the scan — that is not a
       // failure to explain away, it means the list on screen was stale.
-      setError(err?.message || 'Could not remove those items.')
+      setError(apiError(e, 'Could not remove those items.'))
     }
     setRemoving(false)
   }

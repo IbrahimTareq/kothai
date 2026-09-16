@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo, useRef, type MutableRefObject } from 'rea
 import { Icon } from '../components/icons'
 import { ItemCard } from '../components/Cards'
 import { WindowedBoard } from '../components/Board'
-import { scrollEdges, edgeClass } from '../layout/overflow'
+import { useScrollEdges } from '../layout/useScrollEdges'
+import { suggestTags } from '../domain/tagSuggest'
 import { Canvas } from '../components/Canvas'
 import { useNotes } from '../data/useNotes'
 import type { NoteSource } from '../data/useNotes'
@@ -188,28 +189,12 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
   }
   // The rule strip scrolls sideways on phones, so it carries the same fade
   // hints the Everything filter bar does — one module, one behaviour.
-  const ruleRef = useRef<HTMLDivElement>(null)
-  const [ruleEdges, setRuleEdges] = useState({ left: false, right: false })
-  useEffect(() => {
-    const el = ruleRef.current
-    if (!el) return
-    const read = () => setRuleEdges(scrollEdges(el.scrollLeft, el.scrollWidth, el.clientWidth))
-    read()
-    el.addEventListener('scroll', read, { passive: true })
-    const ro = new ResizeObserver(read)
-    ro.observe(el)
-    return () => { el.removeEventListener('scroll', read); ro.disconnect() }
-  }, [collection.tags.length])
+  const { ref: ruleRef, className: ruleFade } = useScrollEdges('x', [collection.tags.length])
 
-  const ruleSet = new Set(collection.tags)
+  // Ranking and the "offer to create this one" rule live in domain/tagSuggest.ts,
+  // covered by test/client/tag-suggest.test.ts.
   const q = tagDraft.trim().toLowerCase()
-  const tagCounts = new Map<string, number>()
-  for (const it of collItems) for (const t of (it.tags || [])) if (!ruleSet.has(t)) tagCounts.set(t, (tagCounts.get(t) || 0) + 1)
-  const suggestions = [...tagCounts.entries()]
-    .filter(([t]) => !q || t.includes(q))
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, 8)
-  const canAddNew = !!q && !ruleSet.has(q) && !suggestions.some(([t]) => t === q)
+  const { suggestions, canAddNew, poolSize } = suggestTags(collItems, collection.tags, tagDraft)
 
   return (
     <div className="collection-view">
@@ -262,7 +247,7 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
             it on the right. Density sits at the left of the tool group so that
             dropping it in canvas mode never moves the view switch or the bin. */}
         <div className="coll-bar">
-          <div className={'coll-rule' + edgeClass(ruleEdges)} ref={ruleRef}>
+          <div className={'coll-rule' + ruleFade} ref={ruleRef}>
             {collection.tags.map((t) => (
               <button key={t} className="chip coll-tag" title="Remove rule tag" onClick={() => removeTag(t)}>{t}<span className="coll-tag-x">×</span></button>
             ))}
@@ -275,12 +260,12 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
                     <p className="rulepop-hint">Items tagged with any of these automatically join this space.</p>
                     <input className="rulepop-input mono" autoFocus value={tagDraft} placeholder="filter or add a tag…"
                       onChange={(e) => setTagDraft(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const pick = suggestions[0]?.[0] ?? q; if (pick) addRule(pick) } if (e.key === 'Escape') closeRuleAdd() }} />
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const pick = suggestions[0]?.tag ?? q; if (pick) addRule(pick) } if (e.key === 'Escape') closeRuleAdd() }} />
                     <div className="rulepop-list">
-                      {suggestions.map(([t, c]) => (
-                        <button key={t} className="rulepop-item" onClick={() => addRule(t)}>
-                          <span className="rulepop-tag">{t}</span>
-                          <span className="rulepop-count">{c} item{c === 1 ? '' : 's'}</span>
+                      {suggestions.map(({ tag, count }) => (
+                        <button key={tag} className="rulepop-item" onClick={() => addRule(tag)}>
+                          <span className="rulepop-tag">{tag}</span>
+                          <span className="rulepop-count">{count} item{count === 1 ? '' : 's'}</span>
                         </button>
                       ))}
                       {canAddNew && (
@@ -290,7 +275,7 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
                         </button>
                       )}
                       {!suggestions.length && !canAddNew && (
-                        <p className="rulepop-empty">{tagCounts.size ? 'No matching tags' : 'No tags in your vault yet'}</p>
+                        <p className="rulepop-empty">{poolSize ? 'No matching tags' : 'No tags in your vault yet'}</p>
                       )}
                     </div>
                   </div>

@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Icon } from './icons'
 import type { ModelPreset, Residency } from '../types'
-import { relevantModels } from './model-relevance'
+import { relevantModels } from '../domain/modelRelevance'
 
 export type Role = 'llm' | 'embed' | 'vision'
 

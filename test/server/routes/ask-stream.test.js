@@ -27,11 +27,8 @@ mock.module('../../../server/data/settings.js', {
   namedExports: { getResidency: () => ({ llm: 'ondemand', embed: 'ondemand', vision: 'ondemand' }) },
 })
 mock.module('../../../server/data/notes.js', {
-  // UPLOAD_DIR is here because http.js imports it — replacing a module means
-  // covering everything that reaches for it, not just what the route uses.
   namedExports: {
     count: () => 3, hybridSearch: () => SOURCES, textSearch: () => SOURCES,
-    UPLOAD_DIR: '/tmp/kothai-test-uploads',
   },
 })
 

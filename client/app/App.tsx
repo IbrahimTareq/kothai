@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Icon, CATEGORIES, CAT } from '../components/icons'
 import { API } from '../data/api'
 import { useNotes } from '../data/useNotes'
+import { boardQuery } from '../domain/boardQuery'
 import { useCollections } from '../data/useCollections'
 import { useVaultStatus } from '../data/useVaultStatus'
 import { useChat } from '../data/useChat'
@@ -18,13 +19,18 @@ import { ACCENTS, SOURCES, SOURCE_BY_KEY, sourceGlyph } from '../domain/source'
 import { CoreView } from '../views/Core'
 import { GalleryView } from '../views/Gallery'
 import { SpacesView, CollectionView } from '../views/Spaces'
-import type { UIItem, UIType, ViewMode } from '../types'
+import type { UIItem, ViewMode } from '../types'
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   'accent': '#ffffff',
   'defaultView': 'grid4',
   'texture': true,
 }/*EDITMODE-END*/
+
+// The type ids the board understands, taken from the icon catalogue so the two
+// cannot drift. boardQuery takes it as an argument rather than importing
+// icons.tsx, which carries JSX and would make that module untestable.
+const KNOWN_TYPES = new Set(Object.keys(CAT))
 
 export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS)
@@ -78,28 +84,14 @@ export default function App() {
   useEffect(() => { setGalFilter([]) }, [nav])   // clear filters when switching pages
   useEffect(() => { const fx = document.getElementById('bg-fx'); if (fx) fx.style.display = t.texture ? '' : 'none' }, [t.texture])
 
-  // nav → server query for the Everything board: the chip filter narrows by
-  // type or source, a direct type-nav (e.g. /image) filters server-side too.
-  // Chips are multi-select and are sorted into their facets here. Selecting
-  // Instagram AND TikTok widens to either; adding Videos then narrows that to
-  // the videos among them — OR within a facet, AND across them, which is what
-  // server/data/query.js applies.
-  //
-  // "unavailable" is a STATE, not a type or a source: a dead link can be any
-  // type from any platform, so it rides as its own parameter and combines with
-  // whatever else is selected rather than replacing it.
-  const chipUnavailable = galFilter.includes('unavailable') || undefined
-  const chipSource = galFilter.filter((k) => SOURCE_BY_KEY[k]).join(',') || undefined
-  const chipType = galFilter
-    .filter((k) => k !== 'unavailable' && !SOURCE_BY_KEY[k])
-    .map((k) => (k === 'note' ? 'text' : k))
-    .join(',') || undefined
-  const navType = nav !== 'all' && !nav.startsWith('space:') && CAT[nav as UIType] ? (nav === 'note' ? 'text' : nav) : undefined
-  const galleryActive = !(nav === 'core' || nav === 'settings' || nav === 'spaces') && !nav.startsWith('space:')
-  const notes = useNotes(
-    { type: navType ?? chipType, source: chipSource, q: search, unavailable: chipUnavailable, sort: galSort },
-    galleryActive,
+  // nav + chips → the server query for the Everything board. The rules (OR
+  // within a facet, AND across them; "unavailable" as a state rather than a
+  // facet; the note→text rename) live in domain/boardQuery.ts, where they are
+  // covered by test/client/board-query.test.ts.
+  const { query: boardQ, active: galleryActive } = boardQuery(
+    nav, galFilter, search, galSort, KNOWN_TYPES, (k) => Boolean(SOURCE_BY_KEY[k]),
   )
+  const notes = useNotes(boardQ, galleryActive)
   // Keep the open detail modal in sync with background completions (e.g.
   // Re-tag) that land via the pager's delta poll: ExpandedView reads from
   // this standalone `expanded` snapshot, not live pager data, so without

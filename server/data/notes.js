@@ -6,14 +6,11 @@
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 import { readdir, rm } from 'node:fs/promises'
-import { UPLOAD_DIR } from './json.js'
+import { UPLOAD_DIR } from '../config.js'
 import { getDb, _resetDb } from './db.js'
 import { encodeEmbedding, decodeEmbedding, cosine } from './embedding.js'
 import { deriveAiMarkers } from '../ai/backlog.js'
 import { deriveAccountFromTitle } from '../import/instagram.js'
-
-// re-exported so http.js / ai/meta.js keep importing it from here
-export { UPLOAD_DIR }
 
 let notes = []
 let loaded = false

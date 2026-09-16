@@ -47,7 +47,7 @@ mock.module('../../../server/ai/meta.js', {
   namedExports: { ...realMeta, fetchLinkMeta: async (url, id) => fetchLinkMetaImpl(url, id) },
 })
 mock.module('../../../server/data/notes.js', {
-  namedExports: { ...realStore, allNotes: () => fakeAllNotes(), updateNote: (id, patch) => fakeUpdateNote(id, patch) },
+  namedExports: { ...realStore, allNotes: () => fakeAllNotes(), getNote: (id) => fakeAllNotes().find((n) => n.id === id) ?? null, updateNote: (id, patch) => fakeUpdateNote(id, patch) },
 })
 mock.module('../../../server/lib/tags.js', { namedExports: { ...realTags, buildVocabulary: () => [] } })
 mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async (tags) => tags } })

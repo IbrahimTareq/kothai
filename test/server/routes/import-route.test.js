@@ -136,6 +136,7 @@ mock.module('../../../server/data/notes.js', {
   namedExports: {
     ...realStore,
     allNotes: () => fakeAllNotes(),
+    getNote: (id) => fakeAllNotes().find((n) => n.id === id) ?? null,
     addNote: (note, opts) => fakeAddNote(note, opts),
     flush: () => fakeFlush(),
     removeMany: (ids) => fakeRemoveMany(ids),

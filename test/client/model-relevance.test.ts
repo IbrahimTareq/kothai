@@ -5,7 +5,7 @@
 // what made the old datalist useless.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { relevantModels } from '../../client/components/model-relevance.ts'
+import { relevantModels } from '../../client/domain/modelRelevance.ts'
 
 // A realistic slice of what OpenAI actually lists.
 const OPENAI = [

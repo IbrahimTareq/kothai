@@ -13,7 +13,7 @@
 import { useState, useRef } from 'react'
 import type { ChangeEvent, DragEvent, ReactNode } from 'react'
 import { SettingsGroup, SettingsRow, RowStatus } from './SettingsRow'
-import { API } from '../data/api'
+import { API, apiError } from '../data/api'
 import { IMPORT_SOURCES, validateImportFiles, type ImportSource } from '../domain/importFile'
 
 type ImportResult = Awaited<ReturnType<typeof API.importFile>>
@@ -71,12 +71,10 @@ function ImportSourceRow({ source }: { source: ImportSource }) {
       })))
       setResult(await API.importFile({ source: source.id, files: payload }))
     } catch (e) {
-      const err = e instanceof Error ? (e as Error & { code?: string }) : null
-      setError(
-        err?.code === 'import_in_progress' ? 'Another import is already running — wait for it to finish.'
-        : err?.code === 'import_rolled_back' ? 'Nothing was saved — the disk write failed. Try again.'
-        : err?.message || 'Import failed — check the server and try again.',
-      )
+      setError(apiError(e, 'Import failed — check the server and try again.', {
+        import_in_progress: 'Another import is already running — wait for it to finish.',
+        import_rolled_back: 'Nothing was saved — the disk write failed. Try again.',
+      }))
       setResult(null)
     }
     setImporting(false)

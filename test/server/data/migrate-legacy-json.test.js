@@ -14,7 +14,7 @@ import { decodeEmbedding } from '../../../server/data/embedding.js'
 const scratch = mkdtempSync(path.join(tmpdir(), 'kothai-migrate-'))
 process.env.STASH_DATA_DIR = scratch
 
-const { DATA_DIR } = await import('../../../server/data/json.js')
+const { DATA_DIR } = await import('../../../server/config.js')
 const { migrateLegacyJson } = await import('../../../server/data/migrate.js')
 assert.equal(DATA_DIR, scratch) // sanity: env var actually took
 

@@ -7,6 +7,7 @@ import * as enrich from '../ai/enrich.js'
 import { findImporter, getImporter, importerNames } from '../import/index.js'
 import { readZip, MAX_TOTAL_BYTES } from '../lib/zip.js'
 import { json, readBody } from '../lib/http.js'
+import { runExclusiveImport } from '../data/import-lock.js'
 
 // Uploads arrive as JSON { name, data } with data base64 (raw or data-URL),
 // matching the app's existing pasted-image transport. This bounds the RAW
@@ -21,31 +22,12 @@ const BODY_LIMIT = 64 * 1024 * 1024
 // base64 decode and a ZIP scan before the body limit above would notice.
 const MAX_UPLOADS = 20
 
-// Kothai is single-user/local-first, so a full mutex around the note store
-// would be overkill — but two overlapping imports both read store.allNotes()
-// for their own url-dedup snapshot before either has written anything, so
-// neither would see the other's in-flight additions and the same post could
-// be imported twice. Serializing imports against EACH OTHER (not against
-// every other route) closes that specific window cheaply, without touching
-// the shared store's concurrency story elsewhere.
-let importInProgress = false
-
-// Read by the wipe route, which must refuse while an import is mid-flight —
-// an import holds unflushed notes in memory, so a wipe landing between its
-// addNote() loop and its flush() would be undone by that flush.
-export function isImportInProgress() {
-  return importInProgress
-}
-
 export async function handleImport(req, res) {
-  if (importInProgress) {
+  // The flag this takes lives in data/import-lock.js — it is state about the
+  // store, and three other bulk routes have to read it.
+  const ran = await runExclusiveImport(() => runImport(req, res))
+  if (!ran) {
     return json(res, 409, { error: 'Another import is already in progress. Try again once it finishes.', code: 'import_in_progress' })
-  }
-  importInProgress = true
-  try {
-    await runImport(req, res)
-  } finally {
-    importInProgress = false
   }
 }
 
@@ -360,6 +342,14 @@ async function runImport(req, res) {
       const prev = spaceByLowerName.get(key)
       if (!prev || (prev.tags?.length && !c.tags?.length)) spaceByLowerName.set(key, c)
     }
+    // Creating a Space and indexing it under its own name are one step, never
+    // one without the other — both branches below used to write the pair out
+    // by hand, which is one place for the index to silently go stale.
+    const ensureSpace = async (n) => {
+      const created = await collections.create({ name: n })
+      spaceByLowerName.set(created.name.toLowerCase(), created)
+      return created
+    }
     // Members are resolved from each collection's OWN urls, through the same
     // canonical-url index used for dedup above — which is seeded from every
     // note already in the database, then extended with the ones added by
@@ -407,13 +397,9 @@ async function runImport(req, res) {
         // than touching either smart one.
         if (altSpace && altSpace.tags && altSpace.tags.length) altSpace = null
         space = altSpace
-        if (!space) {
-          space = await collections.create({ name: altName })
-          spaceByLowerName.set(space.name.toLowerCase(), space)
-        }
+        if (!space) space = await ensureSpace(altName)
       } else if (!space) {
-        space = await collections.create({ name })
-        spaceByLowerName.set(space.name.toLowerCase(), space)
+        space = await ensureSpace(name)
       }
       // Skip ids already filed (a no-op re-import would otherwise cost one
       // addItem — one collections-table row write — per membership, EVERY

@@ -17,9 +17,9 @@ import path from 'node:path'
 
 const TMP_UPLOADS = mkdtempSync(path.join(tmpdir(), 'stash-uploads-'))
 
-const realNotes = await import('../../../server/data/notes.js')
-mock.module('../../../server/data/notes.js', {
-  namedExports: { ...realNotes, UPLOAD_DIR: TMP_UPLOADS },
+const realConfig = await import('../../../server/config.js')
+mock.module('../../../server/config.js', {
+  namedExports: { ...realConfig, UPLOAD_DIR: TMP_UPLOADS },
 })
 
 const { serveStatic, cacheControlFor, etagFor } = await import('../../../server/lib/http.js')

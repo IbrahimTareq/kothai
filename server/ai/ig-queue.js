@@ -16,6 +16,7 @@
 // and the two cannot form a cycle.
 import * as store from '../data/notes.js'
 import { fetchLinkMeta, fetchInstagramSlides, isInstagramPost } from './meta.js'
+import { applyMeta } from './meta-fields.js'
 
 // Called with a noteId once a fetch has produced a caption worth
 // re-classifying on. enrich.js registers the real handler at import; the
@@ -63,9 +64,7 @@ async function runIgJob({ noteId, url }) {
   try {
     const m = await fetchLinkMeta(url, noteId)
     patch.metaFetched = true
-    for (const k of ['siteTitle', 'siteDesc', 'siteName', 'thumb', 'article']) {
-      if (m[k]) patch[k] = m[k]
-    }
+    applyMeta(patch, m)
   } catch (e) {
     console.error('[enrich] instagram meta fetch failed for', url, '-', e.message)
     // Record a try count + earliest-next-attempt instead of permanently
@@ -74,7 +73,7 @@ async function runIgJob({ noteId, url }) {
     // absent) so this note keeps failing queueMetaBackfill's `!n.metaFetched`
     // gate on the non-IG path AND stays eligible for metaRetryEligible until
     // the try budget is exhausted.
-    const n = store.allNotes().find((x) => x.id === noteId)
+    const n = store.getNote(noteId)
     const tries = (n?.metaTries || 0) + 1
     patch.metaTries = tries
     patch.metaNextTry = Date.now() + metaRetryDelay(tries - 1)

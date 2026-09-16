@@ -51,11 +51,15 @@ One Node process serves both the built client and the JSON API on a single
 port. There is no framework, no ORM, no reverse proxy requirement and no build
 step on the server — `server/` is plain ESM that Node runs directly.
 
-**Runtime dependencies, all five of them:** `@qvac/sdk` (on-device inference,
+**Runtime dependencies, all seven of them:** `@qvac/sdk` (on-device inference,
 absent in the lite image), `@extractus/oembed-extractor` and `linkedom` +
 `@mozilla/readability` (link previews and article text), `youtube-transcript`
-(captions as retrieval fuel). ZIP reading, HTTP plumbing, session signing and
-SSRF checks are all hand-rolled in `server/lib/` rather than pulled in.
+(captions as retrieval fuel), `@xyflow/react` (the Spaces canvas — client-side,
+and the only one that reaches the bundle), and `require-asset`, which nothing
+imports directly: it is a `bare-runtime` dependency the SDK pulls in, and the
+Dockerfile strips it along with `@qvac/sdk` for the client build. ZIP reading,
+HTTP plumbing, session signing and SSRF checks are all hand-rolled in
+`server/lib/` rather than pulled in.
 
 ## Project layout
 
@@ -66,12 +70,17 @@ serves that bundle and owns the JSON API.
 client/                 React 19 + TypeScript, bundled by Vite
 ├─ app/                 main.tsx · App.tsx (the shell) · router.ts
 ├─ views/               full screens: Core (ask), Gallery, Spaces, Expanded,
-│                       Settings, Onboarding
+│                       Settings, Onboarding, SetupWizard
 ├─ components/          Board, Capture, Cards, Canvas, Carousel, Chats,
-│                       ModelPicker, Tweaks, icons
-├─ data/                api.ts · pager.ts · useNotes.ts    ← server talk
-├─ domain/              detect · source · importFile       ← pure rules
-├─ layout/              masonry · carousel · canvas        ← pure geometry
+│                       ModelPicker, Tweaks, icons, and the Settings rows:
+│                       ConnectionPanel, EndpointPicker, ImportSection,
+│                       AvailabilityRow, ModelFilesRow, SettingsRow
+├─ data/                api.ts · pager.ts · useNotes · useChat ·
+│                       useCollections · useVaultStatus       ← server talk
+├─ domain/              detect · source · importFile · modelFiles ·
+│                       modelRelevance · boardQuery · tagSuggest  ← pure rules
+├─ layout/              masonry · carousel · canvas · overflow · swipe ·
+│                       useScrollEdges   ← geometry and interaction arithmetic
 ├─ util/                format · markdown
 └─ styles/              foundation/ · components/ · views/ (see design-system.md)
 
@@ -80,17 +89,23 @@ server/                 dependency-light Node ESM, serves ./dist
 ├─ router.js            method + path → handler, and the auth gate
 ├─ config.js            every env var resolved in one place
 ├─ routes/              API by domain: notes, ask, chats, collections,
-│                       settings, models, import, export, backup, wipe, auth
+│                       settings, models, import, export, backup, wipe, auth,
+│                       checkpoint, availability, setup-test
 ├─ ai/                  index.js (facade) · roles.js (residency + lifecycle)
-│  │                    enrich.js (the queue) · meta.js · prompts · normalise
-│  │                    presets · backlog · circuit
+│  │                    enrich.js (the queue) · ig-queue.js (its Instagram
+│  │                    lane) · meta.js (link scraping) · meta-fields ·
+│  │                    prompts · normalise · presets · backlog · circuit ·
+│  │                    availability · endpoints · routing
 │  └─ providers/        local.js (QVAC, on-device) · remote.js (OpenAI-compat)
 ├─ data/                db.js (SQLite) · notes · chats · collections ·
-│                       settings · tagvocab · query · embedding · migrate
-├─ import/              importer registry: Instagram today
-└─ lib/                 http · auth · ssrf · tags · zip · canvas · weights
+│                       settings · tagvocab · query · embedding · migrate ·
+│                       credentials · json · import-lock
+├─ import/              importer registry: Instagram and TikTok
+└─ lib/                 http · auth · ssrf · zip   ← protocol plumbing only
+                        tags · canvas · weights    ← app rules, see note below
 
-test/                   mirrors the source tree · 943 tests, node:test
+test/                   1101 tests, node:test. test/server/ mirrors the server
+                        tree; test/client/ is deliberately flat.
 docs/                   the detail, indexed in README.md
 data/                   your notes, uploads, kothai.db      (git-ignored)
 models/                 cached model weights                (git-ignored)

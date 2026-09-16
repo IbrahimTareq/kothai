@@ -1,0 +1,23 @@
+// Which note fields a link-meta fetch contributes, and the copy that applies
+// them to a pending patch.
+//
+// This list was spelled out at four call sites — the fast meta lane, the
+// backfill job, enrichNote's applyLinkMeta and ig-queue's own lane — in four
+// byte-identical loops, so adding a field to fetchLinkMeta meant remembering
+// all four.
+//
+// It lives here rather than beside fetchLinkMeta in meta.js because it is pure
+// and meta.js is not: eight test files replace meta.js wholesale to keep the
+// network out of a run, and a shape constant has no business being re-supplied
+// by every one of those mocks just to let enrich.js import it.
+export const META_FIELDS = ['siteTitle', 'siteDesc', 'siteName', 'thumb', 'article']
+
+// Truthiness is the filter, not presence: a fetch that came back without a
+// description must leave the one the note already has alone rather than
+// blanking it. `author` is deliberately not here — it lands on a note as
+// `account` under a condition (only when the note has none) that only the
+// call site can judge.
+export function applyMeta(patch, meta) {
+  for (const k of META_FIELDS) if (meta[k]) patch[k] = meta[k]
+  return patch
+}

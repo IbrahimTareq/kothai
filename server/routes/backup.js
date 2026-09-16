@@ -19,7 +19,7 @@ import path from 'node:path'
 import { DATA_DIR } from '../config.js'
 import { getDb } from '../data/db.js'
 import * as store from '../data/notes.js'
-import { isImportInProgress } from './import.js'
+import { isImportInProgress, IMPORT_BUSY } from '../data/import-lock.js'
 import { json } from '../lib/http.js'
 
 // A backup momentarily needs free space equal to the database's size, so two
@@ -39,7 +39,7 @@ export async function handleBackup(req, res) {
   // the before nor the after, and the flush below would make that worse by
   // committing half of it.
   if (isImportInProgress()) {
-    return json(res, 409, { error: 'An import is running — wait for it to finish, then try again.', code: 'import_in_progress' })
+    return json(res, 409, IMPORT_BUSY)
   }
   if (backupInProgress) {
     return json(res, 409, { error: 'A backup is already being prepared.', code: 'backup_in_progress' })

@@ -5,7 +5,7 @@ import { existsSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
-import { UPLOAD_DIR } from '../data/notes.js'
+import { UPLOAD_DIR } from '../config.js'
 
 const LIB_DIR = path.dirname(fileURLToPath(import.meta.url))
 const PUBLIC_DIR = path.join(LIB_DIR, '..', '..', 'dist') // built client at repo root

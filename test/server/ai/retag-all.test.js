@@ -35,6 +35,7 @@ mock.module('../../../server/data/notes.js', {
   namedExports: {
     ...realStore,
     allNotes: () => notes,
+    getNote: (id) => notes.find((n) => n.id === id) ?? null,
     count: () => notes.length,
     updateNote: async (id, patch, opts) => {
       const n = notes.find((x) => x.id === id)

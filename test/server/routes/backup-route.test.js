@@ -24,13 +24,13 @@ process.env.STASH_DATA_DIR = DATA_DIR
 
 // The backup refuses to run mid-import; mocked so that state can be driven
 // without actually importing anything. Must be installed before router.js
-// pulls the real module in.
+// pulls the real module in. IMPORT_BUSY is spread through from the real module
+// — the route answers with it, so a mock that dropped it would 409 with
+// undefined rather than the refusal the client matches on.
 let importRunning = false
-mock.module('../../../server/routes/import.js', {
-  namedExports: {
-    isImportInProgress: () => importRunning,
-    handleImport: async () => {},
-  },
+const realLock = await import('../../../server/data/import-lock.js')
+mock.module('../../../server/data/import-lock.js', {
+  namedExports: { ...realLock, isImportInProgress: () => importRunning },
 })
 
 const store = await import('../../../server/data/notes.js')

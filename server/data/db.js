@@ -7,7 +7,8 @@
 // run the one-time legacy-JSON import).
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import { DATA_DIR, ensureDataDir } from './json.js'
+import { DATA_DIR } from '../config.js'
+import { ensureDataDir } from './json.js'
 import { migrateLegacyJson } from './migrate.js'
 
 const DB_FILE = path.join(DATA_DIR, 'kothai.db')

@@ -30,8 +30,9 @@ const DATA_DIR = mkdtempSync(path.join(os.tmpdir(), 'kothai-checkpoint-test-'))
 process.env.STASH_DATA_DIR = DATA_DIR
 
 let importRunning = false
-mock.module('../../../server/routes/import.js', {
-  namedExports: { isImportInProgress: () => importRunning, handleImport: async () => {} },
+const realLock = await import('../../../server/data/import-lock.js')
+mock.module('../../../server/data/import-lock.js', {
+  namedExports: { ...realLock, isImportInProgress: () => importRunning },
 })
 
 const store = await import('../../../server/data/notes.js')

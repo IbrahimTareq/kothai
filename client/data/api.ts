@@ -49,6 +49,37 @@ export function mapNote(n: ServerNote): UIItem {
 // localhost. Harmless when STASH_PASSWORD is unset and the rule is not applied.
 const JSON_HEADERS = { 'Content-Type': 'application/json' }
 
+// One envelope for every /api call. Thirty-odd call sites used to spell out the
+// fetch, the header and the JSON.stringify by hand — and nineteen of them
+// re-inlined the header literal that JSON_HEADERS above already names, so the
+// reasoning attached to it covered a third of the surface and was silently
+// re-decided everywhere else.
+//
+// The names carry the api prefix because `patch` and `del` collide with local
+// parameters of those names further down the file.
+function request<T = unknown>(
+  path: string,
+  init: { method?: string; body?: unknown; signal?: AbortSignal } = {},
+): Promise<T> {
+  const { method, body, signal } = init
+  return fetch(path, {
+    ...(method ? { method } : {}),
+    // A GET carries no body and needs no content type; everything that changes
+    // data does, for the reason given on JSON_HEADERS above.
+    ...(method && method !== 'GET' ? { headers: JSON_HEADERS } : {}),
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    ...(signal ? { signal } : {}),
+  }).then((r) => _json<T>(r))
+}
+
+const apiGet = <T = unknown>(path: string) => request<T>(path)
+const apiPost = <T = unknown>(path: string, body?: unknown, signal?: AbortSignal) =>
+  request<T>(path, { method: 'POST', body, signal })
+const apiPatch = <T = unknown>(path: string, body?: unknown) =>
+  request<T>(path, { method: 'PATCH', body })
+const apiDel = <T = unknown>(path: string, body?: unknown) =>
+  request<T>(path, { method: 'DELETE', body })
+
 async function _json<T = unknown>(r: Response): Promise<T> {
   // The session expired, or the server was restarted with a password now set.
   // There is no client-side login screen to route to: reloading lands on the
@@ -62,6 +93,19 @@ async function _json<T = unknown>(r: Response): Promise<T> {
     throw e
   }
   return d as T
+}
+
+// The message to show for a failed call. _json above is the only place that
+// ever attaches `code` to an Error, and five call sites re-derived the unwrap
+// from scratch — each one re-deciding that a non-Error is possible, that a
+// coded failure outranks a generic one, and that an empty message falls back.
+//
+// `byCode` maps a server code to the sentence for it; anything not listed
+// falls through to the server's own message, then to `fallback`.
+export function apiError(e: unknown, fallback: string, byCode: Record<string, string> = {}): string {
+  const err = e instanceof Error ? (e as Error & { code?: string }) : null
+  if (err?.code && byCode[err.code]) return byCode[err.code]
+  return err?.message || fallback
 }
 
 interface SavePayload { text?: string; image?: string | null }
@@ -97,11 +141,11 @@ export const API = {
     if (params.collection) qs.set('collection', params.collection)
     if (params.unavailable) qs.set('unavailable', '1')
     if (params.sort) qs.set('sort', params.sort)
-    const d = await _json<{
+    const d = await apiGet<{
       notes: ServerNote[]; total: number; offset: number
       facets: { types: Record<string, number>; sources: Record<string, number>; unavailable?: number }
       pendingTotal: number; rev: number; bootId: string
-    }>(await fetch('/api/notes?' + qs))
+    }>('/api/notes?' + qs)
     return { ...d, notes: (d.notes || []).map(mapNote) }
   },
   // "what changed since rev X" — replaces refetching loaded pages on a timer.
@@ -110,21 +154,17 @@ export const API = {
   async delta(since: number, boot: string): Promise<
     { resync?: boolean; rev: number; bootId: string; pendingTotal: number; notes?: ServerNote[]; deleted?: string[] }
   > {
-    return await _json(await fetch(`/api/notes/delta?since=${since}&boot=${encodeURIComponent(boot)}`))
+    return apiGet(`/api/notes/delta?since=${since}&boot=${encodeURIComponent(boot)}`)
   },
   async save(payload: SavePayload): Promise<{ note: UIItem; aiClassified: boolean }> {
-    const d = await _json<{ note: ServerNote; aiClassified: boolean }>(
-      await fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
-    )
+    const d = await apiPost<{ note: ServerNote; aiClassified: boolean }>('/api/save', payload)
     return { note: mapNote(d.note), aiClassified: d.aiClassified }
   },
   // `signal` backs the composer's stop button. It abandons the response, not
   // the generation: the server finishes the answer and records it to the chat
   // either way, so a stopped question still shows up in history.
   async ask(payload: AskPayload, signal?: AbortSignal): Promise<{ answer: string; cited: UIItem[]; chatId: string }> {
-    const d = await _json<{ answer: string; sources?: ServerNote[]; chatId: string }>(
-      await fetch('/api/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal }),
-    )
+    const d = await apiPost<{ answer: string; sources?: ServerNote[]; chatId: string }>('/api/ask', payload, signal)
     return { answer: d.answer, cited: (d.sources || []).map(mapNote), chatId: d.chatId }
   },
   // Streaming ask. Resolves once the answer is complete; the text arrives via
@@ -182,43 +222,33 @@ export const API = {
     return { chatId }
   },
   async renameChat(id: string, title: string): Promise<{ id: string; title: string; updatedAt: string }> {
-    const d = await _json<{ chat: { id: string; title: string; updatedAt: string } }>(
-      await fetch('/api/chats/' + encodeURIComponent(id), {
-        method: 'PATCH', headers: JSON_HEADERS, body: JSON.stringify({ title }),
-      }),
-    )
+    const d = await apiPatch<{ chat: { id: string; title: string; updatedAt: string } }>('/api/chats/' + encodeURIComponent(id), { title })
     return d.chat
   },
   // One note by id — hydrates a deep-linked expanded tile (/item/<id>), which
   // opens before any pager page exists to look the item up in.
   async note(id: string): Promise<UIItem> {
-    const d = await _json<{ note: ServerNote }>(await fetch('/api/notes/' + encodeURIComponent(id)))
+    const d = await apiGet<{ note: ServerNote }>('/api/notes/' + encodeURIComponent(id))
     return mapNote(d.note)
   },
   async del(id: string): Promise<void> {
-    await fetch('/api/notes/' + id, { method: 'DELETE', headers: JSON_HEADERS })
+    await apiDel('/api/notes/' + id)
   },
   // patch user-editable fields (tags + free-form mind note) of a saved item
   async update(id: string, patch: { tags?: string[]; mindNote?: string }): Promise<UIItem> {
-    const d = await _json<{ note: ServerNote }>(
-      await fetch('/api/notes/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) }),
-    )
+    const d = await apiPatch<{ note: ServerNote }>('/api/notes/' + id, patch)
     return mapNote(d.note)
   },
   // Ask the server to fetch this Instagram post's carousel slides. Lazy by
   // design (see queueIgSlides): the expanded view calls it on open, and the
   // answer is the note either way — deck-less if it was a single image.
   async slides(id: string): Promise<UIItem> {
-    const d = await _json<{ note: ServerNote }>(
-      await fetch('/api/notes/' + encodeURIComponent(id) + '/slides', { method: 'POST', headers: JSON_HEADERS }),
-    )
+    const d = await apiPost<{ note: ServerNote }>('/api/notes/' + encodeURIComponent(id) + '/slides')
     return mapNote(d.note)
   },
   // force a full re-classify of one item, discarding its current tags
   async retag(id: string): Promise<UIItem> {
-    const d = await _json<{ note: ServerNote }>(
-      await fetch('/api/notes/' + id + '/retag', { method: 'POST', headers: JSON_HEADERS }),
-    )
+    const d = await apiPost<{ note: ServerNote }>('/api/notes/' + id + '/retag')
     return mapNote(d.note)
   },
   // chat history: list, load one (sources mapped into UI items), delete
@@ -226,41 +256,31 @@ export const API = {
   // the reader asks for it. `total` is what tells the list whether there is
   // anything left to load.
   async chats(limit = 8, offset = 0): Promise<{ chats: ChatSummary[]; total: number }> {
-    const d = await _json<{ chats?: ChatSummary[]; total?: number }>(
-      await fetch(`/api/chats?offset=${offset}&limit=${limit}`),
-    )
+    const d = await apiGet<{ chats?: ChatSummary[]; total?: number }>(`/api/chats?offset=${offset}&limit=${limit}`)
     return { chats: d.chats || [], total: d.total ?? (d.chats || []).length }
   },
   async chat(id: string): Promise<Chat> {
-    const d = await _json<{ chat: Chat }>(await fetch('/api/chats/' + id))
+    const d = await apiGet<{ chat: Chat }>('/api/chats/' + id)
     const messages: ChatMessage[] = (d.chat.messages || []).map((m) =>
       m.role === 'ai' ? { ...m, cited: (m.sources || []).map(mapNote) } : m,
     )
     return { ...d.chat, messages }
   },
   async delChat(id: string): Promise<void> {
-    await fetch('/api/chats/' + id, { method: 'DELETE', headers: JSON_HEADERS })
+    await apiDel('/api/chats/' + id)
   },
   // model settings
   async settings(): Promise<SettingsResponse> {
-    return await _json<SettingsResponse>(await fetch('/api/settings'))
+    return apiGet<SettingsResponse>('/api/settings')
   },
   async saveSettings(patch: SettingsPatch): Promise<{ ok: boolean; current: SettingsPatch }> {
-    return await _json(
-      await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) }),
-    )
+    return apiPost('/api/settings', patch)
   },
   // first-run: commit the chosen models and kick off their initial download
   // Ask the server whether an endpoint answers with this key. Never throws on
   // a refused key — that comes back as ok:false with a message to show.
   async testEndpoint(baseUrl: string, apiKey: string): Promise<{ ok: boolean; models: string[]; error?: string }> {
-    return await _json(
-      await fetch('/api/setup/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ baseUrl, apiKey }),
-      }),
-    )
+    return apiPost('/api/setup/test', { baseUrl, apiKey })
   },
   // Apply an endpoint mid-first-run, BEFORE the model picker is drawn: which
   // provider serves each role decides what that picker has to ask for.
@@ -271,13 +291,7 @@ export const API = {
     endpoint: EndpointPatch,
     models?: Partial<Record<'llm' | 'embed' | 'vision', string>>,
   ): Promise<{ ok: boolean }> {
-    return await _json(
-      await fetch('/api/setup/endpoint', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ endpoint, models }),
-      }),
-    )
+    return apiPost('/api/setup/endpoint', { endpoint, models })
   },
   // Change the endpoint AFTER first run — a rotated key, or a different
   // service. Distinct from applyEndpoint, which only works while first run is
@@ -286,62 +300,46 @@ export const API = {
     endpoint: EndpointPatch,
     models?: Partial<Record<'llm' | 'embed' | 'vision', string>>,
   ): Promise<{ ok: boolean }> {
-    return await _json(
-      await fetch('/api/settings/endpoint', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ endpoint, models }),
-      }),
-    )
+    return apiPost('/api/settings/endpoint', { endpoint, models })
   },
   // Forget the credential and take every role back on-device. The endpoint's
   // model names are kept, so reconnecting the same service is one paste.
   async clearEndpoint(models?: Partial<Record<'llm' | 'embed' | 'vision', string>>): Promise<{ ok: boolean }> {
-    return await _json(
-      await fetch('/api/settings/endpoint', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(models ? { models } : {}),
-      }),
-    )
+    return apiDel('/api/settings/endpoint', models ? { models } : {})
   },
   async setup(
     patch: (SettingsPatch & { endpoint?: EndpointPatch }) | { skip: true },
   ): Promise<{ ok: boolean; current: SettingsPatch }> {
-    return await _json(
-      await fetch('/api/setup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) }),
-    )
+    return apiPost('/api/setup', patch)
   },
   // downloaded weights on disk, and reclaiming their space. Nothing prunes the
   // cache — see server/routes/models.js.
   async modelFiles(): Promise<ModelFilesResponse> {
-    return await _json<ModelFilesResponse>(await fetch('/api/models/files'))
+    return apiGet<ModelFilesResponse>('/api/models/files')
   },
   async deleteModelFile(name: string): Promise<{ deleted: string; freedBytes: number }> {
-    return await _json(
-      await fetch('/api/models/files/' + encodeURIComponent(name), { method: 'DELETE', headers: JSON_HEADERS }),
-    )
+    return apiDel('/api/models/files/' + encodeURIComponent(name))
   },
   async status(): Promise<ModelStatus> {
-    return await _json<ModelStatus>(await fetch('/api/status'))
+    return apiGet<ModelStatus>('/api/status')
   },
   // enrichment backlog: how many notes the current residency could enrich
   async backlog(): Promise<{ count: number }> {
-    return await _json(await fetch('/api/enrich/backlog'))
+    return apiGet('/api/enrich/backlog')
   },
   async enrichBacklog(): Promise<{ ok: boolean; queued: number }> {
-    return await _json(await fetch('/api/enrich/backlog', { method: 'POST', headers: JSON_HEADERS }))
+    return apiPost('/api/enrich/backlog')
   },
   // re-run classify + embed across the whole library (Settings → Re-tag
   // everything). Unlike enrichBacklog this redoes work that already succeeded.
   async retagAll(): Promise<{ ok: boolean; queued: number }> {
-    return await _json(await fetch('/api/enrich/retag-all', { method: 'POST', headers: JSON_HEADERS }))
+    return apiPost('/api/enrich/retag-all')
   },
   // Viewport-priority hint: bump these (visible, thumbless) note ids to the
   // front of the server's Instagram meta queue. Fire-and-forget — a dropped
   // ping just means those notes stay wherever they already were in queue.
   async prioritize(ids: string[]): Promise<void> {
-    await fetch('/api/enrich/prioritize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) }).catch(() => {})
+    await apiPost('/api/enrich/prioritize', { ids }).catch(() => {})
   },
   // bulk import (instagram export today; pocket/bookmarks later)
   // `source` names the platform (matching a server importer's `name`) so the
@@ -350,61 +348,47 @@ export const API = {
   // Instagram export is saved_posts.json plus saved_collections.json, and
   // importing them separately used to lose the collections.
   async importFile(payload: { source: string; files: { name: string; data: string }[] }): Promise<{ importer: string; imported: number; skipped: number; failed: number; collections: number; warnings: string[] }> {
-    return await _json(
-      await fetch('/api/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
-    )
+    return apiPost('/api/import', payload)
   },
   // Availability: scan marks links whose content is gone, remove deletes the
   // marked ones. Two calls on purpose — the scan only writes a reversible flag,
   // and `expected` makes the destructive step refuse if the count moved between
   // the user seeing it and confirming it.
   async scanAvailability(): Promise<{ checked: number; dead: number; alive: number; unknown: number; marked: number; cleared?: number; unavailable: number; aborted: boolean; error?: string }> {
-    return await _json(await fetch('/api/availability/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }))
+    return apiPost('/api/availability/scan', {})
   },
   async removeUnavailable(expected: number): Promise<{ removed: number; unavailable: number }> {
-    return await _json(await fetch('/api/availability/remove', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expected }),
-    }))
+    return apiPost('/api/availability/remove', { expected })
   },
   // danger zone: erase all content (notes, spaces, chats, tags, uploads).
   // Model settings survive — see server/routes/wipe.js.
   async wipeAll(confirm: string): Promise<{ cleared: { notes: number; collections: number; chats: number; tags: number } }> {
-    return await _json(
-      await fetch('/api/wipe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm }) }),
-    )
+    return apiPost('/api/wipe', { confirm })
   },
 }
 
 export const Collections = {
   async list(): Promise<Collection[]> {
-    const d = await _json<{ collections?: (Collection & { covers?: ServerNote[] })[] }>(await fetch('/api/collections'))
+    const d = await apiGet<{ collections?: (Collection & { covers?: ServerNote[] })[] }>('/api/collections')
     return (d.collections || []).map((c) => ({ ...c, covers: (c.covers || []).map(mapNote) }))
   },
   async create(name: string, tags: string[] = []): Promise<Collection> {
-    const d = await _json<{ collection: Collection }>(
-      await fetch('/api/collections', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, tags }) }),
-    )
+    const d = await apiPost<{ collection: Collection }>('/api/collections', { name, tags })
     return d.collection
   },
   async update(id: string, patch: { name?: string; tags?: string[]; canvas?: CanvasDoc | null }): Promise<Collection> {
-    const d = await _json<{ collection: Collection }>(
-      await fetch('/api/collections/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) }),
-    )
+    const d = await apiPatch<{ collection: Collection }>('/api/collections/' + id, patch)
     return d.collection
   },
   async remove(id: string): Promise<void> {
-    await fetch('/api/collections/' + id, { method: 'DELETE', headers: JSON_HEADERS })
+    await apiDel('/api/collections/' + id)
   },
   async addItem(id: string, itemId: string): Promise<Collection> {
-    const d = await _json<{ collection: Collection }>(
-      await fetch('/api/collections/' + id + '/items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ itemId }) }),
-    )
+    const d = await apiPost<{ collection: Collection }>('/api/collections/' + id + '/items', { itemId })
     return d.collection
   },
   async removeItem(id: string, itemId: string): Promise<Collection> {
-    const d = await _json<{ collection: Collection }>(
-      await fetch('/api/collections/' + id + '/items/' + itemId, { method: 'DELETE', headers: JSON_HEADERS }),
-    )
+    const d = await apiDel<{ collection: Collection }>('/api/collections/' + id + '/items/' + itemId)
     return d.collection
   },
 }

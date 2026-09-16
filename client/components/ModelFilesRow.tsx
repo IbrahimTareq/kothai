@@ -14,7 +14,7 @@
 // instead of a button, and the server refuses them regardless (409 `in_use`).
 import { useState, useEffect } from 'react'
 import { SettingsRow, RowStatus } from './SettingsRow'
-import { API } from '../data/api'
+import { API, apiError } from '../data/api'
 import { fileLabel, fmtSize, storageSummary } from '../domain/modelFiles'
 import { ROLE_META } from './ModelPicker'
 import type { ModelFilesResponse } from '../types'
@@ -43,8 +43,7 @@ export function ModelFilesRow() {
       // the numbers on screen are the numbers on disk.
       await load()
     } catch (e) {
-      const err = e instanceof Error ? (e as Error & { code?: string }) : null
-      setError(err?.message || 'Could not delete that file — check the server and try again.')
+      setError(apiError(e, 'Could not delete that file — check the server and try again.'))
     }
     setDeleting(null)
   }

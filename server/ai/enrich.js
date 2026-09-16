@@ -12,11 +12,12 @@ import * as tags from '../lib/tags.js'
 import * as tagvocab from '../data/tagvocab.js'
 import * as inference from './index.js'
 import { fetchLinkMeta, fetchInstagramSlides, isInstagramPost, isYouTubeVideo, fetchYouTubeCaptions } from './meta.js'
+import { applyMeta } from './meta-fields.js'
 import * as collections from '../data/collections.js'
 import * as settings from '../data/settings.js'
 import { stepsFor } from './backlog.js'
 import { DESCRIBE_THUMB_PROMPT, EMBED_RECIPE } from './prompts.js'
-import { UPLOAD_DIR } from '../data/notes.js'
+import { UPLOAD_DIR } from '../config.js'
 import {
   queueIgMeta, queueIgSlides, promoteIgMeta, metaRetryDelay, metaRetryEligible,
   isStuckInstagramNote, setCaptionHandler, _igQueueState,
@@ -95,12 +96,9 @@ async function runMetaJob({ noteId, url }) {
     return
   }
   if (!m) return
-  const existing = store.allNotes().find((n) => n.id === noteId)
+  const existing = store.getNote(noteId)
   if (!existing) return // deleted (or rolled back) while the fetch was in flight
-  const patch = { metaFetched: true }
-  for (const k of ['siteTitle', 'siteDesc', 'siteName', 'thumb', 'article']) {
-    if (m[k]) patch[k] = m[k]
-  }
+  const patch = applyMeta({ metaFetched: true }, m)
   // The provisional title is the whole point of this lane: the card renders
   // `title`, not siteTitle, so without this the tile keeps the importer's
   // placeholder ("TikTok video") until classify eventually runs. Gated on
@@ -178,7 +176,7 @@ async function reclassifyWithCaption(id) {
   const runEmbed = residency.embed !== 'off'
   if (!runClassify && !runEmbed) return // both roles off — nothing to (re)run
 
-  const existing = store.allNotes().find((n) => n.id === id)
+  const existing = store.getNote(id)
   if (!existing || existing.ai?.igReclassified) return // deleted, or already re-run once
 
   const ai = { ...existing.ai }
@@ -300,10 +298,7 @@ export function queueMetaBackfill() {
         queueJob(async () => {
           const patch = { metaFetched: true }
           try {
-            const m = await fetchLinkMeta(n.url, n.id)
-            for (const k of ['siteTitle', 'siteDesc', 'siteName', 'thumb', 'article']) {
-              if (m[k]) patch[k] = m[k]
-            }
+            applyMeta(patch, await fetchLinkMeta(n.url, n.id))
           } catch (e) {
             console.error('[enrich] meta backfill failed for', n.url, '-', e.message)
           }
@@ -352,7 +347,7 @@ export function queueMetaBackfill() {
 // Link metadata needs no model and always runs regardless of `steps`.
 async function enrichNote(id, { absPath, text, isUrl, hasImage }) {
   const residency = settings.getResidency()
-  const existing = store.allNotes().find((n) => n.id === id)
+  const existing = store.getNote(id)
   const steps = stepsFor(existing || {}, residency)
   const ai = {}
 
@@ -491,9 +486,7 @@ async function enrichNote(id, { absPath, text, isUrl, hasImage }) {
   }
   const applyLinkMeta = () => {
     if (!linkMeta) return
-    for (const k of ['siteTitle', 'siteDesc', 'siteName', 'thumb', 'article']) {
-      if (linkMeta[k]) patch[k] = linkMeta[k]
-    }
+    applyMeta(patch, linkMeta)
     // `author` → `account` (different names, so not part of the loop above).
     // Only when the note has none: an importer that already knows the handle
     // (Instagram reads it straight from the export) and a handle the user has
@@ -771,7 +764,7 @@ export async function retagAll() {
 // whole point of this action is to replace the tags, hand-edited or not.
 // Returns the (now-pending) note, or null if the id doesn't exist.
 export async function retagNote(id) {
-  const existing = store.allNotes().find((n) => n.id === id)
+  const existing = store.getNote(id)
   if (!existing) return null
   const ai = { ...existing.ai, classify: false, embed: false, tagsEdited: false }
   if (existing.image) ai.vision = false

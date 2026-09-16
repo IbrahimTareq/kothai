@@ -15,7 +15,7 @@
 // costs nothing extra but only settles what is already there.
 import { getDb } from '../data/db.js'
 import * as store from '../data/notes.js'
-import { isImportInProgress } from './import.js'
+import { isImportInProgress, IMPORT_BUSY } from '../data/import-lock.js'
 import { json } from '../lib/http.js'
 
 export async function handleCheckpoint(res) {
@@ -26,7 +26,7 @@ export async function handleCheckpoint(res) {
   // mid-import would damage the library rather than just capture it mid-flight.
   // Same refusal, for the same reason, as GET /api/backup.
   if (isImportInProgress()) {
-    return json(res, 409, { error: 'An import is running — wait for it to finish, then try again.', code: 'import_in_progress' })
+    return json(res, 409, IMPORT_BUSY)
   }
   await store.flush()
   const db = await getDb()

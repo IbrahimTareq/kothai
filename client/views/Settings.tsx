@@ -17,7 +17,7 @@ import { ConnectionPanel } from '../components/ConnectionPanel'
 import { ImportSection } from '../components/ImportSection'
 import { AvailabilityRow } from '../components/AvailabilityRow'
 import { ModelFilesRow } from '../components/ModelFilesRow'
-import { API } from '../data/api'
+import { API, apiError } from '../data/api'
 import type { Residency, SettingsResponse, VaultStatus } from '../types'
 
 export function SettingsView({ vault, theme, setTheme }: {
@@ -127,7 +127,7 @@ export function SettingsView({ vault, theme, setTheme }: {
       // Everything is pending again, so the backlog banner's count is stale.
       API.backlog().then((b) => setBacklog(b.count > 0 ? b.count : null)).catch(() => {})
     } catch (e) {
-      setRetagError(e instanceof Error && e.message ? e.message : 'Could not start re-tagging.')
+      setRetagError(apiError(e, 'Could not start re-tagging.'))
     }
     setRetagging(false)
   }
@@ -153,11 +153,9 @@ export function SettingsView({ vault, theme, setTheme }: {
       setBacklog(null)
       API.backlog().then((b) => setBacklog(b.count)).catch(() => {})
     } catch (e) {
-      const err = e instanceof Error ? (e as Error & { code?: string }) : null
-      setWipeError(
-        err?.code === 'import_in_progress' ? 'An import is running — wait for it to finish, then try again.'
-        : err?.message || 'Could not erase your data — check the server and try again.',
-      )
+      setWipeError(apiError(e, 'Could not erase your data — check the server and try again.', {
+        import_in_progress: 'An import is running — wait for it to finish, then try again.',
+      }))
       setWipeResult(null)
     }
     setWiping(false)

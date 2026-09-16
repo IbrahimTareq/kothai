@@ -18,6 +18,7 @@ mock.module('../../../server/data/notes.js', {
   namedExports: {
     ...realStore,
     allNotes: () => notes.map((n) => ({ ...n })),
+    getNote: (id) => { const n = notes.find((x) => x.id === id); return n ? { ...n } : null },
     updateNote: async (id, patch) => {
       const n = notes.find((x) => x.id === id)
       if (n) Object.assign(n, patch)
@@ -29,7 +30,6 @@ mock.module('../../../server/data/notes.js', {
       if (notes.length !== before) { deleted.push(id); return true }
       return false
     },
-    UPLOAD_DIR: '/tmp/none',
   },
 })
 mock.module('../../../server/data/collections.js', {
