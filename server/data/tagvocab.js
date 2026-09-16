@@ -10,7 +10,7 @@
 import { getDb, _resetDb } from './db.ts'
 import { encodeEmbedding, decodeEmbedding, cosine } from './embedding.ts'
 import { normalizeTags } from '../lib/tags.ts'
-import * as ai from '../ai/index.js'
+import * as ai from '../ai/index.ts'
 
 export const THRESHOLD = 0.88
 

@@ -21,7 +21,7 @@ import {
   describeImage,
   validateModel,
   _localAvailable,
-} from '../../../server/ai/index.js'
+} from '../../../server/ai/index.ts'
 
 test('a sync accessor before init fails loudly rather than returning undefined', () => {
   _reset()

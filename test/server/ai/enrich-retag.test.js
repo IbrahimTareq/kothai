@@ -60,7 +60,7 @@ mock.module('../../../server/data/notes.ts', {
 })
 mock.module('../../../server/lib/tags.ts', { namedExports: { ...realTags, buildVocabulary: () => [] } })
 mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async tags => tags } })
-mock.module('../../../server/ai/index.js', {
+mock.module('../../../server/ai/index.ts', {
   namedExports: {
     ...realNormalise,
     classify: args => {

@@ -4,7 +4,7 @@
 // string is treated as secret and only the hostname is returned.
 import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { initProvider, _reset } from '../../../server/ai/index.js'
+import { initProvider, _reset } from '../../../server/ai/index.ts'
 import { handleGetSettings, handleStatus, handleSetup, _validateModels } from '../../../server/routes/settings.js'
 import { Readable } from 'node:stream'
 import { _resetDb } from '../../../server/data/db.ts'

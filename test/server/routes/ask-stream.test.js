@@ -13,7 +13,7 @@ const ANSWER = 'You saved a note about coffee [1].'
 // What the mocked provider does on the next call. Reassigned per test.
 let answerBehaviour = null
 
-mock.module('../../../server/ai/index.js', {
+mock.module('../../../server/ai/index.ts', {
   namedExports: {
     FeatureDisabledError: class FeatureDisabledError extends Error {},
     statusSnapshot: () => ({

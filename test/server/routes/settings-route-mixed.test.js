@@ -19,7 +19,7 @@ const caps = (roles, managesResidency) => ({
 // each test sets, rather than a fresh mock per test.
 const provider = { caps: caps({ llm: 'local', embed: 'local', vision: 'local' }, true), applied: [] }
 
-mock.module('../../../server/ai/index.js', {
+mock.module('../../../server/ai/index.ts', {
   namedExports: {
     capabilities: () => provider.caps,
     validateModel: () => ({ ok: true }),

@@ -1,4 +1,4 @@
-import * as ai from '../ai/index.js'
+import * as ai from '../ai/index.ts'
 import * as store from '../data/notes.ts'
 import * as settings from '../data/settings.ts'
 import * as tagvocab from '../data/tagvocab.js'

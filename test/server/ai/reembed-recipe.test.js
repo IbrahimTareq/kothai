@@ -43,7 +43,7 @@ mock.module('../../../server/data/notes.ts', {
 })
 mock.module('../../../server/lib/tags.ts', { namedExports: { ...realTags, buildVocabulary: () => [] } })
 mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async t => t } })
-mock.module('../../../server/ai/index.js', {
+mock.module('../../../server/ai/index.ts', {
   namedExports: {
     ...realNormalise,
     classify: async () => ({ type: 'link', category: 'General', title: 'T', summary: 'S', tags: [] }),

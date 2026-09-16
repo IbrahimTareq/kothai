@@ -9,7 +9,7 @@ process.env.QVAC_CONFIG_PATH = CONFIG_PATH
 
 // Imported AFTER the env var above so the local provider picks up the right cache config.
 const { createServer } = await import('./router.js')
-const ai = await import('./ai/index.js')
+const ai = await import('./ai/index.ts')
 const store = await import('./data/notes.ts')
 const chats = await import('./data/chats.ts')
 const settings = await import('./data/settings.ts')

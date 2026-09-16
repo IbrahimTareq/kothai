@@ -5,7 +5,7 @@ import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 
 test('queueBacklog enqueues nothing and reports 0 when the provider is unavailable', async () => {
-  mock.module('../../../server/ai/index.js', {
+  mock.module('../../../server/ai/index.ts', {
     namedExports: {
       available: () => false,
       roleEnabled: () => true,

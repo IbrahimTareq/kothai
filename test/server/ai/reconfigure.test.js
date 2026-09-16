@@ -4,7 +4,7 @@
 // weights for a change that has nothing to do with them.
 import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { initProvider, reconfigure, capabilities, _reset } from '../../../server/ai/index.js'
+import { initProvider, reconfigure, capabilities, _reset } from '../../../server/ai/index.ts'
 
 function fakeProvider(kind, log) {
   return {

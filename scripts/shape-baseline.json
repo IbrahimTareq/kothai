@@ -47,8 +47,8 @@
     "lines": 805,
     "exports": 13
   },
-  "server/ai/index.js": {
-    "lines": 293,
+  "server/ai/index.ts": {
+    "lines": 368,
     "exports": 29
   },
   "server/ai/meta.ts": {

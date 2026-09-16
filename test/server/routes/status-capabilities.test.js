@@ -2,7 +2,7 @@
 // must carry it. Asserted against the real handler with a stubbed response.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { initProvider, _reset } from '../../../server/ai/index.js'
+import { initProvider, _reset } from '../../../server/ai/index.ts'
 import { handleStatus, firstRunComplete } from '../../../server/routes/settings.js'
 
 function fakeRes() {
