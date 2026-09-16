@@ -48,6 +48,33 @@ jobs:
           echo ".nvmrc=$want  Dockerfile ARG=$got"
           [ "$want" = "$got" ] || { echo "::error::.nvmrc ($want) and Dockerfile ARG NODE_VERSION ($got) disagree"; exit 1; }
 
+      # The server is TypeScript that node strips at load — there is no compile
+      # step, so nothing else would notice a .js file reappearing under server/.
+      # It would simply run, unchecked by tsc, until it broke something.
+      #
+      # docker/nmtcpp-binding-stub.js is the one permanent exception: it is
+      # copied over a third-party CommonJS native binding inside node_modules
+      # and is consumed by @qvac/translation-nmtcpp, not by this repo.
+      #
+      # test/ is deliberately out of scope: 50 test files are still .js and
+      # would fail this immediately. Every migration wave measured them and
+      # reverted — hand-rolled mockRes()/fakeReq() object literals that are not
+      # a real ServerResponse/IncomingMessage, server.address() nullability, and
+      # res.json() returning unknown. Each needs non-null assertions or casts to
+      # typecheck, which is a worse trade than leaving them JS. A known gap, not
+      # an oversight; widen the scope when those files move.
+      - name: No JavaScript outside the binding stub
+        run: |
+          found=$(git ls-files server scripts docker \
+                  | grep -E '\.(js|mjs|cjs)$' \
+                  | grep -v '^docker/nmtcpp-binding-stub\.js$' || true)
+          if [ -n "$found" ]; then
+            echo "::error::JavaScript found where TypeScript is required:"
+            echo "$found"
+            exit 1
+          fi
+          echo "✅ no JavaScript outside docker/nmtcpp-binding-stub.js"
+
       # Build BEFORE the tests. server/http.js serves static assets out of
       # ./dist, and the auth-gate tests drive a real listening server to check
       # the login page can fetch its font — with no dist that 404s. It passed
