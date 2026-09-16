@@ -5,8 +5,8 @@ description: Add an HTTP route to the server. Use when adding an API endpoint, a
 
 # Add a route
 
-Three things happen, in this order: write the handler, register it, write the
-test that watches it fail before it passes.
+Three things happen: write the handler, write a test that fails against the
+unregistered route, then register it and watch that same test pass.
 
 ## 1. The handler
 

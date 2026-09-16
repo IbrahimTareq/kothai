@@ -58,9 +58,11 @@ list, it changes as debt is paid down or newly incurred.
 raise one (see `nextBaseline` in `scripts/lint-shape.mjs`). If a file grew
 instead of shrank, `--update` will not clear the failure — that is
 deliberate, not a bug to work around. Raising a baseline requires
-hand-editing `scripts/shape-baseline.json` directly, which shows up in a
-diff and can be argued with in review. Never do this to make a check pass;
-it defeats the entire point of the ratchet.
+hand-editing `scripts/shape-baseline.json` directly — but `lint-shape.mjs`
+diffs that file against the last commit and fails on anything widened there,
+so the hand-edit cannot pass `pnpm test` until it's committed to `main`
+(there is no PR review here to catch it otherwise). Never do this to make a
+check pass; it defeats the entire point of the ratchet.
 
 ## What not to do
 

@@ -90,5 +90,11 @@
   "server/routes/settings.js": {
     "lines": 428,
     "exports": 13
+  },
+  "_governance": {
+    "claudeMdLines": 45,
+    "cleanCodeRulesLines": 41,
+    "baselineEntries": 23,
+    "exportTotal": 562
   }
 }

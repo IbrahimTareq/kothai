@@ -13,13 +13,24 @@
  * check was to grow a file, run `--update`, and have the baseline record the
  * larger number: the person who caused the violation could dismiss it
  * themselves, which enforces nothing. Raising a baseline now takes a
- * hand-edit to shape-baseline.json, which shows up in a diff and can be
- * argued with.
+ * hand-edit to shape-baseline.json — but nothing about `--update` stops a
+ * *direct* hand-edit outside it, so `checkAgainstHead` below diffs the
+ * working file against the last commit and fails on anything that grew or is
+ * new. There is no PR review in this repo (commit straight to main, no
+ * branches), so the commit itself, permanent in `git log`, is what stands in
+ * for one: the edit cannot pass `pnpm test` until it is committed.
  *
  * Headroom is a few lines/exports of slack on top of a baselined file's
  * recorded number, not a ceiling the baseline is allowed to grow into — it
  * exists only so a file already over budget can still take the explanatory
  * comment this repo's own rules require without instantly failing on it.
+ *
+ * The same ratchet also covers four numbers about the governance system
+ * itself (docs/development.md's Baseline section) — CLAUDE.md's and
+ * clean-code-rules.md's line counts, the size of this file's own debt
+ * register, and the total export count across client/ + server/. They live
+ * under the `_governance` key below, in this same file rather than a second
+ * one, and are checked and tightened exactly like a per-file entry.
  *
  * Run: npm run lint:shape   (also runs as part of `npm test`)
  * Tighten after a real reduction: npm run lint:shape -- --update
@@ -79,6 +90,97 @@ const sourceFiles = () =>
     .split('\n')
     .filter(f => /\.(js|ts|tsx)$/.test(f))
 
+// `_governance` is metadata about the governance system, not a file's shape —
+// every place that walks the baseline as a set of files must ignore it.
+const fileEntries = baseline => Object.keys(baseline).filter(k => k !== '_governance')
+
+// The four governance numbers, measured fresh: CLAUDE.md's and
+// clean-code-rules.md's line counts, the debt register's own entry count,
+// and the total export statements across every measured client/+server file.
+function measureGovernance(measurements, baselineEntryCount) {
+  return {
+    claudeMdLines: readFileSync(join(ROOT, 'CLAUDE.md'), 'utf8').split('\n').length,
+    cleanCodeRulesLines: readFileSync(join(ROOT, '.claude', 'clean-code-rules.md'), 'utf8').split('\n').length,
+    baselineEntries: baselineEntryCount,
+    exportTotal: Object.values(measurements).reduce((sum, m) => sum + m.exports, 0),
+  }
+}
+
+// CLAUDE.md and clean-code-rules.md get the same line headroom a baselined
+// file gets, for the same reason (room for the explanatory comment this
+// change itself needs). The debt register's entry count and the export total
+// get none — "should not gain entries" and "should trend down" are absolute,
+// not slack-bearing, per docs/development.md's Baseline section.
+export function checkGovernance(gov, current, headroom) {
+  const failures = []
+  if (current.claudeMdLines > gov.claudeMdLines + headroom.lines)
+    failures.push(`CLAUDE.md: grew to ${current.claudeMdLines} lines, baseline is ${gov.claudeMdLines}`)
+  if (current.cleanCodeRulesLines > gov.cleanCodeRulesLines + headroom.lines)
+    failures.push(
+      `.claude/clean-code-rules.md: grew to ${current.cleanCodeRulesLines} lines, baseline is ${gov.cleanCodeRulesLines}`,
+    )
+  if (current.baselineEntries > gov.baselineEntries)
+    failures.push(
+      `scripts/shape-baseline.json: grew to ${current.baselineEntries} entries, baseline is ${gov.baselineEntries}`,
+    )
+  if (current.exportTotal > gov.exportTotal)
+    failures.push(`client/+server/ exports: grew to ${current.exportTotal}, baseline is ${gov.exportTotal}`)
+  return failures
+}
+
+// Same tighten-only rule as nextBaseline, applied to the four governance
+// numbers instead of a per-file entry. Missing/first-run values bootstrap at
+// whatever is currently true rather than failing.
+export function nextGovernance(gov, current) {
+  const g = gov || {}
+  const min = (a, b) => Math.min(a ?? Number.POSITIVE_INFINITY, b)
+  return {
+    claudeMdLines: min(g.claudeMdLines, current.claudeMdLines),
+    cleanCodeRulesLines: min(g.cleanCodeRulesLines, current.cleanCodeRulesLines),
+    baselineEntries: min(g.baselineEntries, current.baselineEntries),
+    exportTotal: min(g.exportTotal, current.exportTotal),
+  }
+}
+
+// Diffs the on-disk (possibly uncommitted) baseline against the version at
+// HEAD. Fails on any entry — a file's `lines`/`exports`, or a `_governance`
+// field — that is new or larger than what's committed; tightening and
+// removal stay allowed. This is what actually stops a hand-edit: nothing
+// else in this file checks the JSON against anything but itself, so a direct
+// edit of shape-baseline.json (skipping --update entirely) would otherwise
+// sail through.
+export function checkAgainstHead(working, head) {
+  const failures = []
+  for (const [key, val] of Object.entries(working)) {
+    if (!val || typeof val !== 'object') continue
+    const prev = head[key]
+    if (!prev) {
+      failures.push(`${key}: new entry, not present at the last commit`)
+      continue
+    }
+    for (const [field, num] of Object.entries(val)) {
+      if (typeof num !== 'number') continue
+      if (prev[field] === undefined || num > prev[field])
+        failures.push(
+          `${key}.${field}: ${num} at working tree vs ${prev[field] ?? 'unset'} at HEAD — widened without a commit`,
+        )
+    }
+  }
+  return failures
+}
+
+function readHeadBaseline() {
+  try {
+    return JSON.parse(
+      execFileSync('git', ['show', 'HEAD:scripts/shape-baseline.json'], { cwd: ROOT, encoding: 'utf8' }),
+    )
+  } catch {
+    // No shape-baseline.json at HEAD yet (e.g. the very first commit that
+    // introduces it) — nothing committed to diff against.
+    return {}
+  }
+}
+
 function main() {
   const update = process.argv.includes('--update')
   let baseline = {}
@@ -94,8 +196,10 @@ function main() {
 
   if (update) {
     const next = nextBaseline(baseline, measurements, BUDGET)
+    const current = measureGovernance(measurements, fileEntries(next).length)
+    next._governance = nextGovernance(baseline._governance, current)
     writeFileSync(BASELINE, `${JSON.stringify(next, null, 2)}\n`)
-    console.log(`shape baseline written: ${Object.keys(next).length} files over budget`)
+    console.log(`shape baseline written: ${Object.keys(next).length - 1} files over budget`)
     return
   }
 
@@ -112,6 +216,10 @@ function main() {
     if (base && overBudget && (got.lines < base.lines || got.exports < base.exports)) loosened.push(path)
   }
 
+  const current = measureGovernance(measurements, fileEntries(baseline).length)
+  failures.push(...checkGovernance(baseline._governance || {}, current, HEADROOM))
+  failures.push(...checkAgainstHead(baseline, readHeadBaseline()))
+
   if (loosened.length) {
     console.log('shape improved — re-baseline with `npm run lint:shape -- --update`:')
     for (const p of loosened) console.log(`  ${p}`)
@@ -124,7 +232,7 @@ function main() {
     process.exit(1)
   }
 
-  console.log(`shape ok — ${Object.keys(baseline).length} files carrying budget debt`)
+  console.log(`shape ok — ${fileEntries(baseline).length} files carrying budget debt`)
 }
 
 // Only run the CLI when invoked directly, so the test can import checkFile.

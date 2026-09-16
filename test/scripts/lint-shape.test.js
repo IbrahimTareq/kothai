@@ -1,6 +1,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { checkFile, nextBaseline, HEADROOM } from '../../scripts/lint-shape.mjs'
+import {
+  checkFile,
+  nextBaseline,
+  HEADROOM,
+  checkGovernance,
+  nextGovernance,
+  checkAgainstHead,
+} from '../../scripts/lint-shape.mjs'
 
 const BUDGET = { lines: 400, exports: 12 }
 
@@ -84,4 +91,133 @@ test('--update drops a baselined file that falls back under the flat budget', ()
   const measurements = { 'server/ai/meta.js': { lines: 350, exports: 5 } }
   const next = nextBaseline(baseline, measurements, BUDGET)
   assert.equal(next['server/ai/meta.js'], undefined)
+})
+
+// The four governance ratchets: docs/development.md's Baseline section
+// recorded these as prose ("should not grow past this") with nothing
+// enforcing them. They now live under shape-baseline.json's `_governance`
+// key and are checked exactly like a file entry.
+const GOV = { claudeMdLines: 45, cleanCodeRulesLines: 41, baselineEntries: 23, exportTotal: 562 }
+
+test('CLAUDE.md at its recorded line count passes', () => {
+  const r = checkGovernance(GOV, { ...GOV, claudeMdLines: 45 }, HEADROOM)
+  assert.deepEqual(r, [])
+})
+
+test('CLAUDE.md within headroom passes', () => {
+  const r = checkGovernance(GOV, { ...GOV, claudeMdLines: 45 + HEADROOM.lines }, HEADROOM)
+  assert.deepEqual(r, [])
+})
+
+test('CLAUDE.md beyond headroom fails, naming both numbers', () => {
+  const r = checkGovernance(GOV, { ...GOV, claudeMdLines: 45 + HEADROOM.lines + 1 }, HEADROOM)
+  assert.equal(r.length, 1)
+  assert.match(r[0], /CLAUDE\.md/)
+  assert.match(r[0], /51/)
+  assert.match(r[0], /45/)
+})
+
+test('clean-code-rules.md beyond headroom fails', () => {
+  const r = checkGovernance(GOV, { ...GOV, cleanCodeRulesLines: 41 + HEADROOM.lines + 1 }, HEADROOM)
+  assert.equal(r.length, 1)
+  assert.match(r[0], /clean-code-rules\.md/)
+})
+
+test('shape-baseline.json gaining a single entry fails — no headroom on the debt register', () => {
+  const r = checkGovernance(GOV, { ...GOV, baselineEntries: 24 }, HEADROOM)
+  assert.equal(r.length, 1)
+  assert.match(r[0], /shape-baseline\.json/)
+  assert.match(r[0], /24/)
+  assert.match(r[0], /23/)
+})
+
+test('shape-baseline.json entry count within its recorded value passes', () => {
+  const r = checkGovernance(GOV, { ...GOV, baselineEntries: 23 }, HEADROOM)
+  assert.deepEqual(r, [])
+})
+
+test('total exports exceeding the recorded count fails — no headroom on the export total', () => {
+  const r = checkGovernance(GOV, { ...GOV, exportTotal: 563 }, HEADROOM)
+  assert.equal(r.length, 1)
+  assert.match(r[0], /exports/)
+  assert.match(r[0], /563/)
+  assert.match(r[0], /562/)
+})
+
+test('total exports at or under the recorded count passes', () => {
+  const r = checkGovernance(GOV, { ...GOV, exportTotal: 500 }, HEADROOM)
+  assert.deepEqual(r, [])
+})
+
+test('all four governance metrics can fail independently in one call', () => {
+  const current = {
+    claudeMdLines: 45 + HEADROOM.lines + 1,
+    cleanCodeRulesLines: 41 + HEADROOM.lines + 1,
+    baselineEntries: 24,
+    exportTotal: 563,
+  }
+  const r = checkGovernance(GOV, current, HEADROOM)
+  assert.equal(r.length, 4)
+})
+
+test('--update tightens a governance number that improved', () => {
+  const next = nextGovernance(GOV, { ...GOV, exportTotal: 550 })
+  assert.equal(next.exportTotal, 550)
+})
+
+test('--update never raises a governance number, even if current reality grew', () => {
+  const next = nextGovernance(GOV, { ...GOV, exportTotal: 600, claudeMdLines: 90, baselineEntries: 30 })
+  assert.deepEqual(next, GOV)
+})
+
+test('--update bootstraps governance numbers when none are recorded yet', () => {
+  const next = nextGovernance({}, GOV)
+  assert.deepEqual(next, GOV)
+})
+
+// Finding C: the tighten-only rule above is enforced by nextGovernance/
+// nextBaseline only on the --update *write* path — nothing stops a direct
+// hand-edit of shape-baseline.json outside --update. checkAgainstHead closes
+// that: it diffs the working file against the last commit and fails on
+// anything that grew or is new, so a hand-edit cannot pass until it is
+// itself committed to main (this repo's only stand-in for review).
+test('checkAgainstHead passes when the working file matches HEAD', () => {
+  const head = { 'server/config.js': { lines: 104, exports: 13 } }
+  const working = { 'server/config.js': { lines: 104, exports: 13 } }
+  assert.deepEqual(checkAgainstHead(working, head), [])
+})
+
+test('checkAgainstHead fails a widened file entry', () => {
+  const head = { 'server/config.js': { lines: 104, exports: 13 } }
+  const working = { 'server/config.js': { lines: 999, exports: 13 } }
+  const r = checkAgainstHead(working, head)
+  assert.equal(r.length, 1)
+  assert.match(r[0], /server\/config\.js/)
+})
+
+test('checkAgainstHead fails a brand-new entry not present at HEAD', () => {
+  const r = checkAgainstHead({ 'server/new.js': { lines: 500, exports: 3 } }, {})
+  assert.equal(r.length, 1)
+  assert.match(r[0], /server\/new\.js/)
+})
+
+test('checkAgainstHead allows tightening', () => {
+  const head = { 'server/config.js': { lines: 104, exports: 13 } }
+  const working = { 'server/config.js': { lines: 90, exports: 10 } }
+  assert.deepEqual(checkAgainstHead(working, head), [])
+})
+
+test('checkAgainstHead allows removing an entry entirely', () => {
+  const head = { 'server/config.js': { lines: 104, exports: 13 } }
+  assert.deepEqual(checkAgainstHead({}, head), [])
+})
+
+test('checkAgainstHead fails a widened _governance field the same as a widened file entry', () => {
+  const head = { _governance: { claudeMdLines: 45, cleanCodeRulesLines: 41, baselineEntries: 23, exportTotal: 562 } }
+  const working = {
+    _governance: { claudeMdLines: 200, cleanCodeRulesLines: 41, baselineEntries: 23, exportTotal: 562 },
+  }
+  const r = checkAgainstHead(working, head)
+  assert.equal(r.length, 1)
+  assert.match(r[0], /_governance/)
 })

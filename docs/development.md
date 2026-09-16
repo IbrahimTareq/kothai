@@ -29,6 +29,9 @@ which hid a `mock.module()` misuse that only fails on 22.
 `pnpm install` is the slow step — `@qvac/sdk` ships large native prebuilds for
 every OS and arch.
 
+Claude Code contributors also need `jq` on `PATH` — the `SessionStart` hook
+(`.claude/hooks/inject-rules.sh`) shells out to it with no fallback.
+
 > [!TIP]
 > Don't want ~3 GB of model weights on your dev box? Set
 > `STASH_AI_PROVIDER=remote` and `STASH_AI_BASE_URL=http://localhost:11434/v1`
@@ -41,6 +44,7 @@ every OS and arch.
 |---|---|
 | `pnpm dev` | Node server on `:5173` **and** Vite with HMR on `:5174`, concurrently. **This is the one you want.** |
 | `pnpm start` | Full build, then serve on `:5173`. What production does. |
+| `pnpm preview` | `vite preview` — serve the already-built `dist/` via Vite's own static server, not the Node server. |
 | `pnpm build` | Biome → token lint → typecheck (client + server) → Vite build. |
 | `pnpm test` | Biome → token lint → shape lint → 1114 tests. ~5s. |
 | `pnpm typecheck` | `tsc --noEmit` alone (client). |
@@ -146,12 +150,16 @@ a mechanical check takes over enforcing it.
 ### The shape ratchet
 
 `scripts/lint-shape.mjs` (wired into `pnpm test`) caps file size and export
-count. 23 files currently carry budget debt in `scripts/shape-baseline.json`
+count, measuring only `client/` and `server/` — `scripts/` and `test/` are
+unbounded. 23 files currently carry budget debt in `scripts/shape-baseline.json`
 — they were over budget when the ratchet was introduced and are grandfathered
 at their recorded size. `--update` can only tighten a baselined number down
 to a smaller measurement; it can never raise one. Raising a baseline takes a
-hand-edit to `shape-baseline.json`, which shows up in a diff and can be
-argued with in review.
+hand-edit to `shape-baseline.json` — but `lint-shape.mjs` also diffs that file
+against the last commit and fails on anything widened or newly added there,
+so the edit cannot pass `pnpm test` until it is itself committed to `main`.
+There is no PR review in this repo to catch it otherwise; the commit, and its
+permanent place in `git log`, is what stands in for one.
 
 **Known gap:** the ratchet reads `git ls-files`, so a brand-new **untracked**
 file that's already oversized is invisible to it until staged. CI still
@@ -172,8 +180,11 @@ asserted:
 | Export statements (`client/` + `server/`) | 562 |
 | Source files (`.js`/`.ts`/`.tsx`, `client/` + `server/`) | 104 |
 
-The prose files should not grow past this. The debt register should not gain
-entries. Total exports should trend down.
+The prose files should not grow past this, the debt register should not gain
+entries, and total exports should trend down — all four are recorded under
+`_governance` in `scripts/shape-baseline.json` and enforced by
+`scripts/lint-shape.mjs` alongside the per-file ratchet above, not left as
+prose to trust.
 
 ## Conventions
 

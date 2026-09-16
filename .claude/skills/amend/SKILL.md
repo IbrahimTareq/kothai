@@ -45,8 +45,12 @@ is not optional cleanup; it's the other half of why the ordered test exists.
 
 ## Size
 
-Keep `CLAUDE.md` at or under 100 lines. If an addition would push it over,
-that is a signal to cut something else first, not to let it grow.
+`CLAUDE.md`'s and `.claude/clean-code-rules.md`'s line counts are
+machine-enforced by `scripts/lint-shape.mjs` against the baseline recorded
+under `_governance` in `scripts/shape-baseline.json` — see
+docs/development.md's Governance section. If an addition would fail that
+check, that is a signal to cut something else first, not to raise the
+baseline.
 
 ## Reporting
 

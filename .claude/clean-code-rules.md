@@ -16,7 +16,7 @@ thoroughness. These rules push back.
   extension points nobody asked for.
 - No abstraction with one caller. Wait for the third case.
 - No defensive branches for states that cannot occur.
-- Prefer deleting to adding. Total exports should trend down, not up.
+- Prefer deleting to adding.
 - Fix the cause, never the symptom. Never widen a type, swallow an error, or
   add a retry to stop a failure being visible.
 - No new dependencies without asking. Everything here ships in the Docker image.
@@ -28,7 +28,8 @@ thing in it and the easiest thing to erode.
 
 - Explain **why**, never what. A comment restating the code is deleted on sight.
 - Every non-obvious guard, ordering constraint or workaround **names the failure
-  that caused it**. See the header of `server/router.js`.
+  that caused it**. See the route comments in `server/router.js` (~line 51) —
+  the file opens with imports, not a header comment.
 - Never delete an explanatory comment while editing around it. Update it if it
   has gone stale.
 
