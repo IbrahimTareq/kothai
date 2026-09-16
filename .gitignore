@@ -9,6 +9,7 @@ qvac.config.json
 !.claude/settings.json
 !.claude/skills/
 !.claude/hooks/
+!.claude/clean-code-rules.md
 .superpowers/
 .DS_Store
 
