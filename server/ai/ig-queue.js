@@ -15,7 +15,7 @@
 // handler rather than an import — so this module has no edge back to enrich.js
 // and the two cannot form a cycle.
 import * as store from '../data/notes.js'
-import { fetchLinkMeta, fetchInstagramSlides, isInstagramPost } from './meta.js'
+import { fetchLinkMeta, fetchInstagramSlides, isInstagramPost } from './meta.ts'
 import { applyMeta } from './meta-fields.ts'
 
 // Called with a noteId once a fetch has produced a caption worth

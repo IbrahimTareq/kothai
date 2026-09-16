@@ -44,7 +44,7 @@ mock.module('../../../server/lib/ssrf.ts', {
   },
 })
 
-const { oembedEndpoint, fetchLinkMeta } = await import('../../../server/ai/meta.js')
+const { oembedEndpoint, fetchLinkMeta } = await import('../../../server/ai/meta.ts')
 
 // ---- provider discovery (pure, real registry) ----------------------------
 
@@ -160,4 +160,31 @@ test('fetchLinkMeta: a failing oEmbed endpoint falls through to the OpenGraph sc
   }
   const meta = await fetchLinkMeta(TIKTOK, 'note-4')
   assert.equal(meta.siteTitle, 'Scraped Title')
+})
+
+test('fetchLinkMeta: oEmbed fields that are not strings read as absent rather than landing in the note', async () => {
+  // oEmbed responses are documents from whichever site the user saved, and
+  // nothing validates them. A provider answering `title: 42` used to write a
+  // number straight into siteTitle, and a non-string thumbnail_url was
+  // resolved against the page URL and fetched — a doomed request for a
+  // thumbnail that was never a URL.
+  fetched = []
+  responses = {
+    [oembedEndpoint(TIKTOK)]: {
+      json: { title: 42, provider_name: { name: 'TikTok' }, author_name: ['chef'], thumbnail_url: 7 },
+    },
+    // No og tags, so nothing masks what oEmbed contributed.
+    [TIKTOK]: { text: '<html><head></head><body></body></html>', contentType: 'text/html' },
+  }
+
+  const meta = await fetchLinkMeta(TIKTOK, 'note-5')
+
+  assert.equal(meta.siteTitle, null)
+  assert.equal(meta.siteName, null)
+  assert.equal(meta.siteDesc, null, 'a non-string author_name produces no "by …" line either')
+  assert.deepEqual(
+    fetched,
+    [oembedEndpoint(TIKTOK), TIKTOK],
+    'the oEmbed call and the page scrape only — no thumbnail download for a thumbnail_url that is not a string',
+  )
 })

@@ -10,7 +10,7 @@
 // GTE-Large, and a remote endpoint can be running anything at all.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { embedInput, isPromptedEmbedModel, EMBED_RECIPE } from '../../../server/ai/prompts.js'
+import { embedInput, isPromptedEmbedModel, EMBED_RECIPE } from '../../../server/ai/prompts.ts'
 
 const GEMMA = 'EMBEDDINGGEMMA_300M_Q8_0'
 

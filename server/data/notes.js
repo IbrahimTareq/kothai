@@ -7,10 +7,10 @@ import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 import { readdir, rm } from 'node:fs/promises'
 import { UPLOAD_DIR } from '../config.ts'
-import { getDb, _resetDb } from './db.js'
+import { getDb, _resetDb } from './db.ts'
 import { encodeEmbedding, decodeEmbedding, cosine } from './embedding.ts'
 import { deriveAiMarkers } from '../ai/backlog.ts'
-import { deriveAccountFromTitle } from '../import/instagram.js'
+import { deriveAccountFromTitle } from '../import/instagram.ts'
 
 let notes = []
 let loaded = false

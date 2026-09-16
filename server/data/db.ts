@@ -9,7 +9,7 @@ import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { DATA_DIR } from '../config.ts'
 import { ensureDataDir } from './json.ts'
-import { migrateLegacyJson } from './migrate.js'
+import { migrateLegacyJson } from './migrate.ts'
 
 const DB_FILE = path.join(DATA_DIR, 'kothai.db')
 
@@ -77,10 +77,70 @@ CREATE TABLE IF NOT EXISTS tag_vocab (
 );
 `
 
-let db = null
-let opening = null
+// SQLite itself is typed per value, not per column, and node:sqlite hands back
+// every row as Record<string, SQLOutputValue> — so a store module reading a
+// row learns nothing from the connection about what it holds. These mirror the
+// CREATE TABLE above, column for column, and are the one declaration of that
+// shape the stores can be checked against as they move to TypeScript.
 
-function createSchema(target) {
+export interface NoteRow {
+  seq: number
+  id: string
+  data: string
+  // Raw float32 bytes as they come off disk — data/embedding.ts's
+  // decodeEmbedding is what turns these into the Float32Array the rest of the
+  // server compares. NOT the wider Float32Array | number[] union in
+  // server/types.ts: that union describes a vector in memory, which may have
+  // arrived as JSON straight from a provider. A row only ever holds bytes.
+  embedding: Uint8Array | null
+}
+
+export interface CollectionRow {
+  seq: number
+  id: string
+  data: string
+}
+
+export interface ChatRow {
+  // Plain column, bumped by hand on every touch — see the column notes above
+  // for why this one is not AUTOINCREMENT.
+  seq: number
+  id: string
+  data: string
+}
+
+export interface SettingsRow {
+  // CHECK (id = 1): the table holds one row and only ever one.
+  id: number
+  llm: string
+  embed: string
+  vision: string
+  residency_llm: string
+  residency_embed: string
+  residency_vision: string
+  // SQLite has no boolean type; 0 or 1.
+  configured: number
+  // Nullable because every one of these arrived via ensureColumns below, after
+  // the table's first release — an install that predates a column reads NULL,
+  // and each call site there explains what that NULL means.
+  remote_llm: string | null
+  remote_embed: string | null
+  remote_vision: string | null
+  embed_recipe: string | null
+  embed_provider: string | null
+}
+
+export interface TagVocabRow {
+  tag: string
+  // NOT NULL: a tag is only ever written together with the vector it was
+  // registered from.
+  embedding: Uint8Array
+}
+
+let db: DatabaseSync | null = null
+let opening: Promise<DatabaseSync> | null = null
+
+function createSchema(target: DatabaseSync) {
   target.exec(SCHEMA)
 }
 
@@ -91,7 +151,7 @@ function createSchema(target) {
 //
 // Additive only — new columns must be nullable or carry a DEFAULT, since
 // existing rows cannot supply a value. Exported for tests.
-export function ensureColumns(target, table, columns) {
+export function ensureColumns(target: DatabaseSync, table: string, columns: Record<string, string>): void {
   const have = new Set(
     target
       .prepare(`PRAGMA table_info(${table})`)
@@ -103,7 +163,7 @@ export function ensureColumns(target, table, columns) {
   }
 }
 
-async function open() {
+async function open(): Promise<DatabaseSync> {
   await ensureDataDir({ uploads: true })
   db = new DatabaseSync(DB_FILE)
   db.exec('PRAGMA journal_mode = WAL')
@@ -132,7 +192,7 @@ async function open() {
   return db
 }
 
-export async function getDb() {
+export async function getDb(): Promise<DatabaseSync> {
   if (db) return db
   if (!opening) opening = open()
   return opening
@@ -142,7 +202,7 @@ export async function getDb() {
 // migration) so each store's own _reset() can get a clean slate without
 // touching the real data/ dir. Synchronous, so it's usable from a plain
 // (non-async) test helper.
-export function _resetDb() {
+export function _resetDb(): DatabaseSync {
   db = new DatabaseSync(':memory:')
   createSchema(db)
   opening = Promise.resolve(db)

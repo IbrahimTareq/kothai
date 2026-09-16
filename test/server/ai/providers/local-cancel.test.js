@@ -56,7 +56,7 @@ after(async () => {
   await local?.shutdown()
 })
 before(async () => {
-  local = await import('../../../../server/ai/providers/local.js')
+  local = await import('../../../../server/ai/providers/local.ts')
   await local.init({
     local: { llm: 'QWEN3_1_7B_INST_Q4', embed: 'EMBEDDINGGEMMA_300M_Q8_0', vision: 'QWEN3_5_2B_MULTIMODAL_Q4_K_M' },
   })

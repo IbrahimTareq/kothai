@@ -1,7 +1,7 @@
 import http from 'node:http'
 import { json, serveStatic } from './lib/http.ts'
 import { PASSWORD } from './config.ts'
-import { authGate } from './routes/auth.js'
+import { authGate } from './routes/auth.ts'
 import {
   handleSave,
   handleNotes,
@@ -42,7 +42,7 @@ import {
   handlePrioritize,
   handleRetagAll,
 } from './routes/settings.js'
-import { handleSetupTest } from './routes/setup-test.js'
+import { handleSetupTest } from './routes/setup-test.ts'
 
 async function handleRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`)

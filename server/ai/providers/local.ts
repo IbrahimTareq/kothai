@@ -4,8 +4,11 @@
 // Everything runs locally / on-device via @qvac/sdk — no data leaves the machine.
 import { loadModel, completion, embed, unloadModel, close, cancel } from '@qvac/sdk'
 import * as MODELS from '@qvac/sdk'
+import type { ModelProgressUpdate } from '@qvac/sdk'
 import { RoleManager, ROLES, FeatureDisabledError } from '../roles.ts'
+import type { Loader, ModelSrc, Policy, Residency, Role, RoleStatus } from '../roles.ts'
 import { PRESETS, DEFAULTS } from '../presets.ts'
+import type { Preset } from '../presets.ts'
 import {
   CLASSIFY_SCHEMA,
   DESCRIBE_IMAGE_PROMPT,
@@ -15,7 +18,7 @@ import {
   classifyUserPrompt,
   answerSystemPrompt,
   answerUserPrompt,
-} from '../prompts.js'
+} from '../prompts.ts'
 import {
   normaliseClassification,
   isJunkTag,
@@ -24,20 +27,68 @@ import {
   isLikelyUrl,
   extractUrl,
   stripThinking,
-} from '../normalise.js'
+} from '../normalise.ts'
+import type { Aggregate, ProviderStatus } from '../routing.ts'
+import type {
+  AnswerArgs,
+  AnswerStreamArgs,
+  ClassifyArgs,
+  DescribeImageArgs,
+  EmbedOptions,
+  ModelOption,
+  ModelSelection,
+  ProviderConfig,
+  ProviderModule,
+  ValidationResult,
+} from './types.ts'
 export { FeatureDisabledError, PRESETS, DEFAULTS }
 export { normaliseClassification, isJunkTag, heuristicType, deriveTitle, isLikelyUrl, extractUrl }
 
+// ---- the SDK's model registry ------------------------------------------
+// @qvac/sdk exports one constant per model, under its own name. A preset key
+// is a string off the settings row, so looking one up is a runtime question
+// that the namespace's static type cannot answer — hence Reflect.get and a
+// narrowing rather than MODELS[key].
+//
+// What comes back is handed STRAIGHT to loadModel and never rebuilt from these
+// three fields: the SDK needs every one of the thirty on it (blob keys,
+// offsets, checksums) to fetch the weights at all.
+interface RegistryModel extends ModelSrc {
+  expectedSize?: number
+  registryPath?: string
+}
+
+// Local rather than shared: server/lib/ is the security floor and a guard
+// added there needs a test that fails without it (CLAUDE.md).
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null
+}
+
+function isRegistryModel(v: unknown): v is RegistryModel {
+  if (!isRecord(v)) return false
+  return (
+    (v.name === undefined || typeof v.name === 'string') &&
+    (v.expectedSize === undefined || typeof v.expectedSize === 'number') &&
+    (v.registryPath === undefined || typeof v.registryPath === 'string')
+  )
+}
+
+function registryModel(key: string | undefined): RegistryModel | null {
+  if (!key) return null
+  const entry: unknown = Reflect.get(MODELS, key)
+  return isRegistryModel(entry) ? entry : null
+}
+
 // ---- model selection ---------------------------------------------------
-function presetFor(role, key) {
+function presetFor(role: Role, key?: string): Preset | undefined {
   return PRESETS[role].find(p => p.key === key) || PRESETS[role].find(p => p.key === DEFAULTS[role])
 }
 
 // Preset list with sizes resolved from the SDK registry, for the settings UI.
-export function presetInfo() {
-  const withSize = p => ({
+export function presetInfo(): Record<Role, ModelOption[]> {
+  const withSize = (p: Preset): ModelOption => ({
     ...p,
-    sizeBytes: (MODELS[p.key]?.expectedSize || 0) + (p.proj ? MODELS[p.proj]?.expectedSize || 0 : 0),
+    sizeBytes: (registryModel(p.key)?.expectedSize || 0) + (p.proj ? registryModel(p.proj)?.expectedSize || 0 : 0),
   })
   return { llm: PRESETS.llm.map(withSize), embed: PRESETS.embed.map(withSize), vision: PRESETS.vision.map(withSize) }
 }
@@ -49,14 +100,17 @@ export function presetInfo() {
 //
 // Unknown keys resolve through presetFor's default fallback, exactly as
 // configureModels would, so what this protects is what the app would load.
-export function weightsInUse(selection = {}) {
-  const out = {}
+export function weightsInUse(selection: ModelSelection = {}): Record<string, Role> {
+  const out: Record<string, Role> = {}
   for (const role of ROLES) {
     const preset = presetFor(role, selection[role])
     if (!preset) continue
     for (const key of [preset.key, preset.proj]) {
-      const registryPath = key && MODELS[key]?.registryPath
-      if (registryPath) out[registryPath.split('/').pop()] = role
+      // The basename is what is guarded, so it is also what is tested: a
+      // registryPath present but with an empty tail would claim no file, which
+      // is the same nothing the old `if (registryPath)` guard let through.
+      const basename = registryModel(key)?.registryPath?.split('/').pop()
+      if (basename) out[basename] = role
     }
   }
   return out
@@ -67,14 +121,27 @@ export function weightsInUse(selection = {}) {
 // when its model occupies RAM. This module adapts the managers to @qvac/sdk.
 const IDLE_MS = { llm: 10 * 60 * 1000, embed: 5 * 60 * 1000, vision: 3 * 60 * 1000 }
 
-function makeLoader(modelType) {
+// Deliberately NOT roles.ts's ROLES order — embed leads. boot() and
+// warmCache() below have always walked the roles in this order, and it is
+// written once here so both iterate a Role rather than a bare string.
+const BOOT_ORDER: Role[] = ['embed', 'llm', 'vision']
+
+function makeLoader(modelType: string): Loader {
   return {
-    load: ({ modelSrc, modelConfig, onProgress }) => {
-      const opts = { modelSrc, modelType, onProgress: p => onProgress(p.percentage ?? 0) }
-      if (modelConfig) opts.modelConfig = modelConfig
-      return loadModel(opts)
-    },
-    unload: id => unloadModel({ modelId: id }),
+    load: ({ modelSrc, modelConfig, onProgress }) =>
+      // modelConfig spread in rather than assigned after the fact: an absent
+      // config must stay an absent KEY, which is what the SDK reads as "use the
+      // model's own defaults".
+      loadModel({
+        modelSrc,
+        modelType,
+        onProgress: (p: ModelProgressUpdate) => onProgress(p.percentage ?? 0),
+        ...(modelConfig ? { modelConfig } : {}),
+      }),
+    // String(): roles.ts keeps the handle opaque on purpose (it is a plain
+    // number in that module's own fake loader), but the one THIS loader hands
+    // out is always loadModel's string id, which is what unloadModel wants.
+    unload: id => unloadModel({ modelId: String(id) }),
   }
 }
 
@@ -87,27 +154,30 @@ const managers = {
   vision: new RoleManager('vision', { loader: makeLoader('llm'), idleMs: IDLE_MS.vision }),
 }
 
-function visionConfig(key) {
-  return { ctx_size: 4096, projectionModelSrc: MODELS[presetFor('vision', key).proj] }
+function visionConfig(key?: string) {
+  return { ctx_size: 4096, projectionModelSrc: registryModel(presetFor('vision', key)?.proj) }
 }
 
 // Apply a saved model selection to the managers (no loading happens here).
-export async function configureModels({ llm, embed: emb, vision } = {}) {
-  if (llm && MODELS[llm]) await managers.llm.setModel(MODELS[llm], { ctx_size: 8192 })
-  if (emb && MODELS[emb]) {
+export async function configureModels({ llm, embed: emb, vision }: ModelSelection = {}) {
+  const llmSrc = registryModel(llm)
+  if (llmSrc) await managers.llm.setModel(llmSrc, { ctx_size: 8192 })
+  const embedSrc = registryModel(emb)
+  if (emb && embedSrc) {
     // Remembered because embedText has to know WHICH embedding model is
     // loaded: EmbeddingGemma wants task prefixes and GTE-Large does not (see
     // prompts.js's embedInput). The RoleManager holds the resolved model
     // source, not the preset key, so this is the only place the key is known.
     embedModelKey = emb
-    await managers.embed.setModel(MODELS[emb])
+    await managers.embed.setModel(embedSrc)
   }
-  if (vision && MODELS[vision]) await managers.vision.setModel(MODELS[vision], visionConfig(vision))
+  const visionSrc = registryModel(vision)
+  if (visionSrc) await managers.vision.setModel(visionSrc, visionConfig(vision))
 }
 
 // Hot-swap models at runtime (settings tab). A resident model is unloaded by
 // setModel; boot()/acquire() bring the new one in per the role's policy.
-export async function applyModels(patch = {}) {
+export async function applyModels(patch: ModelSelection = {}) {
   await configureModels(patch)
   // An always-role whose model changed must come back immediately. Each
   // role is caught independently — one role's load failure (network, OOM)
@@ -118,7 +188,7 @@ export async function applyModels(patch = {}) {
       try {
         await warmRole(role)
       } catch (e) {
-        console.error(`[qvac] ${role} reload after model change failed:`, e.message)
+        console.error(`[qvac] ${role} reload after model change failed:`, e instanceof Error ? e.message : e)
       }
     }
   }
@@ -126,19 +196,19 @@ export async function applyModels(patch = {}) {
 
 // Apply the residency map. Policy changes only manage unloading/timers —
 // loading always-roles is boot()'s job so this stays fast.
-export async function applyResidency(residency) {
+export async function applyResidency(residency: Residency) {
   for (const role of ROLES) await managers[role].setPolicy(residency[role])
 }
 
 // Load one role now (used by boot for always-roles and by cache warming).
-export async function warmRole(role) {
+export async function warmRole(role: Role) {
   await managers[role].acquire()
   managers[role].release()
 }
 
 // Load every always-role. Safe to call repeatedly; errors land in role status.
-let bootPromise = null
-export function boot() {
+let bootPromise: Promise<void> | null = null
+export function boot(): Promise<void> {
   if (!bootPromise) {
     // Captured locally and compared before clearing — with zero always-roles
     // the loop below never awaits, so the IIFE body (including any reset of
@@ -149,12 +219,12 @@ export function boot() {
     // every later boot() short-circuits forever. p.finally() always runs as
     // a separate microtask, after the assignment below has definitely landed.
     const p = (async () => {
-      for (const role of ['embed', 'llm', 'vision']) {
+      for (const role of BOOT_ORDER) {
         if (managers[role].policy !== 'always') continue
         try {
           await warmRole(role)
         } catch (e) {
-          console.error(`[qvac] ${role} load failed:`, e.message)
+          console.error(`[qvac] ${role} load failed:`, e instanceof Error ? e.message : e)
         }
       }
     })()
@@ -168,14 +238,14 @@ export function boot() {
 
 // Pre-download weights for enabled on-demand roles so their first use is a
 // fast local load, never a surprise download. Unloads right after.
-export async function warmCache(residency) {
-  for (const role of ['embed', 'llm', 'vision']) {
+export async function warmCache(residency: Residency) {
+  for (const role of BOOT_ORDER) {
     if (residency[role] !== 'ondemand') continue
     try {
       await warmRole(role)
       await managers[role].unload()
     } catch (e) {
-      console.error(`[qvac] ${role} warm failed:`, e.message)
+      console.error(`[qvac] ${role} warm failed:`, e instanceof Error ? e.message : e)
     }
   }
 }
@@ -189,11 +259,13 @@ export async function warmCache(residency) {
 // shouldn't paint the whole status vault as broken, mirroring how the
 // pre-residency code always tracked vision's state separately from the main
 // boot status.
-export function computeAggregate(roles, policies) {
-  const active = Object.entries(roles).filter(([, r]) => r.state !== 'off')
-  const loading = active.filter(([, r]) => r.state === 'loading').map(([, r]) => r)
-  const err = active.find(([role, r]) => r.state === 'error' && policies[role] === 'always')
-  if (err) return { state: 'error', progress: err[1].progress, message: err[1].message }
+export function computeAggregate(roles: Record<Role, RoleStatus>, policies: Record<Role, Policy>): Aggregate {
+  // Walked by role rather than by Object.entries: a policy is looked up by the
+  // same key, and entries() hands that key back as a bare string.
+  const active = ROLES.filter(role => roles[role].state !== 'off')
+  const loading = active.filter(role => roles[role].state === 'loading').map(role => roles[role])
+  const err = active.find(role => roles[role].state === 'error' && policies[role] === 'always')
+  if (err) return { state: 'error', progress: roles[err].progress, message: roles[err].message }
   if (loading.length) {
     const progress = Math.round(loading.reduce((s, r) => s + r.progress, 0) / loading.length)
     return { state: 'loading', progress, message: loading[0].message }
@@ -202,8 +274,8 @@ export function computeAggregate(roles, policies) {
 }
 
 // Per-role status + a derived aggregate for the client's single progress bar.
-export function statusSnapshot() {
-  const roles = {
+export function statusSnapshot(): ProviderStatus {
+  const roles: Record<Role, RoleStatus> = {
     llm: managers.llm.snapshot(),
     embed: managers.embed.snapshot(),
     vision: managers.vision.snapshot(),
@@ -215,7 +287,7 @@ export function statusSnapshot() {
 // Describe an image file (absolute path) using the vision model. Used both to
 // caption images on save (so they become searchable) and to answer questions
 // about an attached image directly.
-export async function describeImage({ absPath, prompt }) {
+export async function describeImage({ absPath, prompt }: DescribeImageArgs): Promise<string> {
   const modelId = await managers.vision.acquire()
   return serialise('vision', async () => {
     try {
@@ -247,7 +319,7 @@ export async function describeImage({ absPath, prompt }) {
 //
 // The content is clipped to 4000 chars BEFORE the prefix is applied, so the
 // prefix never eats into the text budget and can never itself be truncated.
-export async function embedText(text, { mode = 'document' } = {}) {
+export async function embedText(text: string, { mode = 'document' }: EmbedOptions = {}): Promise<number[]> {
   const modelId = await managers.embed.acquire()
   try {
     const clean = embedInput(clipToTokens(text), { mode, model: embedModelKey })
@@ -262,7 +334,7 @@ export async function embedText(text, { mode = 'document' } = {}) {
 // Ask the LLM to categorise a pasted item into a structured record. Output
 // is grammar-constrained to JSON via responseFormat, so parsing is reliable.
 
-export async function classify({ text, hasImage, isUrl, now, knownTags = [], candidateTags = [] }) {
+export async function classify({ text, hasImage, isUrl, now, knownTags = [], candidateTags = [] }: ClassifyArgs) {
   const modelId = await managers.llm.acquire()
   return serialise('llm', async () => {
     try {
@@ -276,7 +348,10 @@ export async function classify({ text, hasImage, isUrl, now, knownTags = [], can
         responseFormat: { type: 'json_schema', json_schema: { name: 'classification', schema: CLASSIFY_SCHEMA } },
       })
       const final = await run.final
-      let parsed
+      // Annotated, not narrowed: normaliseClassification's own parameter type
+      // is all-optional and all-unknown precisely because this is the model's
+      // raw answer, so a guard here would only re-decide what it already does.
+      let parsed: Record<string, unknown>
       try {
         parsed = JSON.parse(final.contentText.trim())
       } catch {
@@ -292,7 +367,7 @@ export async function classify({ text, hasImage, isUrl, now, knownTags = [], can
 // ---- answering (RAG) ---------------------------------------------------
 // Given the user's question and the retrieved notes, produce an answer that
 // is grounded in the saved items and cites them by number.
-export async function answer({ question, contextNotes, history = [] }) {
+export async function answer({ question, contextNotes, history = [] }: AnswerArgs): Promise<string> {
   const modelId = await managers.llm.acquire()
   return serialise('llm', async () => {
     try {
@@ -324,18 +399,23 @@ const TEARDOWN_GRACE_MS = Number(process.env.STASH_TEARDOWN_GRACE_MS) || 5000
 // role queue here instead. Without this, a stopped answer whose run is still
 // being torn down poisoned the very next question, and a background classify
 // landing mid-answer failed the same way.
-const completionQueue = {}
-function serialise(role, fn) {
+const completionQueue: Partial<Record<Role, Promise<void>>> = {}
+function serialise<T>(role: Role, fn: () => Promise<T>): Promise<T> {
   const prev = completionQueue[role] || Promise.resolve()
-  let done
+  let done: () => void
   completionQueue[role] = new Promise(r => {
     done = r
   })
   // A failed turn must not break the chain for the ones behind it.
-  return prev
-    .catch(() => {})
-    .then(fn)
-    .finally(done)
+  return (
+    prev
+      .catch(() => {})
+      .then(fn)
+      // Wrapped rather than passed as `.finally(done)`: the executor above runs
+      // synchronously, so `done` is always assigned by now, but only a deferred
+      // read says so in a form the compiler accepts.
+      .finally(() => done())
+  )
 }
 
 // Streaming form of the above. Emits each content delta as it arrives and
@@ -343,7 +423,13 @@ function serialise(role, fn) {
 // ignore onToken. `signal` cancels the generation itself — the SDK targets a
 // single run by requestId, so a stopped question stops costing tokens rather
 // than merely being ignored on arrival.
-export async function answerStream({ question, contextNotes, history = [], onToken, signal }) {
+export async function answerStream({
+  question,
+  contextNotes,
+  history = [],
+  onToken,
+  signal,
+}: AnswerStreamArgs): Promise<string> {
   const modelId = await managers.llm.acquire()
   return serialise('llm', async () => {
     try {
@@ -356,9 +442,12 @@ export async function answerStream({ question, contextNotes, history = [], onTok
         stream: true,
         captureThinking: true, // keeps <think> out of contentDelta, as the non-streaming path does
       })
-      let teardown = null
+      // A one-slot record rather than a bare `let`: abort() is handed to
+      // addEventListener, so the compiler never sees that assignment happen and
+      // a plain local still reads as null at the check in `finally` below.
+      const cancellation: { teardown: Promise<void> | null } = { teardown: null }
       const abort = () => {
-        teardown = Promise.resolve(cancel({ requestId: run.requestId })).catch(() => {})
+        cancellation.teardown = Promise.resolve(cancel({ requestId: run.requestId })).catch(() => {})
       }
       if (signal?.aborted) abort()
       else signal?.addEventListener('abort', abort, { once: true })
@@ -388,9 +477,9 @@ export async function answerStream({ question, contextNotes, history = [], onTok
         // while the model still considered the old one live, and it came back
         // "rejected by registry concurrency policy". Bounded, because a teardown
         // that never settles must not wedge the model for the whole session.
-        if (teardown)
+        if (cancellation.teardown)
           await Promise.race([
-            teardown.then(() => run.final).catch(() => {}),
+            cancellation.teardown.then(() => run.final).catch(() => {}),
             new Promise(r => setTimeout(r, TEARDOWN_GRACE_MS)),
           ])
       }
@@ -424,7 +513,7 @@ export function capabilities() {
   return { kind: 'local', managesResidency: true, downloadsWeights: true }
 }
 
-export function roleEnabled(role) {
+export function roleEnabled(role: Role) {
   return managers[role].policy !== 'off'
 }
 
@@ -432,19 +521,24 @@ export function available() {
   return true
 }
 
-export function validateModel(role, key) {
+export function validateModel(role: Role, key: string): ValidationResult {
   if (PRESETS[role].some(p => p.key === key)) return { ok: true }
   return { ok: false, error: `unknown ${role} model: ${key}` }
 }
 
-export async function listModels() {
+export async function listModels(): Promise<Record<Role, ModelOption[]>> {
   return presetInfo()
 }
 
-export async function init({ local = {} } = {}) {
+export async function init({ local = {} }: ProviderConfig = {}) {
   await configureModels(local)
 }
 
-export async function applySettings(patch) {
+export async function applySettings(patch: ModelSelection) {
   await applyModels(patch)
 }
+
+// See types.ts: this module's own exports, checked against the provider
+// contract. A member whose signature drifts from remote.ts's fails here, at
+// typecheck, instead of in whichever contract assertion happened to call it.
+export type LocalProvider = ProviderModule<typeof import('./local.ts')>

@@ -11,7 +11,7 @@ import assert from 'node:assert/strict'
 import * as store from '../../../server/data/notes.js'
 import { encodeEmbedding, decodeEmbedding } from '../../../server/data/notes.js'
 import { cosine } from '../../../server/data/embedding.ts'
-import { getDb } from '../../../server/data/db.js'
+import { getDb } from '../../../server/data/db.ts'
 import { deriveAiMarkers } from '../../../server/ai/backlog.ts'
 
 const vec = n => Array.from({ length: n }, (_, i) => Math.sin(i))

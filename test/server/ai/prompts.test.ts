@@ -15,7 +15,7 @@ import {
   noteContextBody,
   formatHistory,
   retrievalQuery,
-} from '../../../server/ai/prompts.js'
+} from '../../../server/ai/prompts.ts'
 
 test('CLASSIFY_SCHEMA requires every field the normaliser reads', () => {
   assert.deepEqual(CLASSIFY_SCHEMA.required, ['type', 'category', 'title', 'summary', 'tags'])

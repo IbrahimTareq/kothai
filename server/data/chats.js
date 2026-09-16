@@ -2,7 +2,7 @@
 // and can be browsed and resumed. Each AI message snapshots the source notes
 // it cited, so history still renders if a note is deleted.
 import { randomUUID } from 'node:crypto'
-import { getDb, _resetDb } from './db.js'
+import { getDb, _resetDb } from './db.ts'
 
 let chats = []
 let loaded = false

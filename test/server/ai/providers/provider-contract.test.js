@@ -80,7 +80,7 @@ async function localProvider() {
         MMPROJ_QWEN3_5_2B_MULTIMODAL_F16: { name: 'proj', expectedSize: 1 },
       },
     })
-    localMod = await import('../../../../server/ai/providers/local.js')
+    localMod = await import('../../../../server/ai/providers/local.ts')
     await localMod.init({
       local: { llm: 'QWEN3_1_7B_INST_Q4', embed: 'EMBEDDINGGEMMA_300M_Q8_0', vision: 'QWEN3_5_2B_MULTIMODAL_Q4_K_M' },
     })
@@ -90,7 +90,7 @@ async function localProvider() {
 }
 
 async function remoteProvider() {
-  const { createRemoteProvider } = await import('../../../../server/ai/providers/remote.js')
+  const { createRemoteProvider } = await import('../../../../server/ai/providers/remote.ts')
   const p = createRemoteProvider({
     baseUrl: base,
     apiKey: null,

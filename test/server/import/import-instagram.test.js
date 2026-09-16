@@ -7,8 +7,8 @@ import {
   parseCollections,
   deriveNote,
   deriveAccountFromTitle,
-} from '../../../server/import/instagram.js'
-import { findImporter } from '../../../server/import/index.js'
+} from '../../../server/import/instagram.ts'
+import { findImporter } from '../../../server/import/index.ts'
 
 const SAVED = JSON.stringify({
   saved_saved_media: [

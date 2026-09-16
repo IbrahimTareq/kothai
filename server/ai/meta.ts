@@ -14,6 +14,7 @@ import {
   YoutubeTranscriptNotAvailableLanguageError,
   YoutubeTranscriptVideoUnavailableError,
 } from 'youtube-transcript'
+import type { TranscriptResponse } from 'youtube-transcript'
 import { UPLOAD_DIR } from '../config.ts'
 import { safeFetch } from '../lib/ssrf.ts'
 
@@ -28,7 +29,7 @@ const UA = 'Mozilla/5.0 (compatible; Kothai/1.0; local notes app)'
 // (parseInstagramCarousel) before any of them is worth a fetch. It says nothing
 // about where a URL points — http://169.254.169.254 passes it — so it is a
 // pre-filter, never the guard. safeFetch() below is the guard.
-export function isSafeFetchUrl(url) {
+export function isSafeFetchUrl(url: string): boolean {
   try {
     return ['http:', 'https:'].includes(new URL(url).protocol)
   } catch {
@@ -47,7 +48,7 @@ export function isSafeFetchUrl(url) {
 //
 // Exported so tests can assert the guard is actually wired in here, not just
 // that the predicates themselves are correct.
-export async function get(url, accept) {
+export async function get(url: string, accept: string): Promise<Response> {
   const res = await safeFetch(url, {
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     headers: { 'User-Agent': UA, Accept: accept },
@@ -57,14 +58,14 @@ export async function get(url, accept) {
     // checking has to tell a definite "this is gone" (400/404/410) from a
     // "try later" (429/5xx), and parsing that back out of a string would
     // break the moment this message is reworded.
-    const err = new Error(`HTTP ${res.status}`)
+    const err: Error & { status?: number } = new Error(`HTTP ${res.status}`)
     err.status = res.status
     throw err
   }
   return res
 }
 
-function decodeEntities(s) {
+function decodeEntities(s: string): string {
   return (s || '')
     .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n))
     .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
@@ -77,7 +78,7 @@ function decodeEntities(s) {
 }
 
 // <meta property="og:title" content="..."> (handles either attribute order)
-function metaTag(html, prop) {
+function metaTag(html: string, prop: string): string | null {
   const re = new RegExp(`<meta[^>]+(?:property|name)=["']${prop}["'][^>]*>`, 'i')
   const m = re.exec(html)
   if (!m) return null
@@ -85,7 +86,7 @@ function metaTag(html, prop) {
   return c?.[1] ? decodeEntities(c[1]).trim() : null
 }
 
-function titleTag(html) {
+function titleTag(html: string): string | null {
   const m = /<title[^>]*>([^<]*)<\/title>/i.exec(html)
   return m?.[1] ? decodeEntities(m[1]).trim() : null
 }
@@ -117,9 +118,38 @@ function titleTag(html) {
 // this module is careful not to hammer.
 const AUTHED_OEMBED_HOSTS = ['graph.facebook.com']
 
+// The four fields of an oEmbed response this reads, out of the many the spec
+// defines. Every one is `unknown`: res.json() answers unknown, and for this
+// document that is the honest type — it comes from whichever site the user
+// saved, and nothing here has checked it. str() below is how each is read.
+interface OembedResponse {
+  title?: unknown
+  provider_name?: unknown
+  author_name?: unknown
+  thumbnail_url?: unknown
+}
+
+// The two narrowings the JSON boundary needs. Deliberately local rather than
+// lifted into server/lib/: that directory is the security floor, and a change
+// there needs a test that fails without it (CLAUDE.md) — which a type-only
+// migration has no business writing. server/data/migrate.ts and
+// server/routes/setup-test.ts each carry their own isRecord for the same
+// reason; server/import/untrusted.ts exports the fourth.
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null
+}
+
+// A non-string field reads as absent rather than being trusted into a note:
+// for a string this is exactly the `field || null` the untyped version did,
+// and a provider that answers `title: 42` no longer writes a number into
+// siteTitle.
+function str(v: unknown): string | null {
+  return typeof v === 'string' && v ? v : null
+}
+
 // Pure: url → the oEmbed API URL to call, or null when no provider matches
 // (exported for tests; no network).
-export function oembedEndpoint(url) {
+export function oembedEndpoint(url: string): string | null {
   if (!isSafeFetchUrl(url)) return null
   const provider = findProvider(url)
   if (!provider) return null
@@ -145,7 +175,7 @@ export function oembedEndpoint(url) {
 // imports can queue hundreds of these, and hammering Meta gets the IP
 // soft-banned.
 
-export function isInstagramPost(url) {
+export function isInstagramPost(url: string): boolean {
   try {
     const u = new URL(url)
     return /(^|\.)instagram\.com$/.test(u.hostname) && /^\/(p|reels?|tv)\//.test(u.pathname)
@@ -172,8 +202,8 @@ export function isInstagramPost(url) {
 // .../embed/embed/captioned/.
 // Returns null for non-URL input since this is exported and may see
 // arbitrary strings.
-export function instagramEmbedUrl(url) {
-  let u
+export function instagramEmbedUrl(url: string): string | null {
+  let u: URL
   try {
     u = new URL(url)
   } catch {
@@ -196,7 +226,7 @@ export function instagramEmbedUrl(url) {
 // "Caption" from "CaptionUsername"/"CaptionComments" reliably needs an
 // actual token split, not just \b). Tolerates single or double quotes and
 // any attribute order since it searches the whole tag text.
-function hasClassToken(attrs, token) {
+function hasClassToken(attrs: string, token: string): boolean {
   const m = /\sclass=["']([^"']*)["']/i.exec(attrs)
   return !!m && m[1].split(/\s+/).includes(token)
 }
@@ -204,7 +234,7 @@ function hasClassToken(attrs, token) {
 // Finds the first <tagName> start tag carrying `classToken` as one of its
 // classes, tolerant of attribute order/quoting/extra classes (see
 // hasClassToken). Returns the raw tag text, or null.
-function findTagWithClass(html, tagName, classToken) {
+function findTagWithClass(html: string, tagName: string, classToken: string): string | null {
   const re = new RegExp(`<${tagName}\\b[^>]*>`, 'gi')
   for (let m = re.exec(html); m; m = re.exec(html)) {
     if (hasClassToken(m[0], classToken)) return m[0]
@@ -212,13 +242,23 @@ function findTagWithClass(html, tagName, classToken) {
   return null
 }
 
+// What the embed page yields: the three pieces the post's own markup carries.
+// `location` is optional in practice (see below), the other two are what a
+// successful parse is judged on — describeMissingPieces names whichever is
+// missing.
+export interface InstagramEmbed {
+  caption: string | null
+  thumbUrl: string | null
+  location: string | null
+}
+
 // Pure html → { caption, thumbUrl, location } (exported for tests; no network).
-export function parseInstagramEmbed(html) {
+export function parseInstagramEmbed(html: string): InstagramEmbed {
   const imgTag = findTagWithClass(html, 'img', 'EmbeddedMediaImage')
   const src = imgTag ? /\ssrc=["']([^"']+)["']/i.exec(imgTag) : null
 
   const capTag = findTagWithClass(html, 'div', 'Caption')
-  let caption = null
+  let caption: string | null = null
   if (capTag) {
     const start = html.indexOf(capTag) + capTag.length
     // The real embed page nests a <div class="CaptionComments"> ("View all
@@ -248,7 +288,7 @@ export function parseInstagramEmbed(html) {
   // tag at all, so unlike caption/thumbnail this is never treated as a
   // "missing piece" — its absence is normal, not a parse failure.
   const locTag = findTagWithClass(html, 'a', 'Location')
-  let location = null
+  let location: string | null = null
   if (locTag) {
     const start = html.indexOf(locTag) + locTag.length
     const end = html.indexOf('</a>', start)
@@ -263,7 +303,7 @@ export function parseInstagramEmbed(html) {
 
 // Pure caption → { siteTitle, siteDesc } truncation, split out so the ≤120 /
 // ≤2000 char limits are testable without a network call.
-export function captionToMeta(caption) {
+export function captionToMeta(caption: string): { siteTitle: string; siteDesc: string } {
   return {
     siteTitle: caption.split('\n')[0].slice(0, 120),
     siteDesc: caption.slice(0, 2000),
@@ -273,7 +313,7 @@ export function captionToMeta(caption) {
 // Pure delay math, split out from igThrottle so it's testable without real
 // timers or mutating module state. lastFetch=0 (module hasn't fetched IG yet
 // this session) always yields <=0: the first fetch of a session never waits.
-export function nextIgFetchDelay(now, lastFetch, jitter = 0) {
+export function nextIgFetchDelay(now: number, lastFetch: number, jitter = 0): number {
   return Math.max(0, lastFetch + 2500 + jitter - now)
 }
 
@@ -296,7 +336,7 @@ async function igThrottle() {
 // the failure mode this needs to catch — it looks like a partial success (a
 // thumbnail still shows on the card), so it's the one case a "both missing"
 // check would stay silent on.
-export function describeMissingPieces(caption, thumbUrl) {
+export function describeMissingPieces(caption: string | null, thumbUrl: string | null): string | null {
   if (caption && thumbUrl) return null
   return [!caption && 'caption', !thumbUrl && 'thumbnail'].filter(Boolean).join(' and ')
 }
@@ -305,15 +345,36 @@ export function describeMissingPieces(caption, thumbUrl) {
 // captionToMeta's 2000-char limit. Pure, split out for testability — exact
 // structured data (a real place name) is worth surfacing even when there's
 // no caption at all to attach it to.
-export function withLocation(meta, location) {
+// Generic over the meta it is handed rather than tied to InstagramMeta: it
+// reads and rewrites one field and copies the rest, so the caller's shape —
+// the full Instagram meta in fetchInstagramMeta, a two-field object in the
+// tests — comes back out unchanged rather than widened.
+export function withLocation<T extends { siteDesc: string | null }>(meta: T, location: string | null): T {
   if (!location) return meta
   const siteDesc = [location, meta.siteDesc].filter(Boolean).join('\n\n').slice(0, 2000)
   return { ...meta, siteDesc }
 }
 
-async function fetchInstagramMeta(url, noteId) {
+// What an Instagram post contributes. No `article` and no `author`: the embed
+// page carries a caption and a picture and nothing else, and the handle comes
+// off the export instead (see fetchLinkMeta's author note). siteName is always
+// the literal 'Instagram' — nothing here can report anything else.
+export interface InstagramMeta {
+  siteTitle: string | null
+  siteDesc: string | null
+  siteName: string
+  thumb: string | null
+}
+
+async function fetchInstagramMeta(url: string, noteId: string): Promise<InstagramMeta> {
   await igThrottle()
   const embedUrl = instagramEmbedUrl(url)
+  // Unreachable: the only caller reaches here past isInstagramPost(), which
+  // already parsed this URL, and instagramEmbedUrl returns null only for a
+  // string that is not a URL at all. The check is here because the type
+  // cannot say that — and it throws rather than skipping, which is what the
+  // untyped version did anyway (get(null) built 'null' as a URL and threw).
+  if (!embedUrl) throw new Error(`not a URL: ${url}`)
   // Same MAX_HTML-after-.text() tradeoff as the generic HTML branch below:
   // the whole body is buffered into memory before slicing. Matching existing
   // behavior rather than introducing a streaming reader just for this path.
@@ -321,7 +382,7 @@ async function fetchInstagramMeta(url, noteId) {
   const { caption, thumbUrl, location } = parseInstagramEmbed(html)
   const missing = describeMissingPieces(caption, thumbUrl)
   if (missing) console.warn(`[meta] instagram embed parse missing ${missing} for`, url)
-  let meta = { siteTitle: null, siteDesc: null, siteName: 'Instagram', thumb: null }
+  let meta: InstagramMeta = { siteTitle: null, siteDesc: null, siteName: 'Instagram', thumb: null }
   if (caption) {
     // Only siteDesc is kept — captionToMeta's siteTitle is just the caption's
     // FIRST LINE, which for a real Instagram caption is almost always the
@@ -366,7 +427,7 @@ async function fetchInstagramMeta(url, noteId) {
 // at a time on the FIFO chain (see enrich.js), and Reddit saves are a trickle
 // rather than the bulk imports that made Instagram's 2.5s spacing necessary.
 
-export function isRedditPost(url) {
+export function isRedditPost(url: string): boolean {
   try {
     const u = new URL(url)
     // Matches /r/<sub>/comments/<id>/... and the bare /comments/<id> form,
@@ -388,7 +449,7 @@ export function isRedditPost(url) {
 //
 // The share segment has to be the LAST one: a subreddit can be named `s`, and
 // `/r/s/comments/<id>/...` is an ordinary post URL, not a share link.
-export function isRedditShare(url) {
+export function isRedditShare(url: string): boolean {
   try {
     const u = new URL(url)
     return /(^|\.)reddit\.com$/.test(u.hostname) && /\/s\/[^/]+\/?$/.test(u.pathname)
@@ -402,7 +463,7 @@ export function isRedditShare(url) {
 // the oEmbed lookup key). Returns null when it does not resolve to a post — a
 // share link to a subreddit or a profile, or a dead id — so the caller can fall
 // back to the URL it already had.
-export async function resolveRedditShare(url) {
+export async function resolveRedditShare(url: string): Promise<string | null> {
   try {
     const res = await get(url, 'text/html,*/*')
     const u = new URL(res.url)
@@ -418,8 +479,8 @@ export async function resolveRedditShare(url) {
 // append the suffix after the query string where Reddit never looks for it.
 // `raw_json=1` stops Reddit HTML-escaping & < > inside every body it
 // returns, which would otherwise land in the note verbatim.
-export function redditJsonUrl(url, { limit = 20 } = {}) {
-  let u
+export function redditJsonUrl(url: string, { limit = 20 }: { limit?: number } = {}): string | null {
+  let u: URL
   try {
     u = new URL(url)
   } catch {
@@ -431,6 +492,45 @@ export function redditJsonUrl(url, { limit = 20 } = {}) {
 const MAX_COMMENTS = 8
 const MAX_COMMENT_CHARS = 600
 
+// As much of Reddit's JSON rendering as this reads. Every field is optional
+// because in practice every one of them really is missing somewhere — see
+// parseRedditPost — so the optional chains below are load-bearing, not
+// decoration.
+interface RedditPost {
+  title?: string
+  selftext?: string
+  subreddit?: string
+  author?: string
+  url?: string
+  thumbnail?: string
+  preview?: { images?: { source?: { url?: string } }[] }
+}
+
+interface RedditComment {
+  body?: string
+  author?: string
+  stickied?: boolean
+}
+
+interface RedditListing<T> {
+  data?: { children?: { data?: T }[] }
+}
+
+// The two-element array Reddit answers a post URL with: the post, then its
+// comment tree.
+type RedditPayload = [RedditListing<RedditPost>?, RedditListing<RedditComment>?] | null
+
+// What a Reddit post contributes. `article` is the field the whole JSON route
+// exists for — the sub/author line, the selftext and the thread, which the
+// oEmbed fallback cannot produce.
+export interface RedditMeta {
+  siteTitle: string | null
+  siteDesc: string | null
+  siteName: string
+  article: string | null
+  thumbUrl: string | null
+}
+
 // Pure payload → { siteTitle, siteDesc, siteName, article, thumbUrl }
 // (exported for tests; no network).
 //
@@ -439,24 +539,37 @@ const MAX_COMMENT_CHARS = 600
 // deleted posts, removed bodies, quarantined subs and link posts with no
 // selftext all arrive as the same shape with holes in it — so this reads
 // defensively throughout and returns nulls rather than throwing.
-export function parseRedditPost(payload) {
+export function parseRedditPost(payload: unknown): RedditMeta {
   const empty = { siteTitle: null, siteDesc: null, siteName: 'Reddit', article: null, thumbUrl: null }
-  const post = payload?.[0]?.data?.children?.[0]?.data
+  // `unknown` in, because this is handed straight off res.json() — a document
+  // from reddit.com, not something this server produced. Everything past this
+  // line is the same optional-chain read the untyped version did; the one
+  // check is that the payload is the array those chains assume.
+  const listings: RedditPayload = Array.isArray(payload) ? [payload[0], payload[1]] : null
+  const post = listings?.[0]?.data?.children?.[0]?.data
   if (!post) return empty
 
   const selftext = clean(post.selftext)
-  const parts = []
+  const parts: string[] = []
   if (post.subreddit) parts.push(`r/${post.subreddit}${post.author ? ` — posted by u/${post.author}` : ''}`)
   if (selftext) parts.push(selftext)
 
   // The thread is often where the actual answer lives — a "what is this
   // plant" post's whole value is the reply naming it. Stickied bot posts and
   // deleted bodies carry none of that and are dropped.
-  const comments = (payload?.[1]?.data?.children || [])
+  const comments = (listings?.[1]?.data?.children || [])
     .map(c => c?.data)
-    .filter(c => c?.body && !c.stickied && !['[deleted]', '[removed]'].includes(c.body.trim()))
+    // A type predicate, not a bare boolean: the filter is what makes `body`
+    // present for the map below, and only a predicate carries that across.
+    .filter((c): c is RedditComment =>
+      Boolean(c?.body && !c.stickied && !['[deleted]', '[removed]'].includes(c.body.trim())),
+    )
     .slice(0, MAX_COMMENTS)
-    .map(c => `u/${c.author || 'someone'}: ${clean(c.body).slice(0, MAX_COMMENT_CHARS)}`)
+    // `|| ''` covers the one gap the filter leaves: a body of nothing but
+    // whitespace is truthy, so it gets here, and clean() answers null for it.
+    // Untyped, that was `null.slice(...)` — a TypeError that aborted the whole
+    // post and degraded it to oEmbed over one blank comment.
+    .map(c => `u/${c.author || 'someone'}: ${(clean(c.body) || '').slice(0, MAX_COMMENT_CHARS)}`)
   if (comments.length) parts.push(`Top comments:\n${comments.join('\n')}`)
 
   return {
@@ -470,7 +583,7 @@ export function parseRedditPost(payload) {
   }
 }
 
-function clean(text) {
+function clean(text: string | null | undefined): string | null {
   const t = (text || '').toString().trim()
   return t || null
 }
@@ -478,7 +591,7 @@ function clean(text) {
 // `thumbnail` is a sentinel word ('self', 'default', 'nsfw', 'spoiler') for
 // anything Reddit did not generate a preview for, so the preview block is
 // tried first and the sentinel forms are rejected rather than fetched.
-function redditThumbUrl(post) {
+function redditThumbUrl(post: RedditPost): string | null {
   const preview = post.preview?.images?.[0]?.source?.url
   if (preview && isSafeFetchUrl(preview)) return preview
   if (post.thumbnail && isSafeFetchUrl(post.thumbnail)) return post.thumbnail
@@ -487,15 +600,32 @@ function redditThumbUrl(post) {
   return null
 }
 
+// parseRedditPost's shape with the remote thumbnail already downloaded: the
+// note stores a local /uploads path, never the redd.it URL.
+interface RedditLinkMeta {
+  siteTitle: string | null
+  siteDesc: string | null
+  siteName: string
+  article: string | null
+  thumb: string | null
+}
+
 // Returns null when the JSON route is unavailable, so fetchLinkMeta can fall
 // through to the generic path rather than leaving the note with nothing.
-async function fetchRedditMeta(url, noteId) {
-  let parsed
+async function fetchRedditMeta(url: string, noteId: string): Promise<RedditLinkMeta | null> {
+  let parsed: RedditMeta
   try {
-    const payload = await (await get(redditJsonUrl(url), 'application/json')).json()
+    const jsonUrl = redditJsonUrl(url)
+    // Unreachable: the caller reaches here past isRedditPost(), which already
+    // parsed this URL. Thrown rather than returned so it degrades exactly as
+    // the untyped version did — get(null) fetched the string 'null' and threw
+    // out of the same try, landing on the same warning and the same fallback.
+    if (!jsonUrl) throw new Error(`not a URL: ${url}`)
+    const payload = await (await get(jsonUrl, 'application/json')).json()
     parsed = parseRedditPost(payload)
   } catch (e) {
-    console.warn('[meta] reddit json unavailable for', url, '-', e.message, '— falling back to oEmbed/OpenGraph')
+    const why = e instanceof Error ? e.message : String(e)
+    console.warn('[meta] reddit json unavailable for', url, '-', why, '— falling back to oEmbed/OpenGraph')
     return null
   }
   // A payload that parses to nothing is the same situation as a failed fetch:
@@ -503,7 +633,7 @@ async function fetchRedditMeta(url, noteId) {
   if (!parsed.siteTitle && !parsed.article) return null
 
   const { thumbUrl, ...meta } = parsed
-  const out = { ...meta, thumb: null }
+  const out: RedditLinkMeta = { ...meta, thumb: null }
   if (thumbUrl) out.thumb = await saveThumbSafe(thumbUrl, url, noteId)
   return out
 }
@@ -532,15 +662,15 @@ async function fetchRedditMeta(url, noteId) {
 
 // Pure: url → the 11-ish-char video id, or null for anything that isn't a
 // YouTube video URL (exported for tests; no network).
-export function youtubeVideoId(url) {
-  let u
+export function youtubeVideoId(url: string): string | null {
+  let u: URL
   try {
     u = new URL(url)
   } catch {
     return null
   }
   if (!isSafeFetchUrl(url)) return null
-  const id = v => (/^[\w-]{6,20}$/.test(v || '') ? v : null)
+  const id = (v: string | null): string | null => (/^[\w-]{6,20}$/.test(v || '') ? v : null)
   const host = u.hostname.replace(/^(www|m)\./, '')
   if (host === 'youtu.be') return id(u.pathname.slice(1).split('/')[0])
   if (host === 'youtube.com' || host === 'music.youtube.com') {
@@ -552,7 +682,7 @@ export function youtubeVideoId(url) {
   return null
 }
 
-export function isYouTubeVideo(url) {
+export function isYouTubeVideo(url: string): boolean {
   return youtubeVideoId(url) !== null
 }
 
@@ -566,7 +696,9 @@ export function isYouTubeVideo(url) {
 // a long transcript reaches the embedding. That is deliberate rather than a
 // bug to fix here — chunking a note into multiple vectors is explicitly out
 // of scope — and the full 8000 still serves textSearch and the answer prompt.
-export function joinCaptions(segments) {
+export function joinCaptions(
+  segments: readonly (TranscriptResponse | null | undefined)[] | null | undefined,
+): string | null {
   const text = (segments || [])
     .map(s => (s?.text || '').trim())
     .filter(Boolean)
@@ -602,11 +734,11 @@ const CAPTION_LANG = 'en'
 // Returns { text, done }. `text` is null whenever there is nothing to store —
 // absence of captions is a normal outcome for a YouTube video, not a failure,
 // so this never throws. `done` says whether the answer is final.
-export async function fetchYouTubeCaptions(url) {
+export async function fetchYouTubeCaptions(url: string): Promise<{ text: string | null; done: boolean }> {
   const id = youtubeVideoId(url)
   if (!id) return { text: null, done: false }
   try {
-    let segments
+    let segments: TranscriptResponse[]
     try {
       segments = await fetchTranscript(id, { lang: CAPTION_LANG })
     } catch (e) {
@@ -618,7 +750,8 @@ export async function fetchYouTubeCaptions(url) {
     return { text: joinCaptions(segments), done: true }
   } catch (e) {
     const permanent = PERMANENT_CAPTION_ERRORS.some(E => e instanceof E)
-    if (!permanent) console.warn('[meta] youtube captions unavailable for', url, '-', e.message)
+    if (!permanent)
+      console.warn('[meta] youtube captions unavailable for', url, '-', e instanceof Error ? e.message : e)
     return { text: null, done: permanent }
   }
 }
@@ -627,7 +760,7 @@ export async function fetchYouTubeCaptions(url) {
 // adds a little context rather than being thrown away. Pure, split out for
 // testability — fetchLinkMeta's network calls aren't unit-tested, same as
 // fetchInstagramMeta.
-export function mergeSiteDesc(ogDesc, oembedDesc) {
+export function mergeSiteDesc(ogDesc: string | null, oembedDesc: string | null): string | null {
   return [ogDesc, oembedDesc].filter(Boolean).join('\n\n') || null
 }
 
@@ -642,7 +775,7 @@ export function mergeSiteDesc(ogDesc, oembedDesc) {
 // rest of this module treats optional enrichment (see saveThumb's callers):
 // a missing article is fine, it just means classify/embed fall back to the
 // og-description as before.
-export function extractArticle(html) {
+export function extractArticle(html: string): string | null {
   try {
     const { document } = parseHTML(html)
     const parsed = new Readability(document).parse()
@@ -654,9 +787,24 @@ export function extractArticle(html) {
   }
 }
 
+// What a link contributes, whichever of the three routes above produced it.
+// `article` and `author` are optional because only some routes can fill them:
+// Instagram has neither, Reddit has an article and no author, the generic
+// oEmbed + OpenGraph path has both. Callers treat the whole thing as
+// optional-per-field anyway — applyMeta (ai/meta-fields.ts) copies across
+// whichever fields came back truthy.
+export interface LinkMeta {
+  siteTitle: string | null
+  siteDesc: string | null
+  siteName: string | null
+  thumb: string | null
+  article?: string | null
+  author?: string | null
+}
+
 // Returns { siteTitle, siteDesc, siteName, thumb, article } (thumb = local
 // /uploads path). Throws on total failure; partial results are fine.
-export async function fetchLinkMeta(rawUrl, noteId) {
+export async function fetchLinkMeta(rawUrl: string, noteId: string): Promise<LinkMeta> {
   if (isInstagramPost(rawUrl)) return fetchInstagramMeta(rawUrl, noteId)
   // Resolved before anything else looks at it, so oEmbed, the .json fetch and
   // the OpenGraph scrape all see a canonical post URL — see isRedditShare.
@@ -666,16 +814,17 @@ export async function fetchLinkMeta(rawUrl, noteId) {
     if (reddit) return reddit
     // else: fall through to oEmbed + OpenGraph, which is what still works.
   }
-  const meta = { siteTitle: null, siteDesc: null, siteName: null, thumb: null, article: null, author: null }
-  let thumbUrl = null
+  const meta: LinkMeta = { siteTitle: null, siteDesc: null, siteName: null, thumb: null, article: null, author: null }
+  let thumbUrl: string | null = null
 
-  let oembedDesc = null
+  let oembedDesc: string | null = null
   const endpoint = oembedEndpoint(url)
   if (endpoint) {
     try {
-      const d = await (await get(endpoint, 'application/json')).json()
-      meta.siteTitle = d.title || null
-      meta.siteName = d.provider_name || null
+      const body: unknown = await (await get(endpoint, 'application/json')).json()
+      const d: OembedResponse = isRecord(body) ? body : {}
+      meta.siteTitle = str(d.title)
+      meta.siteName = str(d.provider_name)
       // Kept as its own field, not only folded into oembedDesc below. The
       // creator handle is an IDENTITY: enrich promotes it to the note's
       // `account`, which drives the account tag and lets a library be
@@ -684,9 +833,10 @@ export async function fetchLinkMeta(rawUrl, noteId) {
       // handle in NEITHER its export nor the URL it redirects to (that
       // redirect lands on a literal "@/"), so without this a TikTok note has
       // no author anywhere, forever.
-      meta.author = typeof d.author_name === 'string' && d.author_name.trim() ? d.author_name.trim() : null
-      oembedDesc = d.author_name ? `by ${d.author_name}` : null
-      thumbUrl = d.thumbnail_url || null
+      const authorName = str(d.author_name)
+      meta.author = authorName?.trim() || null
+      oembedDesc = authorName ? `by ${authorName}` : null
+      thumbUrl = str(d.thumbnail_url)
     } catch {
       /* fall through to HTML scrape */
     }
@@ -730,7 +880,7 @@ export async function fetchLinkMeta(rawUrl, noteId) {
 // three; this only stops the policy being re-decided per call site. (The
 // carousel loop below deliberately stays open-coded: it needs to tell a failed
 // slide from a skipped one to keep the rest of the deck.)
-async function saveThumbSafe(thumbUrl, base, key) {
+async function saveThumbSafe(thumbUrl: string, base: string, key: string): Promise<string | null> {
   try {
     return await saveThumb(new URL(thumbUrl, base).href, key)
   } catch {
@@ -738,7 +888,7 @@ async function saveThumbSafe(thumbUrl, base, key) {
   }
 }
 
-async function saveThumb(url, key) {
+async function saveThumb(url: string, key: string): Promise<string | null> {
   const res = await get(url, 'image/*')
   const ct = res.headers.get('content-type') || ''
   if (!ct.startsWith('image/')) return null
@@ -764,7 +914,7 @@ const MAX_SLIDES = 20
 // Undo the double escaping on one captured URL. Order matters: \uXXXX first, so
 // `\u00253D` becomes `%3D` (and not a stray `%` next to an orphaned `3D`),
 // then escaped slashes, then anything left over.
-export function unescapeEmbedUrl(raw) {
+export function unescapeEmbedUrl(raw: string): string {
   return raw
     .replace(/\\+$/, '')
     .replace(/\\u([0-9a-f]{4})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
@@ -783,13 +933,13 @@ export function unescapeEmbedUrl(raw) {
 // and the profile hover-card further down the page carries thumbnails of the
 // account's OTHER posts. Anchoring past the sidecar key excludes the cover, and
 // the hover-card images are plain `src=` attributes this pattern never matches.
-export function parseInstagramCarousel(html) {
+export function parseInstagramCarousel(html: string): string[] {
   const at = html.indexOf('edge_sidecar_to_children')
   if (at === -1) return []
   const re = /display_url\\*"\s*:\s*\\*"([^"]+)/g
   re.lastIndex = at
-  const out = []
-  const seen = new Set()
+  const out: string[] = []
+  const seen = new Set<string>()
   for (let m = re.exec(html); m && out.length < MAX_SLIDES; m = re.exec(html)) {
     const url = unescapeEmbedUrl(m[1])
     if (!isSafeFetchUrl(url) || seen.has(url)) continue
@@ -802,10 +952,13 @@ export function parseInstagramCarousel(html) {
 // Download every slide of a carousel post to /uploads. Returns local web paths
 // in post order. One slide failing to download is survivable — a short deck
 // beats no deck — but a slide that fails is dropped rather than left as a hole.
-export async function fetchInstagramSlides(url, noteId) {
+export async function fetchInstagramSlides(url: string, noteId: string): Promise<string[]> {
   await igThrottle()
-  const html = (await (await get(instagramEmbedUrl(url), 'text/html,*/*')).text()).slice(0, MAX_HTML)
-  const slides = []
+  const embedUrl = instagramEmbedUrl(url)
+  // Unreachable, and thrown rather than skipped — see fetchInstagramMeta.
+  if (!embedUrl) throw new Error(`not a URL: ${url}`)
+  const html = (await (await get(embedUrl, 'text/html,*/*')).text()).slice(0, MAX_HTML)
+  const slides: string[] = []
   for (const [i, src] of parseInstagramCarousel(html).entries()) {
     try {
       const local = await saveThumb(new URL(src, url).href, `${noteId}-${i}`)

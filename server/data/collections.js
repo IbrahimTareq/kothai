@@ -6,7 +6,7 @@
 // autoAdd, the full note list for backfill), which keeps the boundary clean
 // and the logic trivially testable.
 import { randomUUID } from 'node:crypto'
-import { getDb, _resetDb } from './db.js'
+import { getDb, _resetDb } from './db.ts'
 import { normalizeTag } from '../lib/tags.ts'
 import * as notesStore from './notes.js'
 

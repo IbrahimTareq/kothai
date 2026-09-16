@@ -130,7 +130,7 @@ reset()
 const realStore = await import('../../../server/data/notes.js')
 const realCollections = await import('../../../server/data/collections.js')
 const realEnrich = await import('../../../server/ai/enrich.js')
-const realImportIndex = await import('../../../server/import/index.js')
+const realImportIndex = await import('../../../server/import/index.ts')
 
 mock.module('../../../server/data/notes.js', {
   namedExports: {
@@ -159,7 +159,7 @@ mock.module('../../../server/ai/enrich.js', {
     },
   },
 })
-mock.module('../../../server/import/index.js', {
+mock.module('../../../server/import/index.ts', {
   namedExports: {
     ...realImportIndex,
     findImporter: files => importerOverride ?? realImportIndex.findImporter(files),

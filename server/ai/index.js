@@ -4,7 +4,7 @@
 // via dynamic import(). That dynamic import is load-bearing, not stylistic:
 // it is what keeps @qvac/sdk off the code path in the lite image, where the
 // package is not installed at all. A static
-// `import ... from './providers/local.js'` here would make the lite build
+// `import ... from './providers/local.ts'` here would make the lite build
 // crash at startup.
 //
 // Sync accessors (capabilities, statusSnapshot, roleEnabled) delegate to the
@@ -13,11 +13,11 @@
 // listens, so no request can arrive first.
 import { getAiConfig, AI_EMBED_PROVIDER } from '../config.ts'
 import { ROLES } from './roles.ts'
-import { resolveRoleProviders, kindsInUse, mergeStatus, mergeListModels, mergeCapabilities } from './routing.js'
+import { resolveRoleProviders, kindsInUse, mergeStatus, mergeListModels, mergeCapabilities } from './routing.ts'
 
 export { FeatureDisabledError } from './roles.ts'
 export { PRESETS, DEFAULTS } from './presets.ts'
-export { normaliseClassification, isJunkTag, heuristicType, deriveTitle, isLikelyUrl, extractUrl } from './normalise.js'
+export { normaliseClassification, isJunkTag, heuristicType, deriveTitle, isLikelyUrl, extractUrl } from './normalise.ts'
 
 // { local?, remote? } — only the kinds the role map actually uses.
 let impls = null
@@ -48,9 +48,9 @@ function L() {
 }
 
 export async function _selectProvider(kind, load = null) {
-  if (kind === 'remote') return await (load ? load() : import('./providers/remote.js'))
+  if (kind === 'remote') return await (load ? load() : import('./providers/remote.ts'))
   try {
-    return await (load ? load() : import('./providers/local.js'))
+    return await (load ? load() : import('./providers/local.ts'))
   } catch (e) {
     if (e?.code === 'ERR_MODULE_NOT_FOUND') {
       throw new Error(
@@ -71,7 +71,7 @@ export async function _selectProvider(kind, load = null) {
 // reaches here: _selectProvider still fails loudly for it.
 export async function _localAvailable(load = null) {
   try {
-    await (load ? load() : import('./providers/local.js'))
+    await (load ? load() : import('./providers/local.ts'))
     return true
   } catch (e) {
     if (e?.code !== 'ERR_MODULE_NOT_FOUND') {

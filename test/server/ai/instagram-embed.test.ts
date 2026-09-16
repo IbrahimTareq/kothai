@@ -13,7 +13,7 @@ import {
   mergeSiteDesc,
   parseInstagramCarousel,
   unescapeEmbedUrl,
-} from '../../../server/ai/meta.js'
+} from '../../../server/ai/meta.ts'
 
 test('isInstagramPost: matches post/reel/tv URLs on instagram.com only', () => {
   assert.equal(isInstagramPost('https://www.instagram.com/reel/DEF456/'), true)
@@ -46,6 +46,7 @@ test('parseInstagramEmbed: login-walled or unexpected html yields empty result',
 test('parseInstagramEmbed: nested <div> in the caption truncates at the first close tag (known, accepted tradeoff)', () => {
   const html = `<div class="Caption"><a>chefsteps</a> before<div class="unexpected">nested</div> after</div>`
   const { caption } = parseInstagramEmbed(html)
+  assert.ok(caption, 'expected a caption, got null')
   assert.match(caption, /before/)
   assert.doesNotMatch(caption, /after/) // truncated, not garbled — still usable
 })
@@ -249,7 +250,7 @@ test('get: rejects a non-web port, so a stashed link cannot probe internal servi
 // nested inside another JSON string inside the HTML, so a slide URL appears as
 // display_url\":\"https:\\\/\\\/host\/path. These fixtures reproduce that exact
 // escaping rather than a cleaned-up version of it.
-const slide = n => `display_url\\":\\"https:\\\\\\/\\\\\\/cdn.example.com\\\\\\/s${n}.jpg?a=1\\u00253D\\"`
+const slide = (n: number) => `display_url\\":\\"https:\\\\\\/\\\\\\/cdn.example.com\\\\\\/s${n}.jpg?a=1\\u00253D\\"`
 
 test('unescapeEmbedUrl: undoes the double escaping, \\u0025 before the slashes', () => {
   assert.equal(

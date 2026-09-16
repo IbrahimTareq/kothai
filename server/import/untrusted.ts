@@ -20,6 +20,17 @@ export function tryJson(buf: Buffer): unknown {
   }
 }
 
+// Narrowing a value read out of a parsed export before its fields can be
+// touched. tryJson returns `unknown` on purpose — that is the honest type for
+// JSON.parse of a user-uploaded file — so every importer needs the same first
+// step, and every importer's field reads (`row?.Link`, `node?.title`) were
+// already relying on exactly this check at runtime. Shared for the same
+// reason tryJson and clip are: the next importer should start out safe rather
+// than start out by copying.
+export function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null
+}
+
 // Collapses whitespace before clipping: these strings ride into an LLM
 // enrichment prompt (a poster "name" full of newlines/control whitespace is a
 // cheap prompt-formatting/injection vector) as well as into the UI, so a

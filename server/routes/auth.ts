@@ -5,6 +5,7 @@
 // Off unless STASH_PASSWORD is set. Every LAN and Tailscale install keeps
 // working exactly as before an upgrade.
 import path from 'node:path'
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import { json, readBody } from '../lib/http.ts'
 import {
   COOKIE_NAME,
@@ -27,30 +28,44 @@ const LOGIN_BODY_LIMIT = 4096
 
 const loginThrottle = createThrottle()
 
+interface LoginContext {
+  password: string
+  secure: boolean
+}
+
+// IncomingMessage declares `socket: Socket`, but `encrypted` lives on
+// TLSSocket — so a plain IncomingMessage shares no property with
+// lib/auth.ts's SecureRequestLike and the isSecureRequest() call below is
+// rejected outright as a weak-type mismatch. Spelled here rather than widened
+// in lib/auth.ts: the security floor takes no change without a test that
+// fails without it, and this one is type-only.
+type GateRequest = IncomingMessage & { socket: { encrypted?: boolean } }
+
 // The socket address, deliberately NOT x-forwarded-for: without a
 // trusted-proxy list XFF is caller-supplied, so keying on it lets an attacker
 // rotate the header and skip the throttle entirely. The cost is that behind a
 // reverse proxy every client shares one bucket — for a single-user app that is
 // nearly free, and a 15-minute self-healing lockout is the worst case.
-const clientKey = req => req.socket?.remoteAddress || 'unknown'
+const clientKey = (req: IncomingMessage) => req.socket?.remoteAddress || 'unknown'
 
-export function hasSession(req, password) {
+export function hasSession(req: IncomingMessage, password: string): boolean {
   return verifySession(parseCookies(req.headers.cookie)[COOKIE_NAME], password)
 }
 
 // A path the SPA would route client-side (no file extension), as opposed to an
 // asset request. Serving login HTML in answer to a request for a .js bundle
 // surfaces as a syntax error in the console instead of a login form.
-const isNavigation = p => !p.startsWith('/api/') && !path.extname(p)
+const isNavigation = (p: string) => !p.startsWith('/api/') && !path.extname(p)
 
-const isJson = req => (req.headers['content-type'] || '').toLowerCase().startsWith('application/json')
+const isJson = (req: IncomingMessage) =>
+  (req.headers['content-type'] || '').toLowerCase().startsWith('application/json')
 
-function send(res, code, headers, body) {
+function send(res: ServerResponse, code: number, headers: Record<string, string>, body: unknown) {
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', ...headers })
   res.end(JSON.stringify(body))
 }
 
-async function handleLogin(req, res, { password, secure }) {
+async function handleLogin(req: IncomingMessage, res: ServerResponse, { password, secure }: LoginContext) {
   const key = clientKey(req)
   const gate = loginThrottle.check(key)
   if (!gate.allowed) {
@@ -61,13 +76,17 @@ async function handleLogin(req, res, { password, secure }) {
       { error: 'Too many attempts. Try again shortly.', code: 'rate_limited' },
     )
   }
-  let body = {}
+  let body: unknown = {}
   try {
     body = await readBody(req, LOGIN_BODY_LIMIT)
   } catch {
     /* an unparseable body is just a failed attempt */
   }
-  if (!passwordMatches(body?.password ?? '', password)) {
+  // readBody hands back `unknown`: this body came from an unauthenticated
+  // caller, so it is not obliged to be an object at all. Reading the field off
+  // a non-object yields undefined here exactly as it did untyped.
+  const supplied = typeof body === 'object' && body !== null && 'password' in body ? body.password : undefined
+  if (!passwordMatches(supplied ?? '', password)) {
     loginThrottle.fail(key)
     return json(res, 401, { error: 'Incorrect password.', code: 'bad_password' })
   }
@@ -80,10 +99,18 @@ async function handleLogin(req, res, { password, secure }) {
 // Order matters: the content-type check runs before anything else so it also
 // covers /api/login, and login/logout are handled whatever the session state
 // is (logging in while already holding a session is not an error).
-export async function authGate(req, res, pathname, { password }) {
+export async function authGate(
+  req: GateRequest,
+  res: ServerResponse,
+  pathname: string,
+  { password }: { password: string },
+): Promise<boolean> {
   const secure = isSecureRequest(req)
 
-  if (MUTATIONS.has(req.method) && !isJson(req)) {
+  // `?? ''` only satisfies the type: IncomingMessage.method is optional
+  // because the type is shared with client-side responses, and neither
+  // undefined nor '' is in MUTATIONS, so the test answers exactly as before.
+  if (MUTATIONS.has(req.method ?? '') && !isJson(req)) {
     // CSRF. SameSite=Lax on the cookie blocks the cross-SITE case, but "site"
     // ignores the port — a page on http://localhost:3000 is same-site with a
     // Kothai on :5173 and its cookie would ride along. application/json is not

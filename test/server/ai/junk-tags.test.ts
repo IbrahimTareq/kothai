@@ -4,7 +4,7 @@
 // model I/O (classify() itself isn't unit-tested for that reason).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isJunkTag } from '../../../server/ai/normalise.js'
+import { isJunkTag } from '../../../server/ai/normalise.ts'
 import { normalizeTag } from '../../../server/lib/tags.ts'
 
 test('isJunkTag: matches a junk word already in its compressed (no-hyphen) form', () => {

@@ -4,7 +4,7 @@
 // pure descriptor/validation methods the facade and routes depend on.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { capabilities, validateModel, weightsInUse } from '../../../../server/ai/providers/local.js'
+import { capabilities, validateModel, weightsInUse } from '../../../../server/ai/providers/local.ts'
 
 test('capabilities reports a local provider that manages residency and downloads weights', () => {
   assert.deepEqual(capabilities(), { kind: 'local', managesResidency: true, downloadsWeights: true })
@@ -17,6 +17,9 @@ test('validateModel accepts a key from the preset catalogue', () => {
 test('validateModel rejects a key that is not a known preset', () => {
   const r = validateModel('llm', 'gpt-4o-mini')
   assert.equal(r.ok, false)
+  // assert.ok before match: a rejection without an explanation is itself a
+  // failure, and asserting it is also what narrows the optional field.
+  assert.ok(r.error)
   assert.match(r.error, /unknown llm model/)
 })
 

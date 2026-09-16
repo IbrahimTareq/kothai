@@ -3,7 +3,7 @@
 // value in the other side's column.
 import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { _resetDb } from '../../../server/data/db.js'
+import { _resetDb } from '../../../server/data/db.ts'
 import * as settings from '../../../server/data/settings.js'
 
 beforeEach(async () => {

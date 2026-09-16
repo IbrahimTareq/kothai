@@ -7,7 +7,7 @@
 // Forward-only: existing notes are never rewritten; their tags seed the registry
 // so new tags have something to snap to. Only the enrichment (LLM) path calls
 // canonicalize — manual tag edits are left as the user typed them.
-import { getDb, _resetDb } from './db.js'
+import { getDb, _resetDb } from './db.ts'
 import { encodeEmbedding, decodeEmbedding, cosine } from './embedding.ts'
 import { normalizeTags } from '../lib/tags.ts'
 import * as ai from '../ai/index.js'

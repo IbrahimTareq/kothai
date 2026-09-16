@@ -8,7 +8,7 @@
 import { test, before, after, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
-import { createRemoteProvider } from '../../../../server/ai/providers/remote.js'
+import { createRemoteProvider } from '../../../../server/ai/providers/remote.ts'
 
 let server, base, routes
 before(async () => {

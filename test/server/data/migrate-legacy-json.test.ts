@@ -9,13 +9,14 @@ import { mkdtempSync, writeFileSync, existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import type { SQLOutputValue } from 'node:sqlite'
 import { decodeEmbedding } from '../../../server/data/embedding.ts'
 
 const scratch = mkdtempSync(path.join(tmpdir(), 'kothai-migrate-'))
 process.env.STASH_DATA_DIR = scratch
 
 const { DATA_DIR } = await import('../../../server/config.ts')
-const { migrateLegacyJson } = await import('../../../server/data/migrate.js')
+const { migrateLegacyJson } = await import('../../../server/data/migrate.ts')
 assert.equal(DATA_DIR, scratch) // sanity: env var actually took
 
 const SCHEMA = `
@@ -30,7 +31,7 @@ CREATE TABLE settings (
 CREATE TABLE tag_vocab (tag TEXT PRIMARY KEY, embedding BLOB NOT NULL);
 `
 
-function write(name, data) {
+function write(name: string, data: unknown) {
   writeFileSync(path.join(scratch, name), JSON.stringify(data))
 }
 
@@ -38,6 +39,25 @@ function freshDb() {
   const db = new DatabaseSync(':memory:')
   db.exec(SCHEMA)
   return db
+}
+
+// A row's columns come back as SQLOutputValue (null | number | bigint |
+// string | Uint8Array), so the column type has to be established before the
+// value can be used. assert here rather than a cast: a column that came back
+// as the wrong type is a migration bug, and the test should say so.
+function textOf(v: SQLOutputValue): string {
+  assert.ok(typeof v === 'string', 'expected a TEXT column')
+  return v
+}
+
+function blobOf(v: SQLOutputValue): Uint8Array {
+  assert.ok(v instanceof Uint8Array, 'expected a BLOB column')
+  return v
+}
+
+function rowOf(row: Record<string, SQLOutputValue> | undefined): Record<string, SQLOutputValue> {
+  assert.ok(row, 'expected a row')
+  return row
 }
 
 after(() => rmSync(scratch, { recursive: true, force: true }))
@@ -53,7 +73,7 @@ test('notes: array order (newest-first) survives the round trip via seq', async 
   const rows = db
     .prepare('SELECT data FROM notes ORDER BY seq DESC')
     .all()
-    .map(r => JSON.parse(r.data))
+    .map(r => JSON.parse(textOf(r.data)))
   assert.deepEqual(
     rows.map(r => r.id),
     ['newest', 'middle', 'oldest'],
@@ -88,7 +108,7 @@ test('chats: MRU order survives via an explicit seq (not insertion order)', asyn
   const rows = db
     .prepare('SELECT data FROM chats ORDER BY seq DESC')
     .all()
-    .map(r => JSON.parse(r.data))
+    .map(r => JSON.parse(textOf(r.data)))
   assert.deepEqual(
     rows.map(r => r.id),
     ['front', 'back'],
@@ -104,7 +124,7 @@ test('settings: legacy shape maps onto the typed row', async () => {
   })
   const db = freshDb()
   await migrateLegacyJson(db)
-  const row = db.prepare('SELECT * FROM settings WHERE id = 1').get()
+  const row = rowOf(db.prepare('SELECT * FROM settings WHERE id = 1').get())
   assert.equal(row.llm, 'CUSTOM_LLM')
   assert.equal(row.configured, 1)
   assert.equal(row.residency_llm, 'always')
@@ -121,7 +141,8 @@ test('tag_vocab: registry entries all land, order-independent', async () => {
     ['cooking', 'travel'],
   )
   // Stored as float32 bytes now, so compare decoded and allow the precision.
-  const vec = decodeEmbedding(rows[0].embedding)
+  const vec = decodeEmbedding(blobOf(rowOf(rows[0]).embedding))
+  assert.ok(vec, 'the blob decodes back to a vector')
   assert.equal(vec.length, 2)
   assert.ok(Math.abs(vec[0] - 0.1) < 1e-6 && Math.abs(vec[1] - 0.2) < 1e-6)
 })
@@ -133,7 +154,7 @@ test('no legacy files left: a no-op, nothing thrown', async () => {
   // migrated, just booting normally" path.
   const db = freshDb()
   await assert.doesNotReject(migrateLegacyJson(db))
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM notes').get().n, 0)
+  assert.equal(rowOf(db.prepare('SELECT COUNT(*) AS n FROM notes').get()).n, 0)
 })
 
 test('a crash-interrupted migration is safe to retry: already-inserted ids are skipped, not duplicated', async () => {
@@ -143,5 +164,5 @@ test('a crash-interrupted migration is safe to retry: already-inserted ids are s
   // notes.json still exists (as if the process died before the rename) — a
   // retry must not throw on the id it already has.
   await assert.doesNotReject(migrateLegacyJson(db))
-  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM notes').get().n, 1)
+  assert.equal(rowOf(db.prepare('SELECT COUNT(*) AS n FROM notes').get()).n, 1)
 })

@@ -6,6 +6,38 @@
 // a provider would guarantee drift the first time one gets tuned.
 import { normalizeTags } from '../lib/tags.ts'
 
+// The note fields the answer context is built from. Deliberately NOT
+// ServerNote: `article` and `thumbDescription` are enrichment columns with no
+// counterpart in the wire type, and a note arrives here at whatever stage of
+// enrichment it happens to be in, so every field is optional.
+interface ContextNote {
+  title?: string
+  summary?: string
+  content?: string
+  url?: string | null
+  siteTitle?: string | null
+  siteDesc?: string | null
+  article?: string | null
+  thumbDescription?: string | null
+  description?: string | null
+  tags?: string[]
+}
+
+// A note as answerUserPrompt numbers it: the header line prints these three
+// unconditionally, so they are the only required fields anywhere in here.
+interface AnswerNote extends ContextNote {
+  createdAt: string
+  type: string
+  category: string
+}
+
+// One turn of a persisted chat (see server/data/chats.js). `text` is optional
+// because formatHistory has always guarded it.
+interface HistoryMessage {
+  role: string
+  text?: string
+}
+
 export const NOTE_TYPES = ['link', 'image', 'video', 'code', 'text']
 
 export const CLASSIFY_SCHEMA = {
@@ -38,7 +70,15 @@ export const DESCRIBE_THUMB_PROMPT = [
   'Ignore player and app chrome: play buttons, usernames, follow buttons, view/like/comment counts, progress bars, watermarks.',
 ].join(' ')
 
-export function classifySystemPrompt({ now, knownTags = [], candidateTags = [] }) {
+export function classifySystemPrompt({
+  now,
+  knownTags = [],
+  candidateTags = [],
+}: {
+  now: string
+  knownTags?: string[]
+  candidateTags?: string[]
+}): string {
   const vocab = normalizeTags(knownTags, { max: 60 })
   const candidates = normalizeTags(candidateTags, { max: 30 })
   return [
@@ -66,7 +106,15 @@ export function classifySystemPrompt({ now, knownTags = [], candidateTags = [] }
   ].join('\n')
 }
 
-export function classifyUserPrompt({ text, hasImage, isUrl }) {
+export function classifyUserPrompt({
+  text,
+  hasImage,
+  isUrl,
+}: {
+  text: string
+  hasImage: boolean
+  isUrl: boolean
+}): string {
   const hints = []
   if (hasImage) hints.push('An image is attached to this item.')
   if (isUrl) hints.push('The text is (or contains) a URL.')
@@ -100,7 +148,7 @@ export function classifyUserPrompt({ text, hasImage, isUrl }) {
 // the check fails closed.
 const PROMPTED_EMBED_MODEL = /embedding[-_ ]?gemma/i
 
-export function isPromptedEmbedModel(model) {
+export function isPromptedEmbedModel(model: string | null | undefined): boolean {
   return PROMPTED_EMBED_MODEL.test(model || '')
 }
 
@@ -125,7 +173,7 @@ export const EMBED_RECIPE = 'v2-gemma-task-prefix'
 // the tail of one long note; overshooting costs the note its entire vector.
 const EMBED_TOKEN_BUDGET = 880 // of 1024, leaving room for the prefix and specials
 
-function tokenCost(code) {
+function tokenCost(code: number): number {
   // Latin text averages ~4 chars/token; 3.6 is that with margin. Anything
   // outside ASCII (CJK, Arabic, and each half of an emoji's surrogate pair)
   // is charged a full token, which is roughly what these tokenizers do.
@@ -133,7 +181,7 @@ function tokenCost(code) {
 }
 
 // Truncate to an estimated token budget, never splitting a surrogate pair.
-export function clipToTokens(text, maxTokens = EMBED_TOKEN_BUDGET) {
+export function clipToTokens(text: string, maxTokens = EMBED_TOKEN_BUDGET): string {
   const s = text || ''
   let cost = 0
   for (let i = 0; i < s.length; i++) {
@@ -143,13 +191,16 @@ export function clipToTokens(text, maxTokens = EMBED_TOKEN_BUDGET) {
   return s
 }
 
-export function embedInput(text, { mode = 'document', model = '' } = {}) {
+export function embedInput(
+  text: string | null | undefined,
+  { mode = 'document', model = '' }: { mode?: 'document' | 'query'; model?: string } = {},
+): string {
   const body = (text || '').trim()
   if (!isPromptedEmbedModel(model)) return body
   return mode === 'query' ? `task: search result | query: ${body}` : `title: none | text: ${body}`
 }
 
-export function answerSystemPrompt() {
+export function answerSystemPrompt(): string {
   return [
     'You are the assistant for a personal notes app.',
     "Answer the user's question using ONLY the saved notes provided as context.",
@@ -192,7 +243,7 @@ const ARTICLE_CHARS = 600 // article bodies run to 8000; an excerpt is enough
 // Mathematical-Bold-Italic alphabet (U+1D400 block) that reel captions use
 // for styled text. A single such caption reaching the prompt mid-character
 // took the whole answer down with "formatPrompt: Invalid input format".
-export function clip(text, max) {
+export function clip(text: string | null | undefined, max: number): string {
   if (!text || text.length <= max) return text || ''
   const last = text.charCodeAt(max - 1)
   // A high surrogate in the final position means its partner is the character
@@ -209,10 +260,10 @@ export function clip(text, max) {
 // link's `content` is character-for-character its `url`. Repeating the same
 // sentence three times spends the note's budget without adding a single new
 // retrieval-relevant fact.
-export function noteContextBody(note) {
-  const lines = []
+export function noteContextBody(note: ContextNote): string {
+  const lines: string[] = []
   const seen = new Set([(note.title || '').trim().toLowerCase()])
-  const add = (label, value) => {
+  const add = (label: string, value: string | null | undefined) => {
     const text = (value || '').toString().replace(/\s+/g, ' ').trim()
     if (!text) return
     const key = text.toLowerCase()
@@ -242,7 +293,7 @@ export function noteContextBody(note) {
 // The point is not to replay the conversation — it is to resolve the pronoun
 // in "what else did they make?", which the immediately preceding turn almost
 // always supplies.
-export function formatHistory(history, { turns = HISTORY_TURNS } = {}) {
+export function formatHistory(history: HistoryMessage[], { turns = HISTORY_TURNS }: { turns?: number } = {}): string {
   return history
     .slice(-turns * 2)
     .map(
@@ -252,7 +303,15 @@ export function formatHistory(history, { turns = HISTORY_TURNS } = {}) {
     .join('\n')
 }
 
-export function answerUserPrompt({ question, contextNotes, history = [] }) {
+export function answerUserPrompt({
+  question,
+  contextNotes,
+  history = [],
+}: {
+  question: string
+  contextNotes: AnswerNote[]
+  history?: HistoryMessage[]
+}): string {
   const perNote = contextNotes.length
     ? Math.min(MAX_NOTE_CHARS, Math.max(MIN_NOTE_CHARS, Math.floor(CONTEXT_CHARS / contextNotes.length)))
     : MAX_NOTE_CHARS
@@ -293,8 +352,11 @@ const HISTORY_CHARS = 500
 // prepended, never the assistant's answer: an answer is model-generated prose
 // that can be several hundred words about the wrong thing, and folding it into
 // the query vector drags retrieval toward whatever it happened to say.
-export function retrievalQuery(question, history = []) {
+export function retrievalQuery(question: string, history: HistoryMessage[] = []): string {
   const lastUser = [...history].reverse().find(m => m.role === 'user' && (m.text || '').trim())
-  if (!lastUser) return question
+  // `?.text` rather than a bare `!lastUser`: find() already guarantees a
+  // non-empty text on whatever it returns, so this is the same check written
+  // where the type can see it, not a second guard.
+  if (!lastUser?.text) return question
   return `${clip(lastUser.text.trim(), HISTORY_CHARS)}\n${question}`
 }

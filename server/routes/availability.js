@@ -12,7 +12,7 @@ import { unlink } from 'node:fs/promises'
 import path from 'node:path'
 import * as store from '../data/notes.js'
 import * as collections from '../data/collections.js'
-import { checkAvailability, isCheckable, DEAD, ALIVE } from '../ai/availability.js'
+import { checkAvailability, isCheckable, DEAD, ALIVE } from '../ai/availability.ts'
 import { json, readBody } from '../lib/http.ts'
 
 const CONCURRENCY = 4

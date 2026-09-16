@@ -41,7 +41,7 @@ mock.module('../../../server/lib/ssrf.ts', {
 })
 
 const { isRedditPost, isRedditShare, redditJsonUrl, parseRedditPost, fetchLinkMeta } = await import(
-  '../../../server/ai/meta.js'
+  '../../../server/ai/meta.ts'
 )
 
 const POST_URL = 'https://www.reddit.com/r/breadit/comments/abc123/my_first_sourdough/'
@@ -127,6 +127,26 @@ test('parseRedditPost drops stickied bot comments and deleted bodies', () => {
   assert.doesNotMatch(p.article, /read the rules/)
   assert.doesNotMatch(p.article, /\[deleted\]|\[removed\]/)
   assert.match(p.article, /u\/real: Looks great\./)
+})
+
+test('parseRedditPost keeps the post when a comment body is nothing but whitespace', () => {
+  // The filter above only checks that `body` is truthy, so '   \n\t ' reaches
+  // the map — where clean() answers null for it. Untyped that was
+  // `null.slice(...)`, a TypeError thrown out of parseRedditPost that lost the
+  // ENTIRE post (title, selftext, every other comment) and degraded it to
+  // oEmbed, over one blank comment.
+  const p = parseRedditPost(
+    payload({
+      comments: [
+        { author: 'blank', body: '   \n\t ' },
+        { author: 'real', body: 'Looks great.' },
+      ],
+    }),
+  )
+  assert.equal(p.siteTitle, 'My first sourdough', 'the post survives the blank comment')
+  assert.match(p.article, /20 hour cold retard/)
+  assert.match(p.article, /u\/real: Looks great\./)
+  assert.ok(p.article.split('\n').includes('u/blank: '), 'the blank comment contributes an empty body line')
 })
 
 test('parseRedditPost handles a link post with no selftext and no comments', () => {

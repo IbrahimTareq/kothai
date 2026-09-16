@@ -2,7 +2,7 @@ import * as ai from '../ai/index.js'
 import * as store from '../data/notes.js'
 import * as chats from '../data/chats.js'
 import * as settings from '../data/settings.js'
-import * as prompts from '../ai/prompts.js'
+import * as prompts from '../ai/prompts.ts'
 import { json, readBody, saveImage } from '../lib/http.ts'
 
 // Server-sent events, opened only once the request has cleared every gate —

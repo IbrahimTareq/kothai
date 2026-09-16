@@ -26,15 +26,15 @@ let linkMetaImpl = async () => ({
 })
 let residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
 
-const realMeta = await import('../../../server/ai/meta.js')
+const realMeta = await import('../../../server/ai/meta.ts')
 const realStore = await import('../../../server/data/notes.js')
 const realTags = await import('../../../server/lib/tags.ts')
 const realTagvocab = await import('../../../server/data/tagvocab.js')
-const realNormalise = await import('../../../server/ai/normalise.js')
+const realNormalise = await import('../../../server/ai/normalise.ts')
 const realCollections = await import('../../../server/data/collections.js')
 const realSettings = await import('../../../server/data/settings.js')
 
-mock.module('../../../server/ai/meta.js', {
+mock.module('../../../server/ai/meta.ts', {
   namedExports: { ...realMeta, fetchLinkMeta: async (...a) => linkMetaImpl(...a) },
 })
 mock.module('../../../server/data/notes.js', {
@@ -74,7 +74,7 @@ mock.module('../../../server/data/settings.js', {
 })
 
 const enrich = await import('../../../server/ai/enrich.js')
-const { DESCRIBE_THUMB_PROMPT } = await import('../../../server/ai/prompts.js')
+const { DESCRIBE_THUMB_PROMPT } = await import('../../../server/ai/prompts.ts')
 
 function seed(note = {}) {
   notes = [{ id: 't1', content: TIKTOK, url: TIKTOK, type: 'video', ai: {}, ...note }]

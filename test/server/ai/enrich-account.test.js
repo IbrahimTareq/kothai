@@ -13,15 +13,15 @@ let notes = []
 let classifyCalls = []
 let linkMeta
 
-const realMeta = await import('../../../server/ai/meta.js')
+const realMeta = await import('../../../server/ai/meta.ts')
 const realStore = await import('../../../server/data/notes.js')
 const realTags = await import('../../../server/lib/tags.ts')
 const realTagvocab = await import('../../../server/data/tagvocab.js')
-const realNormalise = await import('../../../server/ai/normalise.js')
+const realNormalise = await import('../../../server/ai/normalise.ts')
 const realCollections = await import('../../../server/data/collections.js')
 const realSettings = await import('../../../server/data/settings.js')
 
-mock.module('../../../server/ai/meta.js', {
+mock.module('../../../server/ai/meta.ts', {
   namedExports: { ...realMeta, fetchLinkMeta: async () => linkMeta },
 })
 mock.module('../../../server/data/notes.js', {

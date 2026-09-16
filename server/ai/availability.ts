@@ -13,11 +13,13 @@
 // scrape sits behind a >=2.5s throttle precisely because Instagram soft-bans,
 // and a soft-ban is indistinguishable from a deleted post. A wrong guess there
 // is a deleted real save, so the answer is simply "unknown".
-import { oembedEndpoint, get } from './meta.js'
+import { oembedEndpoint, get } from './meta.ts'
 
 export const ALIVE = 'alive'
 export const DEAD = 'dead'
 export const UNKNOWN = 'unknown'
+
+type Availability = typeof ALIVE | typeof DEAD | typeof UNKNOWN
 
 const CHECKABLE_HOST = /(^|\.)tiktok\.com$/
 
@@ -26,7 +28,17 @@ const CHECKABLE_HOST = /(^|\.)tiktok\.com$/
 // note's — those return UNKNOWN and the note is left exactly as it was.
 const GONE = new Set([400, 404, 410])
 
-export function isCheckable(url) {
+// A thrown value is `unknown`, and meta.ts's get() hangs the HTTP status on
+// the error it throws (see the comment there). Local rather than shared: the
+// security floor in server/lib/ is the only place a shared guard would belong,
+// and putting one there needs a test that fails without it.
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null
+}
+
+// Narrows as well as answers: everything below it needs the url as a string,
+// and this is where the `typeof` check that proves it already lives.
+export function isCheckable(url: string | null): url is string {
   if (typeof url !== 'string' || !url) return false
   try {
     return CHECKABLE_HOST.test(new URL(url).hostname.toLowerCase()) && !!oembedEndpoint(url)
@@ -35,7 +47,7 @@ export function isCheckable(url) {
   }
 }
 
-export async function checkAvailability(url) {
+export async function checkAvailability(url: string | null): Promise<Availability> {
   if (!isCheckable(url)) return UNKNOWN
   const endpoint = oembedEndpoint(url)
   if (!endpoint) return UNKNOWN
@@ -46,6 +58,7 @@ export async function checkAvailability(url) {
     await res.json()
     return ALIVE
   } catch (e) {
-    return GONE.has(e?.status) ? DEAD : UNKNOWN
+    const status = isRecord(e) ? e.status : undefined
+    return typeof status === 'number' && GONE.has(status) ? DEAD : UNKNOWN
   }
 }

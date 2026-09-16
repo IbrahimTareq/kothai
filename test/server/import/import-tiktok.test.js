@@ -12,8 +12,8 @@ import {
   parseTikTokDate,
   canonicalVideoUrl,
   deriveNote,
-} from '../../../server/import/tiktok.js'
-import { findImporter } from '../../../server/import/index.js'
+} from '../../../server/import/tiktok.ts'
+import { findImporter } from '../../../server/import/index.ts'
 
 function files(obj) {
   return new Map(Object.entries(obj).map(([k, v]) => [k, Buffer.from(typeof v === 'string' ? v : JSON.stringify(v))]))

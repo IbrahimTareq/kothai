@@ -7,11 +7,11 @@ import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 
 let getImpl
-const realMeta = await import('../../../server/ai/meta.js')
-mock.module('../../../server/ai/meta.js', {
+const realMeta = await import('../../../server/ai/meta.ts')
+mock.module('../../../server/ai/meta.ts', {
   namedExports: { ...realMeta, get: (...a) => getImpl(...a) },
 })
-const { checkAvailability, isCheckable, ALIVE, DEAD, UNKNOWN } = await import('../../../server/ai/availability.js')
+const { checkAvailability, isCheckable, ALIVE, DEAD, UNKNOWN } = await import('../../../server/ai/availability.ts')
 
 const TT = 'https://www.tiktok.com/video/7325881953608158497'
 const httpError = status => {

@@ -22,7 +22,7 @@ mock.module('../../../../server/ai/providers/remote-http.ts', {
   },
 })
 
-const { createRemoteProvider } = await import('../../../../server/ai/providers/remote.js')
+const { createRemoteProvider } = await import('../../../../server/ai/providers/remote.ts')
 
 let server, base, routes
 
@@ -124,6 +124,16 @@ test('embedText truncates very long input to a TOKEN budget, the same way the lo
   // so far fewer characters fit — which is the entire point.
   await p.embedText('م'.repeat(9000))
   assert.ok(seen.input.length < ascii / 3, `non-Latin budget landed at ${seen.input.length} chars`)
+})
+
+test('an embedding that is not an array reads as absent', async () => {
+  // A non-array embedding used to be handed straight back untouched, so a
+  // string or an object from the endpoint travelled on as if it were a vector
+  // and failed far from here, in whatever tried to store or compare it.
+  routes['/embeddings'] = (_req, res) => okJson(res, { data: [{ embedding: 'not-a-vector' }] })
+  const p = make()
+  await p.init()
+  assert.deepEqual(await p.embedText('hello'), [])
 })
 
 test('classify requests json_schema and normalises the result', async () => {
@@ -238,6 +248,16 @@ test('answer posts the shared system prompt and returns trimmed text', async () 
   assert.match(seen.messages[1].content, /QUESTION: q/)
 })
 
+test('an answer whose content is not a string reads as no text', async () => {
+  // A content field that was truthy but not a string used to reach .trim() and
+  // throw TypeError out of answer(), so one malformed reply from the endpoint
+  // surfaced as a crash in this app rather than an empty answer.
+  routes['/chat/completions'] = (_req, res) => okJson(res, { choices: [{ message: { content: { text: 'hi' } } }] })
+  const p = make()
+  await p.init()
+  assert.equal(await p.answer({ question: 'q', contextNotes: [] }), '')
+})
+
 test('a role with no model name configured is disabled, not attempted', async () => {
   const p = createRemoteProvider({ baseUrl: base, apiKey: null, models: { llm: 'm', embed: '', vision: '' } })
   await p.init()
@@ -299,4 +319,19 @@ test('listModels returns the endpoint catalogue for every role', async () => {
     m.llm.map(x => x.key),
     ['llama3.2:3b', 'nomic-embed-text'],
   )
+})
+
+test('a malformed catalogue row is skipped, not allowed to fail the whole probe', async () => {
+  // A null row used to throw on m.id inside init()'s catch-all, which logged it
+  // as a probe failure: one bad row emptied the catalogue for every role and
+  // reported the endpoint as down while it was answering perfectly well.
+  routes['/models'] = (_req, res) => okJson(res, { data: [{ id: 'llama3.2:3b' }, null, { id: 'nomic-embed-text' }] })
+  const p = make()
+  await p.init()
+  const m = await p.listModels()
+  assert.deepEqual(
+    m.llm.map(x => x.key),
+    ['llama3.2:3b', 'nomic-embed-text'],
+  )
+  assert.equal(p.statusSnapshot().aggregate.state, 'ready', 'a bad row is not the endpoint being down')
 })

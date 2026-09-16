@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { DatabaseSync } from 'node:sqlite'
-import { ensureColumns } from '../../../server/data/db.js'
+import { ensureColumns } from '../../../server/data/db.ts'
 
 function db() {
   const d = new DatabaseSync(':memory:')
@@ -41,6 +41,8 @@ test('leaves existing rows intact, with NULL in the new column', () => {
   d.prepare('INSERT INTO t (a) VALUES (?)').run('keep me')
   ensureColumns(d, 't', { b: 'TEXT' })
   const row = d.prepare('SELECT * FROM t').get()
+  // get() is typed `row | undefined`; the row is the whole point of the test.
+  assert.ok(row)
   assert.equal(row.a, 'keep me')
   assert.equal(row.b, null)
 })

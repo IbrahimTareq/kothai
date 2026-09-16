@@ -21,7 +21,7 @@ let flushes = 0
 const realStore = await import('../../../server/data/notes.js')
 const realTags = await import('../../../server/lib/tags.ts')
 const realTagvocab = await import('../../../server/data/tagvocab.js')
-const realNormalise = await import('../../../server/ai/normalise.js')
+const realNormalise = await import('../../../server/ai/normalise.ts')
 const realCollections = await import('../../../server/data/collections.js')
 const realSettings = await import('../../../server/data/settings.js')
 
@@ -68,7 +68,7 @@ mock.module('../../../server/data/settings.js', {
 })
 
 const enrich = await import('../../../server/ai/enrich.js')
-const { EMBED_RECIPE } = await import('../../../server/ai/prompts.js')
+const { EMBED_RECIPE } = await import('../../../server/ai/prompts.ts')
 
 function reset(list = []) {
   notes = list.map(n => ({ ...n }))

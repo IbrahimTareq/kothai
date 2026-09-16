@@ -20,7 +20,7 @@ process.env.STASH_MODELS_DIR = MODELS_DIR
 
 const { initProvider, _reset } = await import('../../../server/ai/index.js')
 const { handleModelFiles, handleDeleteModelFile } = await import('../../../server/routes/models.js')
-const { _resetDb } = await import('../../../server/data/db.js')
+const { _resetDb } = await import('../../../server/data/db.ts')
 const settings = await import('../../../server/data/settings.js')
 
 after(() => rmSync(MODELS_DIR, { recursive: true, force: true }))

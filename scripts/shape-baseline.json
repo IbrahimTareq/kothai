@@ -51,20 +51,20 @@
     "lines": 293,
     "exports": 29
   },
-  "server/ai/meta.js": {
-    "lines": 819,
+  "server/ai/meta.ts": {
+    "lines": 972,
     "exports": 25
   },
-  "server/ai/prompts.js": {
-    "lines": 301,
+  "server/ai/prompts.ts": {
+    "lines": 363,
     "exports": 16
   },
-  "server/ai/providers/local.js": {
-    "lines": 451,
+  "server/ai/providers/local.ts": {
+    "lines": 545,
     "exports": 25
   },
-  "server/ai/providers/remote.js": {
-    "lines": 355,
+  "server/ai/providers/remote.ts": {
+    "lines": 441,
     "exports": 14
   },
   "server/config.ts": {
@@ -79,8 +79,8 @@
     "lines": 621,
     "exports": 23
   },
-  "server/import/instagram.js": {
-    "lines": 481,
+  "server/import/instagram.ts": {
+    "lines": 535,
     "exports": 9
   },
   "server/routes/import.js": {

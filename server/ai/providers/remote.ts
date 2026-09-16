@@ -13,6 +13,8 @@ import path from 'node:path'
 import { getAiConfig } from '../../config.ts'
 import { findEndpoint } from '../endpoints.ts'
 import { FeatureDisabledError, ROLES } from '../roles.ts'
+import type { Role, RoleStatus } from '../roles.ts'
+import type { Aggregate, ProviderStatus } from '../routing.ts'
 import { Circuit } from '../circuit.ts'
 import {
   CLASSIFY_SCHEMA,
@@ -23,11 +25,46 @@ import {
   answerUserPrompt,
   embedInput,
   clipToTokens,
-} from '../prompts.js'
-import { normaliseClassification, stripThinking } from '../normalise.js'
+} from '../prompts.ts'
+import { normaliseClassification, stripThinking } from '../normalise.ts'
 import { postJson, getJson, TIMEOUTS, RemoteError } from './remote-http.ts'
+import type {
+  AnswerArgs,
+  AnswerStreamArgs,
+  ClassifyArgs,
+  DescribeImageArgs,
+  EmbedOptions,
+  ModelOption,
+  ModelSelection,
+  Provider,
+  ProviderConfig,
+  ProviderModule,
+  ValidationResult,
+} from './types.ts'
 
-const MIME = {
+// Everything below the transport arrives as `unknown`: postJson and getJson
+// hand back whatever the endpoint sent, which is the reason this guard exists
+// at all. Local rather than shared: server/lib/ is the security floor and a
+// guard added there needs a test that fails without it (CLAUDE.md).
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null
+}
+
+// The `{ data: [{ id }] }` list both /models and the embeddings catalogue
+// answer with. A non-object row or a non-string id reads as absent rather than
+// being trusted into the catalogue the settings UI offers.
+function modelIds(payload: unknown): string[] {
+  const data = isRecord(payload) ? payload.data : null
+  if (!Array.isArray(data)) return []
+  const ids: string[] = []
+  for (const row of data) {
+    const id = isRecord(row) ? row.id : null
+    if (typeof id === 'string' && id) ids.push(id)
+  }
+  return ids
+}
+
+const MIME: Record<string, string> = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
@@ -39,20 +76,30 @@ const MIME = {
 // Factory rather than module-level state so tests can drive several
 // independent instances against a throwaway server. The module's default
 // export set (bottom of file) is the singleton the facade resolves.
-export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath = '' }) {
+interface RemoteProviderOptions {
+  // '' rather than null for "no endpoint configured". Every read of it here is
+  // a truthiness check, and one falsy spelling is what keeps the postJson calls
+  // behind guard() from having to re-prove it is a string.
+  baseUrl: string
+  apiKey: string | null
+  models: ModelSelection
+  embeddingsPath?: string
+}
+
+export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath = '' }: RemoteProviderOptions) {
   const circuit = new Circuit({ threshold: 5, cooldownMs: 60_000 })
-  let catalogue = []
+  let catalogue: string[] = []
   // Some providers keep their embedding models out of /models entirely —
   // OpenRouter lists hundreds of chat models there and not one embedding, and
   // serves the real list from a path of its own. When the catalogue entry names
   // that path, the embedding role gets its own list; otherwise it shares the
   // one catalogue, which is what every other provider needs.
-  let embedCatalogue = []
+  let embedCatalogue: string[] = []
   let probeError = ''
 
-  const modelFor = role => (models?.[role] || '').trim()
+  const modelFor = (role: Role) => (models?.[role] || '').trim()
 
-  function guard(role) {
+  function guard(role: Role) {
     if (!baseUrl)
       throw new FeatureDisabledError(role, {
         code: `${role}_off`,
@@ -73,7 +120,7 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
 
   // Every network call funnels through here so success/failure bookkeeping
   // for the circuit happens in exactly one place.
-  async function call(fn) {
+  async function call<T>(fn: () => Promise<T>): Promise<T> {
     try {
       const out = await fn()
       circuit.recordSuccess()
@@ -86,18 +133,26 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
     }
   }
 
-  const chat = (body, timeoutMs, retries) =>
+  const chat = (body: unknown, timeoutMs: number, retries?: number) =>
     postJson(baseUrl, '/chat/completions', body, { apiKey, timeoutMs, ...(retries === undefined ? {} : { retries }) })
-  const textOf = r => (r?.choices?.[0]?.message?.content || '').trim()
+  // Same posture as modelIds: a choice, message or content that is not the
+  // shape the OpenAI wire format promises reads as no text at all.
+  const textOf = (r: unknown): string => {
+    const choices = isRecord(r) ? r.choices : null
+    const first: unknown = Array.isArray(choices) ? choices[0] : null
+    const message = isRecord(first) ? first.message : null
+    const content = isRecord(message) ? message.content : null
+    return (typeof content === 'string' ? content : '').trim()
+  }
 
   return {
     capabilities: () => ({ kind: 'remote', managesResidency: false, downloadsWeights: false }),
 
-    roleEnabled: role => Boolean(baseUrl) && Boolean(modelFor(role)),
+    roleEnabled: (role: Role) => Boolean(baseUrl) && Boolean(modelFor(role)),
 
     available: () => Boolean(baseUrl) && circuit.allow(),
 
-    validateModel(role, key) {
+    validateModel(role: Role, key: string): ValidationResult {
       const k = (key || '').trim()
       if (!k) return { ok: false, error: `${role} model name cannot be empty` }
       if (k.length > 200) return { ok: false, error: `${role} model name is too long` }
@@ -113,8 +168,9 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
       return { ok: true }
     },
 
-    async listModels() {
-      const asOpts = ids => ids.map(id => ({ key: id, label: id, desc: '', best: [], sizeBytes: 0 }))
+    async listModels(): Promise<Record<Role, ModelOption[]>> {
+      const asOpts = (ids: string[]): ModelOption[] =>
+        ids.map(id => ({ key: id, label: id, desc: '', best: [], sizeBytes: 0 }))
       const opts = asOpts(catalogue)
       return { llm: opts, embed: embedCatalogue.length ? asOpts(embedCatalogue) : opts, vision: opts }
     },
@@ -128,7 +184,7 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
         // retries:0 — a probe is a question about right now, and something is
         // waiting on the answer (boot, or the wizard's Test connection button).
         const res = await getJson(baseUrl, '/models', { apiKey, timeoutMs: TIMEOUTS.probe, retries: 0 })
-        catalogue = (res?.data || []).map(m => m.id).filter(Boolean)
+        catalogue = modelIds(res)
         probeError = ''
         circuit.recordSuccess()
         // Best-effort and deliberately after the success bookkeeping above: a
@@ -137,41 +193,54 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
         if (embeddingsPath) {
           try {
             const em = await getJson(baseUrl, embeddingsPath, { apiKey, timeoutMs: TIMEOUTS.probe, retries: 0 })
-            embedCatalogue = (em?.data || []).map(m => m.id).filter(Boolean)
+            embedCatalogue = modelIds(em)
           } catch {
             embedCatalogue = []
           }
         }
       } catch (e) {
-        probeError = e.message
+        // `e.transient !== false` was the old read, and it has to survive the
+        // narrowing: a failure that is NOT a RemoteError carried no transient
+        // flag, `undefined !== false` was true, and treating an unclassified
+        // probe failure as transient is what keeps it from opening the circuit
+        // on the first try.
+        const remote = e instanceof RemoteError ? e : null
+        probeError = e instanceof Error ? e.message : String(e)
         circuit.recordFailure({
-          transient: e.transient !== false,
-          message: e.message,
-          retryAfterMs: e.retryAfterMs || 0,
+          transient: remote?.transient !== false,
+          message: probeError,
+          retryAfterMs: remote?.retryAfterMs || 0,
         })
       }
     },
 
-    async applySettings(patch) {
+    async applySettings(patch: ModelSelection) {
       models = { ...models, ...patch }
     },
 
     async shutdown() {},
 
-    statusSnapshot() {
-      const roles = {}
-      for (const role of ROLES) {
-        if (!baseUrl || !modelFor(role)) roles[role] = { state: 'off', progress: 0, message: '', model: modelFor(role) }
-        else if (!circuit.allow())
-          roles[role] = { state: 'error', progress: 0, message: circuit.reason, model: modelFor(role) }
-        else if (probeError) roles[role] = { state: 'error', progress: 0, message: probeError, model: modelFor(role) }
-        else roles[role] = { state: 'ready', progress: 100, message: 'Ready', model: modelFor(role) }
+    statusSnapshot(): ProviderStatus {
+      // Named per role rather than accumulated into an empty object: a
+      // Record<Role, RoleStatus> cannot be built up key by key without
+      // asserting it is complete before it is.
+      const statusFor = (role: Role): RoleStatus => {
+        const model = modelFor(role)
+        if (!baseUrl || !model) return { state: 'off', progress: 0, message: '', model }
+        if (!circuit.allow()) return { state: 'error', progress: 0, message: circuit.reason, model }
+        if (probeError) return { state: 'error', progress: 0, message: probeError, model }
+        return { state: 'ready', progress: 100, message: 'Ready', model }
+      }
+      const roles: Record<Role, RoleStatus> = {
+        llm: statusFor('llm'),
+        embed: statusFor('embed'),
+        vision: statusFor('vision'),
       }
       // No endpoint configured at all is AI-free mode, not a fault — the same
       // state local reports when every role's residency is 'off'.
       const anyOn = ROLES.some(r => roles[r].state !== 'off')
       const broken = anyOn && ROLES.some(r => roles[r].state === 'error')
-      const aggregate = broken
+      const aggregate: Aggregate = broken
         ? { state: 'error', progress: 0, message: probeError || circuit.reason || 'Inference endpoint unavailable' }
         : { state: 'ready', progress: 100, message: 'Ready' }
       return { roles, aggregate }
@@ -183,7 +252,7 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
     // the configured model NAME, since it may equally be serving nomic, bge
     // or an OpenAI text-embedding-*, none of which want the prefix. See
     // prompts.js's embedInput.
-    async embedText(text, { mode = 'document' } = {}) {
+    async embedText(text: string, { mode = 'document' }: EmbedOptions = {}): Promise<number[]> {
       guard('embed')
       const clean = embedInput(clipToTokens(text), { mode, model: modelFor('embed') }) || ' '
       const res = await call(() =>
@@ -194,10 +263,13 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
           { apiKey, timeoutMs: TIMEOUTS.embed },
         ),
       )
-      return res?.data?.[0]?.embedding || []
+      const data = isRecord(res) ? res.data : null
+      const first: unknown = Array.isArray(data) ? data[0] : null
+      const embedding = isRecord(first) ? first.embedding : null
+      return Array.isArray(embedding) ? embedding : []
     },
 
-    async classify({ text, hasImage, isUrl, now, knownTags = [], candidateTags = [] }) {
+    async classify({ text, hasImage, isUrl, now, knownTags = [], candidateTags = [] }: ClassifyArgs) {
       guard('llm')
       const messages = [
         { role: 'system', content: classifySystemPrompt({ now, knownTags, candidateTags }) },
@@ -239,7 +311,10 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
         }
         raw = textOf(await call(() => chat({ model, messages }, TIMEOUTS.classify)))
       }
-      let parsed
+      // Annotated, not narrowed: normaliseClassification's own parameter type
+      // is all-optional and all-unknown precisely because this is the model's
+      // raw answer, so a guard here would only re-decide what it already does.
+      let parsed: Record<string, unknown>
       try {
         parsed = JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g, ''))
       } catch {
@@ -248,7 +323,7 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
       return normaliseClassification(parsed, { hasImage, isUrl, text })
     },
 
-    async describeImage({ absPath, prompt }) {
+    async describeImage({ absPath, prompt }: DescribeImageArgs): Promise<string> {
       guard('vision')
       const bytes = await readFile(absPath)
       const mime = MIME[path.extname(absPath).toLowerCase()] || 'image/png'
@@ -274,7 +349,7 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
       return stripThinking(textOf(res))
     },
 
-    async answer({ question, contextNotes, history = [] }) {
+    async answer({ question, contextNotes, history = [] }: AnswerArgs): Promise<string> {
       guard('llm')
       const res = await call(() =>
         chat(
@@ -295,48 +370,52 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
     // token channel to forward. Emitting the finished answer as a single delta
     // keeps one code path in the route and the client: a remote provider just
     // streams in one piece.
-    async answerStream({ question, contextNotes, history = [], onToken }) {
+    async answerStream({ question, contextNotes, history = [], onToken }: AnswerStreamArgs): Promise<string> {
       const text = await this.answer({ question, contextNotes, history })
       if (text) onToken?.(text)
       return text
     },
-  }
+  } satisfies Provider
 }
 
 // ---- module singleton, what the facade resolves --------------------------
-let singleton = null
+let singleton: Provider | null = null
 
 export function capabilities() {
   return (singleton || boot({})).capabilities()
 }
-export function roleEnabled(role) {
+export function roleEnabled(role: Role) {
   return (singleton || boot({})).roleEnabled(role)
 }
 export function available() {
   return (singleton || boot({})).available()
 }
-export function validateModel(role, key) {
+export function validateModel(role: Role, key: string) {
   return (singleton || boot({})).validateModel(role, key)
 }
 export function statusSnapshot() {
   return (singleton || boot({})).statusSnapshot()
 }
-export const listModels = (...a) => (singleton || boot({})).listModels(...a)
-export const applySettings = (...a) => (singleton || boot({})).applySettings(...a)
-export const classify = (...a) => (singleton || boot({})).classify(...a)
-export const embedText = (...a) => (singleton || boot({})).embedText(...a)
-export const describeImage = (...a) => (singleton || boot({})).describeImage(...a)
-export const answer = (...a) => (singleton || boot({})).answer(...a)
+export const listModels = (...a: Parameters<Provider['listModels']>) => (singleton || boot({})).listModels(...a)
+export const applySettings = (...a: Parameters<Provider['applySettings']>) =>
+  (singleton || boot({})).applySettings(...a)
+export const classify = (...a: Parameters<Provider['classify']>) => (singleton || boot({})).classify(...a)
+export const embedText = (...a: Parameters<Provider['embedText']>) => (singleton || boot({})).embedText(...a)
+export const describeImage = (...a: Parameters<Provider['describeImage']>) =>
+  (singleton || boot({})).describeImage(...a)
+export const answer = (...a: Parameters<Provider['answer']>) => (singleton || boot({})).answer(...a)
 export const shutdown = async () => {
   if (singleton) await singleton.shutdown()
 }
 
-function boot(models) {
+function boot(models: ModelSelection): Provider {
   // Read at boot, not at import: this is what makes re-pointing the endpoint a
   // matter of calling init() again rather than restarting the container.
   const { baseUrl, apiKey, providerId } = getAiConfig()
   singleton = createRemoteProvider({
-    baseUrl,
+    // '' is this provider's spelling of "no endpoint configured" — see
+    // RemoteProviderOptions.
+    baseUrl: baseUrl || '',
     apiKey,
     // Per-provider quirks live in the catalogue, not in this transport.
     embeddingsPath: findEndpoint(providerId)?.embeddingsPath || '',
@@ -348,7 +427,14 @@ function boot(models) {
 // Config arrives as { local, remote } — both selections, since the caller
 // resolves settings before it knows which provider was chosen. This provider
 // reads only the remote half.
-export async function init({ remote = {} } = {}) {
-  boot(remote)
-  await singleton.init()
+export async function init({ remote = {} }: ProviderConfig = {}) {
+  // boot() returns the singleton it just installed, so this is the same object
+  // the module-level forwarders above will resolve.
+  await boot(remote).init()
 }
+
+// See types.ts: the module's own exports, checked against the contract. This is
+// the object server/ai/index.js resolves — the factory above is asserted
+// separately, because the cross-provider contract test drives an instance of it
+// rather than this namespace.
+export type RemoteProvider = ProviderModule<typeof import('./remote.ts')>

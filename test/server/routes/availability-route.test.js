@@ -12,7 +12,7 @@ let verdicts = {} // url -> 'alive' | 'dead' | 'unknown'
 
 const realStore = await import('../../../server/data/notes.js')
 const realCollections = await import('../../../server/data/collections.js')
-const realAvail = await import('../../../server/ai/availability.js')
+const realAvail = await import('../../../server/ai/availability.ts')
 
 mock.module('../../../server/data/notes.js', {
   namedExports: {
@@ -41,7 +41,7 @@ mock.module('../../../server/data/notes.js', {
 mock.module('../../../server/data/collections.js', {
   namedExports: { ...realCollections, deleteItemEverywhere: async () => {} },
 })
-mock.module('../../../server/ai/availability.js', {
+mock.module('../../../server/ai/availability.ts', {
   namedExports: {
     ...realAvail,
     isCheckable: url => typeof url === 'string' && url.includes('tiktok.com'),

@@ -2,7 +2,7 @@
 // vision), the residency map controlling whether each role is off / on-demand
 // / always-loaded, and a `configured` flag marking that the first-run picker
 // has been completed. Single row (id = 1) in the `settings` table.
-import { getDb } from './db.js'
+import { getDb } from './db.ts'
 import { DEFAULTS } from '../ai/presets.ts'
 import { ROLES, POLICIES, resolveResidency } from '../ai/roles.ts'
 

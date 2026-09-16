@@ -5,7 +5,7 @@
 // what the model's output gets turned into before it reaches a note.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { normaliseClassification, stripThinking } from '../../../server/ai/normalise.js'
+import { normaliseClassification, stripThinking } from '../../../server/ai/normalise.ts'
 
 function tagsOf(n = 8, prefix = 'tag') {
   return Array.from({ length: n }, (_, i) => `${prefix}${i}`)

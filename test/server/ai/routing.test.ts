@@ -1,9 +1,11 @@
-// Unit tests for server/ai/routing.js — which provider serves which role.
+// Unit tests for server/ai/routing.ts — which provider serves which role.
 // Pure resolution, so every branch is testable without a provider, an
 // endpoint or the SDK.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { resolveRoleProviders, kindsInUse } from '../../../server/ai/routing.js'
+import { resolveRoleProviders, kindsInUse } from '../../../server/ai/routing.ts'
+import type { ProviderStatus, RoleProviders } from '../../../server/ai/routing.ts'
+import type { RoleStatus } from '../../../server/ai/roles.ts'
 
 test('provider=local puts every role on-device', () => {
   const r = resolveRoleProviders({ provider: 'local', localAvailable: true })
@@ -40,14 +42,22 @@ test('kindsInUse lists each provider once', () => {
   assert.deepEqual(kindsInUse({ llm: 'local', embed: 'local', vision: 'local' }), ['local'])
 })
 
-import { mergeStatus, mergeListModels, mergeCapabilities } from '../../../server/ai/routing.js'
+import { mergeStatus, mergeListModels, mergeCapabilities } from '../../../server/ai/routing.ts'
 
-const ALL_LOCAL = { llm: 'local', embed: 'local', vision: 'local' }
-const MIXED = { llm: 'remote', embed: 'local', vision: 'remote' }
+const ALL_LOCAL: RoleProviders = { llm: 'local', embed: 'local', vision: 'local' }
+const MIXED: RoleProviders = { llm: 'remote', embed: 'local', vision: 'remote' }
 
-const snap = (state, extra = {}) => ({ state, progress: state === 'ready' ? 100 : 0, message: '', model: '', ...extra })
+const snap = (state: RoleStatus['state'], extra: Partial<RoleStatus> = {}): RoleStatus => ({
+  state,
+  progress: state === 'ready' ? 100 : 0,
+  message: '',
+  model: '',
+  ...extra,
+})
 
-const SNAPSHOTS = {
+// Keyed by provider kind exactly as ai/index.js builds these maps — see
+// routing.ts's ByKind.
+const SNAPSHOTS: Record<string, ProviderStatus> = {
   local: {
     roles: { llm: snap('off'), embed: snap('ready'), vision: snap('off') },
     aggregate: { state: 'ready', progress: 100, message: 'Local ready' },
@@ -70,7 +80,7 @@ test('mixed mode takes each role from the provider that owns it', () => {
 })
 
 test('a failing remote endpoint makes the mixed aggregate an error', () => {
-  const snapshots = {
+  const snapshots: Record<string, ProviderStatus> = {
     ...SNAPSHOTS,
     remote: {
       roles: { llm: snap('error', { message: 'endpoint down' }), embed: snap('error'), vision: snap('error') },
@@ -83,7 +93,7 @@ test('a failing remote endpoint makes the mixed aggregate an error', () => {
 })
 
 test('a downloading local model makes the mixed aggregate loading, and carries its progress', () => {
-  const snapshots = {
+  const snapshots: Record<string, ProviderStatus> = {
     ...SNAPSHOTS,
     local: {
       roles: {
@@ -100,7 +110,7 @@ test('a downloading local model makes the mixed aggregate loading, and carries i
 })
 
 test('every role off in mixed mode is ready (AI-free), not an error', () => {
-  const snapshots = {
+  const snapshots: Record<string, ProviderStatus> = {
     local: {
       roles: { llm: snap('off'), embed: snap('off'), vision: snap('off') },
       aggregate: { state: 'ready', progress: 100, message: '' },
@@ -114,7 +124,7 @@ test('every role off in mixed mode is ready (AI-free), not an error', () => {
 })
 
 test('a fault outranks a download still in progress', () => {
-  const snapshots = {
+  const snapshots: Record<string, ProviderStatus> = {
     local: {
       roles: { llm: snap('off'), embed: snap('loading', { progress: 10 }), vision: snap('off') },
       aggregate: { state: 'loading', progress: 10, message: 'Downloading' },

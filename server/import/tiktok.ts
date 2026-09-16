@@ -1,5 +1,5 @@
 // Parses TikTok's "Download your data" JSON export into neutral import items.
-// Same trust posture as server/import/instagram.js: this JSON arrives from a
+// Same trust posture as server/import/instagram.ts: this JSON arrives from a
 // user-uploaded file, so it's treated as hostile input, and every unexpected
 // shape degrades to "fewer items" rather than a failed import.
 //
@@ -10,7 +10,31 @@
 // and pay for an LLM enrichment pass on each one.
 //
 // Verified against a real export (197 favorites, 13 collections, Aug 2026).
-import { tryJson, clip } from './untrusted.ts'
+import { tryJson, clip, isRecord } from './untrusted.ts'
+
+// A favourite as the parser emits it. `savedAt` is Unix SECONDS out of
+// parseFavorites, but deriveNote is reachable with the export's raw date
+// string still in place (see its own guard), so both forms are named.
+interface ImportItem {
+  url: string
+  poster: string
+  savedAt: number | string
+}
+
+// parseFavorites hangs its two counters off the array it returns — see the
+// comment at the assignment. Named so parse() can read them back.
+interface ParsedItems extends Array<ImportItem> {
+  skipped?: number
+  unusableUrl?: number
+}
+
+// parse()'s contract, shared with server/import/instagram.ts and consumed by
+// server/routes/import.js.
+interface ParseResult {
+  items: ImportItem[]
+  collections: { name: string; urls: string[] }[]
+  warnings: string[]
+}
 
 export const name = 'tiktok'
 export const label = 'TikTok'
@@ -32,7 +56,7 @@ const FAVORITES_MARKER = Buffer.from('FavoriteVideoList')
 const VIDEO_LIST_KEY = 'FavoriteVideoList'
 const COLLECTION_LIST_KEY = 'FavoriteCollectionList'
 
-// Caps mirror server/import/instagram.js — cheap guards against a hostile
+// Caps mirror server/import/instagram.ts — cheap guards against a hostile
 // export, not general-purpose validation.
 const MAX_ITEMS = 100_000
 const MAX_URL_LEN = 2048
@@ -49,7 +73,7 @@ const MAX_TS = 4_102_444_800 // 2100-01-01Z in Unix seconds
 const TIKTOK_VIDEO_ID = /\/(?:share\/)?video\/(\d+)/
 const TIKTOK_HOST = /(^|\.)(tiktok\.com|tiktokv\.com)$/
 
-export function sniff(files) {
+export function sniff(files: Map<string, Buffer>): boolean {
   for (const [key, buf] of files) {
     if (USER_DATA_FILE.test(key)) return true
     if (Buffer.isBuffer(buf) && buf.includes(FAVORITES_MARKER)) return true
@@ -61,7 +85,7 @@ export function sniff(files) {
 // same reason instagram.js's walks are: JSON.parse is not recursive in V8, so a
 // maliciously deep document genuinely reaches our own walk and would otherwise
 // overflow the stack. Past the cap we stop descending and report truncation.
-function findLists(node, key, out, depth = 0) {
+function findLists(node: unknown, key: string, out: unknown[][], depth = 0): boolean {
   if (depth > MAX_WALK_DEPTH) return true // truncated
   let truncated = false
   if (Array.isArray(node)) {
@@ -80,7 +104,7 @@ function findLists(node, key, out, depth = 0) {
 // Parsing it with `new Date(str)` would read it as LOCAL time, silently
 // shifting every imported note by the user's offset (and putting notes in the
 // wrong day at the edges), so the zone is made explicit here.
-export function parseTikTokDate(str) {
+export function parseTikTokDate(str: unknown): number {
   if (typeof str !== 'string') return 0
   const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(str.trim())
   if (!m) return 0
@@ -93,7 +117,7 @@ export function parseTikTokDate(str) {
 // Only explicit http(s) on a TikTok host, short enough not to become a broken
 // link everywhere it flows. A stray "javascript:" or an off-platform URL must
 // never survive the parse — these become clickable card URLs on the client.
-function isUsableLink(v) {
+function isUsableLink(v: unknown): v is string {
   if (typeof v !== 'string' || v.length > MAX_URL_LEN) return false
   if (!v.startsWith('http://') && !v.startsWith('https://')) return false
   try {
@@ -106,18 +130,22 @@ function isUsableLink(v) {
 // Share URL → the canonical form oEmbed answers. Anything already in a
 // canonical shape (or that carries no readable id) is returned untouched
 // rather than guessed at.
-export function canonicalVideoUrl(link) {
+export function canonicalVideoUrl(link: string): string {
   const m = TIKTOK_VIDEO_ID.exec(link)
   if (!m) return link
   return `https://www.tiktok.com/video/${m[1]}`
 }
 
-export function parseFavorites(rows, maxItems = MAX_ITEMS) {
-  const items = []
+export function parseFavorites(rows: unknown[], maxItems = MAX_ITEMS): ParsedItems {
+  const items: ParsedItems = []
   let skipped = 0
   let unusableUrl = 0
   for (const row of rows) {
-    const link = row?.Link ?? row?.link
+    // One narrowing for the whole row rather than a `?.` on each read: every
+    // `row?.X` below was already undefined for a non-object row, so skipping
+    // it here parses exactly the same export.
+    if (!isRecord(row)) continue
+    const link = row.Link ?? row.link
     if (!isUsableLink(link)) {
       // Only worth reporting when the row carried SOMETHING url-shaped that we
       // then refused — a row with no Link at all simply isn't a saved video.
@@ -132,8 +160,8 @@ export function parseFavorites(rows, maxItems = MAX_ITEMS) {
     }
     items.push({
       url: canonicalVideoUrl(link),
-      poster: clip(row?.Author || ''), // absent in every export seen so far; enrichment fills the handle in from oEmbed
-      savedAt: parseTikTokDate(row?.Date),
+      poster: clip(row.Author || ''), // absent in every export seen so far; enrichment fills the handle in from oEmbed
+      savedAt: parseTikTokDate(row.Date),
     })
   }
   items.skipped = skipped
@@ -144,19 +172,20 @@ export function parseFavorites(rows, maxItems = MAX_ITEMS) {
 // Collection NAMES, which is all the export carries: each row is
 // { Date, FavoriteCollection: "Umrah" } — when the collection was created,
 // never which videos are in it. See parse() for what that costs.
-export function parseCollectionNames(rows) {
-  const names = []
+export function parseCollectionNames(rows: unknown[]): string[] {
+  const names: string[] = []
   for (const row of rows) {
-    const n = clip(row?.FavoriteCollection ?? row?.Name ?? '')
+    if (!isRecord(row)) continue
+    const n = clip(row.FavoriteCollection ?? row.Name ?? '')
     if (n && !names.includes(n)) names.push(n)
   }
   return names
 }
 
-export function parse(files) {
-  let items = []
-  const collectionNames = []
-  const warnings = []
+export function parse(files: Map<string, Buffer>): ParseResult {
+  let items: ImportItem[] = []
+  const collectionNames: string[] = []
+  const warnings: string[] = []
   let remaining = MAX_ITEMS
   let itemsSkippedByCap = 0
   let itemsWithUnusableUrl = 0
@@ -172,7 +201,7 @@ export function parse(files) {
     }
     sawFavoritesFile = true
 
-    const videoLists = []
+    const videoLists: unknown[][] = []
     truncated = findLists(json, VIDEO_LIST_KEY, videoLists) || truncated
     for (const rows of videoLists) {
       const parsed = parseFavorites(rows, remaining)
@@ -182,7 +211,7 @@ export function parse(files) {
       itemsWithUnusableUrl += parsed.unusableUrl || 0
     }
 
-    const collectionLists = []
+    const collectionLists: unknown[][] = []
     truncated = findLists(json, COLLECTION_LIST_KEY, collectionLists) || truncated
     for (const rows of collectionLists) {
       for (const n of parseCollectionNames(rows)) if (!collectionNames.includes(n)) collectionNames.push(n)
@@ -219,7 +248,7 @@ export function parse(files) {
 // export carries no caption or handle, so title is a placeholder that the
 // background enrich pass replaces with the real caption (and `account` with
 // the real handle) once oEmbed answers for the canonical URL built above.
-export function deriveNote(item) {
+export function deriveNote(item: ImportItem) {
   const savedAt = parseTikTokDate(item.savedAt) || (typeof item.savedAt === 'number' ? item.savedAt : 0)
   const seconds = Number.isFinite(savedAt) && savedAt > 0 && savedAt <= MAX_TS ? savedAt : 0
   return {

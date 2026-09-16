@@ -3,8 +3,8 @@
 // entry today; TikTok / Twitter / Pocket importers slot in here without
 // touching the route, and the client's per-source Import sections address
 // them by `name`.
-import * as instagram from './instagram.js'
-import * as tiktok from './tiktok.js'
+import * as instagram from './instagram.ts'
+import * as tiktok from './tiktok.ts'
 
 const IMPORTERS = [instagram, tiktok]
 
@@ -14,17 +14,17 @@ const IMPORTERS = [instagram, tiktok]
 // export" instead of the generic "not a recognized export" — which is the
 // difference between a useful error and a dead end once several platforms'
 // exports are all just "some JSON files".
-export function getImporter(name) {
+export function getImporter(name: string) {
   return IMPORTERS.find(i => i.name === name) || null
 }
 
 // The source names the UI may send, so the route can reject an unknown one
 // without leaking module internals.
-export function importerNames() {
+export function importerNames(): string[] {
   return IMPORTERS.map(i => i.name)
 }
 
-export function findImporter(files) {
+export function findImporter(files: Map<string, Buffer>) {
   for (const importer of IMPORTERS) {
     // files comes straight from an untrusted upload (see server/lib/zip.js);
     // a future importer's sniff() poking at attacker-controlled names/content

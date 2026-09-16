@@ -69,7 +69,7 @@ test('a mixed save survives a restart: endpoint ids land in the remote store, no
   provider.caps = caps({ llm: 'remote', embed: 'local', vision: 'remote' }, true)
   provider.applied = []
 
-  const { _resetDb } = await import('../../../server/data/db.js')
+  const { _resetDb } = await import('../../../server/data/db.ts')
   const settings = await import('../../../server/data/settings.js')
   const { DEFAULTS } = await import('../../../server/ai/presets.ts')
 

@@ -6,7 +6,46 @@
 // This module sits on the same trust boundary as server/lib/zip.js: the JSON
 // here comes straight from a user-uploaded archive, so it's treated as
 // hostile input, not just "unusual" input — see the guards below.
-import { tryJson, clip } from './untrusted.ts'
+import { tryJson, clip, isRecord } from './untrusted.ts'
+
+// A saved post as the parser emits it. `savedAt` is Unix SECONDS (see
+// normalizeTimestamp), 0 meaning "no usable date".
+interface ImportItem {
+  url: string
+  poster: string
+  savedAt: number
+}
+
+// parseSavedPosts hangs two counters off the array it returns — see the
+// comment at the assignment. Named so parse() can read them back.
+interface ParsedItems extends Array<ImportItem> {
+  skipped?: number
+  unusableUrl?: number
+}
+
+// Likewise for the collections walk's truncation flag, hung off the Map.
+interface CollectionMap extends Map<string, Set<string>> {
+  truncated?: boolean
+}
+
+// One saved_posts row normalized out of either export shape — see readRow.
+// `timestamp` and `poster` stay `unknown`: they come straight off untrusted
+// JSON and are handed to normalizeTimestamp/clip, both of which take unknown
+// and do their own checking.
+interface RawRow {
+  href: string | undefined
+  timestamp: unknown
+  poster: unknown
+  hadHttpHref: boolean
+}
+
+// parse()'s contract, shared with server/import/tiktok.ts and consumed by
+// server/routes/import.js.
+interface ParseResult {
+  items: ImportItem[]
+  collections: { name: string; urls: string[] }[]
+  warnings: string[]
+}
 
 export const name = 'instagram'
 // Shown by the route when an upload doesn't match this importer. Kept beside
@@ -46,7 +85,7 @@ const MAX_COLLECTION_HREFS = 200_000 // total href memberships retained per save
 // memberships and the route resolves them against notes already in the
 // database, so "posts now, collections later" works. Requiring saved_posts
 // here would reject that upload as "not a recognized export".
-export function sniff(files) {
+export function sniff(files: Map<string, Buffer>): boolean {
   return [...files.keys()].some(k => SAVED_POSTS_FILE.test(k) || COLLECTIONS_FILE.test(k))
 }
 
@@ -54,7 +93,7 @@ export function sniff(files) {
 // "httpfoo://" or worse, and these values eventually become clickable card
 // URLs on the client, so a stray "javascript:" or "data:" URL must never
 // survive the parse (defense in depth; the client should also validate).
-function isHttpUrl(v) {
+function isHttpUrl(v: unknown): v is string {
   return typeof v === 'string' && (v.startsWith('http://') || v.startsWith('https://'))
 }
 
@@ -68,7 +107,7 @@ function isHttpUrl(v) {
 // would otherwise sail through as "a number > 0") and anything past MAX_TS,
 // so a hostile timestamp degrades to "no timestamp" (falls back to "now" in
 // deriveNote) instead of producing an Invalid Date that throws downstream.
-function normalizeTimestamp(t) {
+function normalizeTimestamp(t: unknown): number {
   if (typeof t !== 'number' || !Number.isFinite(t) || t <= 0) return 0
   const ms = t > 1e11 ? t : t * 1000
   const seconds = ms / 1000
@@ -82,17 +121,21 @@ function normalizeTimestamp(t) {
 // (not checked after picking an entry) so that an oversized permalink-shaped
 // href can still lose to a shorter, valid href on the same row instead of
 // dropping the whole row.
-function isUsableHref(v) {
+function isUsableHref(v: unknown): v is string {
   return isHttpUrl(v) && v.length <= MAX_URL_LEN
 }
 
 // Shared "what's this node's collection name" heuristic: used both to decide
 // whether parseCollections' walk should claim a node, and to know when
 // collectHrefs should stop descending (see parseCollections below).
-function nodeName(node) {
-  if (!node || typeof node !== 'object') return null
+function nodeName(node: unknown): string | null {
+  if (!isRecord(node)) return null
   if (typeof node.title === 'string' && node.title.trim()) return clip(node.title.trim())
-  const v = node?.string_map_data?.Name?.value
+  // The `node?.string_map_data?.Name?.value` chain, one guard per hop: an
+  // optional chain short-circuits on a non-object exactly as isRecord does.
+  const bag = node.string_map_data
+  const entry = isRecord(bag) ? bag.Name : null
+  const v = isRecord(entry) ? entry.value : null
   if (typeof v === 'string' && v.trim()) return clip(v.trim())
   // Newer Accounts Center exports carry the name as a label_values row
   // ({ label: 'Name', value: 'Recipes' }) instead of string_map_data.
@@ -103,8 +146,8 @@ function nodeName(node) {
 // `label_values` and not the `dict` bags nested under it — a hashtag entry is
 // `{ dict: [{ label: 'Name', value: 'cinematic' }] }`, so descending into
 // dicts here would invent a collection per hashtag.
-function labelValuesName(node) {
-  const rows = Array.isArray(node?.label_values) ? node.label_values : null
+function labelValuesName(node: unknown): string | null {
+  const rows = isRecord(node) && Array.isArray(node.label_values) ? node.label_values : null
   if (!rows) return null
   const hit = rows.find(e => e?.label === 'Name' && typeof e.value === 'string' && e.value.trim())
   return hit ? clip(hit.value.trim()) : null
@@ -122,9 +165,10 @@ function labelValuesName(node) {
 // either shape down to the same { href, timestamp, poster } triple; every
 // guard (scheme, length, permalink preference, timestamp bounding) applies
 // identically to both.
-function rowsOf(json) {
+function rowsOf(json: unknown): unknown[] {
   if (Array.isArray(json)) return json
-  return Array.isArray(json?.saved_saved_media) ? json.saved_saved_media : []
+  const media = isRecord(json) ? json.saved_saved_media : null
+  return Array.isArray(media) ? media : []
 }
 
 // Ordered so an href always beats a bare string value, and a permalink-shaped
@@ -132,11 +176,13 @@ function rowsOf(json) {
 // restricted to permalink-shaped strings: label names are localized, so we
 // can't reliably single out the "URL" row, and a Caption that happens to be a
 // bare http(s) URL must not be mistaken for the post's own link.
-function pickUrl(entries) {
-  const hrefs = entries.map(e => e?.href).filter(isUsableHref)
+function pickUrl(entries: unknown[]): string | undefined {
+  const hrefs = entries.map(e => (isRecord(e) ? e.href : undefined)).filter(isUsableHref)
   return (
     hrefs.find(h => IG_PERMALINK.test(h)) ??
-    entries.map(e => e?.value).filter(v => isUsableHref(v) && IG_PERMALINK.test(v))[0] ??
+    entries
+      .map(e => (isRecord(e) ? e.value : undefined))
+      .filter((v): v is string => isUsableHref(v) && IG_PERMALINK.test(v))[0] ??
     hrefs[0]
   )
 }
@@ -149,11 +195,14 @@ function pickUrl(entries) {
 // Depth-bounded for the same reason parseCollections' walk is: this reads an
 // untrusted upload, and a hostile export can nest `dict` arbitrarily deep.
 // Past the cap we return '' (no poster) rather than overflowing the stack.
-function labelIn(entries, label, depth = 0) {
+function labelIn(entries: unknown[], label: string, depth = 0): string {
   if (depth > MAX_WALK_DEPTH) return ''
   for (const e of entries) {
-    if (e?.label === label && typeof e.value === 'string' && e.value.trim()) return e.value
-    const inner = Array.isArray(e?.dict) ? e.dict : null
+    // `e?.label`/`e?.dict` were both undefined for a non-object entry, so
+    // skipping it here reads the same export.
+    if (!isRecord(e)) continue
+    if (e.label === label && typeof e.value === 'string' && e.value.trim()) return e.value
+    const inner = Array.isArray(e.dict) ? e.dict : null
     if (inner) {
       const hit = labelIn(inner, label, depth + 1)
       if (hit) return hit
@@ -162,8 +211,8 @@ function labelIn(entries, label, depth = 0) {
   return ''
 }
 
-function readRow(row) {
-  if (Array.isArray(row?.label_values)) {
+function readRow(row: unknown): RawRow {
+  if (isRecord(row) && Array.isArray(row.label_values)) {
     const entries = row.label_values
     const href = pickUrl(entries)
     return {
@@ -184,25 +233,30 @@ function readRow(row) {
       hadHttpHref: entries.some(e => isHttpUrl(e?.href) || (isHttpUrl(e?.value) && IG_PERMALINK.test(e.value))),
     }
   }
-  const vals = Object.values(row?.string_map_data || {})
+  const bag = isRecord(row) ? row.string_map_data : null
+  const vals = isRecord(bag) ? Object.values(bag).filter(isRecord) : []
   // Resolve ONE entry and read both href and timestamp off it — selecting
   // them independently let a post pick up e.g. an "Owner" entry's
   // timestamp while using "Saved on"'s href, silently mismatching the two.
   const entry =
-    vals.find(v => isUsableHref(v?.href) && IG_PERMALINK.test(v.href)) ?? vals.find(v => isUsableHref(v?.href))
+    vals.find(v => isUsableHref(v.href) && IG_PERMALINK.test(v.href)) ?? vals.find(v => isUsableHref(v.href))
+  const href = entry?.href
   return {
-    href: entry?.href,
+    // isUsableHref once more, only so the type says what the find above
+    // already guaranteed — `entry` is by construction an entry whose href
+    // passed it. Not a second validation; the same one, where it is visible.
+    href: isUsableHref(href) ? href : undefined,
     timestamp: entry?.timestamp,
-    poster: row?.title,
-    hadHttpHref: vals.some(v => isHttpUrl(v?.href)),
+    poster: isRecord(row) ? row.title : undefined,
+    hadHttpHref: vals.some(v => isHttpUrl(v.href)),
   }
 }
 
 // `maxItems` is a remaining-budget the caller passes in (see parse()) so the
 // cap applies across an entire import, not reset per file.
-export function parseSavedPosts(json, maxItems = MAX_ITEMS) {
+export function parseSavedPosts(json: unknown, maxItems = MAX_ITEMS): ParsedItems {
   const rows = rowsOf(json)
-  const items = []
+  const items: ParsedItems = []
   let skipped = 0
   let unusableUrl = 0
   for (const row of rows) {
@@ -234,18 +288,18 @@ export function parseSavedPosts(json, maxItems = MAX_ITEMS) {
 // export collapsed into one bogus collection named "Media". Here, titles are
 // known to be structural: only a `label_values` Name row names a collection,
 // and everything below a row is that row's members.
-function isLabelValuesCollections(json) {
+function isLabelValuesCollections(json: unknown): json is unknown[] {
   return Array.isArray(json) && json.some(row => labelValuesName(row))
 }
 
-function parseCollectionsLabelValues(rows) {
-  const map = new Map()
+function parseCollectionsLabelValues(rows: unknown[]): CollectionMap {
+  const map: CollectionMap = new Map()
   let truncated = false
   let retained = 0
 
   // Same depth/count bounding as the generic walk — this reads the same
   // untrusted upload, so a hostile export must degrade, not crash.
-  function collect(node, out, depth) {
+  function collect(node: unknown, out: string[], depth: number) {
     if (depth > MAX_WALK_DEPTH) {
       truncated = true
       return
@@ -254,7 +308,7 @@ function parseCollectionsLabelValues(rows) {
       for (const v of node) collect(v, out, depth + 1)
       return
     }
-    if (!node || typeof node !== 'object') return
+    if (!isRecord(node)) return
     if (isUsableHref(node.href)) out.push(node.href)
     for (const v of Object.values(node)) collect(v, out, depth + 1)
   }
@@ -262,10 +316,10 @@ function parseCollectionsLabelValues(rows) {
   for (const row of rows) {
     const name = labelValuesName(row)
     if (!name) continue
-    const hrefs = []
+    const hrefs: string[] = []
     collect(row, hrefs, 0)
     if (!hrefs.length) continue
-    const set = map.get(name) || new Set()
+    const set = map.get(name) || new Set<string>()
     for (const h of hrefs) {
       if (retained >= MAX_COLLECTION_HREFS) {
         truncated = true
@@ -283,9 +337,9 @@ function parseCollectionsLabelValues(rows) {
 // Collections shapes vary by export version, so instead of pinning a schema we
 // deep-walk: any object owning a name-ish string AND (transitively) a list of
 // instagram hrefs becomes a collection. Unknown shapes → empty map, never an error.
-export function parseCollections(json) {
+export function parseCollections(json: unknown): CollectionMap {
   if (isLabelValuesCollections(json)) return parseCollectionsLabelValues(json)
-  const map = new Map()
+  const map: CollectionMap = new Map()
   let truncated = false
   let retained = 0 // total distinct href memberships committed to `map` so far — see MAX_COLLECTION_HREFS
 
@@ -302,7 +356,7 @@ export function parseCollections(json) {
   // collection like `{title:'Recipes', list:[{title:'natgeo', href:A}]}`
   // would have its href stolen into an invented "natgeo" collection instead
   // of staying under "Recipes".
-  function collectHrefs(node, out, depth, isTop) {
+  function collectHrefs(node: unknown, out: string[], depth: number, isTop: boolean) {
     if (depth > MAX_WALK_DEPTH) {
       truncated = true
       return
@@ -311,14 +365,14 @@ export function parseCollections(json) {
       for (const v of node) collectHrefs(v, out, depth + 1, false)
       return
     }
-    if (node && typeof node === 'object') {
+    if (isRecord(node)) {
       if (!isTop && !isHttpUrl(node.href) && nodeName(node)) return // nested wrapper collection — claimed separately by walk()
       if (isHttpUrl(node.href)) out.push(node.href)
       for (const v of Object.values(node)) collectHrefs(v, out, depth + 1, false)
     }
   }
 
-  const walk = (node, depth) => {
+  const walk = (node: unknown, depth: number) => {
     if (depth > MAX_WALK_DEPTH) {
       truncated = true
       return
@@ -327,15 +381,15 @@ export function parseCollections(json) {
       for (const v of node) walk(v, depth + 1)
       return
     }
-    if (!node || typeof node !== 'object') return
+    if (!isRecord(node)) return
     // An href-bearing node is a link entry, not a collection, even if it
     // happens to carry a `title` (the poster's username, typically).
     const name = isHttpUrl(node.href) ? null : nodeName(node)
     if (name) {
-      const hrefs = []
+      const hrefs: string[] = []
       collectHrefs(node, hrefs, depth + 1, true)
       if (hrefs.length) {
-        const set = map.get(name) || new Set()
+        const set = map.get(name) || new Set<string>()
         for (const h of hrefs) {
           if (retained >= MAX_COLLECTION_HREFS) {
             truncated = true
@@ -356,10 +410,10 @@ export function parseCollections(json) {
   return map
 }
 
-export function parse(files) {
-  let items = []
-  const collections = new Map()
-  const warnings = []
+export function parse(files: Map<string, Buffer>): ParseResult {
+  let items: ImportItem[] = []
+  const collections = new Map<string, Set<string>>()
+  const warnings: string[] = []
   let remaining = MAX_ITEMS
   let itemsSkippedByCap = 0
   let itemsWithUnusableUrl = 0
@@ -430,7 +484,7 @@ export function parse(files) {
 // Classifies by URL PATHNAME only — matching against the raw URL string would
 // let a query string like `?ref=/tv/` on a plain post link misclassify it as
 // a video.
-function isReelUrl(url) {
+function isReelUrl(url: string): boolean {
   let pathname = url
   try {
     pathname = new URL(url).pathname
@@ -443,7 +497,7 @@ function isReelUrl(url) {
 // Import item → phase-one note fields (store.addNote spread overrides its
 // defaults, so createdAt here wins — imports keep their IG saved-on date and
 // interleave into the timeline where they belong).
-export function deriveNote(item) {
+export function deriveNote(item: ImportItem) {
   const isReel = isReelUrl(item.url)
   // Total guard: deriveNote can be called directly (e.g. in tests, or by a
   // future caller) with input that bypassed parseSavedPosts' own timestamp
@@ -474,7 +528,7 @@ export function deriveNote(item) {
 // that merely starts with "@something". Used by notes.js's load() migration,
 // mirroring backlog.js's deriveAiMarkers pattern.
 const TITLE_ACCOUNT_RE = /^@(\S+) · (?:Reel|Post)$/
-export function deriveAccountFromTitle(title) {
+export function deriveAccountFromTitle(title: unknown): string | null {
   const m = TITLE_ACCOUNT_RE.exec(String(title || ''))
   return m ? m[1] : null
 }
