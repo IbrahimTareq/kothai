@@ -72,7 +72,7 @@ export function buildVocabulary(notes, { limit = 60 } = {}) {
 // or the tag is already present (idempotent across repeated classify runs).
 export function withAccountTag(tagList, account) {
   if (!account) return tagList
-  const t = normalizeTag('@' + account)
+  const t = normalizeTag(`@${account}`)
   if (!t || tagList.includes(t)) return tagList
   return [t, ...tagList]
 }

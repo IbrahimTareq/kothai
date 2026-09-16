@@ -194,7 +194,7 @@ function Field({ label, value, big }: { label: string; value: string; big?: bool
   return (
     <div className="exp-field">
       <div className="exp-field-label">{label}</div>
-      <div className={'exp-field-val' + (big ? ' big' : '')}>{value}</div>
+      <div className={`exp-field-val${big ? ' big' : ''}`}>{value}</div>
     </div>
   )
 }
@@ -415,11 +415,7 @@ export function ExpandedView({
 
   return (
     <div className="exp-overlay" onClick={onClose}>
-      <div
-        className={'exp-shell' + (dragging ? ' dragging' : '')}
-        style={shellStyle}
-        onClick={e => e.stopPropagation()}
-      >
+      <div className={`exp-shell${dragging ? ' dragging' : ''}`} style={shellStyle} onClick={e => e.stopPropagation()}>
         <button className="exp-close-m" aria-label="Close" onClick={onClose}>
           <Icon name="close" size={16} />
         </button>
@@ -427,7 +423,7 @@ export function ExpandedView({
             .exp-overlay) so .exp-side's own vertical scroll — the tags/notes/
             spaces form — is never in competition with them. */}
         <div
-          className={'exp-main' + mainFade}
+          className={`exp-main${mainFade}`}
           ref={mainRef}
           onPointerDown={onGestureStart}
           onPointerMove={onGestureMove}
@@ -507,7 +503,7 @@ export function ExpandedView({
                     <span className="exp-coll-name">{c.name}</span>
                     <button
                       className="exp-coll-x"
-                      aria-label={'Remove from ' + c.name}
+                      aria-label={`Remove from ${c.name}`}
                       onClick={() => onRemoveFrom(c.id, item.id)}
                     >
                       <Icon name="close" size={11} />
@@ -516,7 +512,7 @@ export function ExpandedView({
                 ))}
                 <div className="exp-coll-add" ref={pickRef}>
                   <button
-                    className={'exp-coll-plus' + (picking ? ' open' : '')}
+                    className={`exp-coll-plus${picking ? ' open' : ''}`}
                     aria-expanded={picking}
                     onClick={() => setPicking(!picking)}
                   >

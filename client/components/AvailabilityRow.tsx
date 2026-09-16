@@ -65,7 +65,7 @@ export function AvailabilityRow() {
     const parts = [`Checked ${r.checked}`, `${r.alive} fine`]
     if (r.dead > 0) parts.push(`${r.dead} gone`)
     if (r.unknown > 0) parts.push(`${r.unknown} couldn't be reached`)
-    let s = parts.join(', ') + '.'
+    let s = `${parts.join(', ')}.`
     if (r.cleared) s += ` ${r.cleared} came back and had their mark cleared.`
     return s
   }

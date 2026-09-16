@@ -130,8 +130,8 @@ export function TweaksPanel({ title = 'Tweaks', children }: { title?: string; ch
       x: Math.min(maxRight, Math.max(PAD, offsetRef.current.x)),
       y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y)),
     }
-    panel.style.right = offsetRef.current.x + 'px'
-    panel.style.bottom = offsetRef.current.y + 'px'
+    panel.style.right = `${offsetRef.current.x}px`
+    panel.style.bottom = `${offsetRef.current.y}px`
   }, [])
 
   useEffect(() => {
@@ -417,7 +417,7 @@ export function TweakColor({
   options?: ColorOption[]
   onChange: (v: ColorOption) => void
 }) {
-  if (!options || !options.length) {
+  if (!options?.length) {
     return (
       <div className="twk-row twk-row-h">
         <div className="twk-lbl">

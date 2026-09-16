@@ -198,7 +198,7 @@ export function SettingsView({
     const parts = [`Erased ${c.notes} note${c.notes === 1 ? '' : 's'}`]
     if (c.collections > 0) parts.push(`${c.collections} space${c.collections === 1 ? '' : 's'}`)
     if (c.chats > 0) parts.push(`${c.chats} chat${c.chats === 1 ? '' : 's'}`)
-    return parts.join(', ') + '. Your models and settings are untouched.'
+    return `${parts.join(', ')}. Your models and settings are untouched.`
   }
 
   // Approximate RAM footprint: idle = always-on roles, peak = everything enabled.
@@ -228,7 +228,7 @@ export function SettingsView({
       {switching && (
         <div className="settings-progress">
           <div className="settings-progress-track">
-            <div className="settings-progress-bar" style={{ width: (vault.pct || 0) + '%' }}></div>
+            <div className="settings-progress-bar" style={{ width: `${vault.pct || 0}%` }}></div>
           </div>
           <span className="settings-progress-msg mono">{vault.msg || vault.txt}</span>
         </div>
@@ -522,14 +522,14 @@ export function SettingsView({
                 action={
                   <div className="seg" role="group" aria-label="Theme">
                     <button
-                      className={'seg-btn' + (theme === 'light' ? ' on' : '')}
+                      className={`seg-btn${theme === 'light' ? ' on' : ''}`}
                       aria-pressed={theme === 'light'}
                       onClick={() => setTheme('light')}
                     >
                       Light
                     </button>
                     <button
-                      className={'seg-btn' + (theme === 'dark' ? ' on' : '')}
+                      className={`seg-btn${theme === 'dark' ? ' on' : ''}`}
                       aria-pressed={theme === 'dark'}
                       onClick={() => setTheme('dark')}
                     >

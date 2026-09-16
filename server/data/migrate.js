@@ -27,7 +27,7 @@ async function withLegacyFile(name, fn) {
   if (!existsSync(file)) return
   const data = await readJson(file, null)
   if (data !== null) fn(data)
-  await rename(file, file + '.migrated').catch(() => {})
+  await rename(file, `${file}.migrated`).catch(() => {})
 }
 
 function inTransaction(db, fn) {

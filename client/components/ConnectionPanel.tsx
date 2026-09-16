@@ -91,7 +91,7 @@ export function ConnectionPanel({
               sentence ended up set in Geist Mono at 14px, the loudest of the
               mismatches this surface had. A hostname is machine text and keeps
               the mono face; the sentence is prose and takes the title role. */}
-          <span className={'conn-where' + (host ? ' mono' : '')}>
+          <span className={`conn-where${host ? ' mono' : ''}`}>
             {cfg.endpoint.configured ? host || 'a remote endpoint' : 'Models run on this machine'}
           </span>
           <span className="conn-sub">

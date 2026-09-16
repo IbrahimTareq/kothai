@@ -396,11 +396,11 @@ export default function App() {
               On phones the active marker is a single pill that slides between
               them (see foundation/responsive.css), driven by --tab. */}
           <div
-            className={'rail-group rail-tabs' + (tabIndex >= 0 ? ' has-active' : '')}
+            className={`rail-group rail-tabs${tabIndex >= 0 ? ' has-active' : ''}`}
             style={{ '--tab': lastTab.current } as React.CSSProperties}
           >
             <button
-              className={'rail-btn' + (nav === 'all' ? ' active' : '')}
+              className={`rail-btn${nav === 'all' ? ' active' : ''}`}
               onClick={() => {
                 navigate('all')
                 setSearch('')
@@ -409,12 +409,12 @@ export default function App() {
               <Icon name="all" size={20} />
               <span className="rail-tip">Everything</span>
             </button>
-            <button className={'rail-btn' + (nav === 'core' ? ' active' : '')} onClick={goAsk}>
+            <button className={`rail-btn${nav === 'core' ? ' active' : ''}`} onClick={goAsk}>
               <Icon name="ask" size={20} />
               <span className="rail-tip">Ask</span>
             </button>
             <button
-              className={'rail-btn' + (navTab === 'spaces' ? ' active' : '')}
+              className={`rail-btn${navTab === 'spaces' ? ' active' : ''}`}
               onClick={() => {
                 navigate('spaces')
                 setSearch('')
@@ -426,7 +426,7 @@ export default function App() {
             {/* Settings is a page like the three above it, so it rides the same
                 marker. On phones it is the bar's fourth tab; on the desktop
                 rail it is the last of the destinations, above the divider. */}
-            <button className={'rail-btn' + (nav === 'settings' ? ' active' : '')} onClick={toggleSettings}>
+            <button className={`rail-btn${nav === 'settings' ? ' active' : ''}`} onClick={toggleSettings}>
               <Icon name="settings" size={21} />
               <span className="rail-tip">Settings</span>
             </button>
@@ -518,7 +518,7 @@ export default function App() {
           click happened here, so this is where the answer belongs. Both icon
           and label are rendered at once and cross-faded so the pill never
           resizes mid-transition; `saved` drives the whole sequence. */}
-      <button className={'fab' + (captured ? ' saved' : '')} onClick={() => setCaptureOpen(true)}>
+      <button className={`fab${captured ? ' saved' : ''}`} onClick={() => setCaptureOpen(true)}>
         <span className="fab-ico">
           <Icon name="plus" size={20} stroke={2} />
           <Icon name="check" size={20} stroke={2.2} />

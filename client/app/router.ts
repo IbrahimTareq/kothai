@@ -46,7 +46,7 @@ function navOf(seg: string[]): string {
     case 'type':
       return TYPES.includes(seg[1]) ? seg[1] : 'all'
     case 'space':
-      return seg[1] ? 'space:' + seg[1] : 'all'
+      return seg[1] ? `space:${seg[1]}` : 'all'
     default:
       return 'all'
   }
@@ -56,13 +56,13 @@ function navOf(seg: string[]): string {
 export function routeToPath(nav: string, item?: string): string {
   const base = baseOf(nav)
   if (!item) return base
-  return (base === '/' ? '' : base) + '/item/' + encodeURIComponent(item)
+  return `${base === '/' ? '' : base}/item/${encodeURIComponent(item)}`
 }
 
 // The Ask screen with a conversation open. Separate from routeToPath because a
 // chat id hangs off /ask directly, where an item id hangs off /item.
 export function chatPath(chatId: string | null): string {
-  return chatId ? '/ask/' + encodeURIComponent(chatId) : '/ask'
+  return chatId ? `/ask/${encodeURIComponent(chatId)}` : '/ask'
 }
 
 function baseOf(nav: string): string {
@@ -76,6 +76,6 @@ function baseOf(nav: string): string {
     case 'settings':
       return '/settings'
     default:
-      return nav.startsWith('space:') ? '/space/' + nav.slice(6) : '/type/' + nav
+      return nav.startsWith('space:') ? `/space/${nav.slice(6)}` : `/type/${nav}`
   }
 }

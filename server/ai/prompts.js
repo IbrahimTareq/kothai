@@ -70,7 +70,7 @@ export function classifyUserPrompt({ text, hasImage, isUrl }) {
   const hints = []
   if (hasImage) hints.push('An image is attached to this item.')
   if (isUrl) hints.push('The text is (or contains) a URL.')
-  return `${hints.length ? hints.join(' ') + '\n\n' : ''}ITEM:\n${(text || '(no text — image only)').slice(0, 3000)}`
+  return `${hints.length ? `${hints.join(' ')}\n\n` : ''}ITEM:\n${(text || '(no text — image only)').slice(0, 3000)}`
 }
 
 // ---- embedding input -----------------------------------------------------

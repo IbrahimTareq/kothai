@@ -15,14 +15,14 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
 
-const read = (p: string) => readFileSync(new URL('../../' + p, import.meta.url), 'utf8')
+const read = (p: string) => readFileSync(new URL(`../../${p}`, import.meta.url), 'utf8')
 
 test('no view hand-rolls a board element — they all go through components/Board', () => {
   for (const f of readdirSync(new URL('../../client/views', import.meta.url))) {
-    const src = read('client/views/' + f)
+    const src = read(`client/views/${f}`)
     assert.ok(
       !/className=\{?['"`]board[ '"`]/.test(src),
-      `client/views/${f} builds its own .board; use the shared Board component ` + `or its cards get no layout at all`,
+      `client/views/${f} builds its own .board; use the shared Board component or its cards get no layout at all`,
     )
   }
 })

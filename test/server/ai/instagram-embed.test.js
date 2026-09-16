@@ -287,7 +287,7 @@ test('parseInstagramCarousel: de-dupes a slide url repeated by the surrounding j
 })
 
 test('parseInstagramCarousel: caps a runaway deck at 20 slides', () => {
-  const html = 'edge_sidecar_to_children ' + Array.from({ length: 40 }, (_, i) => slide(i)).join(' ')
+  const html = `edge_sidecar_to_children ${Array.from({ length: 40 }, (_, i) => slide(i)).join(' ')}`
   assert.equal(parseInstagramCarousel(html).length, 20)
 })
 

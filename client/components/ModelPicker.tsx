@@ -10,7 +10,7 @@ import { relevantModels } from '../domain/modelRelevance'
 export type Role = 'llm' | 'embed' | 'vision'
 
 export function fmtGB(bytes: number): string {
-  return bytes ? (bytes / 1e9).toFixed(1) + ' GB' : ''
+  return bytes ? `${(bytes / 1e9).toFixed(1)} GB` : ''
 }
 
 export const ROLE_META: Record<Role, { title: string; sub: string }> = {
@@ -55,7 +55,7 @@ export function ResidencyControl({
         {POLICY_META.map(p => (
           <button
             key={p.key}
-            className={'residency-btn mono' + (value === p.key ? ' active' : '')}
+            className={`residency-btn mono${value === p.key ? ' active' : ''}`}
             disabled={busy}
             onClick={() => onPick(p.key)}
           >
@@ -79,7 +79,7 @@ interface ModelRowProps {
 
 function ModelRow({ p, active, busy, switching, pct, onPick }: ModelRowProps) {
   return (
-    <button className={'model-row' + (active ? ' active' : '')} disabled={busy} onClick={onPick}>
+    <button className={`model-row${active ? ' active' : ''}`} disabled={busy} onClick={onPick}>
       <span className="model-radio">{active && <span className="model-radio-dot"></span>}</span>
       <span className="model-main">
         <span className="model-name">{p.label}</span>
@@ -123,7 +123,7 @@ export function RoleAccordion({
   const current = presets.find(p => p.key === currentKey)
   const meta = ROLE_META[role]
   return (
-    <div className={'role-acc' + (open ? ' open' : '')}>
+    <div className={`role-acc${open ? ' open' : ''}`}>
       <button className="role-acc-head" onClick={() => setOpen(o => !o)} aria-expanded={open}>
         <span className="role-acc-info">
           <span className="role-acc-title mono">{meta.title}</span>
@@ -266,7 +266,7 @@ export function RemoteModelField({
                 type="button"
                 role="option"
                 aria-selected={id === value}
-                className={'remote-model-opt mono' + (i === active ? ' active' : '') + (id === value ? ' picked' : '')}
+                className={`remote-model-opt mono${i === active ? ' active' : ''}${id === value ? ' picked' : ''}`}
                 onMouseEnter={() => setActive(i)}
                 // mousedown, not click: the input's blur would otherwise fire
                 // first and close the list out from under the click.

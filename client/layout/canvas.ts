@@ -18,7 +18,7 @@ export const DEFAULT_H = 160 // assumed card height until React Flow has measure
 
 export const EMPTY_DOC: CanvasDoc = { nodes: [], edges: [] }
 
-export const itemNodeId = (itemId: string) => 'item:' + itemId
+export const itemNodeId = (itemId: string) => `item:${itemId}`
 
 export interface Bounds {
   minX: number
@@ -121,7 +121,7 @@ export function childrenOf(doc: CanvasDoc, groupId: string): CanvasNode[] {
 // order, full column width minus padding, and grows the column to fit.
 export function stackColumn(doc: CanvasDoc, groupId: string): CanvasDoc {
   const g = doc.nodes.find(n => n.id === groupId)
-  if (!g || g.type !== 'group') return doc
+  if (g?.type !== 'group') return doc
   const kids = childrenOf(doc, groupId).sort((a, b) => a.y - b.y || a.x - b.x)
   const moved = new Map<string, CanvasNode>()
   let y = g.y + COL_HEAD + COL_PAD

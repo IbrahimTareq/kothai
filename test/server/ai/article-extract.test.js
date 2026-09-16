@@ -46,7 +46,7 @@ test('extractArticle: malformed html returns null instead of throwing', () => {
 })
 
 test('extractArticle: long articles are capped at 8000 chars', () => {
-  const huge = '<p>' + 'All work and no play makes Jack a dull boy. '.repeat(600) + '</p>'
+  const huge = `<p>${'All work and no play makes Jack a dull boy. '.repeat(600)}</p>`
   const out = extractArticle(articlePage(huge))
   assert.ok(out)
   assert.equal(out.length, 8000)

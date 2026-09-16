@@ -32,7 +32,7 @@ const spy = () => {
 // Fails with `status` the first `times` calls, then succeeds.
 function flaky(status, times, headers = {}) {
   let n = 0
-  handler = (req, res) => {
+  handler = (_req, res) => {
     if (n++ < times) {
       res.writeHead(status, { 'content-type': 'application/json', ...headers })
       return res.end(JSON.stringify({ error: { message: 'slow down' } }))

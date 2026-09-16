@@ -206,8 +206,7 @@ function hasClassToken(attrs, token) {
 // hasClassToken). Returns the raw tag text, or null.
 function findTagWithClass(html, tagName, classToken) {
   const re = new RegExp(`<${tagName}\\b[^>]*>`, 'gi')
-  let m
-  while ((m = re.exec(html))) {
+  for (let m = re.exec(html); m; m = re.exec(html)) {
     if (hasClassToken(m[0], classToken)) return m[0]
   }
   return null
@@ -455,10 +454,10 @@ export function parseRedditPost(payload) {
   // deleted bodies carry none of that and are dropped.
   const comments = (payload?.[1]?.data?.children || [])
     .map(c => c?.data)
-    .filter(c => c && c.body && !c.stickied && !['[deleted]', '[removed]'].includes(c.body.trim()))
+    .filter(c => c?.body && !c.stickied && !['[deleted]', '[removed]'].includes(c.body.trim()))
     .slice(0, MAX_COMMENTS)
     .map(c => `u/${c.author || 'someone'}: ${clean(c.body).slice(0, MAX_COMMENT_CHARS)}`)
-  if (comments.length) parts.push('Top comments:\n' + comments.join('\n'))
+  if (comments.length) parts.push(`Top comments:\n${comments.join('\n')}`)
 
   return {
     siteTitle: clean(post.title)?.slice(0, 300) || null,
@@ -791,8 +790,7 @@ export function parseInstagramCarousel(html) {
   re.lastIndex = at
   const out = []
   const seen = new Set()
-  let m
-  while ((m = re.exec(html)) && out.length < MAX_SLIDES) {
+  for (let m = re.exec(html); m && out.length < MAX_SLIDES; m = re.exec(html)) {
     const url = unescapeEmbedUrl(m[1])
     if (!isSafeFetchUrl(url) || seen.has(url)) continue
     seen.add(url)

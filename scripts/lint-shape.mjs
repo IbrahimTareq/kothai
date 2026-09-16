@@ -95,4 +95,4 @@ function main() {
 }
 
 // Only run the CLI when invoked directly, so the test can import checkFile.
-if (process.argv[1] && process.argv[1].endsWith('lint-shape.mjs')) main()
+if (process.argv[1]?.endsWith('lint-shape.mjs')) main()

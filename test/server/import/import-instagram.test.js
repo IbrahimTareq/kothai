@@ -216,7 +216,10 @@ test('parseSavedPosts: normalizes millisecond timestamps and rejects out-of-rang
       // JSON.parse('1e400') yields Infinity — a "number > 0" check alone would let this through.
       {
         title: 'huge',
-        string_map_data: { 'Saved on': { href: 'https://www.instagram.com/p/HUGE/', timestamp: 1e400 } },
+        string_map_data: {
+          // biome-ignore lint/correctness/noPrecisionLoss: the precision loss (-> Infinity) is the case under test.
+          'Saved on': { href: 'https://www.instagram.com/p/HUGE/', timestamp: 1e400 },
+        },
       },
       // Finite but absurdly far in the future.
       {
@@ -269,7 +272,7 @@ test('parseSavedPosts: prefers a permalink-shaped href over an earlier Profile h
 })
 
 test('parseSavedPosts: rejects an oversized href rather than truncating it into a broken link', () => {
-  const hugeUrl = 'https://www.instagram.com/p/' + 'A'.repeat(3000) + '/'
+  const hugeUrl = `https://www.instagram.com/p/${'A'.repeat(3000)}/`
   const json = {
     saved_saved_media: [
       { title: 'huge', string_map_data: { 'Saved on': { href: hugeUrl, timestamp: 1 } } },
@@ -397,7 +400,7 @@ test('parseSavedPosts: an oversized permalink href falls back to a shorter usabl
   // Length must be part of the SELECTION predicate, not a check applied
   // after `entry` is already chosen — otherwise an oversized permalink drops
   // the whole row even though a perfectly usable fallback href exists.
-  const hugePermalink = 'https://www.instagram.com/p/' + 'A'.repeat(3000) + '/'
+  const hugePermalink = `https://www.instagram.com/p/${'A'.repeat(3000)}/`
   const json = {
     saved_saved_media: [
       {
@@ -415,7 +418,7 @@ test('parseSavedPosts: an oversized permalink href falls back to a shorter usabl
 })
 
 test('parse: an oversized href is counted and warned about rather than silently dropped', () => {
-  const hugeUrl = 'https://www.instagram.com/p/' + 'A'.repeat(3000) + '/'
+  const hugeUrl = `https://www.instagram.com/p/${'A'.repeat(3000)}/`
   const json = JSON.stringify({
     saved_saved_media: [{ title: 'huge', string_map_data: { 'Saved on': { href: hugeUrl, timestamp: 1 } } }],
   })
@@ -537,7 +540,8 @@ test('parseSavedPosts: newer shape falls back to the URL label value when href i
 test('parseSavedPosts: newer shape applies the same hostile-input guards (scheme, length, timestamp)', () => {
   const items = parseSavedPosts([
     { timestamp: 1, label_values: [{ label: 'URL', value: 'javascript:alert(1)', href: 'javascript:alert(1)' }] },
-    { timestamp: 1, label_values: [{ label: 'URL', href: 'https://www.instagram.com/p/' + 'x'.repeat(3000) }] },
+    { timestamp: 1, label_values: [{ label: 'URL', href: `https://www.instagram.com/p/${'x'.repeat(3000)}` }] },
+    // biome-ignore lint/correctness/noPrecisionLoss: the precision loss (-> Infinity) is the case under test.
     { timestamp: 1e400, label_values: [{ label: 'URL', href: 'https://www.instagram.com/p/OK/' }] },
   ])
   assert.equal(items.length, 1)

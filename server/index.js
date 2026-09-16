@@ -4,7 +4,7 @@ import { PORT, MODELS_DIR, CONFIG_PATH, PASSWORD, getAiConfig, setAiCredentials 
 import { readCredentials } from './data/credentials.js'
 
 mkdirSync(MODELS_DIR, { recursive: true })
-writeFileSync(CONFIG_PATH, JSON.stringify({ cacheDirectory: MODELS_DIR }, null, 2) + '\n')
+writeFileSync(CONFIG_PATH, `${JSON.stringify({ cacheDirectory: MODELS_DIR }, null, 2)}\n`)
 process.env.QVAC_CONFIG_PATH = CONFIG_PATH
 
 // Imported AFTER the env var above so the local provider picks up the right cache config.

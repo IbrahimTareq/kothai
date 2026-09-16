@@ -90,7 +90,7 @@ function ItemNode({ data }: NodeProps<FlowNode>) {
     ) : undefined
   return (
     <div
-      className={'cv-item item-card type-' + it.type + (headline ? ' linktile' : '')}
+      className={`cv-item item-card type-${it.type}${headline ? ' linktile' : ''}`}
       title={it.title || it.name || ''}
     >
       <div className="card-content">
@@ -109,14 +109,14 @@ function TextNode({ id, data, selected }: NodeProps<FlowNode>) {
     const el = ref.current
     if (el) {
       el.style.height = '0'
-      el.style.height = el.scrollHeight + 'px'
+      el.style.height = `${el.scrollHeight}px`
     }
   }, [data.text])
   useEffect(() => {
     if (data.autoFocus) ref.current?.focus()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <div className={'cv-text' + (selected ? ' selected' : '')}>
+    <div className={`cv-text${selected ? ' selected' : ''}`}>
       <NodeResizeControl
         position="right"
         variant={ResizeControlVariant.Line}
@@ -141,7 +141,7 @@ function TextNode({ id, data, selected }: NodeProps<FlowNode>) {
 function ColumnNode({ id, data, selected }: NodeProps<FlowNode>) {
   const { setData, restack } = useContext(CanvasCtx)
   return (
-    <div className={'cv-col' + (selected ? ' selected' : '')}>
+    <div className={`cv-col${selected ? ' selected' : ''}`}>
       <NodeResizeControl
         position="right"
         variant={ResizeControlVariant.Line}
@@ -320,7 +320,7 @@ function CanvasInner({ collectionId, items, doc, onSave, onExpand, onRemoveItem 
   const onConnect = useCallback(
     (c: Connection) => {
       if (c.source === c.target) return
-      setEdges(prev => addEdge({ ...c, id: 'e:' + uid() }, prev))
+      setEdges(prev => addEdge({ ...c, id: `e:${uid()}` }, prev))
       markDirty()
     },
     [markDirty],
@@ -379,7 +379,7 @@ function CanvasInner({ collectionId, items, doc, onSave, onExpand, onRemoveItem 
       setNodes(prev => [
         ...prev.map(n => (n.selected ? { ...n, selected: false } : n)),
         {
-          id: 'n:' + uid(),
+          id: `n:${uid()}`,
           type: 'text',
           position: at,
           width: TEXT_W,
@@ -396,7 +396,7 @@ function CanvasInner({ collectionId, items, doc, onSave, onExpand, onRemoveItem 
     const at = centre()
     setNodes(prev => [
       {
-        id: 'n:' + uid(),
+        id: `n:${uid()}`,
         type: 'group',
         position: { x: at.x - COL_W / 2, y: at.y - COL_MIN_H / 2 },
         width: COL_W,

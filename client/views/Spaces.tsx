@@ -37,7 +37,7 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
     setName('')
     setTags('')
     setCreating(false)
-    navigate('space:' + c.id)
+    navigate(`space:${c.id}`)
   }
 
   const coverFor = (c: Collection): string | null => {
@@ -100,7 +100,7 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
                 // The same .tile the Ask thread's citations use — a space
                 // card and a citation card are both a cover, a name and a
                 // line of small print, so they share one shape.
-                <button key={c.id} className="tile space-card" onClick={() => navigate('space:' + c.id)}>
+                <button key={c.id} className="tile space-card" onClick={() => navigate(`space:${c.id}`)}>
                   <div className="tile-media" style={cover ? { backgroundImage: `url(${cover})` } : undefined}>
                     {!cover && <Icon name="spark" size={26} />}
                     {c.tags.length > 0 && (
@@ -213,6 +213,9 @@ export function CollectionView({
     setArmed(false)
   }, [collection?.id])
 
+  // The rule strip scrolls sideways on phones, so it carries the same fade
+  // hints the Everything filter bar does — one module, one behaviour.
+  const { ref: ruleRef, className: ruleFade } = useScrollEdges('x', [collection?.tags.length])
   if (!collection) {
     return (
       <div className="collection-view">
@@ -267,9 +270,6 @@ export function CollectionView({
     if (t && !collection.tags.includes(t)) editCollectionTags(collection.id, [...collection.tags, t])
     setTagDraft('') // keep the popover open for adding several rules in a row
   }
-  // The rule strip scrolls sideways on phones, so it carries the same fade
-  // hints the Everything filter bar does — one module, one behaviour.
-  const { ref: ruleRef, className: ruleFade } = useScrollEdges('x', [collection.tags.length])
 
   // Ranking and the "offer to create this one" rule live in domain/tagSuggest.ts,
   // covered by test/client/tag-suggest.test.ts.
@@ -325,7 +325,7 @@ export function CollectionView({
                   <Icon name="edit" size={14} />
                 </button>
                 <button
-                  className={'coll-del' + (armed ? ' armed' : '')}
+                  className={`coll-del${armed ? ' armed' : ''}`}
                   aria-label={armed ? 'Confirm delete space' : 'Delete space'}
                   title={armed ? '' : 'Delete space'}
                   onClick={() => (armed ? del() : setArmed(true))}
@@ -345,7 +345,7 @@ export function CollectionView({
             it on the right. Density sits at the left of the tool group so that
             dropping it in canvas mode never moves the view switch or the bin. */}
         <div className="coll-bar">
-          <div className={'coll-rule' + ruleFade} ref={ruleRef}>
+          <div className={`coll-rule${ruleFade}`} ref={ruleRef}>
             {collection.tags.map(t => (
               <button key={t} className="chip coll-tag" title="Remove rule tag" onClick={() => removeTag(t)}>
                 {t}
@@ -354,7 +354,7 @@ export function CollectionView({
             ))}
             <div className="coll-ruleadd">
               <button
-                className={'chip coll-addtag' + (addingTag ? ' on' : '')}
+                className={`chip coll-addtag${addingTag ? ' on' : ''}`}
                 aria-haspopup="dialog"
                 aria-expanded={addingTag}
                 onClick={() => (addingTag ? closeRuleAdd() : setAddingTag(true))}
@@ -424,7 +424,7 @@ export function CollectionView({
               <button
                 role="tab"
                 aria-selected={!board}
-                className={'seg-btn' + (!board ? ' on' : '')}
+                className={`seg-btn${!board ? ' on' : ''}`}
                 onClick={() => setBoard(false)}
               >
                 Grid
@@ -432,7 +432,7 @@ export function CollectionView({
               <button
                 role="tab"
                 aria-selected={board}
-                className={'seg-btn' + (board ? ' on' : '')}
+                className={`seg-btn${board ? ' on' : ''}`}
                 onClick={() => setBoard(true)}
               >
                 Canvas

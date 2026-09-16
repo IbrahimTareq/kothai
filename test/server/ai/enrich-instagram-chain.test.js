@@ -54,7 +54,7 @@ function reset() {
   autoAddCalls = []
   describeImageCalls = []
   fetchLinkMetaImpl = async () => ({ siteTitle: null, siteDesc: null, siteName: 'Instagram', thumb: null })
-  classifyImpl = async ({ text }) => ({ type: 'link', category: 'General', title: 'T', summary: 'S', tags: [] })
+  classifyImpl = async () => ({ type: 'link', category: 'General', title: 'T', summary: 'S', tags: [] })
   embedTextImpl = async () => [0, 0, 0]
   describeImageImpl = async () => 'default thumbnail description' // benign, distinct string a test can assert against or ignore
   residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
@@ -141,7 +141,7 @@ test("metaFetched write-order: a slow main-chain classify pass must not clobber 
   seedNotes([{ id: 'n1', content: IG_URL, url: IG_URL, type: 'link', ai: {} }])
   // Reproduces the reviewer's measured ordering: IG fetch resolves fast,
   // classify is slow — so the IG job's store.updateNote lands first.
-  classifyImpl = async ({ text }) => {
+  classifyImpl = async () => {
     await new Promise(r => setTimeout(r, 15))
     return { type: 'link', category: 'General', title: 'T', summary: 'S', tags: [] }
   }

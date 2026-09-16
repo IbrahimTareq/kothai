@@ -88,7 +88,7 @@ export function GalleryView({
   return (
     <div className="gallery-view">
       <header className="gal-head">
-        <div className={'search-box' + (searchFocus ? ' focus' : '')}>
+        <div className={`search-box${searchFocus ? ' focus' : ''}`}>
           <Icon name="search" size={16} />
           <input
             value={search}
@@ -102,9 +102,9 @@ export function GalleryView({
 
       <div className="gal-controls">
         {nav === 'all' && (typeChips.length > 0 || sourceChips.length > 0 || unavailableCount > 0) ? (
-          <div className={'gal-filters' + filtersFade} ref={filtersRef}>
+          <div className={`gal-filters${filtersFade}`} ref={filtersRef}>
             <button
-              className={'chip filter-chip' + (galFilter.length === 0 ? ' on' : '')}
+              className={`chip filter-chip${galFilter.length === 0 ? ' on' : ''}`}
               onClick={() => setGalFilter([])}
             >
               All
@@ -112,7 +112,7 @@ export function GalleryView({
             {typeChips.map(c => (
               <button
                 key={c.key}
-                className={'chip filter-chip' + (on(c.key) ? ' on' : '')}
+                className={`chip filter-chip${on(c.key) ? ' on' : ''}`}
                 aria-pressed={on(c.key)}
                 onClick={() => toggle(c.key)}
               >
@@ -127,7 +127,7 @@ export function GalleryView({
             {sourceChips.map(c => (
               <button
                 key={c.key}
-                className={'chip filter-chip' + (on(c.key) ? ' on' : '')}
+                className={`chip filter-chip${on(c.key) ? ' on' : ''}`}
                 aria-pressed={on(c.key)}
                 onClick={() => toggle(c.key)}
               >
@@ -149,7 +149,7 @@ export function GalleryView({
               <>
                 <span className="filter-sep" />
                 <button
-                  className={'chip filter-chip' + (on('unavailable') ? ' on' : '')}
+                  className={`chip filter-chip${on('unavailable') ? ' on' : ''}`}
                   aria-pressed={on('unavailable')}
                   title="Saved links whose content no longer exists"
                   onClick={() => toggle('unavailable')}
@@ -175,7 +175,7 @@ export function GalleryView({
             reading in. */}
         <div className="seg gal-sort" role="group" aria-label="Sort order">
           <button
-            className={'seg-btn' + (galSort === 'newest' ? ' on' : '')}
+            className={`seg-btn${galSort === 'newest' ? ' on' : ''}`}
             aria-pressed={galSort === 'newest'}
             title="Newest first"
             onClick={() => setGalSort('newest')}
@@ -183,7 +183,7 @@ export function GalleryView({
             Newest
           </button>
           <button
-            className={'seg-btn' + (galSort === 'oldest' ? ' on' : '')}
+            className={`seg-btn${galSort === 'oldest' ? ' on' : ''}`}
             aria-pressed={galSort === 'oldest'}
             title="Oldest first"
             onClick={() => setGalSort('oldest')}

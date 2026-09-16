@@ -260,7 +260,7 @@ test('a non-YouTube link never reaches the caption step', async () => {
 })
 
 test('English captions are preferred, with a fall back to whatever the video actually has', async () => {
-  const calls = []
+  const _calls = []
   transcriptImpl = async () => [{ text: 'the english transcript' }]
   transcriptCalls = []
   // The mock records ids; wrap it to see the language option too.

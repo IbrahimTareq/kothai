@@ -154,10 +154,10 @@ export function extractUrl(text) {
   const m = /https?:\/\/[^\s<>"')\]]+/i.exec(t)
   if (m) return m[0].replace(/[.,;:!?]+$/, '')
   const w = /\bwww\.[^\s<>"')\]]+/i.exec(t)
-  if (w) return 'https://' + w[0].replace(/[.,;:!?]+$/, '')
+  if (w) return `https://${w[0].replace(/[.,;:!?]+$/, '')}`
   // bare domain with a well-known TLD, e.g. "google.com" or "foo.dev/bar"
   const d =
     /\b[a-z0-9][a-z0-9-]*(\.[a-z0-9-]+)*\.(com|org|net|io|dev|app|ai|co|me|tv|gg|sh|xyz)(\/[^\s<>"')\]]*)?/i.exec(t)
-  if (d) return 'https://' + d[0].replace(/[.,;:!?]+$/, '')
+  if (d) return `https://${d[0].replace(/[.,;:!?]+$/, '')}`
   return null
 }

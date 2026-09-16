@@ -239,18 +239,16 @@ function nonIgPost(title, href, ts = 1718000000) {
 // so the corrupt-ZIP test can also sanity-check a WELL-formed one without a
 // third-party zip library — deliberately reuses the "PK" sniff the route uses.
 function crc32(buf) {
-  let c
-  const table =
-    crc32.table ||
-    (crc32.table = (() => {
-      const t = []
-      for (let n = 0; n < 256; n++) {
-        c = n
-        for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
-        t[n] = c >>> 0
-      }
-      return t
-    })())
+  if (!crc32.table) {
+    const t = []
+    for (let n = 0; n < 256; n++) {
+      let c = n
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
+      t[n] = c >>> 0
+    }
+    crc32.table = t
+  }
+  const table = crc32.table
   let crc = 0xffffffff
   for (let i = 0; i < buf.length; i++) crc = table[(crc ^ buf[i]) & 0xff] ^ (crc >>> 8)
   return (crc ^ 0xffffffff) >>> 0
@@ -786,7 +784,7 @@ test('an importer returning non-array warnings is guarded against, not trusted b
 test('a failed per-item addNote is counted as failed, not silently dropped or counted as skipped', async () => {
   reset()
   addNoteImpl = async note => {
-    if (note.url && note.url.includes('BBB222')) throw new Error('simulated add failure')
+    if (note.url?.includes('BBB222')) throw new Error('simulated add failure')
   }
   const payload = savedPostsPayload([post('natgeo', 'AAA111'), post('chefsteps', 'BBB222')])
   const res = fakeRes()

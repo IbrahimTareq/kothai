@@ -33,7 +33,7 @@ let backupInProgress = false
 // quotes keeps a directory name containing one from breaking the statement.
 const sqlLiteral = value => `'${value.replace(/'/g, "''")}'`
 
-export async function handleBackup(req, res) {
+export async function handleBackup(_req, res) {
   // An import holds a batch of notes in memory and writes them at the end (see
   // import.js). A snapshot taken mid-import captures a library that is neither
   // the before nor the after, and the flush below would make that worse by

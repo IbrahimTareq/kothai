@@ -158,7 +158,7 @@ async function runImport(req, res) {
       try {
         entries = readZip(buf, { maxTotalBytes: zipBudget })
       } catch (e) {
-        return json(res, 400, { error: 'Could not read that ZIP: ' + e.message })
+        return json(res, 400, { error: `Could not read that ZIP: ${e.message}` })
       }
       for (const [entryName, entryBuf] of entries) {
         zipBudget -= entryBuf.length
@@ -212,7 +212,7 @@ async function runImport(req, res) {
     // parse() is documented to degrade rather than throw, but the route is
     // the trust boundary for this upload — an unexpected throw here must
     // still land as a clean 400, not the router's generic 500.
-    return json(res, 400, { error: 'Could not parse that export: ' + e.message })
+    return json(res, 400, { error: `Could not parse that export: ${e.message}` })
   }
   // A future importer that omits/mis-shapes any of these must not turn into
   // an unhandled throw further down (the .push()/.length/for-of calls below).
@@ -403,7 +403,7 @@ async function runImport(req, res) {
       // attach() clears removedIds — silently resurrecting items the user
       // deliberately hand-removed from it. Route IG-only collections into a
       // distinct, clearly-labeled Space instead of ever touching a smart one.
-      if (space && space.tags && space.tags.length) {
+      if (space?.tags?.length) {
         const altName = `${name} (Instagram)`
         let altSpace = spaceByLowerName.get(altName.toLowerCase())
         // The fallback name itself could ALSO collide with a user's own
@@ -411,7 +411,7 @@ async function runImport(req, res) {
         // re-check rather than trusting a name match alone, same reasoning
         // as above. In that (rare) case, create a fresh Space anyway rather
         // than touching either smart one.
-        if (altSpace && altSpace.tags && altSpace.tags.length) altSpace = null
+        if (altSpace?.tags?.length) altSpace = null
         space = altSpace
         if (!space) space = await ensureSpace(altName)
       } else if (!space) {

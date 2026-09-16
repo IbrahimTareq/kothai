@@ -60,7 +60,7 @@ test('verifySession: the expiry is signed, so extending it by hand invalidates t
 test('verifySession: a tampered signature is rejected', () => {
   const token = issueSession(PW, { now: T0 })
   const [exp, sig] = token.split('.')
-  const flipped = sig[0] === 'A' ? 'B' + sig.slice(1) : 'A' + sig.slice(1)
+  const flipped = sig[0] === 'A' ? `B${sig.slice(1)}` : `A${sig.slice(1)}`
   assert.equal(verifySession(`${exp}.${flipped}`, PW, { now: T0 }), false)
 })
 
@@ -81,7 +81,7 @@ test('verifySession: malformed input is rejected without throwing', () => {
 
 test('passwordMatches: accepts the password and rejects a near miss', () => {
   assert.equal(passwordMatches(PW, PW), true)
-  assert.equal(passwordMatches(PW + 'x', PW), false)
+  assert.equal(passwordMatches(`${PW}x`, PW), false)
   assert.equal(passwordMatches('', PW), false)
 })
 

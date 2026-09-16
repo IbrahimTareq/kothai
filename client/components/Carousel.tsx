@@ -71,7 +71,7 @@ export function Carousel({ slides, alt, onOpen, badge }: CarouselProps) {
   return (
     <div className="carousel">
       <div
-        className={'carousel-stage' + (drag ? ' dragging' : '')}
+        className={`carousel-stage${drag ? ' dragging' : ''}`}
         ref={stage}
         style={{ aspectRatio: String(ratio) }}
         onPointerDown={onDown}
@@ -86,7 +86,7 @@ export function Carousel({ slides, alt, onOpen, badge }: CarouselProps) {
           return (
             <div
               key={src}
-              className={'carousel-slide' + (idx === i ? ' active' : '') + (loaded[src] ? '' : ' loading')}
+              className={`carousel-slide${idx === i ? ' active' : ''}${loaded[src] ? '' : ' loading'}`}
               style={{ transform: `translateX(${x}%) scale(${scale})`, opacity, zIndex: z }}
             >
               <img
@@ -112,7 +112,7 @@ export function Carousel({ slides, alt, onOpen, badge }: CarouselProps) {
         {slides.map((src, idx) => (
           <button
             key={src}
-            className={'carousel-dot' + (idx === i ? ' on' : '')}
+            className={`carousel-dot${idx === i ? ' on' : ''}`}
             aria-label={`Slide ${idx + 1} of ${slides.length}`}
             onClick={() => setI(idx)}
           />

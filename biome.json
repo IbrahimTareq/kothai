@@ -11,11 +11,11 @@
       "server/**",
       "scripts/**",
       "test/**",
-      "!**/node_modules/**",
-      "!dist/**",
-      "!site/**",
-      "!data/**",
-      "!models/**",
+      "!**/node_modules",
+      "!dist",
+      "!site",
+      "!data",
+      "!models",
       "!**/*.css"
     ]
   },
@@ -26,7 +26,33 @@
     "lineWidth": 120
   },
   "linter": {
-    "enabled": false
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "a11y": {
+        "noStaticElementInteractions": "off",
+        "useKeyWithClickEvents": "off",
+        "useSemanticElements": "off",
+        "noLabelWithoutControl": "off",
+        "noNoninteractiveElementToInteractiveRole": "off",
+        "useAriaPropsSupportedByRole": "off",
+        "noNoninteractiveTabindex": "off",
+        "noAutofocus": "off",
+        "useButtonType": "off"
+      },
+      "style": {
+        "noNonNullAssertion": "off"
+      },
+      "correctness": {
+        "useExhaustiveDependencies": "off"
+      },
+      "suspicious": {
+        "noArrayIndexKey": "off"
+      },
+      "performance": {
+        "noDynamicNamespaceImportAccess": "off"
+      }
+    }
   },
   "javascript": {
     "formatter": {
@@ -38,5 +64,47 @@
   },
   "assist": {
     "enabled": false
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["client/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/server/**"],
+                    "message": "client/ must not import from server/ — shared meaning crosses the HTTP boundary, or is duplicated deliberately."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["server/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/client/**"],
+                    "message": "server/ must not import from client/ — shared meaning crosses the HTTP boundary, or is duplicated deliberately."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

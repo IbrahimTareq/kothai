@@ -16,11 +16,11 @@ function mockRes() {
   r.setHeader = () => {}
   return r
 }
-const urlOf = qs => new URL('http://x/api/notes' + qs)
+const urlOf = qs => new URL(`http://x/api/notes${qs}`)
 
 test('paged /api/notes returns page, total, facets, pendingTotal', async () => {
   store._reset()
-  for (let i = 0; i < 5; i++) await store.addNote({ type: 'text', content: 'n' + i })
+  for (let i = 0; i < 5; i++) await store.addNote({ type: 'text', content: `n${i}` })
   await store.addNote({ type: 'video', url: 'https://www.instagram.com/reel/Z/', pending: true })
   const res = mockRes()
   handleNotes(res, urlOf('?offset=0&limit=3'))

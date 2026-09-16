@@ -189,10 +189,10 @@ test('addItems: an empty batch is a no-op', async () => {
 
 const canvasFor = itemId => ({
   nodes: [
-    { id: 'item:' + itemId, type: 'item', itemId, x: 0, y: 0, width: 220, height: 100 },
+    { id: `item:${itemId}`, type: 'item', itemId, x: 0, y: 0, width: 220, height: 100 },
     { id: 'n1', type: 'text', text: 'keep me', x: 300, y: 0, width: 220, height: 60 },
   ],
-  edges: [{ id: 'e1', fromNode: 'item:' + itemId, toNode: 'n1' }],
+  edges: [{ id: 'e1', fromNode: `item:${itemId}`, toNode: 'n1' }],
 })
 
 test('update stores a canvas doc and null clears it', async () => {

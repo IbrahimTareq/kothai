@@ -77,7 +77,7 @@ export function applyFilters(notes, { type, source, q, collection, unavailable }
   const avail = unavailable === true ? 'only' : unavailable || 'hide'
   if (avail === 'only') out = out.filter(n => !!n.unavailable)
   else if (avail !== 'all') out = out.filter(n => !n.unavailable)
-  if (q && q.trim()) out = out.filter(n => matchesQ(n, q.trim()))
+  if (q?.trim()) out = out.filter(n => matchesQ(n, q.trim()))
   return out
 }
 

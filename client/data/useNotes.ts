@@ -137,7 +137,9 @@ export function useNotes(query: PagerQuery, enabled = true): NoteSource {
           if (!mounted.current) return
           const ids = pager.current.thumbless(first, last).filter(id => !sentPriority.current.has(id))
           if (!ids.length) return
-          ids.forEach(id => sentPriority.current.add(id))
+          ids.forEach(id => {
+            sentPriority.current.add(id)
+          })
           pager.current.markAwaitingThumb(ids, Date.now(), 20_000)
           rerender()
           API.prioritize(ids)

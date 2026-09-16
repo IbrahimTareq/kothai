@@ -154,7 +154,7 @@ export async function handleDeleteNote(res, id) {
   if (ok) await collections.deleteItemEverywhere(id)
   if (ok && note) {
     for (const f of [note.image, note.thumb, ...(note.slides || [])]) {
-      if (f && f.startsWith('/uploads/')) {
+      if (f?.startsWith('/uploads/')) {
         unlink(path.join(store.UPLOAD_DIR, path.basename(f))).catch(() => {})
       }
     }

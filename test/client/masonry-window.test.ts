@@ -147,7 +147,7 @@ test('packColumns places each item in the shortest column and stacks with the ga
 })
 
 test('packColumns keeps every item, and total covers the tallest column including gaps', () => {
-  const ids = Array.from({ length: 100 }, (_, i) => 'i' + i)
+  const ids = Array.from({ length: 100 }, (_, i) => `i${i}`)
   const { boxes, total } = packColumns(ids, 4, () => 50, 10)
   assert.equal(boxes.length, 100)
   assert.equal(new Set(boxes.map(b => b.id)).size, 100, 'no item dropped or duplicated')
@@ -165,7 +165,7 @@ test('packColumns handles an empty list without producing a negative total', () 
 
 const grid = (n: number) =>
   packColumns(
-    Array.from({ length: n }, (_, i) => 'i' + i),
+    Array.from({ length: n }, (_, i) => `i${i}`),
     4,
     () => 200,
     14,
@@ -291,7 +291,7 @@ test('clampScrollTop never returns a negative position for content shorter than 
 })
 
 test('a non-empty board ALWAYS renders something, at any scroll position', () => {
-  const ids = Array.from({ length: 400 }, (_, i) => 'i' + i)
+  const ids = Array.from({ length: 400 }, (_, i) => `i${i}`)
   const { boxes, total } = packColumns(ids, 4, () => 200, 14)
   for (const raw of [0, total / 2, total, total * 3, 999999]) {
     const vis = visibleBoxes(boxes, clampScrollTop(raw, total, 744), 744)

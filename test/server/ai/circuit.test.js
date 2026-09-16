@@ -116,7 +116,7 @@ test('without a Retry-After the configured cooldown still applies', () => {
 })
 
 test('a success clears a Retry-After window along with the rest', () => {
-  let t = 0
+  const t = 0
   const c = new Circuit({ threshold: 1, cooldownMs: 60_000, now: () => t })
   c.recordFailure({ transient: true, retryAfterMs: 90_000 })
   c.recordSuccess()

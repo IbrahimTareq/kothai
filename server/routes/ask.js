@@ -114,7 +114,7 @@ export async function handleAsk(req, res) {
       return await record(answer, [], img.webPath)
     } catch (e) {
       if (e instanceof ai.FeatureDisabledError) return fail(409, { error: e.message, code: e.code })
-      return fail(500, { error: 'Vision model error: ' + e.message })
+      return fail(500, { error: `Vision model error: ${e.message}` })
     }
   }
 

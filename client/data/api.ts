@@ -201,7 +201,7 @@ export const API = {
       pendingTotal: number
       rev: number
       bootId: string
-    }>('/api/notes?' + qs)
+    }>(`/api/notes?${qs}`)
     return { ...d, notes: (d.notes || []).map(mapNote) }
   },
   // "what changed since rev X" — replaces refetching loaded pages on a timer.
@@ -292,7 +292,7 @@ export const API = {
   },
   async renameChat(id: string, title: string): Promise<{ id: string; title: string; updatedAt: string }> {
     const d = await apiPatch<{ chat: { id: string; title: string; updatedAt: string } }>(
-      '/api/chats/' + encodeURIComponent(id),
+      `/api/chats/${encodeURIComponent(id)}`,
       { title },
     )
     return d.chat
@@ -300,27 +300,27 @@ export const API = {
   // One note by id — hydrates a deep-linked expanded tile (/item/<id>), which
   // opens before any pager page exists to look the item up in.
   async note(id: string): Promise<UIItem> {
-    const d = await apiGet<{ note: ServerNote }>('/api/notes/' + encodeURIComponent(id))
+    const d = await apiGet<{ note: ServerNote }>(`/api/notes/${encodeURIComponent(id)}`)
     return mapNote(d.note)
   },
   async del(id: string): Promise<void> {
-    await apiDel('/api/notes/' + id)
+    await apiDel(`/api/notes/${id}`)
   },
   // patch user-editable fields (tags + free-form mind note) of a saved item
   async update(id: string, patch: { tags?: string[]; mindNote?: string }): Promise<UIItem> {
-    const d = await apiPatch<{ note: ServerNote }>('/api/notes/' + id, patch)
+    const d = await apiPatch<{ note: ServerNote }>(`/api/notes/${id}`, patch)
     return mapNote(d.note)
   },
   // Ask the server to fetch this Instagram post's carousel slides. Lazy by
   // design (see queueIgSlides): the expanded view calls it on open, and the
   // answer is the note either way — deck-less if it was a single image.
   async slides(id: string): Promise<UIItem> {
-    const d = await apiPost<{ note: ServerNote }>('/api/notes/' + encodeURIComponent(id) + '/slides')
+    const d = await apiPost<{ note: ServerNote }>(`/api/notes/${encodeURIComponent(id)}/slides`)
     return mapNote(d.note)
   },
   // force a full re-classify of one item, discarding its current tags
   async retag(id: string): Promise<UIItem> {
-    const d = await apiPost<{ note: ServerNote }>('/api/notes/' + id + '/retag')
+    const d = await apiPost<{ note: ServerNote }>(`/api/notes/${id}/retag`)
     return mapNote(d.note)
   },
   // chat history: list, load one (sources mapped into UI items), delete
@@ -332,14 +332,14 @@ export const API = {
     return { chats: d.chats || [], total: d.total ?? (d.chats || []).length }
   },
   async chat(id: string): Promise<Chat> {
-    const d = await apiGet<{ chat: Chat }>('/api/chats/' + id)
+    const d = await apiGet<{ chat: Chat }>(`/api/chats/${id}`)
     const messages: ChatMessage[] = (d.chat.messages || []).map(m =>
       m.role === 'ai' ? { ...m, cited: (m.sources || []).map(mapNote) } : m,
     )
     return { ...d.chat, messages }
   },
   async delChat(id: string): Promise<void> {
-    await apiDel('/api/chats/' + id)
+    await apiDel(`/api/chats/${id}`)
   },
   // model settings
   async settings(): Promise<SettingsResponse> {
@@ -390,7 +390,7 @@ export const API = {
     return apiGet<ModelFilesResponse>('/api/models/files')
   },
   async deleteModelFile(name: string): Promise<{ deleted: string; freedBytes: number }> {
-    return apiDel('/api/models/files/' + encodeURIComponent(name))
+    return apiDel(`/api/models/files/${encodeURIComponent(name)}`)
   },
   async status(): Promise<ModelStatus> {
     return apiGet<ModelStatus>('/api/status')
@@ -468,18 +468,18 @@ export const Collections = {
     return d.collection
   },
   async update(id: string, patch: { name?: string; tags?: string[]; canvas?: CanvasDoc | null }): Promise<Collection> {
-    const d = await apiPatch<{ collection: Collection }>('/api/collections/' + id, patch)
+    const d = await apiPatch<{ collection: Collection }>(`/api/collections/${id}`, patch)
     return d.collection
   },
   async remove(id: string): Promise<void> {
-    await apiDel('/api/collections/' + id)
+    await apiDel(`/api/collections/${id}`)
   },
   async addItem(id: string, itemId: string): Promise<Collection> {
-    const d = await apiPost<{ collection: Collection }>('/api/collections/' + id + '/items', { itemId })
+    const d = await apiPost<{ collection: Collection }>(`/api/collections/${id}/items`, { itemId })
     return d.collection
   },
   async removeItem(id: string, itemId: string): Promise<Collection> {
-    const d = await apiDel<{ collection: Collection }>('/api/collections/' + id + '/items/' + itemId)
+    const d = await apiDel<{ collection: Collection }>(`/api/collections/${id}/items/${itemId}`)
     return d.collection
   },
 }

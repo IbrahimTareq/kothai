@@ -419,7 +419,7 @@ export async function handlePrioritize(req, res) {
   const byId = new Map(store.allNotes().map(n => [n.id, n]))
   const eligible = ids.filter(id => {
     const n = byId.get(id)
-    return n && n.url && isInstagramPost(n.url) && !n.metaFetched
+    return n?.url && isInstagramPost(n.url) && !n.metaFetched
   })
   // ensure queued (a note might not be in the queue this boot), then promote
   for (const id of eligible) enrich.queueIgMeta(id, byId.get(id).url)

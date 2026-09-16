@@ -24,7 +24,7 @@ const noSleep = async () => {}
 const post = (path, body, opts = {}) => postJson(base, path, body, { sleep: noSleep, ...opts })
 
 function reply(status, body, headers = {}) {
-  handler = (req, res) => {
+  handler = (_req, res) => {
     res.writeHead(status, { 'content-type': 'application/json', ...headers })
     res.end(JSON.stringify(body))
   }
@@ -111,7 +111,7 @@ test('a refused connection maps to endpoint_unreachable', async () => {
 })
 
 test('a non-JSON success body maps to a transient bad_response error', async () => {
-  handler = (req, res) => {
+  handler = (_req, res) => {
     res.writeHead(200, { 'content-type': 'text/plain' })
     res.end('not json')
   }

@@ -51,7 +51,7 @@ export function useChat(nav: string) {
     const ta = taRef.current
     if (ta) {
       ta.style.height = 'auto'
-      ta.style.height = Math.min(ta.scrollHeight, MAX_COMPOSER_H) + 'px'
+      ta.style.height = `${Math.min(ta.scrollHeight, MAX_COMPOSER_H)}px`
     }
   }
   useEffect(autosize, [text])
@@ -97,7 +97,7 @@ export function useChat(nav: string) {
     // The pending bubble is claimed by id, not by position: a reply used to be
     // written to whatever sat last in the thread, so with two asks in flight
     // the first answer back landed under the second question.
-    const slot = 'm' + msgSeq.current++
+    const slot = `m${msgSeq.current++}`
     const at = Date.now()
     setThread(prev => [
       ...prev,
@@ -153,7 +153,7 @@ export function useChat(nav: string) {
       stopFlushing()
       if (ctl.signal.aborted)
         patch({ pending: false, streaming: false, lead: acc, q: raw, ts: Date.now(), stopped: true })
-      else settle({ role: 'ai', id: slot, lead: '⚠ ' + (e as Error).message, cited: [], q: raw, ts: Date.now() })
+      else settle({ role: 'ai', id: slot, lead: `⚠ ${(e as Error).message}`, cited: [], q: raw, ts: Date.now() })
     } finally {
       if (askAbort.current === ctl) askAbort.current = null
     }
@@ -182,9 +182,11 @@ export function useChat(nav: string) {
       setThread(
         chat.messages.map((m): ThreadMsg => {
           const ts = m.ts ? Date.parse(m.ts) : undefined
-          return m.role === 'user'
-            ? ((lastQ = m.text || ''), { role: 'user', text: m.text || '▣ image', img: m.image || null, ts })
-            : { role: 'ai', lead: m.text, cited: m.cited || [], q: lastQ, ts }
+          if (m.role === 'user') {
+            lastQ = m.text || ''
+            return { role: 'user', text: m.text || '▣ image', img: m.image || null, ts }
+          }
+          return { role: 'ai', lead: m.text, cited: m.cited || [], q: lastQ, ts }
         }),
       )
       setChatId(chat.id)

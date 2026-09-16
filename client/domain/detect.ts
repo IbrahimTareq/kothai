@@ -18,7 +18,7 @@ export function detectType(raw: string): Detection | null {
   // url detection
   const urlMatch = t.match(/\bhttps?:\/\/[^\s]+/i) || t.match(/^[a-z0-9.-]+\.[a-z]{2,}(\/[^\s]*)?$/i)
   if (urlMatch && t.split(/\s+/).length <= 4) {
-    const url = urlMatch[0].startsWith('http') ? urlMatch[0] : 'https://' + urlMatch[0]
+    const url = urlMatch[0].startsWith('http') ? urlMatch[0] : `https://${urlMatch[0]}`
     let host = ''
     try {
       host = new URL(url).hostname.replace(/^www\./, '')

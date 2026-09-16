@@ -6,7 +6,7 @@ import { sanitizeCanvas } from '../../../server/lib/canvas.js'
 const item = (id, extra = {}) => ({
   id,
   type: 'item',
-  itemId: 'note-' + id,
+  itemId: `note-${id}`,
   x: 1.4,
   y: 2.6,
   width: 220,
@@ -22,7 +22,7 @@ test('rejects anything that is not a doc with node and edge arrays', () => {
 })
 
 test('rejects oversized docs outright', () => {
-  const nodes = Array.from({ length: 2001 }, (_, i) => item('n' + i))
+  const nodes = Array.from({ length: 2001 }, (_, i) => item(`n${i}`))
   assert.equal(sanitizeCanvas({ nodes, edges: [] }), null)
   assert.equal(sanitizeCanvas({ nodes: [], edges: Array(2001).fill({}) }), null)
 })

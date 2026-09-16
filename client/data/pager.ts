@@ -67,7 +67,7 @@ export function matchesLocal(item: UIItem, query: PagerQuery): boolean {
   if (query.unavailable ? !item.unavailable : item.unavailable) return false
   const sources = (query.source || '').split(',').filter(Boolean)
   if (sources.length && !sources.some(k => SOURCE_BY_KEY[k]?.test(item))) return false
-  if (query.q && query.q.trim()) {
+  if (query.q?.trim()) {
     const hay = [item.text, item.title, item.note, item.name, item.host, (item.tags || []).join(' ')]
       .filter(Boolean)
       .join(' ')
@@ -163,7 +163,8 @@ export class NotePager {
       if (it) return it
       // Placeholder objects are cached per index so identity is stable
       // across renders (byId maps and React keys depend on it).
-      return (this.phCache[i] ??= { id: 'ph:' + i, ph: true })
+      this.phCache[i] ??= { id: `ph:${i}`, ph: true }
+      return this.phCache[i]
     })
     return this.slotCache
   }
@@ -306,7 +307,7 @@ export class NotePager {
       const it = idx !== undefined ? this.arr[idx] : undefined
       // Gone from this view (deleted, or filtered out by a query change)
       // or already enriched — either way there is nothing left to wait for.
-      if (!it || !it.pending) {
+      if (!it?.pending) {
         this.watching.delete(id)
         continue
       }

@@ -84,7 +84,7 @@ test('a thumbnail is served with the validators a 304 needs', async () => {
 
   assert.equal(res.code, 200)
   assert.equal(res.headers['content-type'], 'image/jpeg')
-  assert.ok(res.headers['etag'], 'needs an ETag to revalidate against')
+  assert.ok(res.headers.etag, 'needs an ETag to revalidate against')
   assert.ok(res.headers['last-modified'], 'needs Last-Modified')
   assert.ok(res.headers['cache-control'])
   assert.equal(res.body.toString(), 'imagebytes')
@@ -96,11 +96,11 @@ test('a matching If-None-Match gets a bodyless 304 instead of the bytes again', 
   await serveStatic(fakeReq(), first, '/uploads/meta-two.jpg')
 
   const res = fakeRes()
-  await serveStatic(fakeReq({ 'if-none-match': first.headers['etag'] }), res, '/uploads/meta-two.jpg')
+  await serveStatic(fakeReq({ 'if-none-match': first.headers.etag }), res, '/uploads/meta-two.jpg')
 
   assert.equal(res.code, 304)
   assert.ok(!res.body || res.body.length === 0, '304 must carry no body')
-  assert.equal(res.headers['etag'], first.headers['etag'])
+  assert.equal(res.headers.etag, first.headers.etag)
   assert.ok(res.headers['cache-control'], '304 still refreshes the freshness policy')
 })
 
@@ -111,11 +111,11 @@ test('re-enriching a note changes the ETag, so the stale thumbnail is replaced',
 
   writeFileSync(abs, 'a-completely-new-thumbnail')
   const res = fakeRes()
-  await serveStatic(fakeReq({ 'if-none-match': first.headers['etag'] }), res, '/uploads/meta-three.jpg')
+  await serveStatic(fakeReq({ 'if-none-match': first.headers.etag }), res, '/uploads/meta-three.jpg')
 
   assert.equal(res.code, 200)
   assert.equal(res.body.toString(), 'a-completely-new-thumbnail')
-  assert.notEqual(res.headers['etag'], first.headers['etag'])
+  assert.notEqual(res.headers.etag, first.headers.etag)
 })
 
 test('a same-size overwrite still changes the ETag — size alone is not enough', async () => {

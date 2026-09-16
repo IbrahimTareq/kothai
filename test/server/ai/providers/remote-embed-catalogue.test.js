@@ -25,7 +25,7 @@ before(async () => {
 })
 after(() => server.close())
 
-const json = body => (req, res) => {
+const json = body => (_req, res) => {
   res.writeHead(200, { 'content-type': 'application/json' })
   res.end(JSON.stringify(body))
 }
@@ -95,7 +95,7 @@ test('a chat id is still checked against the chat list', async () => {
 // the chat roles are unaffected, and the embedding field falls back to the
 // behaviour it had before this existed.
 test('a failing embeddings probe does not take the provider down with it', async () => {
-  routes['/v1/embeddings/models'] = (req, res) => {
+  routes['/v1/embeddings/models'] = (_req, res) => {
     res.writeHead(500)
     res.end('nope')
   }

@@ -6,7 +6,7 @@
 // cosine similarity over these vectors is unaffected by the last few digits of
 // mantissa — the ranking is identical.
 export function encodeEmbedding(embedding) {
-  if (!embedding || !embedding.length) return null
+  if (!embedding?.length) return null
   return new Uint8Array(Float32Array.from(embedding).buffer)
 }
 
@@ -15,7 +15,7 @@ export function encodeEmbedding(embedding) {
 // an offset that is not a multiple of 4, so this copies rather than views —
 // the copy is the correctness fix, not an oversight.
 export function decodeEmbedding(blob) {
-  if (!blob || !blob.byteLength) return null
+  if (!blob?.byteLength) return null
   const bytes = Uint8Array.from(blob)
   return new Float32Array(bytes.buffer, 0, Math.floor(bytes.byteLength / 4))
 }

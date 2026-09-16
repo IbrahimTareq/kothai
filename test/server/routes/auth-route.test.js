@@ -138,7 +138,7 @@ test('a session cookie unlocks the API', async () => {
 
 test('a tampered session cookie is refused', async () => {
   const cookie = await sessionOf()
-  const res = await fetch(`${BASE}/api/notes`, { headers: { cookie: cookie.slice(0, -3) + 'AAA' } })
+  const res = await fetch(`${BASE}/api/notes`, { headers: { cookie: `${cookie.slice(0, -3)}AAA` } })
   assert.equal(res.status, 401)
 })
 

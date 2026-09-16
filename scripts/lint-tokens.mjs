@@ -149,8 +149,7 @@ for (const full of walk(CLIENT)) {
   const src = readFileSync(full, 'utf8')
   const rel = full.slice(CLIENT.length + 1)
   const marker = /style=\{\{/g
-  let m
-  while ((m = marker.exec(src))) {
+  for (let m = marker.exec(src); m; m = marker.exec(src)) {
     // balance braces from the opening of the object literal
     let i = m.index + 'style={'.length,
       depth = 0,

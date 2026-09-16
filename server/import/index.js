@@ -33,9 +33,7 @@ export function findImporter(files) {
     // same posture as parse()'s per-file try/catch in instagram.js.
     try {
       if (importer.sniff(files)) return importer
-    } catch {
-      continue
-    }
+    } catch {}
   }
   return null
 }

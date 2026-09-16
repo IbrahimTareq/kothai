@@ -15,7 +15,7 @@ function mockRes() {
   r.setHeader = () => {}
   return r
 }
-const urlOf = qs => new URL('http://x/api/notes/delta' + qs)
+const urlOf = qs => new URL(`http://x/api/notes/delta${qs}`)
 
 test('rev bumps on add/update/delete and changedSince reports patches', async () => {
   store._reset()
@@ -53,7 +53,7 @@ test('deltaOk refuses a since that predates the tombstone window', async () => {
   const ids = []
   for (let i = 0; i < 3; i++) ids.push((await store.addNote({ type: 'text', content: String(i) })).id)
   store._setTombstoneCap(2)
-  const sinceBefore = store.revState().rev
+  const _sinceBefore = store.revState().rev
   for (const id of ids) await store.deleteNote(id)
   assert.equal(store.deltaOk(0), false, 'rev 0 predates the trimmed window')
   assert.equal(store.deltaOk(store.revState().rev), true)

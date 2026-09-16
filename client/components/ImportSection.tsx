@@ -212,5 +212,5 @@ function summarizeImport(r: ImportResult) {
   if (r.collections > 0) parts.push(`${r.collections} space${r.collections === 1 ? '' : 's'} updated`)
   let s = parts.join(', ')
   if (r.failed > 0) s += `, ${r.failed} failed`
-  return s + '.'
+  return `${s}.`
 }

@@ -72,9 +72,9 @@ export function CaptureModal({ onClose, onSave }: CaptureModalProps) {
   }
 
   return (
-    <div className={'cap-overlay' + (closing ? ' closing' : '')} onClick={close}>
+    <div className={`cap-overlay${closing ? ' closing' : ''}`} onClick={close}>
       <div className="cap-modal" onClick={e => e.stopPropagation()}>
-        <div className={'input-shell' + (text || pendingImg ? ' focus' : '')}>
+        <div className={`input-shell${text || pendingImg ? ' focus' : ''}`}>
           {pendingImg && (
             <span className="attach-preview">
               <img src={pendingImg} alt="attachment" />
@@ -104,7 +104,7 @@ export function CaptureModal({ onClose, onSave }: CaptureModalProps) {
           {chip && (
             <span className="detect-chip">
               <Icon name={CAT[chip.type].glyph} size={12} /> {CAT[chip.type].label.replace(/s$/, '').toUpperCase()}
-              {chip.lang ? ' · ' + chip.lang.toUpperCase() : ''}
+              {chip.lang ? ` · ${chip.lang.toUpperCase()}` : ''}
             </span>
           )}
           <input
@@ -117,11 +117,7 @@ export function CaptureModal({ onClose, onSave }: CaptureModalProps) {
               e.target.value = ''
             }}
           />
-          <button
-            className="attach-btn"
-            title="attach image"
-            onClick={() => fileRef.current && fileRef.current.click()}
-          >
+          <button className="attach-btn" title="attach image" onClick={() => fileRef.current?.click()}>
             <Icon name="image" size={17} />
           </button>
           <button className="send-btn" disabled={(!text.trim() && !pendingImg) || saving} onClick={save}>

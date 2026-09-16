@@ -156,7 +156,7 @@ test('removeWeight deletes a companion-set directory whole', async () => {
 
 test('removeWeight refuses a traversing name and leaves the target alone', async () => {
   const dir = fixture({ 'keep.gguf': 8 })
-  const outside = path.join(dir, '..', path.basename(dir) + '-sibling.gguf')
+  const outside = path.join(dir, '..', `${path.basename(dir)}-sibling.gguf`)
   writeFileSync(outside, Buffer.alloc(8))
   try {
     await assert.rejects(

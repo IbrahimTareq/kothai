@@ -29,7 +29,7 @@ const RATIO_MIN_SAMPLE = 20
 
 let scanInProgress = false
 
-export async function handleAvailabilityScan(req, res) {
+export async function handleAvailabilityScan(_req, res) {
   if (scanInProgress) {
     return json(res, 409, { error: 'A scan is already running.', code: 'scan_in_progress' })
   }

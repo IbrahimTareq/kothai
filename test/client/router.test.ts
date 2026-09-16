@@ -61,8 +61,8 @@ test('a dangling item segment is not an item', () => {
 
 test('an open chat round-trips through /ask/<id>', () => {
   const id = 'a1b2c3d4-0000-4000-8000-000000000000'
-  assert.equal(chatPath(id), '/ask/' + id)
-  const r = pathToRoute('/ask/' + id)
+  assert.equal(chatPath(id), `/ask/${id}`)
+  const r = pathToRoute(`/ask/${id}`)
   assert.equal(r.nav, 'core')
   assert.equal(r.chat, id)
 })

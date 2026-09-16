@@ -53,7 +53,7 @@ export function ChatRow({ chat, active, open, rename, remove }: RowProps) {
           className="chat-rename"
           value={draft}
           autoFocus
-          aria-label={'Rename chat: ' + chat.title}
+          aria-label={`Rename chat: ${chat.title}`}
           onChange={e => setDraft(e.target.value)}
           onBlur={commit}
           onKeyDown={e => {
@@ -89,7 +89,7 @@ export function ChatRow({ chat, active, open, rename, remove }: RowProps) {
 
   return (
     <div
-      className={'chat-row' + (active ? ' active' : '')}
+      className={`chat-row${active ? ' active' : ''}`}
       role="button"
       tabIndex={0}
       onClick={() => open(chat)}
@@ -116,7 +116,7 @@ export function ChatRow({ chat, active, open, rename, remove }: RowProps) {
       </div>
       <button
         className="card-del"
-        aria-label={'Rename chat: ' + chat.title}
+        aria-label={`Rename chat: ${chat.title}`}
         title="Rename"
         onClick={e => {
           e.stopPropagation()
@@ -128,7 +128,7 @@ export function ChatRow({ chat, active, open, rename, remove }: RowProps) {
       </button>
       <button
         className="card-del"
-        aria-label={'Delete chat: ' + chat.title}
+        aria-label={`Delete chat: ${chat.title}`}
         title="Delete"
         onClick={e => {
           e.stopPropagation()

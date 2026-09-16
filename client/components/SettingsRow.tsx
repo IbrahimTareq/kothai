@@ -17,7 +17,7 @@ export function SettingsGroup({
   children: ReactNode
 }) {
   return (
-    <section className={'settings-group' + (className ? ' ' + className : '')}>
+    <section className={`settings-group${className ? ` ${className}` : ''}`}>
       <div className="recent-h">{label}</div>
       {sub && <div className="settings-group-sub">{sub}</div>}
       {children}

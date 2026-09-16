@@ -168,7 +168,7 @@ export function CardInner({ item, overlay }: { item: UIItem; overlay?: ReactElem
               exists to prevent, which would otherwise return the moment a
               note finishes enriching without a thumbnail. See tileSeed. */}
           <div
-            className={'img-thumb vid' + (it.thumb ? ' real' : '')}
+            className={`img-thumb vid${it.thumb ? ' real' : ''}`}
             style={it.thumb ? undefined : { background: imgGradient(tileSeed(it)), height: phHeight(tileSeed(it)) }}
           >
             {it.thumb && <img className="vid-thumb-img" src={it.thumb} alt="" loading="lazy" />}
@@ -236,7 +236,7 @@ function CollectionPopover({
         return (
           <button
             key={c.id}
-            className={'coll-pop-row' + (on ? ' on' : '')}
+            className={`coll-pop-row${on ? ' on' : ''}`}
             onClick={() => (on ? onRemoveFrom(c.id, item.id) : onAddTo(c.id, item.id))}
           >
             <span className="coll-pop-check">{on ? '✓' : ''}</span>
@@ -324,7 +324,7 @@ export function ItemCard({
   )
   return (
     <article
-      className={'item-card type-' + item.type + (headline ? ' linktile' : '') + (openable ? ' openable' : '')}
+      className={`item-card type-${item.type}${headline ? ' linktile' : ''}${openable ? ' openable' : ''}`}
       tabIndex={0}
       role={openable ? 'button' : undefined}
       title={item.url ?? undefined}
@@ -389,7 +389,7 @@ export function PreviewCard({ item, n, onJump }: { item: UIItem; n: number; onJu
   const jump = () => onJump(it)
   return (
     <article
-      className={'tile ask-tile type-' + it.type}
+      className={`tile ask-tile type-${it.type}`}
       tabIndex={0}
       role="button"
       title="Open in vault"
@@ -401,7 +401,7 @@ export function PreviewCard({ item, n, onJump }: { item: UIItem; n: number; onJu
         }
       }}
     >
-      <div className={'tile-media' + (media || !excerpt ? '' : ' quote')}>
+      <div className={`tile-media${media || !excerpt ? '' : ' quote'}`}>
         {media ? (
           // The glyph sits under the picture, which covers it — so a thumbnail
           // whose file has gone missing falls back to the same flat field a

@@ -179,7 +179,7 @@ export function CoreView({
     if (el) el.scrollTop = el.scrollHeight
   }
   return (
-    <div className={'core' + (hasThread ? ' has-thread' : '')} ref={coreRef}>
+    <div className={`core${hasThread ? ' has-thread' : ''}`} ref={coreRef}>
       {!hasThread && (
         <div className="core-prompt">
           <h1>What do you want to find?</h1>
@@ -260,7 +260,7 @@ export function CoreView({
             </span>
           </div>
         ) : (
-          <div className={'input-shell' + (focus ? ' focus' : '')}>
+          <div className={`input-shell${focus ? ' focus' : ''}`}>
             {pendingImg && (
               <span className="attach-preview">
                 <img src={pendingImg} alt="attachment" />
@@ -307,7 +307,7 @@ export function CoreView({
               className="attach-btn"
               aria-label="Attach an image"
               title="Attach an image"
-              onClick={() => fileRef.current && fileRef.current.click()}
+              onClick={() => fileRef.current?.click()}
             >
               <Icon name="image" size={17} />
             </button>
@@ -381,7 +381,7 @@ function AiAnswer({ m, jumpTo }: { m: ThreadMsg; jumpTo: (item: UIItem) => void 
   const others = cited.filter(c => !featIds.has(c.id))
   return (
     <>
-      <div className={'ai-lead' + (m.streaming ? ' streaming' : '')}>{renderLead(m, jumpTo)}</div>
+      <div className={`ai-lead${m.streaming ? ' streaming' : ''}`}>{renderLead(m, jumpTo)}</div>
       {featured.length > 0 && (
         <div className="preview-list">
           {featured.map(f => (
@@ -392,7 +392,7 @@ function AiAnswer({ m, jumpTo }: { m: ThreadMsg; jumpTo: (item: UIItem) => void 
       {others.length > 0 && (
         <div className="also">
           <button className="also-toggle mono" onClick={() => setShowOthers(v => !v)} aria-expanded={showOthers}>
-            <span className={'also-caret' + (showOthers ? ' open' : '')}></span>
+            <span className={`also-caret${showOthers ? ' open' : ''}`}></span>
             {featured.length > 0 ? 'ALSO CONSIDERED' : 'SOURCES SEARCHED'}{' '}
             <span className="also-count">{others.length}</span>
           </button>
@@ -458,7 +458,7 @@ function CopyAnswer({ text }: { text: string }) {
   const label = state === 'done' ? 'Copied' : state === 'failed' ? "Couldn't copy" : 'Copy'
   return (
     <button
-      className={'msg-copy' + (state === 'idle' ? '' : ' ' + state)}
+      className={`msg-copy${state === 'idle' ? '' : ` ${state}`}`}
       onClick={copy}
       aria-label={state === 'idle' ? 'Copy answer' : label}
       title={label}
@@ -517,7 +517,7 @@ function renderLead(m: ThreadMsg, jumpTo: (item: UIItem) => void): ReactNode {
         return (
           <ul key={i} className="ai-list">
             {b.items.map((it, j) => (
-              <li key={j}>{renderSpans(it, m, jumpTo, i + '.' + j)}</li>
+              <li key={j}>{renderSpans(it, m, jumpTo, `${i}.${j}`)}</li>
             ))}
           </ul>
         )
@@ -525,7 +525,7 @@ function renderLead(m: ThreadMsg, jumpTo: (item: UIItem) => void): ReactNode {
         return (
           <ol key={i} className="ai-list" start={b.start}>
             {b.items.map((it, j) => (
-              <li key={j}>{renderSpans(it, m, jumpTo, i + '.' + j)}</li>
+              <li key={j}>{renderSpans(it, m, jumpTo, `${i}.${j}`)}</li>
             ))}
           </ol>
         )
@@ -537,7 +537,7 @@ function renderLead(m: ThreadMsg, jumpTo: (item: UIItem) => void): ReactNode {
 
 function renderSpans(spans: Inline[], m: ThreadMsg, jumpTo: (item: UIItem) => void, keyBase: string): ReactNode[] {
   return spans.map((s, i) => {
-    const k = keyBase + ':' + i
+    const k = `${keyBase}:${i}`
     if (s.kind === 'br') return <br key={k} />
     // A code span is verbatim by definition — no citations, no question echo.
     if (s.kind === 'code')
@@ -558,14 +558,14 @@ function renderSpans(spans: Inline[], m: ThreadMsg, jumpTo: (item: UIItem) => vo
 function decorate(text: string, m: ThreadMsg, jumpTo: (item: UIItem) => void, keyBase: string): ReactNode[] {
   const q = m.q?.trim()
   if (q) {
-    const parts = text.split('“' + q + '”')
+    const parts = text.split(`“${q}”`)
     if (parts.length === 2)
       return [
-        ...linkifyCites(parts[0], m, jumpTo, keyBase + 'a'),
-        <Fragment key={keyBase + 'q'}>
+        ...linkifyCites(parts[0], m, jumpTo, `${keyBase}a`),
+        <Fragment key={`${keyBase}q`}>
           “<span className="q">{q}</span>”
         </Fragment>,
-        ...linkifyCites(parts[1], m, jumpTo, keyBase + 'b'),
+        ...linkifyCites(parts[1], m, jumpTo, `${keyBase}b`),
       ]
   }
   return linkifyCites(text, m, jumpTo, keyBase)

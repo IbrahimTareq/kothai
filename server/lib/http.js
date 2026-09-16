@@ -58,7 +58,7 @@ export function readBody(req, limit = 25 * 1024 * 1024) {
       const raw = Buffer.concat(chunks).toString('utf8')
       try {
         resolve(raw ? JSON.parse(raw) : {})
-      } catch (e) {
+      } catch (_e) {
         reject(new Error('invalid JSON body'))
       }
     })

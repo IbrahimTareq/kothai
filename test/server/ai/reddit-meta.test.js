@@ -193,7 +193,7 @@ test('a walled JSON endpoint degrades to oEmbed/OpenGraph instead of leaving the
   // that is what a Reddit save actually gets — the real post title, rather
   // than nothing at all plus five wasted metaTries retries.
   fetched = []
-  const oembed = 'https://www.reddit.com/oembed?url=' + encodeURIComponent(POST_URL) + '&format=json'
+  const oembed = `https://www.reddit.com/oembed?url=${encodeURIComponent(POST_URL)}&format=json`
   responses = {
     // no entry for the .json url → 403-equivalent, get() throws
     [oembed]: {
@@ -209,7 +209,7 @@ test('a walled JSON endpoint degrades to oEmbed/OpenGraph instead of leaving the
 
 test('a 200 that contains no post (a login wall) degrades the same way as a hard failure', async () => {
   fetched = []
-  const oembed = 'https://www.reddit.com/oembed?url=' + encodeURIComponent(POST_URL) + '&format=json'
+  const oembed = `https://www.reddit.com/oembed?url=${encodeURIComponent(POST_URL)}&format=json`
   responses = {
     [redditJsonUrl(POST_URL)]: { json: { kind: 'Listing', data: { children: [] } } },
     [oembed]: { json: { title: 'Recovered by oEmbed', provider_name: 'reddit' } },
@@ -245,7 +245,7 @@ test('fetchLinkMeta resolves a share link to the canonical post before fetching 
     [SHARE_URL]: {
       contentType: 'text/html',
       text: '<html><head><title>Reddit</title></head></html>',
-      redirectsTo: POST_URL + '?share_id=abc&utm_medium=android_app',
+      redirectsTo: `${POST_URL}?share_id=abc&utm_medium=android_app`,
     },
     [redditJsonUrl(POST_URL)]: { json: payload() },
   }

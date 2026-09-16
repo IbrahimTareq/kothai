@@ -53,7 +53,7 @@ export function useVaultStatus(): VaultSource {
         else if (a.state === 'loading')
           setVault({
             state: 'loading',
-            txt: 'LOADING ' + (a.progress || 0) + '%',
+            txt: `LOADING ${a.progress || 0}%`,
             pct: a.progress || 0,
             msg: a.message,
           })

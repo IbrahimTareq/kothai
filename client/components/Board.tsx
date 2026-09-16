@@ -174,7 +174,7 @@ export function WindowedBoard({
   }, [visible])
 
   return (
-    <div ref={boardRef} className={'board ' + view} style={{ height: total }}>
+    <div ref={boardRef} className={`board ${view}`} style={{ height: total }}>
       {visible.map(b => {
         const slot = byId.get(b.id)
         if (!slot) return null

@@ -174,7 +174,7 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
         ) : submitted ? (
           <div className="onboarding-progress">
             <div className="settings-progress-track">
-              <div className="settings-progress-bar" style={{ width: (vault.pct || 0) + '%' }}></div>
+              <div className="settings-progress-bar" style={{ width: `${vault.pct || 0}%` }}></div>
             </div>
             <span className="settings-progress-msg mono">
               {vault.state === 'error' ? vault.msg || 'Model load failed' : vault.msg || 'Downloading models…'}

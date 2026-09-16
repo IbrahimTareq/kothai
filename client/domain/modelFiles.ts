@@ -21,8 +21,8 @@ export function fileLabel(f: ModelFile): string {
 // embedding model to a 2.5 GB LLM, and rounding the small end to "0.3 GB"
 // hides exactly the difference the user is weighing up.
 export function fmtSize(bytes: number): string {
-  if (bytes >= 1e9) return (bytes / 1e9).toFixed(1) + ' GB'
-  return Math.round(bytes / 1e6) + ' MB'
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`
+  return `${Math.round(bytes / 1e6)} MB`
 }
 
 export function storageSummary({

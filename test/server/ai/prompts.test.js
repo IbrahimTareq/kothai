@@ -139,8 +139,8 @@ test('answerUserPrompt keeps the whole context inside the LLM ctx budget, trimmi
     category: 'Food',
     title: `Note ${i}`,
     siteDesc: 'x'.repeat(5000),
-    content: 'https://x.test/' + i,
-    url: 'https://x.test/' + i,
+    content: `https://x.test/${i}`,
+    url: `https://x.test/${i}`,
     tags: [],
   }))
   const p = answerUserPrompt({ question: 'q', contextNotes: many })

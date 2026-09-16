@@ -52,7 +52,7 @@ const okJson = (res, body) => {
 const chatReply = content => ({ choices: [{ message: { content } }] })
 
 beforeEach(() => {
-  routes = { '/models': (req, res) => okJson(res, { data: [{ id: 'llama3.2:3b' }, { id: 'nomic-embed-text' }] }) }
+  routes = { '/models': (_req, res) => okJson(res, { data: [{ id: 'llama3.2:3b' }, { id: 'nomic-embed-text' }] }) }
 })
 
 const make = (models = { llm: 'llama3.2:3b', embed: 'nomic-embed-text', vision: 'llava' }) =>
@@ -64,7 +64,7 @@ test('capabilities reports a remote provider that neither manages residency nor 
 
 test('embedText posts to /embeddings and returns the vector', async () => {
   let seen = null
-  routes['/embeddings'] = (req, res, body) => {
+  routes['/embeddings'] = (_req, res, body) => {
     seen = body
     okJson(res, { data: [{ embedding: [0.1, 0.2] }] })
   }
@@ -79,7 +79,7 @@ test('embedText prefixes query and document differently when the endpoint is ser
   // The prefix decision is keyed on the configured model NAME, because a
   // remote endpoint may be serving anything — see prompts.js's embedInput.
   let seen
-  routes['/embeddings'] = (req, res, body) => {
+  routes['/embeddings'] = (_req, res, body) => {
     seen = body
     okJson(res, { data: [{ embedding: [1] }] })
   }
@@ -97,7 +97,7 @@ test('embedText prefixes query and document differently when the endpoint is ser
 
 test('embedText leaves input untouched for an endpoint serving a model that is not prompt-instructed', async () => {
   let seen
-  routes['/embeddings'] = (req, res, body) => {
+  routes['/embeddings'] = (_req, res, body) => {
     seen = body
     okJson(res, { data: [{ embedding: [1] }] })
   }
@@ -109,7 +109,7 @@ test('embedText truncates very long input to a TOKEN budget, the same way the lo
   // A character cap cannot keep the request inside the model's fixed batch
   // size, because characters are not tokens — see prompts.js's clipToTokens.
   let seen = null
-  routes['/embeddings'] = (req, res, body) => {
+  routes['/embeddings'] = (_req, res, body) => {
     seen = body
     okJson(res, { data: [{ embedding: [1] }] })
   }
@@ -128,7 +128,7 @@ test('embedText truncates very long input to a TOKEN budget, the same way the lo
 
 test('classify requests json_schema and normalises the result', async () => {
   let seen = null
-  routes['/chat/completions'] = (req, res, body) => {
+  routes['/chat/completions'] = (_req, res, body) => {
     seen = body
     okJson(
       res,
@@ -146,7 +146,7 @@ test('classify requests json_schema and normalises the result', async () => {
 
 test('classify retries without json_schema when the endpoint rejects it', async () => {
   const bodies = []
-  routes['/chat/completions'] = (req, res, body) => {
+  routes['/chat/completions'] = (_req, res, body) => {
     bodies.push(body)
     if (bodies.length === 1) {
       res.writeHead(400, { 'content-type': 'application/json' })
@@ -164,7 +164,7 @@ test('classify retries without json_schema when the endpoint rejects it', async 
 
 test('classify json_schema 400 does not open the circuit when plain retry succeeds', async () => {
   const bodies = []
-  routes['/chat/completions'] = (req, res, body) => {
+  routes['/chat/completions'] = (_req, res, body) => {
     bodies.push(body)
     if (bodies.length === 1) {
       res.writeHead(400, { 'content-type': 'application/json' })
@@ -198,7 +198,7 @@ test('classify opens the circuit on a genuine failure, not just on the plain-pro
 })
 
 test('classify falls back to heuristics when output is unparseable after the retry', async () => {
-  routes['/chat/completions'] = (req, res) => okJson(res, chatReply('sorry, I cannot'))
+  routes['/chat/completions'] = (_req, res) => okJson(res, chatReply('sorry, I cannot'))
   const p = make()
   await p.init()
   const out = await p.classify({ text: 'https://youtube.com/watch?v=1', isUrl: true, now: 'now' })
@@ -211,7 +211,7 @@ test('describeImage inlines the file as a base64 data URL content part', async (
   const file = path.join(dir, 'a.png')
   writeFileSync(file, Buffer.from([0x89, 0x50, 0x4e, 0x47]))
   let seen = null
-  routes['/chat/completions'] = (req, res, body) => {
+  routes['/chat/completions'] = (_req, res, body) => {
     seen = body
     okJson(res, chatReply('a png'))
   }
@@ -226,7 +226,7 @@ test('describeImage inlines the file as a base64 data URL content part', async (
 
 test('answer posts the shared system prompt and returns trimmed text', async () => {
   let seen = null
-  routes['/chat/completions'] = (req, res, body) => {
+  routes['/chat/completions'] = (_req, res, body) => {
     seen = body
     okJson(res, chatReply('  the answer  '))
   }
@@ -266,7 +266,7 @@ test('an unreachable endpoint reports error in the aggregate but still serves th
 
 test('a non-transient failure opens the circuit and later calls fail fast without hitting the network', async () => {
   let hits = 0
-  routes['/chat/completions'] = (req, res) => {
+  routes['/chat/completions'] = (_req, res) => {
     hits++
     res.writeHead(401, { 'content-type': 'application/json' })
     res.end('{}')

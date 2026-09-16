@@ -10,11 +10,11 @@
   },
   "scripts": {
     "dev": "concurrently -k -n server,vite -c blue,magenta \"node server/index.js\" \"vite\"",
-    "build": "node scripts/lint-tokens.mjs && tsc --noEmit && vite build",
+    "build": "biome check . && node scripts/lint-tokens.mjs && tsc --noEmit && vite build",
     "start": "npm run build && node server/index.js",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/lint-tokens.mjs && node scripts/lint-shape.mjs && node --experimental-test-module-mocks --test 'test/**/*.test.js' 'test/**/*.test.ts'",
+    "test": "biome check . && node scripts/lint-tokens.mjs && node scripts/lint-shape.mjs && node --experimental-test-module-mocks --test 'test/**/*.test.js' 'test/**/*.test.ts'",
     "lint:tokens": "node scripts/lint-tokens.mjs",
     "lint:shape": "node scripts/lint-shape.mjs",
     "format": "biome format --write .",
