@@ -10,6 +10,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import * as store from '../../../server/data/notes.js'
 import { encodeEmbedding, decodeEmbedding } from '../../../server/data/notes.js'
+import { cosine } from '../../../server/data/embedding.js'
 import { getDb } from '../../../server/data/db.js'
 import { deriveAiMarkers } from '../../../server/ai/backlog.js'
 
@@ -192,4 +193,13 @@ test('the same rule holds for batched { persist: false } writes', async () => {
   await store.updateNote(id, { summary: 'batched' }, { persist: false })
   await store.flush()
   assert.deepEqual([...decodeEmbedding(db.prepare('SELECT embedding FROM notes WHERE id = ?').get(id).embedding)], [9, 9, 9, 9])
+})
+
+// cosine lives beside the codec in embedding.js. notes.js and tagvocab.js each
+// had a byte-identical private copy; this covers the one they now share.
+test('cosine: identical → 1, orthogonal → 0, mismatched length → 0', () => {
+  assert.ok(Math.abs(cosine([1, 0, 0], [1, 0, 0]) - 1) < 1e-9)
+  assert.equal(cosine([1, 0, 0], [0, 1, 0]), 0)
+  assert.equal(cosine([1, 2, 3], [1, 2]), 0)
+  assert.equal(cosine(null, [1]), 0)
 })

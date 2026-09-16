@@ -1,17 +1,11 @@
 // Unit tests for server/data/tagvocab.js — the canonical-tag embedding registry.
-// Pure helpers (cosine, nearestTag) need no I/O. The embedding-coupled paths
+// The pure helper nearestTag needs no I/O (cosine moved to embedding.js, and is
+// covered there). The embedding-coupled paths
 // (canonicalize, rebuildFromNotes) are driven with an injected fake embedder and
 // _reset() so no model or disk is touched.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import * as tagvocab from '../../../server/data/tagvocab.js'
-
-test('cosine: identical → 1, orthogonal → 0, mismatched length → 0', () => {
-  assert.ok(Math.abs(tagvocab.cosine([1, 0, 0], [1, 0, 0]) - 1) < 1e-9)
-  assert.equal(tagvocab.cosine([1, 0, 0], [0, 1, 0]), 0)
-  assert.equal(tagvocab.cosine([1, 2, 3], [1, 2]), 0)
-  assert.equal(tagvocab.cosine(null, [1]), 0)
-})
 
 test('nearestTag: returns best entry when ≥ threshold, else null', () => {
   const entries = [

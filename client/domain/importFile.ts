@@ -51,10 +51,6 @@ export const IMPORT_SOURCES: ImportSource[] = [
   },
 ]
 
-export function getImportSource(id: string): ImportSource | null {
-  return IMPORT_SOURCES.find((s) => s.id === id) || null
-}
-
 const DEFAULT_SOURCE = IMPORT_SOURCES[0]
 
 // Returns a user-facing reason to reject, or null when the file is fine.

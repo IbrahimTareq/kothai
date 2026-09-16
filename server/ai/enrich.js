@@ -60,11 +60,6 @@ export function queueLinkMeta(noteId, url) {
   pumpMeta()
 }
 
-// Read by tests and by anything wanting to know the lane is drained.
-export function metaLaneDepth() {
-  return metaQueue.length + metaActive
-}
-
 function pumpMeta() {
   while (metaActive < META_CONCURRENCY && metaQueue.length) {
     const job = metaQueue.shift()

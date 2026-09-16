@@ -6,6 +6,7 @@
 // This module sits on the same trust boundary as server/lib/zip.js: the JSON
 // here comes straight from a user-uploaded archive, so it's treated as
 // hostile input, not just "unusual" input — see the guards below.
+import { tryJson, clip } from './untrusted.js'
 
 export const name = 'instagram'
 // Shown by the route when an upload doesn't match this importer. Kept beside
@@ -29,7 +30,6 @@ const IG_PERMALINK = /instagram\.com\/(p|reel|reels|tv)\//
 // against a hostile export, not general-purpose validation.
 const MAX_ITEMS = 100_000 // shared budget across every saved_posts.json in one import (tracked in parse()) — Meta splits large exports into parts, so capping per-file would let a hostile zip multiply past this
 const MAX_URL_LEN = 2048 // an oversized href flows into note.url/content, the embedding input, and an <a href> on the client — reject rather than clip, since a truncated URL is a broken link
-const MAX_FIELD_LEN = 500 // caps poster/title/collection-name strings only (note.url has its own cap above); these land in the UI and in LLM enrichment prompts, so a multi-MB string field can't ride along
 // `depth` bounds recursion against a maliciously deep-nested JSON (e.g. a
 // 100k-deep array) that would otherwise blow the stack with a RangeError.
 // JSON.parse itself won't save us here — V8's parser is NOT recursive (it
@@ -50,9 +50,6 @@ export function sniff(files) {
   return [...files.keys()].some((k) => SAVED_POSTS_FILE.test(k) || COLLECTIONS_FILE.test(k))
 }
 
-function tryJson(buf) {
-  try { return JSON.parse(buf.toString('utf8')) } catch { return null }
-}
 
 // Only accept explicit http(s) — href.startsWith('http') would also admit
 // "httpfoo://" or worse, and these values eventually become clickable card
@@ -62,13 +59,6 @@ function isHttpUrl(v) {
   return typeof v === 'string' && (v.startsWith('http://') || v.startsWith('https://'))
 }
 
-// Collapses whitespace before clipping: these strings ride into an LLM
-// enrichment prompt (a poster "name" full of newlines/control whitespace is a
-// cheap prompt-formatting/injection vector) as well as into the UI.
-function clip(str) {
-  if (typeof str !== 'string') return ''
-  return str.replace(/\s+/g, ' ').trim().slice(0, MAX_FIELD_LEN)
-}
 
 // Meta normally encodes "Saved on" as Unix seconds, but some export versions
 // (and hostile input) carry milliseconds instead — feeding that straight into

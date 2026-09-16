@@ -10,6 +10,7 @@
 // and pay for an LLM enrichment pass on each one.
 //
 // Verified against a real export (197 favorites, 13 collections, Aug 2026).
+import { tryJson, clip } from './untrusted.js'
 
 export const name = 'tiktok'
 export const label = 'TikTok'
@@ -35,7 +36,6 @@ const COLLECTION_LIST_KEY = 'FavoriteCollectionList'
 // export, not general-purpose validation.
 const MAX_ITEMS = 100_000
 const MAX_URL_LEN = 2048
-const MAX_FIELD_LEN = 500
 const MAX_WALK_DEPTH = 64
 const MAX_TS = 4_102_444_800 // 2100-01-01Z in Unix seconds
 
@@ -57,14 +57,7 @@ export function sniff(files) {
   return false
 }
 
-function tryJson(buf) {
-  try { return JSON.parse(buf.toString('utf8')) } catch { return null }
-}
 
-function clip(str) {
-  if (typeof str !== 'string') return ''
-  return str.replace(/\s+/g, ' ').trim().slice(0, MAX_FIELD_LEN)
-}
 
 // Collects every array stored under `key`, at any depth. Depth-bounded for the
 // same reason instagram.js's walks are: JSON.parse is not recursive in V8, so a

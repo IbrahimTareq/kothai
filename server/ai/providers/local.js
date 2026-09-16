@@ -204,14 +204,6 @@ export function statusSnapshot() {
   return { roles, aggregate: computeAggregate(roles, policies) }
 }
 
-export function roleState(role) {
-  return managers[role].snapshot().state
-}
-
-export function rolePolicy(role) {
-  return managers[role].policy
-}
-
 // Describe an image file (absolute path) using the vision model. Used both to
 // caption images on save (so they become searchable) and to answer questions
 // about an attached image directly.

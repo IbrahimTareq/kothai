@@ -1,6 +1,5 @@
 // Time / date / gradient formatting helpers.
 
-const DAY = 86400000
 const now = Date.now()
 
 // Wall-clock time for a chat message. Absolute rather than relative: a thread
@@ -24,21 +23,6 @@ export function relTime(ts: number): string {
   const wks = Math.floor(days / 7)
   if (days < 30) return wks + 'w ago'
   return Math.floor(days / 30) + 'mo ago'
-}
-
-export function dateGroup(ts: number): string {
-  const d = new Date(ts)
-  const t = new Date(now)
-  const same = (a: Date, b: Date) => a.toDateString() === b.toDateString()
-  if (same(d, t)) return 'TODAY'
-  if (same(d, new Date(now - DAY))) return 'YESTERDAY'
-  if (now - ts < 7 * DAY) return 'THIS WEEK'
-  if (now - ts < 30 * DAY) return 'THIS MONTH'
-  return 'ARCHIVE'
-}
-
-export function fullDate(ts: number): string {
-  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 // deterministic gradient for image placeholders

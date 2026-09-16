@@ -8,7 +8,7 @@ import path from 'node:path'
 import { readdir, rm } from 'node:fs/promises'
 import { UPLOAD_DIR } from './json.js'
 import { getDb, _resetDb } from './db.js'
-import { encodeEmbedding, decodeEmbedding } from './embedding.js'
+import { encodeEmbedding, decodeEmbedding, cosine } from './embedding.js'
 import { deriveAiMarkers } from '../ai/backlog.js'
 import { deriveAccountFromTitle } from '../import/instagram.js'
 
@@ -522,18 +522,4 @@ function haystackFor(n) {
 function stripEmbedding(n) {
   const { embedding, _rev, ...rest } = n
   return rest
-}
-
-function cosine(a, b) {
-  if (!a || !b || a.length !== b.length) return 0
-  let dot = 0
-  let na = 0
-  let nb = 0
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i]
-    na += a[i] * a[i]
-    nb += b[i] * b[i]
-  }
-  const denom = Math.sqrt(na) * Math.sqrt(nb)
-  return denom ? dot / denom : 0
 }

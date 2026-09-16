@@ -8,7 +8,7 @@
 // so new tags have something to snap to. Only the enrichment (LLM) path calls
 // canonicalize — manual tag edits are left as the user typed them.
 import { getDb, _resetDb } from './db.js'
-import { encodeEmbedding, decodeEmbedding } from './embedding.js'
+import { encodeEmbedding, decodeEmbedding, cosine } from './embedding.js'
 import { normalizeTags } from '../lib/tags.js'
 import * as ai from '../ai/index.js'
 
@@ -18,21 +18,6 @@ let registry = new Map() // canonical tag -> embedding vector
 let loaded = false
 
 // ---- pure helpers (no I/O) ---------------------------------------------
-// Cosine similarity of two equal-length vectors. Local copy (store.js has a
-// private one) to keep this module self-contained.
-export function cosine(a, b) {
-  if (!a || !b || a.length !== b.length) return 0
-  let dot = 0
-  let na = 0
-  let nb = 0
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i]
-    na += a[i] * a[i]
-    nb += b[i] * b[i]
-  }
-  const denom = Math.sqrt(na) * Math.sqrt(nb)
-  return denom ? dot / denom : 0
-}
 
 // Best-matching entry for `vec` among `entries` ([tag, vector] pairs), but only
 // if its similarity is >= threshold. Returns { tag, score } or null.
