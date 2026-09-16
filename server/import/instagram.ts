@@ -517,12 +517,10 @@ export function deriveNote(item: ImportItem) {
     tags: ['instagram'],
     account: item.poster || null,
     createdAt: savedAt > 0 ? new Date(savedAt * 1000).toISOString() : new Date().toISOString(),
-    importedAt: new Date().toISOString(),
     pending: true,
     // Pins `type` to NoteType rather than letting it widen to `string`: the
-    // route hands this object straight to store.addNote. `importedAt` is
-    // named because it is persisted but undeclared — see ServerNote.
-  } satisfies Partial<ServerNote> & { importedAt: string }
+    // route hands this object straight to store.addNote.
+  } satisfies Partial<ServerNote>
 }
 
 // One-time migration for notes imported before `account` was a first-class

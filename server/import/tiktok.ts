@@ -260,8 +260,7 @@ export function deriveNote(item: ImportItem) {
     tags: ['tiktok'],
     account: item.poster || null,
     createdAt: seconds > 0 ? new Date(seconds * 1000).toISOString() : new Date().toISOString(),
-    importedAt: new Date().toISOString(),
     pending: true,
     // See instagram.ts's deriveNote — same reason.
-  } satisfies Partial<ServerNote> & { importedAt: string }
+  } satisfies Partial<ServerNote>
 }

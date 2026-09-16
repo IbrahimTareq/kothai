@@ -246,7 +246,6 @@ async function runImport(req: IncomingMessage, res: ServerResponse): Promise<voi
     if (c && !urlIndex.has(c)) urlIndex.set(c, n.id)
   }
 
-  const batchImportedAt = new Date().toISOString()
   const imported = [] // [{ id, url }] added THIS run, in order — url is kept alongside id so enrich can be queued after the fact without re-deriving it
   let skipped = 0
   let failed = 0
@@ -262,16 +261,16 @@ async function runImport(req: IncomingMessage, res: ServerResponse): Promise<voi
       // disk I/O, so a mid-loop failure can only be a logic bug, not a
       // partial disk write; caught per-item so one bad row can't sink the
       // whole import.
-      // One arrival stamp for the whole run, overriding deriveNote's per-item
-      // `new Date()`. An import is a single event, and stamping each row
-      // separately made "recently added" sort by millisecond — i.e. by the
-      // order the export file happened to list things — which is how a
-      // library's OLDEST imported items ended up at the top of the board.
-      // `importedAt` is a real persisted field that ServerNote/NoteRecord do
-      // not declare, and an undeclared property is rejected only in a FRESH
-      // object literal — hence the variable rather than an inline spread.
-      const fields = { ...importer.deriveNote(item), importedAt: batchImportedAt }
-      note = await store.addNote(fields, { persist: false })
+      // Deliberately no arrival stamp. Notes once carried an `importedAt`,
+      // stamped once per run here so "recently added" would not sort by
+      // millisecond — i.e. by the order the export file happened to list
+      // things, which is how a library's OLDEST imported items ended up at
+      // the top of the board. Its only reader is gone: sortNotes orders on
+      // `createdAt` and breaks ties on insertion order, curing that same
+      // symptom. The write outlived the read, persisting an unread field on
+      // every row and shipping it to every client — so it was deleted
+      // rather than declared in ServerNote.
+      note = await store.addNote(importer.deriveNote(item), { persist: false })
     } catch (e) {
       console.error('[import] failed to add note for', item.url, '-', e instanceof Error ? e.message : e)
       failed++

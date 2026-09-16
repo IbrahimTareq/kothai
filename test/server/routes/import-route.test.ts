@@ -1266,3 +1266,20 @@ test('bulk: a no-op re-import writes the Space row zero times', async () => {
   assert.equal(addItemCalls.length, 0, 'nothing to file')
   assert.equal(rowWrites, 0, 'and so nothing written')
 })
+
+// Covers both writers of the field at once: the importer's own per-item
+// stamp and the route's whole-batch override of it. `importedAt` was
+// persisted on every imported note and sent to the client, and nothing has
+// read it since c85c793 replaced sortNotes' 'added' order — which was its
+// only reader — with the newest/oldest createdAt sort. The incident that
+// override existed for (a bulk import's OLDEST items at the top of the
+// board, each captioned "8 months ago") is still fixed, by sortNotes'
+// insertion-order tiebreak; see the comment there.
+test('an imported note is stamped with no arrival time — nothing reads one', async () => {
+  reset()
+  const payload = savedPostsPayload([post('natgeo', 'AAA111', 1718000000)])
+  await handleImport(fakeReq({ name: 'saved_posts.json', data: b64(payload) }), fakeRes())
+
+  assert.equal(addNoteCalls.length, 1)
+  assert.equal('importedAt' in addNoteCalls[0].note, false)
+})

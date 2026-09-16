@@ -195,3 +195,14 @@ test('deriveNote: an absent or absurd timestamp falls back to now rather than th
   assert.doesNotThrow(() => deriveNote({ url: 'https://www.tiktok.com/video/1', poster: '', savedAt: 1e300 }))
   assert.doesNotThrow(() => deriveNote({ url: 'https://www.tiktok.com/video/1', poster: '', savedAt: 0 }))
 })
+
+// `importedAt` was a real persisted field that reached the client on every
+// note, read by nothing. Its only reader — sortNotes' 'added' order — was
+// replaced by the newest/oldest createdAt sort in c85c793, eighteen minutes
+// after fe69ac4 introduced it, and the write outlived the read. Asserted
+// rather than assumed: a write-only field is invisible until something
+// checks for it.
+test('deriveNote: stamps no arrival time — nothing reads one', () => {
+  const note = deriveNote({ url: 'https://www.tiktok.com/video/1', poster: '', savedAt: 0 })
+  assert.equal('importedAt' in note, false)
+})
