@@ -11,7 +11,7 @@ import * as store from '../data/notes.js'
 import * as collections from '../data/collections.js'
 import * as chats from '../data/chats.js'
 import * as settings from '../data/settings.js'
-import { downloadJson } from '../lib/http.js'
+import { downloadJson } from '../lib/http.ts'
 
 export function handleExport(res) {
   const bundle = {

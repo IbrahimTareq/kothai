@@ -12,14 +12,17 @@
 // same reason: DNS answers are the attacker's other lever.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isBlockedAddress, isAllowedPort, assertPublicUrl, safeFetch } from '../../../server/lib/ssrf.js'
+import type { LookupAddress } from 'node:dns'
+import { isBlockedAddress, isAllowedPort, assertPublicUrl, safeFetch } from '../../../server/lib/ssrf.ts'
 
 // A resolver stub. Takes a hostname → address map; anything unmapped is NXDOMAIN.
-const resolver = map => async host => {
-  const addrs = map[host]
-  if (!addrs) throw Object.assign(new Error('getaddrinfo ENOTFOUND'), { code: 'ENOTFOUND' })
-  return addrs.map(address => ({ address, family: address.includes(':') ? 6 : 4 }))
-}
+const resolver =
+  (map: Record<string, string[]>) =>
+  async (host: string): Promise<LookupAddress[]> => {
+    const addrs = map[host]
+    if (!addrs) throw Object.assign(new Error('getaddrinfo ENOTFOUND'), { code: 'ENOTFOUND' })
+    return addrs.map(address => ({ address, family: address.includes(':') ? 6 : 4 }))
+  }
 
 // ---- the address predicate ---------------------------------------------
 
@@ -168,23 +171,22 @@ test('assertPublicUrl: allowPrivate re-opens everything except the scheme check 
 
 // ---- redirects ----------------------------------------------------------
 
-// Minimal Response-alikes; safeFetch only ever touches status/headers/body.
-const redirectTo = (location, status = 302) => ({
-  status,
-  headers: new Headers({ location }),
-  body: { cancel: async () => {} },
-})
-const ok = marker => ({ status: 200, headers: new Headers(), body: null, marker })
+// Real Response objects rather than Response-alikes: safeFetch hands its result
+// straight back to the caller, which reads res.ok and res.status
+// (server/ai/meta.js), so the fake has to be the same thing. Identity of the
+// returned object is what each test below asserts.
+const redirectTo = (location: string, status = 302): Response => new Response(null, { status, headers: { location } })
 
 test('safeFetch: follows a redirect to another public host', async () => {
   const lookup = resolver({ 'a.example.com': ['93.184.216.34'], 'b.example.com': ['8.8.8.8'] })
-  const seen = []
-  const fetchImpl = async (url, init) => {
-    seen.push([url, init.redirect])
-    return url === 'http://a.example.com/' ? redirectTo('http://b.example.com/final') : ok('landed')
+  const seen: [string, RequestInit['redirect']][] = []
+  const landed = new Response(null, { status: 200 })
+  const fetchImpl = async (url: string | URL | Request, init?: RequestInit) => {
+    seen.push([String(url), init?.redirect])
+    return String(url) === 'http://a.example.com/' ? redirectTo('http://b.example.com/final') : landed
   }
   const res = await safeFetch('http://a.example.com/', {}, { fetchImpl, lookup })
-  assert.equal(res.marker, 'landed')
+  assert.equal(res, landed)
   assert.deepEqual(
     seen.map(([u]) => u),
     ['http://a.example.com/', 'http://b.example.com/final'],
@@ -205,13 +207,14 @@ test('safeFetch: refuses a redirect that lands on a private address (the gap red
 
 test('safeFetch: a relative Location is resolved against the hop it came from, then re-checked', async () => {
   const lookup = resolver({ 'a.example.com': ['93.184.216.34'] })
-  const seen = []
-  const fetchImpl = async url => {
-    seen.push(url)
-    return url === 'http://a.example.com/one' ? redirectTo('/two') : ok('landed')
+  const seen: string[] = []
+  const landed = new Response(null, { status: 200 })
+  const fetchImpl = async (url: string | URL | Request) => {
+    seen.push(String(url))
+    return String(url) === 'http://a.example.com/one' ? redirectTo('/two') : landed
   }
   const res = await safeFetch('http://a.example.com/one', {}, { fetchImpl, lookup })
-  assert.equal(res.marker, 'landed')
+  assert.equal(res, landed)
   assert.deepEqual(seen, ['http://a.example.com/one', 'http://a.example.com/two'])
 })
 
@@ -224,25 +227,26 @@ test('safeFetch: gives up on a redirect loop rather than spinning forever', asyn
 test('safeFetch: drains each redirect response body so the connection is not left hanging', async () => {
   const lookup = resolver({ 'a.example.com': ['93.184.216.34'] })
   let cancelled = 0
-  const fetchImpl = async url =>
-    url === 'http://a.example.com/'
-      ? {
-          status: 302,
-          headers: new Headers({ location: 'http://a.example.com/final' }),
-          body: {
-            cancel: async () => {
+  const landed = new Response(null, { status: 200 })
+  const fetchImpl = async (url: string | URL | Request) =>
+    String(url) === 'http://a.example.com/'
+      ? new Response(
+          new ReadableStream({
+            cancel() {
               cancelled++
             },
-          },
-        }
-      : ok('landed')
+          }),
+          { status: 302, headers: { location: 'http://a.example.com/final' } },
+        )
+      : landed
   await safeFetch('http://a.example.com/', {}, { fetchImpl, lookup })
   assert.equal(cancelled, 1)
 })
 
 test('safeFetch: a 3xx with no Location is returned as-is rather than treated as a hop', async () => {
   const lookup = resolver({ 'a.example.com': ['93.184.216.34'] })
-  const fetchImpl = async () => ({ status: 304, headers: new Headers(), body: null, marker: 'not-modified' })
+  const notModified = new Response(null, { status: 304 })
+  const fetchImpl = async () => notModified
   const res = await safeFetch('http://a.example.com/', {}, { fetchImpl, lookup })
-  assert.equal(res.marker, 'not-modified')
+  assert.equal(res, notModified)
 })

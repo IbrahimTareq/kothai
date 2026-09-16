@@ -5,12 +5,14 @@ import { existsSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
+import type { IncomingMessage, ServerResponse } from 'node:http'
+import type { Stats } from 'node:fs'
 import { UPLOAD_DIR } from '../config.ts'
 
 const LIB_DIR = path.dirname(fileURLToPath(import.meta.url))
 const PUBLIC_DIR = path.join(LIB_DIR, '..', '..', 'dist') // built client at repo root
 
-const MIME = {
+const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -24,7 +26,7 @@ const MIME = {
 }
 
 // ---- tiny helpers ------------------------------------------------------
-export function json(res, code, obj) {
+export function json(res: ServerResponse, code: number, obj: unknown): void {
   const body = JSON.stringify(obj)
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' })
   res.end(body)
@@ -32,7 +34,7 @@ export function json(res, code, obj) {
 
 // Same as json(), but with a Content-Disposition that makes the browser save
 // it as a file instead of navigating to it.
-export function downloadJson(res, filename, obj) {
+export function downloadJson(res: ServerResponse, filename: string, obj: unknown): void {
   const body = JSON.stringify(obj, null, 2)
   res.writeHead(200, {
     'Content-Type': 'application/json; charset=utf-8',
@@ -41,11 +43,11 @@ export function downloadJson(res, filename, obj) {
   res.end(body)
 }
 
-export function readBody(req, limit = 25 * 1024 * 1024) {
+export function readBody(req: IncomingMessage, limit = 25 * 1024 * 1024): Promise<unknown> {
   return new Promise((resolve, reject) => {
     let size = 0
-    const chunks = []
-    req.on('data', c => {
+    const chunks: Buffer[] = []
+    req.on('data', (c: Buffer) => {
       size += c.length
       if (size > limit) {
         reject(new Error('payload too large'))
@@ -68,7 +70,9 @@ export function readBody(req, limit = 25 * 1024 * 1024) {
 
 // Persist a pasted (base64 data-URL) image to disk.
 // Returns { webPath, absPath } or null.
-export async function saveImage(dataUrl) {
+export async function saveImage(
+  dataUrl: string | null | undefined,
+): Promise<{ webPath: string; absPath: string } | null> {
   const m = /^data:(image\/(png|jpe?g|gif|webp));base64,(.+)$/i.exec(dataUrl || '')
   if (!m) return null
   const ext = m[2].toLowerCase().replace('jpeg', 'jpg')
@@ -87,7 +91,7 @@ const HASHED_RE = /-[A-Za-z0-9_-]{8,}\.\w+$/
 // Decided from the URL rather than the resolved file, so a request that falls
 // through to the SPA shell is treated as the route it asked for, not as
 // index.html.
-export function cacheControlFor(urlPath) {
+export function cacheControlFor(urlPath: string): string {
   // The user's own uploads. `meta-<noteId>.jpg` is a stable name that a
   // re-enrich overwrites in place, so these get a short freshness window and
   // then revalidate — a 304 is ~200 bytes against a ~190KB thumbnail — rather
@@ -102,13 +106,13 @@ export function cacheControlFor(urlPath) {
 // Strong validator over the two things that change when a file is rewritten.
 // Size alone would miss an in-place overwrite of identical length, so mtime
 // is what actually carries the change.
-export function etagFor(stat) {
+export function etagFor(stat: Stats): string {
   return `"${Math.floor(stat.mtimeMs).toString(16)}-${stat.size.toString(16)}"`
 }
 
 // Per RFC 9110 an If-None-Match, when present, wins outright and
 // If-Modified-Since is not consulted at all.
-function isFresh(req, etag, mtimeMs) {
+function isFresh(req: IncomingMessage, etag: string, mtimeMs: number): boolean {
   const inm = req.headers['if-none-match']
   if (inm) return inm.split(',').some(t => t.trim() === etag)
   const ims = req.headers['if-modified-since']
@@ -118,9 +122,9 @@ function isFresh(req, etag, mtimeMs) {
   return Number.isFinite(since) && Math.floor(mtimeMs / 1000) <= Math.floor(since / 1000)
 }
 
-export async function serveStatic(req, res, urlPath) {
+export async function serveStatic(req: IncomingMessage, res: ServerResponse, urlPath: string): Promise<void> {
   // uploaded images live in ./data/uploads, everything else in ./dist (built client)
-  let filePath
+  let filePath: string
   if (urlPath.startsWith('/uploads/')) {
     filePath = path.join(UPLOAD_DIR, path.basename(urlPath))
   } else {

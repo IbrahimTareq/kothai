@@ -6,7 +6,7 @@ import * as collections from '../data/collections.js'
 import * as enrich from '../ai/enrich.js'
 import { findImporter, getImporter, importerNames } from '../import/index.js'
 import { readZip, MAX_TOTAL_BYTES } from '../lib/zip.ts'
-import { json, readBody } from '../lib/http.js'
+import { json, readBody } from '../lib/http.ts'
 import { runExclusiveImport } from '../data/import-lock.ts'
 
 // Uploads arrive as JSON { name, data } with data base64 (raw or data-URL),

@@ -13,7 +13,7 @@ import * as collections from '../data/collections.js'
 import * as chats from '../data/chats.js'
 import * as tagvocab from '../data/tagvocab.js'
 import { isImportInProgress, IMPORT_BUSY } from '../data/import-lock.ts'
-import { json, readBody } from '../lib/http.js'
+import { json, readBody } from '../lib/http.ts'
 
 export const CONFIRM_TOKEN = 'DELETE'
 

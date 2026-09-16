@@ -3,7 +3,7 @@ import * as store from '../data/notes.js'
 import * as chats from '../data/chats.js'
 import * as settings from '../data/settings.js'
 import * as prompts from '../ai/prompts.js'
-import { json, readBody, saveImage } from '../lib/http.js'
+import { json, readBody, saveImage } from '../lib/http.ts'
 
 // Server-sent events, opened only once the request has cleared every gate —
 // before that a plain JSON error is still the right answer, and the headers

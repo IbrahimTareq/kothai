@@ -7,13 +7,13 @@ import { existsSync } from 'node:fs'
 import { DATA_DIR, UPLOAD_DIR } from '../config.ts'
 
 // Ensure data/ exists (and uploads/ when asked).
-export async function ensureDataDir({ uploads = false } = {}) {
+export async function ensureDataDir({ uploads = false }: { uploads?: boolean } = {}): Promise<void> {
   if (!existsSync(DATA_DIR)) await mkdir(DATA_DIR, { recursive: true })
   if (uploads && !existsSync(UPLOAD_DIR)) await mkdir(UPLOAD_DIR, { recursive: true })
 }
 
 // Read a JSON file, returning `fallback` if it's missing or unparseable.
-export async function readJson(file, fallback) {
+export async function readJson(file: string, fallback: unknown): Promise<unknown> {
   if (!existsSync(file)) return fallback
   try {
     return JSON.parse(await readFile(file, 'utf8'))

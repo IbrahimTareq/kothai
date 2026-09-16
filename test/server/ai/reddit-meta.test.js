@@ -29,8 +29,8 @@ function respond(url) {
   }
 }
 
-const realSsrf = await import('../../../server/lib/ssrf.js')
-mock.module('../../../server/lib/ssrf.js', {
+const realSsrf = await import('../../../server/lib/ssrf.ts')
+mock.module('../../../server/lib/ssrf.ts', {
   namedExports: {
     ...realSsrf,
     safeFetch: async url => {

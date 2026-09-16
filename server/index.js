@@ -1,7 +1,7 @@
 // Kothai backend entry — boots the local models and HTTP server.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { PORT, MODELS_DIR, CONFIG_PATH, PASSWORD, getAiConfig, setAiCredentials } from './config.ts'
-import { readCredentials } from './data/credentials.js'
+import { readCredentials } from './data/credentials.ts'
 
 mkdirSync(MODELS_DIR, { recursive: true })
 writeFileSync(CONFIG_PATH, `${JSON.stringify({ cacheDirectory: MODELS_DIR }, null, 2)}\n`)

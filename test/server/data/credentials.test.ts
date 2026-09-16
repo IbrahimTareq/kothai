@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, writeFileSync, statSync, chmodSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { readCredentials, writeCredentials, clearCredentials } from '../../../server/data/credentials.js'
+import { readCredentials, writeCredentials, clearCredentials } from '../../../server/data/credentials.ts'
 
 const dir = () => mkdtempSync(path.join(tmpdir(), 'kothai-creds-'))
 

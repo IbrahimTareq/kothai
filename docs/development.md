@@ -45,9 +45,9 @@ Claude Code contributors also need `jq` on `PATH` — the `SessionStart` hook
 | `pnpm dev` | Node server on `:5173` **and** Vite with HMR on `:5174`, concurrently. **This is the one you want.** |
 | `pnpm start` | Full build, then serve on `:5173`. What production does. |
 | `pnpm preview` | `vite preview` — serve the already-built `dist/` via Vite's own static server, not the Node server. |
-| `pnpm build` | Biome → token lint → typecheck (three tsconfig projects) → Vite build. |
+| `pnpm build` | Biome → token lint → typecheck (both tsconfig projects) → Vite build. |
 | `pnpm test` | Biome → token lint → shape lint → 1114 tests. ~5s. |
-| `pnpm typecheck` | `tsc --noEmit` over all three projects: `tsconfig.json` (client), `tsconfig.server.json`, `tsconfig.server-js.json`. |
+| `pnpm typecheck` | `tsc --noEmit` over both projects: `tsconfig.json` (client) and `tsconfig.server.json`. |
 | `pnpm typecheck:server` | `tsc -p tsconfig.server.json --noEmit` alone (the TypeScript server files). |
 | `pnpm lint` | Biome check alone. |
 | `pnpm format` | Apply formatting. Biome decides style; do not argue with it. |

@@ -14,6 +14,7 @@
 // stay true across every redirect hop. So this module resolves the hostname and
 // checks the ANSWERS, and follows redirects by hand so each hop is re-checked.
 import dns from 'node:dns/promises'
+import type { LookupAddress, LookupAllOptions } from 'node:dns'
 import net from 'node:net'
 import { ALLOW_PRIVATE_FETCH } from '../config.ts'
 
@@ -24,6 +25,10 @@ const ALLOWED_PORTS = new Set([80, 443])
 const REDIRECT_STATUS = new Set([301, 302, 303, 307, 308])
 const MAX_HOPS = 5
 
+// The injected resolver, spelled with node's own dns types so the real
+// dns.lookup satisfies it without a wrapper.
+type Lookup = (hostname: string, options: LookupAllOptions) => Promise<LookupAddress[]>
+
 // ---- address classification --------------------------------------------
 
 // Not just RFC1918. 169.254/16 is the metadata-service range every major cloud
@@ -31,8 +36,7 @@ const MAX_HOPS = 5
 // reaching into the tailnet is exactly the thing to prevent, so blocking it
 // here is deliberate, not collateral. 0/8 matters because 0.0.0.0 routes to
 // loopback on Linux, and 240/4 carries the 255.255.255.255 broadcast address.
-/** @type {[string, number][]} */
-const V4_BLOCKED = [
+const V4_BLOCKED: [string, number][] = [
   ['0.0.0.0', 8], // "this host on this network"
   ['10.0.0.0', 8], // RFC1918
   ['100.64.0.0', 10], // CGNAT / Tailscale
@@ -46,29 +50,33 @@ const V4_BLOCKED = [
   ['240.0.0.0', 4], // reserved, incl. 255.255.255.255
 ]
 
-function v4ToInt(ip) {
+function v4ToInt(ip: string): number | null {
   if (!net.isIPv4(ip)) return null
   const p = ip.split('.').map(Number)
   return ((p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3]) >>> 0
 }
 
-function v4Blocked(n) {
+function v4Blocked(n: number | null): boolean {
   if (n === null) return true
-  return V4_BLOCKED.some(([base, bits]) => (n ^ v4ToInt(base)) >>> (32 - bits) === 0)
+  // v4ToInt answers `number | null` for any string, so its null survives here
+  // even though every base in the table is a literal dotted quad. `?? 0` is
+  // precisely what `^` already does with a null operand, so this narrows the
+  // type without moving a single result.
+  return V4_BLOCKED.some(([base, bits]) => (n ^ (v4ToInt(base) ?? 0)) >>> (32 - bits) === 0)
 }
 
 // IPv6 text → 16 bytes. Node validates the syntax (net.isIPv6) but exposes no
 // parser, and the checks below need the actual bits: a prefix test on the
 // string form would have to cope with every legal spelling of the same address.
 // Handles the one "::" run and a trailing dotted-quad group.
-function v6ToBytes(ip) {
+function v6ToBytes(ip: string): number[] | null {
   if (!net.isIPv6(ip)) return null
   const dbl = ip.indexOf('::')
   const head = dbl === -1 ? ip : ip.slice(0, dbl)
   const tail = dbl === -1 ? '' : ip.slice(dbl + 2)
-  const toGroups = s => {
+  const toGroups = (s: string): number[] | null => {
     if (!s) return []
-    const out = []
+    const out: number[] = []
     for (const part of s.split(':')) {
       if (part.includes('.')) {
         const n = v4ToInt(part) // ::ffff:127.0.0.1 spells its last 32 bits in dotted form
@@ -89,19 +97,19 @@ function v6ToBytes(ip) {
   return groups.flatMap(g => [(g >> 8) & 0xff, g & 0xff])
 }
 
-const startsWith = (bytes, prefix) => prefix.every((b, i) => bytes[i] === b)
+const startsWith = (bytes: number[], prefix: number[]): boolean => prefix.every((b, i) => bytes[i] === b)
 
 // Two well-known prefixes carry a whole IPv4 address in their low 32 bits, so
 // ::ffff:7f00:1 and 64:ff9b::7f00:1 are both just 127.0.0.1 wearing a hat. A
 // checker that only knew the v6 rules would wave either straight through.
-function embeddedV4(bytes) {
+function embeddedV4(bytes: number[]): number | null {
   const mapped = startsWith(bytes, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff])
   const nat64 = startsWith(bytes, [0, 0x64, 0xff, 0x9b, 0, 0, 0, 0, 0, 0, 0, 0])
   if (!mapped && !nat64) return null
   return ((bytes[12] << 24) | (bytes[13] << 16) | (bytes[14] << 8) | bytes[15]) >>> 0
 }
 
-function v6Blocked(b) {
+function v6Blocked(b: number[]): boolean {
   if (b.every(x => x === 0)) return true // ::
   if (startsWith(b, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])) return true // ::1
   if ((b[0] & 0xfe) === 0xfc) return true // fc00::/7 unique-local
@@ -116,7 +124,7 @@ function v6Blocked(b) {
 // Not decoded: 6to4 (2002::/16) and Teredo (2001::/32), which also embed v4.
 // getaddrinfo only returns those if a host publishes them, and reaching a
 // private v4 through one needs a relay that will not forward to RFC1918 anyway.
-export function isBlockedAddress(ip) {
+export function isBlockedAddress(ip: unknown): boolean {
   if (typeof ip !== 'string' || !ip) return true
   if (net.isIPv4(ip)) return v4Blocked(v4ToInt(ip))
   if (net.isIPv6(ip)) {
@@ -128,7 +136,7 @@ export function isBlockedAddress(ip) {
   return true
 }
 
-export function isAllowedPort(url) {
+export function isAllowedPort(url: URL): boolean {
   const port = url.port ? Number(url.port) : url.protocol === 'https:' ? 443 : 80
   return ALLOWED_PORTS.has(port)
 }
@@ -144,10 +152,13 @@ export function isAllowedPort(url) {
 // gets through. Closing it means pinning the resolved IP on the socket, which
 // means dropping fetch() for node:http with a custom agent lookup — a large
 // rewrite of every call path for a much narrower attack than the ones above.
-export async function assertPublicUrl(url, opts = {}) {
+export async function assertPublicUrl(
+  url: string,
+  opts: { lookup?: Lookup; allowPrivate?: boolean } = {},
+): Promise<void> {
   const { lookup = dns.lookup, allowPrivate = ALLOW_PRIVATE_FETCH } = opts
 
-  let parsed
+  let parsed: URL
   try {
     parsed = new URL(url)
   } catch {
@@ -170,7 +181,7 @@ export async function assertPublicUrl(url, opts = {}) {
     return
   }
 
-  let answers
+  let answers: LookupAddress[]
   try {
     answers = await lookup(host, { all: true, verbatim: true })
   } catch {
@@ -191,7 +202,11 @@ export async function assertPublicUrl(url, opts = {}) {
 // — so a URL that passes the check and then 302s to 169.254.169.254 defeats it
 // entirely. Node's fetch (unlike a browser's) exposes the real status and
 // Location on a manual redirect, so the chain can be walked here instead.
-export async function safeFetch(url, init = {}, opts = {}) {
+export async function safeFetch(
+  url: string,
+  init: RequestInit = {},
+  opts: { fetchImpl?: typeof fetch; lookup?: Lookup; allowPrivate?: boolean; maxHops?: number } = {},
+): Promise<Response> {
   const { fetchImpl = fetch, lookup, allowPrivate, maxHops = MAX_HOPS } = opts
   let current = String(url)
 

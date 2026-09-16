@@ -12,12 +12,18 @@ import { DATA_DIR } from '../config.ts'
 
 const FILE = 'credentials.json'
 
+interface Credentials {
+  baseUrl: string | null
+  apiKey: string | null
+  providerId: string | null
+}
+
 // Missing, unreadable or malformed all read as "nothing configured" rather
 // than throwing: the app serves notes perfectly well with no inference at
 // all, so a corrupt file must never be the reason it fails to boot.
-export function readCredentials(dir = DATA_DIR) {
+export function readCredentials(dir: string = DATA_DIR): Credentials | null {
   try {
-    const parsed = JSON.parse(readFileSync(path.join(dir, FILE), 'utf8'))
+    const parsed: Record<string, unknown> = JSON.parse(readFileSync(path.join(dir, FILE), 'utf8'))
     const baseUrl = typeof parsed.baseUrl === 'string' && parsed.baseUrl ? parsed.baseUrl : null
     const apiKey = typeof parsed.apiKey === 'string' && parsed.apiKey ? parsed.apiKey : null
     // Which catalogue entry this endpoint came from. Not a credential — it is
@@ -33,7 +39,10 @@ export function readCredentials(dir = DATA_DIR) {
 
 // Throws on failure, deliberately: a key that appears to save and is gone
 // after the next restart is worse than an error the user can see now.
-export function writeCredentials({ baseUrl = null, apiKey = null, providerId = null }, dir = DATA_DIR) {
+export function writeCredentials(
+  { baseUrl = null, apiKey = null, providerId = null }: Partial<Credentials>,
+  dir: string = DATA_DIR,
+): Credentials {
   const file = path.join(dir, FILE)
   writeFileSync(file, JSON.stringify({ baseUrl, apiKey, providerId }, null, 2), { mode: 0o600 })
   // writeFileSync's `mode` applies only when it creates the file, so an
@@ -42,7 +51,7 @@ export function writeCredentials({ baseUrl = null, apiKey = null, providerId = n
   return { baseUrl, apiKey, providerId }
 }
 
-export function clearCredentials(dir = DATA_DIR) {
+export function clearCredentials(dir: string = DATA_DIR): void {
   try {
     unlinkSync(path.join(dir, FILE))
   } catch {

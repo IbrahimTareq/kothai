@@ -13,7 +13,7 @@
     "build": "biome check . && node scripts/lint-tokens.mjs && pnpm run typecheck && vite build",
     "start": "npm run build && node server/index.js",
     "preview": "vite preview",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.server-js.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.server.json --noEmit",
     "typecheck:server": "tsc -p tsconfig.server.json --noEmit",
     "test": "biome check . && node scripts/lint-tokens.mjs && node scripts/lint-shape.mjs && node --experimental-test-module-mocks --test 'test/**/*.test.js' 'test/**/*.test.ts'",
     "lint:tokens": "node scripts/lint-tokens.mjs",

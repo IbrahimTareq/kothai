@@ -16,7 +16,7 @@
 import * as ai from '../ai/index.js'
 import * as settings from '../data/settings.js'
 import { scanWeights, removeWeight, isSafeEntryName } from '../lib/weights.ts'
-import { json } from '../lib/http.js'
+import { json } from '../lib/http.ts'
 import { MODELS_DIR } from '../config.ts'
 
 // A remote-inference deployment (the lite image) has no download cache at all,

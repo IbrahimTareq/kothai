@@ -7,7 +7,7 @@ import * as enrich from '../ai/enrich.js'
 import { isInstagramPost } from '../ai/meta.js'
 import * as collections from '../data/collections.js'
 import * as query from '../data/query.ts'
-import { json, readBody, saveImage } from '../lib/http.js'
+import { json, readBody, saveImage } from '../lib/http.ts'
 
 // ---- API handlers ------------------------------------------------------
 // Every save returns instantly with heuristic metadata (regex type, derived

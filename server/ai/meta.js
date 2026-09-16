@@ -15,7 +15,7 @@ import {
   YoutubeTranscriptVideoUnavailableError,
 } from 'youtube-transcript'
 import { UPLOAD_DIR } from '../config.ts'
-import { safeFetch } from '../lib/ssrf.js'
+import { safeFetch } from '../lib/ssrf.ts'
 
 const FETCH_TIMEOUT_MS = 8000
 const MAX_HTML = 1024 * 1024 // only scan the first 1 MB for meta tags

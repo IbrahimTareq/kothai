@@ -5,7 +5,7 @@
 // Off unless STASH_PASSWORD is set. Every LAN and Tailscale install keeps
 // working exactly as before an upgrade.
 import path from 'node:path'
-import { json, readBody } from '../lib/http.js'
+import { json, readBody } from '../lib/http.ts'
 import {
   COOKIE_NAME,
   clearedCookie,

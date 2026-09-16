@@ -20,7 +20,7 @@ import { DATA_DIR } from '../config.ts'
 import { getDb } from '../data/db.js'
 import * as store from '../data/notes.js'
 import { isImportInProgress, IMPORT_BUSY } from '../data/import-lock.ts'
-import { json } from '../lib/http.js'
+import { json } from '../lib/http.ts'
 
 // A backup momentarily needs free space equal to the database's size, so two
 // at once need double. One at a time is also simply all a single-user app can

@@ -8,7 +8,7 @@
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { DATA_DIR } from '../config.ts'
-import { ensureDataDir } from './json.js'
+import { ensureDataDir } from './json.ts'
 import { migrateLegacyJson } from './migrate.js'
 
 const DB_FILE = path.join(DATA_DIR, 'kothai.db')

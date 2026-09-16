@@ -8,7 +8,7 @@
 // ok:false, because the wizard needs to render it as a message beside the
 // field rather than as a failure of the request.
 import { getJson, TIMEOUTS } from '../ai/providers/remote-http.ts'
-import { json, readBody } from '../lib/http.js'
+import { json, readBody } from '../lib/http.ts'
 
 export async function handleSetupTest(req, res) {
   const body = await readBody(req)

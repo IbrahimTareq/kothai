@@ -6,9 +6,9 @@ import * as enrich from '../ai/enrich.js'
 import { ROLES, POLICIES, OFF_RESIDENCY } from '../ai/roles.ts'
 import { backlogCount } from '../ai/backlog.ts'
 import { isInstagramPost } from '../ai/meta.js'
-import { json, readBody } from '../lib/http.js'
+import { json, readBody } from '../lib/http.ts'
 import { getAiConfig, setAiCredentials, SETUP_PROVIDER } from '../config.ts'
-import { writeCredentials, clearCredentials } from '../data/credentials.js'
+import { writeCredentials, clearCredentials } from '../data/credentials.ts'
 import { ENDPOINTS } from '../ai/endpoints.ts'
 
 // A provider with nothing to download has nothing to CONSENT to — but it still

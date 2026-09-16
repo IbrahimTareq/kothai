@@ -12,7 +12,7 @@ import { handleSetup, handleSetupEndpoint, handleGetSettings } from '../../../se
 import { _resetDb } from '../../../server/data/db.js'
 import * as settings from '../../../server/data/settings.js'
 import { setAiCredentials, getAiConfig } from '../../../server/config.ts'
-import { readCredentials } from '../../../server/data/credentials.js'
+import { readCredentials } from '../../../server/data/credentials.ts'
 
 function fakeRes() {
   return {
