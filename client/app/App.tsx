@@ -1,8 +1,11 @@
 // App.tsx — Kothai shell: capture console, reactor states, gallery, ask thread, tweaks.
 import { useState, useEffect, useRef } from 'react'
 import { Icon, CATEGORIES, CAT } from '../components/icons'
-import { API, Collections } from '../data/api'
+import { API } from '../data/api'
 import { useNotes } from '../data/useNotes'
+import { useCollections } from '../data/useCollections'
+import { useVaultStatus } from '../data/useVaultStatus'
+import { useChat } from '../data/useChat'
 import type { NoteSource } from '../data/useNotes'
 import { isPlaceholder } from '../data/pager'
 import { ExpandedView } from '../views/Expanded'
@@ -15,9 +18,7 @@ import { ACCENTS, SOURCES, SOURCE_BY_KEY, sourceGlyph } from '../domain/source'
 import { CoreView } from '../views/Core'
 import { GalleryView } from '../views/Gallery'
 import { SpacesView, CollectionView } from '../views/Spaces'
-import type {
-  CanvasDoc, ChatSummary, Collection, ThreadMsg, UIItem, UIType, VaultStatus, ViewMode,
-} from '../types'
+import type { UIItem, UIType, ViewMode } from '../types'
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   'accent': '#ffffff',
@@ -27,30 +28,22 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 
 export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS)
-  const [collections, setCollections] = useState<Collection[]>([])
+  const { vault, llmOff, llmWarming, needsSetup, setNeedsSetup } = useVaultStatus()
+  const {
+    collections, createCollection, renameCollection, saveCanvas,
+    editCollectionTags, deleteCollection, addToCollection, removeFromCollection,
+  } = useCollections()
   const [expanded, setExpanded] = useState<UIItem | null>(null)
   // id of the item whose Instagram carousel slides are in flight, if any
   const [slidesLoading, setSlidesLoading] = useState<string | null>(null)
-  const [pendingImg, setPendingImg] = useState<string | null>(null)
-  const [vault, setVault] = useState<VaultStatus>({ state: 'loading', txt: 'BOOTING', pct: 0 })
-  const [llmOff, setLlmOff] = useState(false)
-  const [llmWarming, setLlmWarming] = useState('')
-  // First-run gate: null until the first /api/status poll resolves; true shows the
-  // model picker (fresh install), false enters the normal app. Onboarding flips
-  // it false once the chosen models finish loading.
-  const [needsSetup, setNeedsSetup] = useState<boolean | null>(null)
   // nav/mode are the two-part app location; seed them from the URL so deep links
   // and refreshes land on the right screen.
   const initialRoute = pathToRoute(typeof location !== 'undefined' ? location.pathname : '/')
   const [nav, setNav] = useState<string>(initialRoute.nav)
+  // After nav: useChat reloads the saved-conversation list on entering Ask.
+  const chat = useChat(nav)
   const [captureOpen, setCaptureOpen] = useState(false)
-  const [text, setText] = useState('')
-  const [focus, setFocus] = useState(false)
   const [view, setView] = useState<ViewMode>(TWEAK_DEFAULTS.defaultView as ViewMode)
-  const [thread, setThread] = useState<ThreadMsg[]>([])
-  const [chatId, setChatId] = useState<string | null>(null)   // active server-side chat
-  const [chatList, setChatList] = useState<ChatSummary[]>([]) // saved chat history (paged)
-  const [chatTotal, setChatTotal] = useState(0)               // how many exist server-side
   const [search, setSearch] = useState('')
   const [searchFocus, setSearchFocus] = useState(false)
   // Everything-page filters, multi-select. Chip keys are mixed (types, sources
@@ -62,15 +55,11 @@ export default function App() {
   const [captured, setCaptured] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>(() =>
     (typeof localStorage !== 'undefined' && localStorage.getItem('kothai-theme') === 'light') ? 'light' : 'dark')
-  const taRef = useRef<HTMLTextAreaElement>(null)
   const coreRef = useRef<HTMLDivElement>(null)
   const beforeSettings = useRef<string>('all')  // view to restore when settings toggles off
   const pushedItem = useRef(false)  // true while the open item owns a history entry we can pop
   const askedSlides = useRef(new Set<string>())  // ids already checked for carousel slides this session
   const capturedTimer = useRef<number | undefined>(undefined)
-  const msgSeq = useRef(0)   // ids for pending answer slots (see sendQuestion)
-  const askAbort = useRef<AbortController | null>(null)  // backs the composer's stop button
-  const chatIdRef = useRef<string | null>(null)  // live chatId for the mount-time popstate handler
   // CollectionView's own useNotes pager, when a Space is open — deleteItem/
   // updateItem below reach into it too, since ExpandedView (an App-level
   // modal) can trigger edits/deletes while a Space is open, and that pager
@@ -87,10 +76,7 @@ export default function App() {
   useEffect(() => { document.documentElement.dataset.theme = theme; try { localStorage.setItem('kothai-theme', theme) } catch { /* ignore */ } }, [theme])
   useEffect(() => { setView(t.defaultView as ViewMode) }, [t.defaultView])
   useEffect(() => { setGalFilter([]) }, [nav])   // clear filters when switching pages
-  useEffect(() => { chatIdRef.current = chatId }, [chatId])
   useEffect(() => { const fx = document.getElementById('bg-fx'); if (fx) fx.style.display = t.texture ? '' : 'none' }, [t.texture])
-
-  useEffect(() => { Collections.list().then(setCollections).catch(() => {}) }, [])
 
   // nav → server query for the Everything board: the chip filter narrows by
   // type or source, a direct type-nav (e.g. /image) filters server-side too.
@@ -161,36 +147,6 @@ export default function App() {
     return () => { stop = true }
   }, [expanded?.id])
 
-  // live model status (text models + lazy vision model)
-  useEffect(() => {
-    let stop = false
-    const tick = async () => {
-      try {
-        const s = await API.status()
-        // Decide the first-run gate once, from the first successful poll. Onboarding
-        // owns flipping it false afterward (so it stays up through the download).
-        setNeedsSetup((v) => (v === null ? !s.configured : v))
-        setLlmOff(s.roles.llm.state === 'off')
-        // Tied to the llm role specifically, not the aggregate — the aggregate
-        // can be "loading" because an unrelated role (e.g. vision) is warming
-        // up in the background, which would otherwise show a misleading
-        // message under a text answer that isn't waiting on that role at all.
-        setLlmWarming(s.roles.llm.state === 'loading' ? (s.roles.llm.message || 'Warming up the language model…') : '')
-        const a = s.aggregate
-        if (a.state === 'error') setVault({ state: 'error', txt: 'FAULT', pct: a.progress || 0, msg: a.message })
-        else if (a.state === 'loading') setVault({ state: 'loading', txt: 'LOADING ' + (a.progress || 0) + '%', pct: a.progress || 0, msg: a.message })
-        else setVault({ state: 'ready', txt: 'ONLINE', pct: 100, msg: '' })
-        // keep polling forever — settings changes flip status back to "loading"
-        // at any time (slow tick while ready)
-        if (!stop) window.setTimeout(tick, a.state === 'loading' ? 1300 : 4000)
-      } catch { if (!stop) window.setTimeout(tick, 2200) }
-    }
-    tick(); return () => { stop = true }
-  }, [])
-
-  const autosize = () => { const ta = taRef.current; if (ta) { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 200) + 'px' } }
-  useEffect(autosize, [text])
-
   // Long enough to read the swap and see it settle, short enough that the
   // button is back to "Capture" before anyone reaches for it again.
   const flashCaptured = () => {
@@ -198,83 +154,6 @@ export default function App() {
     capturedTimer.current = window.setTimeout(() => setCaptured(false), 1900)
   }
   useEffect(() => () => clearTimeout(capturedTimer.current), [])
-
-  // One question at a time: the composer's send button and Enter are both gated
-  // on this, so a second ask can't be started while one is still in flight.
-  const asking = thread.some((m) => m.pending)
-
-  // Ask: query the vault; used by the Ask (core) view composer.
-  const sendQuestion = async () => {
-    const raw = text.trim(); const img = pendingImg
-    if (asking || (!raw && !img)) return
-    // The pending bubble is claimed by id, not by position: a reply used to be
-    // written to whatever sat last in the thread, so with two asks in flight
-    // the first answer back landed under the second question.
-    const slot = 'm' + (msgSeq.current++)
-    const at = Date.now()
-    setThread((prev) => [...prev,
-      { role: 'user', text: raw || '▣ image', img, ts: at },
-      { role: 'ai', pending: true, id: slot, ts: at }])
-    setText(''); setPendingImg(null)
-    const settle = (msg: ThreadMsg) => setThread((prev) => prev.map((m) => (m.id === slot ? msg : m)))
-    const ctl = new AbortController()
-    askAbort.current = ctl
-    // Tokens arrive far faster than anyone reads, so they accumulate and land
-    // on a timer — one setState per token re-renders the whole thread hundreds
-    // of times for a single answer. This is deliberately NOT
-    // requestAnimationFrame: a backgrounded tab stops painting frames, and a
-    // slow local answer is exactly when someone switches away, so an rAF flush
-    // showed nothing at all until the whole answer had arrived.
-    const FLUSH_MS = 60
-    let acc = ''
-    let timer: number | undefined
-    let lastFlush = 0
-    const patch = (p: Partial<ThreadMsg>) =>
-      setThread((prev) => prev.map((m) => (m.id === slot ? { ...m, ...p } : m)))
-    const flush = () => {
-      timer = undefined
-      lastFlush = Date.now()
-      patch({ pending: false, streaming: true, lead: acc, q: raw })
-    }
-    // Any pending flush has to be dropped before the final patch, or it lands
-    // afterwards and puts the message back into its streaming state.
-    const stopFlushing = () => { clearTimeout(timer); timer = undefined }
-    try {
-      const { chatId: cid } = await API.askStream({ question: raw, image: img, chatId }, {
-        onSources: (cited) => patch({ cited }),
-        onDelta: (t) => {
-          acc += t
-          if (timer !== undefined) return
-          timer = window.setTimeout(flush, Math.max(0, FLUSH_MS - (Date.now() - lastFlush)))
-        },
-      }, ctl.signal)
-      stopFlushing()
-      if (cid) {
-        setChatId(cid)
-        // The chat only exists once the server has recorded it, so this is the
-        // first moment the question has an address worth keeping.
-        if (location.pathname !== chatPath(cid)) history.replaceState(null, '', chatPath(cid))
-      }
-      patch({ pending: false, streaming: false, lead: acc, q: raw, ts: Date.now() })
-      refreshChats()
-    } catch (e) {
-      // A stopped answer keeps whatever it managed to say — the tokens were
-      // real, and throwing them away to show "Stopped." loses information the
-      // user was already reading.
-      stopFlushing()
-      if (ctl.signal.aborted) patch({ pending: false, streaming: false, lead: acc, q: raw, ts: Date.now(), stopped: true })
-      else settle({ role: 'ai', id: slot, lead: '⚠ ' + (e as Error).message, cited: [], q: raw, ts: Date.now() })
-    } finally {
-      if (askAbort.current === ctl) askAbort.current = null
-    }
-    // Hand the caret back so the next question is one keystroke away.
-    taRef.current?.focus()
-  }
-
-  // Stop waiting on the answer in flight. The server is already generating it
-  // and will still record it to the chat — this releases the composer, it does
-  // not cancel the model.
-  const stopAsk = () => askAbort.current?.abort()
 
   // Store: persist a captured item. Called by the capture modal; resolves to
   // null on success (the modal closes and the button flashes "Added") or to
@@ -291,79 +170,6 @@ export default function App() {
       return (e as Error).message || 'Could not save that.'
     }
   }
-
-  // ---- chat history: load list in ask mode; open / delete / start fresh ---
-  // One screenful to start; "Load more" walks the rest. Refreshes reload
-  // however much is already on screen, so answering a question doesn't collapse
-  // a list the reader had expanded.
-  const CHAT_PAGE = 8
-  const loadChats = (limit = CHAT_PAGE) =>
-    API.chats(limit, 0).then(({ chats, total }) => { setChatList(chats); setChatTotal(total) })
-  const refreshChats = () => loadChats(Math.max(CHAT_PAGE, chatList.length)).catch(() => {})
-  const loadMoreChats = () =>
-    API.chats(CHAT_PAGE, chatList.length)
-      .then(({ chats, total }) => {
-        setChatTotal(total)
-        // Filter by id: a chat answered since the first page shifts everything
-        // down by one, which would otherwise duplicate a row across pages.
-        setChatList((prev) => {
-          const seen = new Set(prev.map((c) => c.id))
-          return [...prev, ...chats.filter((c) => !seen.has(c.id))]
-        })
-      })
-      .catch(() => {})
-  useEffect(() => { if (nav === 'core') loadChats().catch(() => {}) }, [nav])
-  const openChat = (c: ChatSummary) => {
-    if (location.pathname !== chatPath(c.id)) history.pushState(null, '', chatPath(c.id))
-    return showChat(c.id)
-  }
-  // Load a conversation into the thread without touching history — the URL is
-  // either already right (popstate, deep link) or the caller has just set it.
-  const showChat = async (id: string) => {
-    try {
-      const chat = await API.chat(id)
-      let lastQ = ''
-      setThread(chat.messages.map((m): ThreadMsg => {
-        const ts = m.ts ? Date.parse(m.ts) : undefined
-        return m.role === 'user'
-          ? (lastQ = m.text || '', { role: 'user', text: m.text || '▣ image', img: m.image || null, ts })
-          : { role: 'ai', lead: m.text, cited: m.cited || [], q: lastQ, ts }
-      }))
-      setChatId(chat.id)
-      // Resuming a conversation puts you back at the composer, ready to continue.
-      setTimeout(() => taRef.current?.focus(), 60)
-    } catch {
-      // Deleted or unknown id: drop back to a blank Ask rather than stranding
-      // the reader on a URL that resolves to nothing.
-      setThread([]); setChatId(null)
-      if (location.pathname !== '/ask') history.replaceState(null, '', '/ask')
-    }
-  }
-  const newChat = () => {
-    setThread([]); setChatId(null)
-    if (location.pathname !== '/ask') history.pushState(null, '', '/ask')
-    setTimeout(() => taRef.current?.focus(), 60)
-  }
-  // The list carries the title, so it updates locally; the server is the
-  // authority on the trim/length rules and reconciles on the next fetch.
-  const renameChat = (id: string, title: string) => {
-    setChatList((prev) => prev.map((c) => (c.id === id ? { ...c, title } : c)))
-    API.renameChat(id, title)
-      .then(refreshChats)
-      .catch(refreshChats)
-  }
-  const deleteChat = (id: string) => {
-    setChatList((prev) => prev.filter((c) => c.id !== id))
-    setChatTotal((n) => Math.max(0, n - 1))
-    if (id === chatId) newChat()   // also drops /ask/<id> from the URL
-    API.delChat(id).catch(() => {})
-  }
-
-  const onKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendQuestion() } }
-  const onFocus = () => setFocus(true)
-  const onBlur = () => setFocus(false)
-  const onImageFile = (file: File | null | undefined) => { if (!file) return; const r = new FileReader(); r.onload = () => setPendingImg(r.result as string); r.readAsDataURL(file) }
-  const clearImg = () => setPendingImg(null)
 
   const deleteItem = (id: string) => {
     notes.removeLocal(id)
@@ -389,42 +195,6 @@ export default function App() {
   }
 
   // ---- collections (Spaces) ----------------------------------------------
-  const createCollection = async (name: string, tags: string[]) => {
-    const c = await Collections.create(name, tags)
-    setCollections((prev) => [c, ...prev])
-    return c
-  }
-  const renameCollection = (id: string, name: string) => {
-    setCollections((prev) => prev.map((c) => (c.id === id ? { ...c, name } : c)))
-    Collections.update(id, { name }).catch(() => {})
-  }
-  // The mounted canvas is the authority for the space it shows; this only
-  // keeps App's copy current so leaving and returning shows the latest board.
-  const saveCanvas = (id: string, canvas: CanvasDoc) => {
-    setCollections((prev) => prev.map((c) => (c.id === id ? { ...c, canvas } : c)))
-    Collections.update(id, { canvas }).catch(() => { Collections.list().then(setCollections).catch(() => {}) })
-  }
-  // These three await the server (its response reflects smart-rule backfill /
-  // membership); on failure we just refetch the truth rather than leave the UI
-  // ahead of the server.
-  const syncCollection = (c: Collection) => setCollections((prev) => prev.map((x) => (x.id === c.id ? c : x)))
-  const editCollectionTags = async (id: string, tags: string[]) => {
-    try { syncCollection(await Collections.update(id, { tags })) }
-    catch { Collections.list().then(setCollections).catch(() => {}) }
-  }
-  const deleteCollection = (id: string) => {
-    setCollections((prev) => prev.filter((c) => c.id !== id))
-    Collections.remove(id).catch(() => {})
-  }
-  const addToCollection = async (cid: string, itemId: string) => {
-    try { syncCollection(await Collections.addItem(cid, itemId)) }
-    catch { Collections.list().then(setCollections).catch(() => {}) }
-  }
-  const removeFromCollection = async (cid: string, itemId: string) => {
-    try { syncCollection(await Collections.removeItem(cid, itemId)) }
-    catch { Collections.list().then(setCollections).catch(() => {}) }
-  }
-
   // Central navigation: update state and push a matching URL so the back/forward
   // buttons and shareable links work.
   const navigate = (next: string) => {
@@ -499,7 +269,7 @@ export default function App() {
     if (initialRoute.item) showItemById(initialRoute.item, initialRoute.nav)
     // A cold deep link to /ask/<id> arrives with no chat in hand, same as an
     // item deep link does.
-    if (initialRoute.chat) showChat(initialRoute.chat)
+    if (initialRoute.chat) chat.showChat(initialRoute.chat)
     const onPop = () => {
       const r = pathToRoute(location.pathname)
       pushedItem.current = false
@@ -509,8 +279,8 @@ export default function App() {
       // Back and forward move through conversations too: into one loads it,
       // out of one empties the thread.
       if (r.nav === 'core') {
-        if (r.chat) { if (r.chat !== chatIdRef.current) showChat(r.chat) }
-        else { setThread([]); setChatId(null) }
+        if (r.chat) { if (r.chat !== chat.chatIdRef.current) chat.showChat(r.chat) }
+        else chat.clearChat()
       }
     }
     window.addEventListener('popstate', onPop)
@@ -536,9 +306,9 @@ export default function App() {
   // it: clicking it from inside a conversation returns to the blank composer
   // and the history list. The conversation is saved, so nothing is lost.
   const goAsk = () => {
-    if (nav === 'core') { newChat(); return }
+    if (nav === 'core') { chat.newChat(); return }
     navigate('core')
-    setTimeout(() => taRef.current && taRef.current.focus(), 60)
+    chat.focusComposer()
   }
 
   // Which destination the phone tab bar's sliding marker sits under. -1 on
@@ -613,7 +383,7 @@ export default function App() {
 
         <main className="main" key={nav}>
           {nav === 'core'
-            ? <CoreView {...{ focus, onFocus, onBlur, onKey, text, setText, submit: sendQuestion, taRef, coreRef, thread, jumpTo, pendingImg, onImageFile, clearImg, chatList, openChat, newChat, deleteChat, renameChat, chatId, chatTotal, loadMoreChats, llmOff, busy: asking, stop: stopAsk, warming: llmWarming }} />
+            ? <CoreView {...chat} {...{ coreRef, jumpTo, llmOff, warming: llmWarming, submit: chat.sendQuestion, busy: chat.asking, stop: chat.stopAsk }} />
             : nav === 'settings'
             ? <SettingsView vault={vault} theme={theme} setTheme={setTheme} />
             : nav === 'spaces'
