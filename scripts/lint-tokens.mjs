@@ -14,6 +14,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, dirname, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { findButtonChrome } from './button-chrome.mjs'
 
 const CLIENT = join(dirname(fileURLToPath(import.meta.url)), '..', 'client')
 const STYLES = join(CLIENT, 'styles')
@@ -79,6 +80,20 @@ for (const file of files) {
   })
 }
 
+/* ── buttons built from scratch ────────────────────────────────────────────
+ * The line rules above prove a value came from a token. They cannot see that a
+ * rule has quietly rebuilt .btn: every value in .conn-btn was a token, and it
+ * still shipped a white label on a white button because it re-derived a
+ * pairing .btn--solid already had right. Buttons live in primitives.css. */
+for (const file of files) {
+  if (basename(file) === 'primitives.css') continue
+  for (const hit of findButtonChrome(readFileSync(join(STYLES, file), 'utf8'))) {
+    report.push(`  ${file}:${hit.line}  [button-chrome] ${hit.selector} builds a button box`
+      + `\n      use .btn plus a size (--xs/--sm/--lg) and a tone (--solid/--ghost/--icon/--danger)`)
+    failures++
+  }
+}
+
 /* ── inline styles in components ──────────────────────────────────────────
  * The stylesheets are only half the surface: a component can hardcode the same
  * values in a style={{...}} object and bypass the system entirely. Genuinely
@@ -140,6 +155,7 @@ if (failures) {
   console.error(report.join('\n'))
   console.error('\nAdd the value to tokens.css, or annotate the line with')
   console.error('/* token-lint-ignore: why this cannot be a token */\n')
+  console.error('For a button, use .btn and its modifiers instead of a new class.\n')
   process.exit(1)
 }
 console.log(`design token check passed — ${files.length} stylesheets and all component inline styles clean`)
