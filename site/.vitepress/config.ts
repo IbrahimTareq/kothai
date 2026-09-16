@@ -71,7 +71,7 @@ export default defineConfig({
   },
 
   head: [
-    ['link', { rel: 'icon', href: `${BASE}logo.png` }],
+    ['link', { rel: 'icon', href: `${BASE}logo.svg` }],
     ['link', { rel: 'preload', as: 'font', type: 'font/woff2', crossorigin: '', href: `${BASE}vendor/fonts/Geist-latin.woff2` }],
     ['meta', { name: 'theme-color', content: '#f7f5f2' }],
     ['meta', { property: 'og:type', content: 'website' }],

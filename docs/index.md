@@ -8,7 +8,7 @@ hero:
     machine. Later you ask it questions in plain English, and it answers from
     your own stuff rather than the open web.
   image:
-    src: /logo.png
+    src: /logo.svg
     alt: Kothai
   actions:
     - theme: brand

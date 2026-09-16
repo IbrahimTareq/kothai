@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="public/logo.png" alt="Kothai" width="120">
+<img src="public/logo.svg" alt="Kothai" width="120">
 
 ### Save now. Remember later.
 
