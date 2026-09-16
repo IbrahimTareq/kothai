@@ -126,7 +126,7 @@ test('deriveNote: types by URL pathname only, ignoring query strings', () => {
   assert.equal(note.type, 'link')
 })
 
-// --- Hardening: this parser eats the same untrusted upload as server/lib/zip.js ---
+// --- Hardening: this parser eats the same untrusted upload as server/lib/zip.ts ---
 
 test('parseSavedPosts: rejects non-http(s) href schemes (javascript:/data:/ftp:/lookalikes)', () => {
   const hostile = {

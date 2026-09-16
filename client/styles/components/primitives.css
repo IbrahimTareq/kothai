@@ -6,7 +6,7 @@
    (.btn--solid/--ghost/--icon/--danger, and --danger--solid for a filled
    destructive confirm); size and tone compose freely. There
    are no per-view aliases of .btn left, and lint:tokens fails any new
-   duplicate of this box — see scripts/button-chrome.mjs. That doesn't cover
+   duplicate of this box — see scripts/button-chrome.ts. That doesn't cover
    every button-shaped class in the app: .seg-btn, .residency-btn, .rail-btn,
    .send-btn and .attach-btn are distinct components with their own box, not
    .btn under another name. A view may still add a rule for genuine layout

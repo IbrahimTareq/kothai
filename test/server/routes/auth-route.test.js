@@ -3,7 +3,7 @@
 // router can reach, so testing it by calling handlers directly would test the
 // opposite of what matters.
 //
-// STASH_PASSWORD is set before the dynamic import because server/config.js
+// STASH_PASSWORD is set before the dynamic import because server/config.ts
 // freezes its resolved config at import time; node --test gives each file its
 // own process, so this env var cannot leak into any other test.
 process.env.STASH_PASSWORD = 'hunter2'

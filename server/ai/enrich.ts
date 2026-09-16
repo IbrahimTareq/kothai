@@ -278,7 +278,7 @@ async function reclassifyWithCaption(id: string) {
     }
   }
 
-  // A user's own tag edit (server/routes/notes.js's handleUpdateNote) always
+  // A user's own tag edit (server/routes/notes.ts's handleUpdateNote) always
   // wins over a re-classify: reclassifyWithCaption bypasses stepsFor's normal
   // "already classified, don't touch tags" protection (see enrichNote's own
   // comment on why that protection exists), and the window for a hand edit

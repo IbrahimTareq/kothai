@@ -52,13 +52,13 @@ export function resolveConfig(env: NodeJS.ProcessEnv = process.env, root: string
     // a credential — the installer deliberately collects none, because a key
     // typed on a command line lands in shell history.
     SETUP_PROVIDER: env.STASH_SETUP_PROVIDER || null,
-    // Escape hatch for the outbound-fetch guard (server/lib/ssrf.js): lets link
+    // Escape hatch for the outbound-fetch guard (server/lib/ssrf.ts): lets link
     // previews reach private/loopback addresses again, for people stashing
     // intranet links on a trusted LAN. Opt-in only, and the allowed spellings
     // are deliberately narrow — a typo must fail closed, since anything that
     // silently disables an SSRF guard is worse than no guard at all.
     ALLOW_PRIVATE_FETCH: ['1', 'true'].includes((env.STASH_ALLOW_PRIVATE_FETCH || '').toLowerCase()),
-    // Optional single password gating the whole app (server/lib/auth.js).
+    // Optional single password gating the whole app (server/lib/auth.ts).
     // Unset means no auth at all, which is the historical behavior and stays
     // the default: every LAN and Tailscale install must be unaffected by an
     // upgrade. Env-only, like the remote credentials above — it is never
@@ -81,7 +81,7 @@ export const PASSWORD: string | null = config.PASSWORD
 
 // ---- inference endpoint ---------------------------------------------------
 // Resolved on demand rather than frozen at import, because the app can now be
-// given an endpoint at runtime (server/data/credentials.js) and must act on it
+// given an endpoint at runtime (server/data/credentials.ts) and must act on it
 // without a container restart.
 //
 // Precedence is env -> credential file -> nothing, and env wins as a PAIR: if

@@ -2,7 +2,7 @@
 // bind-mounted volumes (every install before this ran as root, so existing
 // data/ and models/ are root-owned), then drops to uid 1000 and hands off to
 // the normal server entry. Outside Docker nothing uses this file — `npm start`
-// still runs server/index.js directly.
+// still runs server/index.ts directly.
 //
 // Deliberately uses Node's own chown/setuid instead of `chown`/`gosu`/`setpriv`
 // so the image needs no extra apt packages and makes no assumption about which

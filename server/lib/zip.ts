@@ -75,7 +75,7 @@ function assertSafeName(name: string): void {
 //
 // `maxTotalBytes` lets a caller pass a SMALLER remaining budget than the
 // module default. One import request can now carry several uploads (see
-// server/routes/import.js), and a per-call cap would hand an attacker N x
+// server/routes/import.ts), and a per-call cap would hand an attacker N x
 // MAX_TOTAL_BYTES simply by splitting one bomb across N archives — the
 // caller decrements a shared budget and passes what's left.
 export function readZip(

@@ -24,13 +24,13 @@ flowchart TB
   end
 
   subgraph node["node process · one port"]
-    RT["router.js<br/>method + path → handler"]
+    RT["router.ts<br/>method + path → handler"]
     AG["auth gate"]
     RO["routes/*"]
     ST["data/* stores"]
     DB[("SQLite<br/>data/kothai.db")]
-    EQ(["ai/enrich.js<br/>FIFO queue"])
-    FA["ai/index.js<br/>provider facade"]
+    EQ(["ai/enrich.ts<br/>FIFO queue"])
+    FA["ai/index.ts<br/>provider facade"]
   end
 
   LP["local provider<br/>@qvac/sdk · on-device"]
@@ -85,19 +85,19 @@ client/                 React 19 + TypeScript, bundled by Vite
 └─ styles/              foundation/ · components/ · views/ (see design-system.md)
 
 server/                 dependency-light Node ESM, serves ./dist
-├─ index.js             boot: resolve provider, load stores, listen
-├─ router.js            method + path → handler, and the auth gate
-├─ config.js            every env var resolved in one place
+├─ index.ts             boot: resolve provider, load stores, listen
+├─ router.ts            method + path → handler, and the auth gate
+├─ config.ts            every env var resolved in one place
 ├─ routes/              API by domain: notes, ask, chats, collections,
 │                       settings, models, import, export, backup, wipe, auth,
 │                       checkpoint, availability, setup-test
-├─ ai/                  index.js (facade) · roles.js (residency + lifecycle)
-│  │                    enrich.js (the queue) · ig-queue.js (its Instagram
-│  │                    lane) · meta.js (link scraping) · meta-fields ·
+├─ ai/                  index.ts (facade) · roles.ts (residency + lifecycle)
+│  │                    enrich.ts (the queue) · ig-queue.ts (its Instagram
+│  │                    lane) · meta.ts (link scraping) · meta-fields ·
 │  │                    prompts · normalise · presets · backlog · circuit ·
 │  │                    availability · endpoints · routing
-│  └─ providers/        local.js (QVAC, on-device) · remote.js (OpenAI-compat)
-├─ data/                db.js (SQLite) · notes · chats · collections ·
+│  └─ providers/        local.ts (QVAC, on-device) · remote.ts (OpenAI-compat)
+├─ data/                db.ts (SQLite) · notes · chats · collections ·
 │                       settings · tagvocab · query · embedding · migrate ·
 │                       credentials · json · import-lock
 ├─ import/              importer registry: Instagram and TikTok
@@ -114,8 +114,8 @@ dist/                   built client, served by the server  (git-ignored)
 
 The client layer split is by what a module is allowed to touch, covered under
 [The client](#the-client). The server's one-place-per-concern rule is the same
-idea: every env var resolves in `config.js`, every route registers in
-`router.js`, every model call goes through `ai/index.js`.
+idea: every env var resolves in `config.ts`, every route registers in
+`router.ts`, every model call goes through `ai/index.ts`.
 
 ## The two-phase save
 
@@ -141,12 +141,12 @@ sequenceDiagram
     S-->>U: picked up by the next delta poll
 ```
 
-**Phase one** (`server/routes/notes.js` → `handleSave`) runs inside the request.
+**Phase one** (`server/routes/notes.ts` → `handleSave`) runs inside the request.
 It writes the note using regex/heuristic guesses for type and title — the same
-pure functions the client uses to preview them (`ai/normalise.js`:
+pure functions the client uses to preview them (`ai/normalise.ts`:
 `heuristicType`, `deriveTitle`, `isLikelyUrl`).
 
-**Phase two** (`server/ai/enrich.js`) is a background FIFO chain.
+**Phase two** (`server/ai/enrich.ts`) is a background FIFO chain.
 
 What this buys:
 
@@ -165,7 +165,7 @@ What this buys:
 
 ## The enrich queue
 
-`server/ai/enrich.js` holds a single promise chain:
+`server/ai/enrich.ts` holds a single promise chain:
 
 ```js
 let enrichChain = Promise.resolve()
@@ -199,7 +199,7 @@ flowchart LR
 
 Steps a note may go through, in order:
 
-1. **Metadata** — oEmbed + OpenGraph via `ai/meta.js`, cached locally. YouTube
+1. **Metadata** — oEmbed + OpenGraph via `ai/meta.ts`, cached locally. YouTube
    captions and article text (`@mozilla/readability`) get pulled in here too,
    because they're far better retrieval keys than a title.
 2. **Thumb vision** — any note carrying a thumbnail gets it described by the
@@ -210,7 +210,7 @@ Steps a note may go through, in order:
    the output is *grammar-constrained* to the schema and parsing cannot fail.
 5. **Embed** — a float32 vector over a defined recipe of fields.
 
-Which steps a given note still needs is computed by `ai/backlog.js` — a pure
+Which steps a given note still needs is computed by `ai/backlog.ts` — a pure
 module with no I/O, which is also what powers the "backlog" count in Settings.
 Completed steps are recorded as `ai.*` markers on the note so work is never
 repeated.
@@ -219,7 +219,7 @@ repeated.
 > `thumbVision` is keyed on the *artifact* (a thumbnail with no description)
 > rather than on its marker, because the notes that need it most are exactly
 > the ones whose marker lies — described back when the description was thrown
-> away instead of stored. See the comment at the top of `ai/backlog.js`.
+> away instead of stored. See the comment at the top of `ai/backlog.ts`.
 
 ## Storage
 
@@ -236,7 +236,7 @@ Three schema decisions worth knowing before you touch it:
 <details>
 <summary><b>Why most fields live in one JSON <code>data</code> column</b></summary>
 
-Notes pick up fields over time from `ai/meta.js` and `ai/enrich.js`
+Notes pick up fields over time from `ai/meta.ts` and `ai/enrich.ts`
 (`siteTitle`, `thumb`, `pending`, `ai` markers, …). A fixed column set would
 silently drop anything future code adds. `settings` and `tag_vocab` are the
 exception — both have a small, genuinely fixed shape, so real columns are
@@ -273,14 +273,14 @@ Notes are held in an in-memory array as well as on disk, so `allNotes()`,
 `search()` and `textSearch()` stay synchronous. SQLite is the durability layer;
 the array is the query layer.
 
-**Migration.** `data/migrate.js` imports the old flat-JSON store on first boot
+**Migration.** `data/migrate.ts` imports the old flat-JSON store on first boot
 and renames each file to `<name>.migrated` — kept, not deleted, so an
 unexpected shape leaves evidence on disk. Every insert is `INSERT OR IGNORE`, so
 a crash mid-migration is safe to retry.
 
 ## Retrieval
 
-Ask uses **hybrid retrieval**, in `server/data/notes.js`:
+Ask uses **hybrid retrieval**, in `server/data/notes.ts`:
 
 ```
 query ──┬─→ embed → cosine over all vectors → ranked list ─┐
@@ -295,18 +295,18 @@ model name, an error string, a person's handle — and keyword search is weak on
 paraphrase.
 
 The retrieved cards are the *only* context the language model gets, and the
-prompt (`ai/prompts.js`) requires it to cite each by number. Below the
+prompt (`ai/prompts.ts`) requires it to cite each by number. Below the
 similarity floor, nothing is retrieved and the answer says so rather than
 inventing one.
 
 Cosine search runs over the in-memory array — linear, and honest to a few
-thousand items. Past that, `server/data/notes.js` is the one seam to swap for a
+thousand items. Past that, `server/data/notes.ts` is the one seam to swap for a
 real vector index.
 
 ## Delta sync
 
 The client pages notes rather than fetching them all, so it needs "what changed
-since I last looked". `data/notes.js` keeps a monotonic `rev` counter and a
+since I last looked". `data/notes.ts` keeps a monotonic `rev` counter and a
 per-boot `bootId`:
 
 - Every mutation bumps `rev` and stamps `_rev` on the in-memory record. `_rev`
@@ -322,7 +322,7 @@ client silently trusts is worse than an honest resync.
 
 ## The inference facade
 
-Everything model-shaped goes through `server/ai/index.js`, which resolves
+Everything model-shaped goes through `server/ai/index.ts`, which resolves
 exactly one provider at boot — on-device or an OpenAI-compatible endpoint —
 behind a contract both satisfy.
 
@@ -361,13 +361,13 @@ only visible cards. The previous version put every card in the DOM and
 re-measured all of them each pass — 1,675 cards meant 42k DOM nodes and about
 20 seconds of blocked main thread.
 
-`domain/source.ts` and `server/data/query.js` both classify a note's platform,
+`domain/source.ts` and `server/data/query.ts` both classify a note's platform,
 and that duplication is intentional (client filtering, server facet counts).
 They're kept honest by a parity test — if you add a platform, add it to both.
 
 ## Boot sequence
 
-`server/index.js`, in order:
+`server/index.ts`, in order:
 
 1. Create `models/`, write `qvac.config.json` with a `cacheDirectory`, and set
    `QVAC_CONFIG_PATH` — **before** anything imports the SDK, so weights land in
@@ -393,7 +393,7 @@ Things that look like omissions and aren't:
 - **Single user.** No accounts, no per-user separation. `STASH_PASSWORD` is one
   shared password, designed to make a public URL safe — not to model identity.
 - **Linear vector search.** Fine to a few thousand notes. Swap
-  `data/notes.js` when it isn't.
+  `data/notes.ts` when it isn't.
 - **One enrich job at a time.** Concurrency here would contend for the same
   weights on the hardware this targets.
 - **No rate limiting.** See [Security](security.md).

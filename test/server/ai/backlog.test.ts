@@ -1,4 +1,4 @@
-// Unit tests for server/ai/backlog.js — which enrichment steps a note still
+// Unit tests for server/ai/backlog.ts — which enrichment steps a note still
 // needs under a residency map, and the legacy ai-marker migration.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'

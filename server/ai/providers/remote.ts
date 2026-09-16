@@ -434,7 +434,7 @@ export async function init({ remote = {} }: ProviderConfig = {}) {
 }
 
 // See types.ts: the module's own exports, checked against the contract. This is
-// the object server/ai/index.js resolves — the factory above is asserted
+// the object server/ai/index.ts resolves — the factory above is asserted
 // separately, because the cross-provider contract test drives an instance of it
 // rather than this namespace.
 export type RemoteProvider = ProviderModule<typeof import('./remote.ts')>

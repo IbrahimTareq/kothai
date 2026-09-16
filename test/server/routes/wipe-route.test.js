@@ -1,4 +1,4 @@
-// Tests for server/routes/wipe.js — POST /api/wipe erases the user's CONTENT
+// Tests for server/routes/wipe.ts — POST /api/wipe erases the user's CONTENT
 // (notes, spaces, chats, tag vocab, uploaded images) while deliberately
 // leaving model settings and residency alone, so the app stays configured and
 // no multi-GB weights need re-downloading. This is the one irreversible

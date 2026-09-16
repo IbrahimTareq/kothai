@@ -21,8 +21,8 @@ in order and stop at the first step that applies:
 
 1. **Can Biome enforce it?** Then it is a `biome.json` rule, not prose. No
    line added to either file.
-2. **Can a script check it?** Then it joins `scripts/lint-tokens.mjs` or
-   `scripts/lint-shape.mjs` (or a new script of the same shape), wired into
+2. **Can a script check it?** Then it joins `scripts/lint-tokens.ts` or
+   `scripts/lint-shape.ts` (or a new script of the same shape), wired into
    the `test` script in `package.json` so `pnpm test` runs it. No line added
    to either file.
 3. **Can a test assert it?** Then write the test, under `test/`. No line
@@ -38,7 +38,7 @@ speculative rules; "an agent might someday..." is not a citation.
 ## Removing a rule
 
 Whenever a new mechanical check lands (a Biome rule, a script, a test), read
-both prose files against `biome.json`, `scripts/*.mjs`, and the test suite.
+both prose files against `biome.json`, `scripts/*.ts`, and the test suite.
 Delete any prose rule that check now enforces — a rule duplicating a
 mechanical check is dead weight that dilutes the rules still doing work. This
 is not optional cleanup; it's the other half of why the ordered test exists.
@@ -46,7 +46,7 @@ is not optional cleanup; it's the other half of why the ordered test exists.
 ## Size
 
 `CLAUDE.md`'s and `.claude/clean-code-rules.md`'s line counts are
-machine-enforced by `scripts/lint-shape.mjs` against the baseline recorded
+machine-enforced by `scripts/lint-shape.ts` against the baseline recorded
 under `_governance` in `scripts/shape-baseline.json` — see
 docs/development.md's Governance section. If an addition would fail that
 check, that is a signal to cut something else first, not to raise the

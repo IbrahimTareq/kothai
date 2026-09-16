@@ -1,4 +1,4 @@
-// Tests for server/ai/availability.js — the verdict, not the sweep.
+// Tests for server/ai/availability.ts — the verdict, not the sweep.
 //
 // The distinction these pin is the one that makes auto-removal safe or
 // catastrophic: a definite "this content is gone" versus "the request failed".

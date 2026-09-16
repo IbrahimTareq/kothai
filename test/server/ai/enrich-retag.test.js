@@ -1,4 +1,4 @@
-// Tests for server/ai/enrich.js's account-tag injection (both classify call
+// Tests for server/ai/enrich.ts's account-tag injection (both classify call
 // sites) and the new retagNote() forced-reclassify path. Uses the same
 // mock.module harness as enrich-instagram-chain.test.js so this runs with
 // zero network I/O and zero real model calls.

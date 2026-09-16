@@ -234,7 +234,7 @@ for (const token of defined) {
   if (used.has(token) || EXEMPT.has(token)) continue
   report.push(
     `  foundation/tokens.css  [unused-token] ${token} has no consumer` +
-      `\n      delete it, or add it to EXEMPT in lint-tokens.mjs with the reason it is held open`,
+      `\n      delete it, or add it to EXEMPT in lint-tokens.ts with the reason it is held open`,
   )
   failures++
 }

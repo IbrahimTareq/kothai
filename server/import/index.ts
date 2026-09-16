@@ -59,7 +59,7 @@ export function importerNames(): string[] {
 
 export function findImporter(files: Map<string, Buffer>) {
   for (const importer of IMPORTERS) {
-    // files comes straight from an untrusted upload (see server/lib/zip.js);
+    // files comes straight from an untrusted upload (see server/lib/zip.ts);
     // a future importer's sniff() poking at attacker-controlled names/content
     // could throw on a shape it didn't expect. One misbehaving importer must
     // not take down detection for the whole route — skip it and keep looking,

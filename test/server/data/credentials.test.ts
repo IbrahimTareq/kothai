@@ -14,7 +14,7 @@ test('round-trips a base URL and key', () => {
   const d = dir()
   writeCredentials({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-test' }, d)
   // providerId rides along so the provider can look up its own quirks later
-  // (a separate embeddings catalogue, say) — see server/ai/endpoints.js.
+  // (a separate embeddings catalogue, say) — see server/ai/endpoints.ts.
   assert.deepEqual(readCredentials(d), { baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-test', providerId: null })
 })
 

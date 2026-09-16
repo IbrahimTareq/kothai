@@ -1,4 +1,4 @@
-// Tests for server/import/tiktok.js. Fixtures mirror the shape of a real
+// Tests for server/import/tiktok.ts. Fixtures mirror the shape of a real
 // "Download your data" JSON export (verified against one: 197 favourites, 13
 // collections) but carry synthetic ids — a personal export is nobody's test
 // fixture.

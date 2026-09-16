@@ -1,4 +1,4 @@
-// Unit tests for server/ai/qvac.js's normaliseClassification — the pure
+// Unit tests for server/ai/normalise.ts's normaliseClassification — the pure
 // post-processing classify() applies to the model's raw JSON (type
 // fallback, length caps, junk-tag filtering). classify() itself does real
 // model I/O so isn't unit-tested directly; this is the testable surface for

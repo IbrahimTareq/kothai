@@ -92,7 +92,7 @@ export interface Provider {
   // Optional, and the remote module genuinely has none of them.
   //
   // answerStream: the endpoint is a plain request/response JSON API with no
-  // token channel to forward. server/ai/index.js falls back to emitting the
+  // token channel to forward. server/ai/index.ts falls back to emitting the
   // finished answer as one delta, so the route and the client never branch on
   // which provider is configured.
   //

@@ -2,7 +2,7 @@
 // into the single shapes routes and the client already consume.
 //
 // Pure by design: no imports beyond ROLES, so every branch is unit-testable
-// without a provider, an endpoint or @qvac/sdk. server/ai/index.js is the
+// without a provider, an endpoint or @qvac/sdk. server/ai/index.ts is the
 // only caller.
 import { ROLES } from './roles.ts'
 import type { Role, RoleStatus } from './roles.ts'

@@ -6,6 +6,7 @@ recipes for the common extensions.
 - [Setup](#setup)
 - [Commands](#commands)
 - [The two ports](#the-two-ports)
+- [TypeScript](#typescript)
 - [The test suite](#the-test-suite)
 - [Governance](#governance)
 - [Conventions](#conventions)
@@ -46,7 +47,7 @@ Claude Code contributors also need `jq` on `PATH` — the `SessionStart` hook
 | `pnpm start` | Full build, then serve on `:5173`. What production does. |
 | `pnpm preview` | `vite preview` — serve the already-built `dist/` via Vite's own static server, not the Node server. |
 | `pnpm build` | Biome → token lint → typecheck (both tsconfig projects) → Vite build. |
-| `pnpm test` | Biome → token lint → shape lint → 1114 tests. ~5s. |
+| `pnpm test` | Biome → token lint → shape lint → 1142 tests. ~5s. |
 | `pnpm typecheck` | `tsc --noEmit` over both projects: `tsconfig.json` (client) and `tsconfig.server.json`. |
 | `pnpm typecheck:server` | `tsc -p tsconfig.server.json --noEmit` alone (the TypeScript server files). |
 | `pnpm lint` | Biome check alone. |
@@ -54,7 +55,7 @@ Claude Code contributors also need `jq` on `PATH` — the `SessionStart` hook
 | `pnpm lint:tokens` | The design-token linter alone. |
 | `pnpm lint:shape` | The file-shape ratchet alone — see [Governance](#governance). |
 
-Note that `build` runs Biome, the token lint, and all three typechecks, which
+Note that `build` runs Biome, the token lint, and both typechecks, which
 is why CI has no separate lint or typecheck step. `test` runs
 that same Biome and token-lint pass plus the shape ratchet before the suite,
 so a red `pnpm test` can mean a lint or shape failure, not just a failing
@@ -75,13 +76,46 @@ actually looks like.
 > If you configure a launch/preview target, point it at **5173**, not 5174.
 > Hitting 5174 before Vite is ready leaves the app stuck on `BOOTING…`.
 
+## TypeScript
+
+There is **no build step on the server**. `node server/index.ts` runs the
+source directly; node strips the types at load and never checks them. The
+compiler is therefore a separate gate — `pnpm typecheck` — over two projects,
+because client and server are different runtimes:
+
+| | |
+|---|---|
+| `tsconfig.json` | `client/` — DOM libs, JSX, `moduleResolution: bundler`. Vite owns the bundle. |
+| `tsconfig.server.json` | `server/`, `test/server/`, `scripts/`, `docker/` — node libs, `moduleResolution: nodenext`. Nothing here is ever compiled. |
+
+Both are `noEmit`, and neither runs in `pnpm test` — only in `pnpm build`. A
+type error survives a green test run.
+
+Three flags in `tsconfig.server.json` are not style preferences. Each one
+converts a **boot failure** into a typecheck error. Without them the failure
+lands at load, before any test body runs, so no test in this repo would catch
+it:
+
+- **`allowImportingTsExtensions`** — relative imports carry an explicit `.ts`
+  extension (`./routes/notes.ts`, never `./routes/notes`). That is the only
+  form node's type-stripper resolves with no build step in between.
+- **`erasableSyntaxOnly`** — `enum`, `namespace` and constructor parameter
+  properties cannot be erased. Node throws
+  `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX` on them at load.
+- **`verbatimModuleSyntax`** — every type-only import must say `import type`.
+  Node cannot tell a type import from a value import, so `import { SomeType }`
+  survives stripping and the process dies at load with *"does not provide an
+  export named"*. Writing `import { Foo }` for a type is not a style slip, it
+  is a boot failure — which is why the keyword is mandatory rather than
+  preferred.
+
 ## The test suite
 
-1114 tests, `node:test`, about five seconds, no browser and no running server.
+1142 tests, `node:test`, about five seconds, no browser and no running server.
 
 ```bash
 pnpm test                                     # everything
-node --test test/server/ai/roles.test.js      # one file
+node --test test/server/ai/roles.test.ts      # one file
 node --test --test-name-pattern="residency"   # by name
 ```
 
@@ -149,13 +183,13 @@ a mechanical check takes over enforcing it.
 
 ### The shape ratchet
 
-`scripts/lint-shape.mjs` (wired into `pnpm test`) caps file size and export
+`scripts/lint-shape.ts` (wired into `pnpm test`) caps file size and export
 count, measuring only `client/` and `server/` — `scripts/` and `test/` are
 unbounded. 23 files currently carry budget debt in `scripts/shape-baseline.json`
 — they were over budget when the ratchet was introduced and are grandfathered
 at their recorded size. `--update` can only tighten a baselined number down
 to a smaller measurement; it can never raise one. Raising a baseline takes a
-hand-edit to `shape-baseline.json` — but `lint-shape.mjs` also diffs that file
+hand-edit to `shape-baseline.json` — but `lint-shape.ts` also diffs that file
 against the last commit and fails on anything widened or newly added there,
 so the edit cannot pass `pnpm test` until it is itself committed to `main`.
 There is no PR review in this repo to catch it otherwise; the commit, and its
@@ -166,31 +200,31 @@ file that's already oversized is invisible to it until staged. CI still
 catches it — nothing reaches CI unstaged — so this is a known gap in local
 feedback, not a bug to fix now.
 
-### Baseline (2026-09-16)
+### Baseline (2026-09-17)
 
 Recorded so the governance system's own health can be judged later, not
 asserted:
 
 | | |
 |---|---|
-| Tests | 1114, ~5s (Node 22) |
+| Tests | 1142, ~5s (Node 22) |
 | `CLAUDE.md` | 45 lines |
 | `.claude/clean-code-rules.md` | 41 lines |
 | `scripts/shape-baseline.json` | 23 entries |
-| Export statements (`client/` + `server/`) | 499 |
-| Source files (`.js`/`.ts`/`.tsx`, `client/` + `server/`) | 104 |
+| Export statements (`client/` + `server/`) | 500 |
+| Source files (`.ts`/`.tsx`, `client/` + `server/`) | 106 |
 
 The prose files should not grow past this, the debt register should not gain
 entries, and total exports should trend down — all four are recorded under
 `_governance` in `scripts/shape-baseline.json` and enforced by
-`scripts/lint-shape.mjs` alongside the per-file ratchet above, not left as
+`scripts/lint-shape.ts` alongside the per-file ratchet above, not left as
 prose to trust.
 
 The export count excludes `export type` and `export interface`: both are
 erased before the code runs, so they add no runtime API surface, which is what
 "trend down" is about. Counting them made the metric un-satisfiable during the
 TypeScript migration — 45f7fd6 tripped the ratchet by adding `server/types.ts`,
-two type declarations and nothing else. The 499 above is the new measure; the
+two type declarations and nothing else. The 500 above is the new measure; the
 recorded `_governance.exportTotal` is still 562, from the old one.
 
 ## Conventions
@@ -208,13 +242,13 @@ or React — where it can be tested directly.
 dependencies. Hand-rolling ZIP reading and session signing was cheaper than the
 supply chain.
 
-**One place per concern.** Every env var resolves in `server/config.js`. Every
-route registers in `server/router.js`. Every model call goes through
-`server/ai/index.js`. Every design token lives in
+**One place per concern.** Every env var resolves in `server/config.ts`. Every
+route registers in `server/router.ts`. Every model call goes through
+`server/ai/index.ts`. Every design token lives in
 `client/styles/foundation/tokens.css`.
 
 **CSS goes through tokens.** Every size, colour, radius, spacing step, duration
-and z-index must come from a token — enforced by `scripts/lint-tokens.mjs`,
+and z-index must come from a token — enforced by `scripts/lint-tokens.ts`,
 which runs in both `build` and `test`. There's an escape hatch for values that
 genuinely can't be tokens:
 
@@ -229,9 +263,9 @@ Always say why. Full rules in [design-system.md](design-system.md).
 <details>
 <summary><b>Add an API route</b></summary>
 
-1. Write the handler in `server/routes/<domain>.js`. Take `(req, res)`, use
-   `json(res, status, body)` and `readBody(req)` from `server/lib/http.js`.
-2. Register it in `server/router.js`. Order matters — specific paths before
+1. Write the handler in `server/routes/<domain>.ts`. Take `(req, res)`, use
+   `json(res, status, body)` and `readBody(req)` from `server/lib/http.ts`.
+2. Register it in `server/router.ts`. Order matters — specific paths before
    the prefix matches, and everything after the auth gate.
 3. Add a test in `test/server/routes/<domain>.test.js`.
 
@@ -244,7 +278,7 @@ so the UI can render a real state instead of parsing prose.
 <details>
 <summary><b>Add an importer (TikTok, Pocket, bookmarks…)</b></summary>
 
-`server/import/index.js` is a registry. An importer is a module exporting:
+`server/import/index.ts` is a registry. An importer is a module exporting:
 
 ```js
 export const name = 'tiktok'
@@ -271,7 +305,7 @@ Two things the Instagram importer learned the hard way, both worth copying:
 <details>
 <summary><b>Add a model preset</b></summary>
 
-`server/ai/presets.js` is pure data — no SDK import, because the settings store
+`server/ai/presets.ts` is pure data — no SDK import, because the settings store
 needs `DEFAULTS` even in the lite image where no local provider exists.
 
 ```js
@@ -289,7 +323,7 @@ mmproj file.
 <summary><b>Add a source platform (for filter chips and facets)</b></summary>
 
 Platform predicates are duplicated in exactly two places — `client/domain/source.ts`
-(client filtering) and `server/data/query.js` (server facet counts). Add to
+(client filtering) and `server/data/query.ts` (server facet counts). Add to
 both; a parity test fails if they drift.
 
 </details>
@@ -308,7 +342,7 @@ in that order by `client/style.css`. Run `pnpm lint:tokens`.
 [`ci.yml`](../.github/workflows/ci.yml) runs on every push and PR to `main`:
 install → assert `.nvmrc` and the Dockerfile agree on Node → **build** → test.
 
-The build runs *before* the tests deliberately: `server/lib/http.js` serves
+The build runs *before* the tests deliberately: `server/lib/http.ts` serves
 static assets from `./dist`, and the auth-gate tests drive a real listening
 server to check the login page can fetch its font. With no `dist` that 404s. It
 passed locally only because contributors have a stale build lying around, which

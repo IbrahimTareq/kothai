@@ -1,4 +1,4 @@
-// Tests for the Instagram meta retry policy (server/ai/enrich.js): a failed
+// Tests for the Instagram meta retry policy (server/ai/enrich.ts): a failed
 // fetch used to permanently set metaFetched — one bad network moment and the
 // note never got a thumbnail. These pure functions replace that with a try
 // count + backoff delay, plus a one-time "unstick" check for notes that were

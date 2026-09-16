@@ -1,4 +1,4 @@
-// Unit tests for server/ai/presets.js — the pure model-preset catalogue.
+// Unit tests for server/ai/presets.ts — the pure model-preset catalogue.
 // It must stay free of @qvac/sdk imports: the lite image has no local
 // provider but still needs DEFAULTS, because the settings table's
 // llm/embed/vision columns are NOT NULL.

@@ -1,4 +1,4 @@
-// server/lib/weights.js — the model cache on disk, as files rather than as
+// server/lib/weights.ts — the model cache on disk, as files rather than as
 // presets. QVAC downloads weights into MODELS_DIR and never prunes them, so a
 // long-lived install accumulates every model it has ever been pointed at:
 // changing the LLM preset once leaves the old multi-GB file behind forever.

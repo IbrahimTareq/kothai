@@ -233,7 +233,7 @@ test('get: rejects non-http(s) URLs before ever calling fetch (no network I/O �
 
 // The scheme check alone never stopped these — http://169.254.169.254 is a
 // perfectly valid http(s) URL. These assert get() actually routes through
-// server/lib/ssrf.js (which owns the range rules and their own tests), rather
+// server/lib/ssrf.ts (which owns the range rules and their own tests), rather
 // than that the ranges themselves are right.
 test('get: rejects internal and loopback addresses — the SSRF guard is wired into the real fetch path', async () => {
   await assert.rejects(() => get('http://169.254.169.254/latest/meta-data/', '*/*'), /blocked address/)

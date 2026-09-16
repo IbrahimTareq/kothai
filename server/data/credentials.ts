@@ -1,7 +1,7 @@
 // Inference credentials — the endpoint base URL and its API key.
 //
 // Deliberately NOT in SQLite. /api/backup is a VACUUM INTO over the whole
-// database (server/routes/backup.js), so anything held in a table is copied
+// database (server/routes/backup.ts), so anything held in a table is copied
 // into every backup the user downloads. The guarantee this file exists to
 // keep is that a credential never leaves through a backup or an export; the
 // original env-only design kept the same guarantee a different way, and
@@ -29,7 +29,7 @@ export function readCredentials(dir: string = DATA_DIR): Credentials | null {
     // Which catalogue entry this endpoint came from. Not a credential — it is
     // here because it is the one place that already knows which provider is
     // connected, and the provider needs it to look up quirks like a separate
-    // embeddings catalogue (server/ai/endpoints.js).
+    // embeddings catalogue (server/ai/endpoints.ts).
     const providerId = typeof parsed.providerId === 'string' && parsed.providerId ? parsed.providerId : null
     return baseUrl || apiKey ? { baseUrl, apiKey, providerId } : null
   } catch {

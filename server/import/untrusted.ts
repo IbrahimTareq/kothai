@@ -1,7 +1,7 @@
 // Reading values out of an untrusted export archive.
 //
 // Every importer is handed a Map<entryName, Buffer> that came straight off a
-// user upload (see server/lib/zip.js), so the two operations below — decode
+// user upload (see server/lib/zip.ts), so the two operations below — decode
 // some JSON, take a string field — are the points where hostile input enters.
 // instagram.js and tiktok.js each carried a byte-identical private copy of
 // both, and only one of the four copies carried the reasoning for why they are

@@ -3,7 +3,7 @@
 // keys between export versions, so everything degrades to "fewer fields" or
 // "no collections" rather than a failed import. No credentials, no scraping.
 //
-// This module sits on the same trust boundary as server/lib/zip.js: the JSON
+// This module sits on the same trust boundary as server/lib/zip.ts: the JSON
 // here comes straight from a user-uploaded archive, so it's treated as
 // hostile input, not just "unusual" input — see the guards below.
 import type { ServerNote } from '../types.ts'
@@ -41,7 +41,7 @@ interface RawRow {
 }
 
 // parse()'s contract, shared with server/import/tiktok.ts and consumed by
-// server/routes/import.js.
+// server/routes/import.ts.
 interface ParseResult {
   items: ImportItem[]
   collections: { name: string; urls: string[] }[]
@@ -66,7 +66,7 @@ const COLLECTIONS_FILE = /(^|\/)saved_collections\.json$/
 // the wrong date too — to the note.
 const IG_PERMALINK = /instagram\.com\/(p|reel|reels|tv)\//
 
-// Caps mirror the trust-boundary posture of server/lib/zip.js: cheap guards
+// Caps mirror the trust-boundary posture of server/lib/zip.ts: cheap guards
 // against a hostile export, not general-purpose validation.
 const MAX_ITEMS = 100_000 // shared budget across every saved_posts.json in one import (tracked in parse()) — Meta splits large exports into parts, so capping per-file would let a hostile zip multiply past this
 const MAX_URL_LEN = 2048 // an oversized href flows into note.url/content, the embedding input, and an <a href> on the client — reject rather than clip, since a truncated URL is a broken link
@@ -474,7 +474,7 @@ export function parse(files: Map<string, Buffer>): ParseResult {
   //
   // A post can legitimately live in several IG collections at once, and
   // Kothai's own collections already support multi-membership (see
-  // server/data/collections.js), so a url simply appears under each.
+  // server/data/collections.ts), so a url simply appears under each.
   return {
     items,
     collections: [...collections].map(([name, set]) => ({ name, urls: [...set] })),

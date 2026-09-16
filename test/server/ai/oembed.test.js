@@ -6,7 +6,7 @@
 //     package is a dependency is that the ~300-entry registry is not ours to
 //     keep current, and a test against a stubbed registry would prove nothing
 //     about whether TikTok is actually in it.
-//   - the fetchLinkMeta integration mocks server/lib/ssrf.js (the seam get()
+//   - the fetchLinkMeta integration mocks server/lib/ssrf.ts (the seam get()
 //     calls) so the wiring can be asserted with no network at all. Mocking
 //     THERE and not at global fetch is the point of the exercise: it proves
 //     the oEmbed lookup goes through the guarded get(), and not through the

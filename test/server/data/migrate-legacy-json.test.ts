@@ -1,4 +1,4 @@
-// Tests for server/data/migrate.js — importing the old flat-JSON store
+// Tests for server/data/migrate.ts — importing the old flat-JSON store
 // (data/*.json) into SQLite the first time data/kothai.db is created.
 // STASH_DATA_DIR is pointed at a scratch temp dir BEFORE any server module
 // is imported (config.js resolves it once, at import time), so this exercises

@@ -1,4 +1,4 @@
-// Unit tests for server/ai/qvac.js's isJunkTag — the platform/engagement-word
+// Unit tests for server/ai/normalise.ts's isJunkTag — the platform/engagement-word
 // filter classify() applies to model-generated tags. Exported specifically so
 // this regex-adjacent logic has a testable surface without needing real
 // model I/O (classify() itself isn't unit-tested for that reason).

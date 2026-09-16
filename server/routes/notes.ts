@@ -123,7 +123,7 @@ export async function handleUpdateNote(req: IncomingMessage, res: ServerResponse
   if (Array.isArray(fields.tags)) {
     patch.tags = normalizeTags(fields.tags, { max: 40 })
     // Marks these tags hand-edited so a later Instagram re-classify pass
-    // (server/ai/enrich.js's reclassifyWithCaption, which bypasses the
+    // (server/ai/enrich.ts's reclassifyWithCaption, which bypasses the
     // normal stepsFor "don't touch an already-classified note's tags"
     // protection) never silently overwrites them with AI-suggested ones.
     // Merge onto the note's existing `ai` markers, not replace — this patch

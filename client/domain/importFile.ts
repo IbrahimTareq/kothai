@@ -18,7 +18,7 @@
 // their COMBINED size, since they ride in a single request body.
 export const MAX_IMPORT_BYTES = 45 * 1024 * 1024
 
-// Mirrors server/routes/import.js's MAX_UPLOADS so a too-large selection is
+// Mirrors server/routes/import.ts's MAX_UPLOADS so a too-large selection is
 // refused here rather than after base64-ing every file.
 export const MAX_IMPORT_FILES = 20
 

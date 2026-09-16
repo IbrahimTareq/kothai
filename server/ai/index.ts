@@ -9,7 +9,7 @@
 //
 // Sync accessors (capabilities, statusSnapshot, roleEnabled) delegate to the
 // provider that owns the role and throw if called before initProvider(). That
-// is safe because server/index.js awaits initProvider() before the HTTP server
+// is safe because server/index.ts awaits initProvider() before the HTTP server
 // listens, so no request can arrive first.
 import { getAiConfig, AI_EMBED_PROVIDER } from '../config.ts'
 import { ROLES } from './roles.ts'

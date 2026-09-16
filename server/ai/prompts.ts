@@ -31,7 +31,7 @@ interface AnswerNote extends ContextNote {
   category: string
 }
 
-// One turn of a persisted chat (see server/data/chats.js). `text` is optional
+// One turn of a persisted chat (see server/data/chats.ts). `text` is optional
 // because formatHistory has always guarded it.
 interface HistoryMessage {
   role: string

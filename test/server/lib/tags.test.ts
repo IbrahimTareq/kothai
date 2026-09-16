@@ -1,4 +1,4 @@
-// Unit tests for server/lib/tags.js — the pure tag normalization + vocabulary module.
+// Unit tests for server/lib/tags.ts — the pure tag normalization + vocabulary module.
 // No filesystem or model access: every function is a pure transform.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'

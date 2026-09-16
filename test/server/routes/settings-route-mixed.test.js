@@ -75,7 +75,7 @@ test('a model id that is not a string is rejected rather than handed to a provid
 // The end-to-end shape of the bug: one save on a mixed install, through the
 // real route and the real SQLite-backed store, then a simulated restart. The
 // endpoint's ids must come back from getRemote() — that is the half of the
-// settings server/index.js hands the remote provider at boot — and must NOT
+// settings server/index.ts hands the remote provider at boot — and must NOT
 // have been written into the on-device columns, which only the local registry
 // reads.
 test('a mixed save survives a restart: endpoint ids land in the remote store, not the local one', async () => {

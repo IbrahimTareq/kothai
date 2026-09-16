@@ -30,7 +30,7 @@ interface ParsedItems extends Array<ImportItem> {
 }
 
 // parse()'s contract, shared with server/import/instagram.ts and consumed by
-// server/routes/import.js.
+// server/routes/import.ts.
 interface ParseResult {
   items: ImportItem[]
   collections: { name: string; urls: string[] }[]

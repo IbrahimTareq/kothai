@@ -95,7 +95,7 @@ export function presetInfo(): Record<Role, ModelOption[]> {
 
 // Which files in the download cache the current selection depends on, keyed by
 // the registry BASENAME (`Qwen3-4B-Q4_K_M.gguf`) rather than the SDK's hashed
-// cache filename — see server/lib/weights.js for why that indirection is the
+// cache filename — see server/lib/weights.ts for why that indirection is the
 // safe one. Vision contributes two entries: the weights and their projector.
 //
 // Unknown keys resolve through presetFor's default fallback, exactly as
@@ -505,7 +505,7 @@ export async function shutdown() {
 }
 
 // ---- provider contract --------------------------------------------------
-// The methods below are what server/ai/index.js's facade calls. Everything
+// The methods below are what server/ai/index.ts's facade calls. Everything
 // above is this provider's own machinery (RoleManagers, residency, the QVAC
 // registry) and is not part of the contract.
 

@@ -1,4 +1,4 @@
-// Unit tests for server/lib/canvas.js — validation of a space's canvas doc.
+// Unit tests for server/lib/canvas.ts — validation of a space's canvas doc.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { sanitizeCanvas } from '../../../server/lib/canvas.ts'

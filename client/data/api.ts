@@ -78,7 +78,7 @@ export function mapNote(n: ServerNote): UIItem {
 
 // Every request that changes data must carry this. It is not a CORS-safelisted
 // content type, so the browser preflights any cross-origin attempt and the
-// server rejects anything without it (see server/routes/auth.js) — which is
+// server rejects anything without it (see server/routes/auth.ts) — which is
 // what closes the CSRF hole SameSite=Lax leaves open between ports on
 // localhost. Harmless when STASH_PASSWORD is unset and the rule is not applied.
 const JSON_HEADERS = { 'Content-Type': 'application/json' }
@@ -165,7 +165,7 @@ interface SettingsPatch {
 
 export const API = {
   // paged/filtered/faceted fetch for the Everything board — see
-  // server/routes/notes.js's handleNotes for the query contract.
+  // server/routes/notes.ts's handleNotes for the query contract.
   async page(params: {
     offset: number
     limit?: number
@@ -358,7 +358,7 @@ export const API = {
   // provider serves each role decides what that picker has to ask for.
   // `models` are the provider's default ids. They are sent WITH the endpoint
   // because naming an embedding model is what sends that role to the endpoint
-  // rather than downloading one — see server/ai/routing.js.
+  // rather than downloading one — see server/ai/routing.ts.
   async applyEndpoint(
     endpoint: EndpointPatch,
     models?: Partial<Record<'llm' | 'embed' | 'vision', string>>,
@@ -385,7 +385,7 @@ export const API = {
     return apiPost('/api/setup', patch)
   },
   // downloaded weights on disk, and reclaiming their space. Nothing prunes the
-  // cache — see server/routes/models.js.
+  // cache — see server/routes/models.ts.
   async modelFiles(): Promise<ModelFilesResponse> {
     return apiGet<ModelFilesResponse>('/api/models/files')
   },
@@ -450,7 +450,7 @@ export const API = {
     return apiPost('/api/availability/remove', { expected })
   },
   // danger zone: erase all content (notes, spaces, chats, tags, uploads).
-  // Model settings survive — see server/routes/wipe.js.
+  // Model settings survive — see server/routes/wipe.ts.
   async wipeAll(
     confirm: string,
   ): Promise<{ cleared: { notes: number; collections: number; chats: number; tags: number } }> {

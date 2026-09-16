@@ -1,4 +1,4 @@
-// Unit tests for server/ai/qvac.js's computeAggregate — the pure logic
+// Unit tests for server/ai/providers/local.ts's computeAggregate — the pure logic
 // deriving the client's single boot/status signal from per-role RoleManager
 // snapshots and policies. No SDK, no RoleManager instances — just plain
 // snapshot-shaped objects, matching what RoleManager.snapshot() returns.

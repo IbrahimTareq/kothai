@@ -160,7 +160,7 @@ export function SettingsView({
   }
 
   // Danger zone. The typed token is the confirmation — it's sent to the
-  // server, which enforces it independently (see server/routes/wipe.js), so
+  // server, which enforces it independently (see server/routes/wipe.ts), so
   // this input is a deliberate speed bump rather than the only thing standing
   // between a stray click and every note the user has.
   const WIPE_TOKEN = 'DELETE'

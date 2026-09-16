@@ -1,4 +1,4 @@
-// Unit tests for server/ai/prompts.js — the prompt text and JSON schema both
+// Unit tests for server/ai/prompts.ts — the prompt text and JSON schema both
 // providers share. These are the only guarantee that a note classified
 // on-device and one classified against a remote endpoint get asked the same
 // question; if these drift, the two providers silently produce different tags.

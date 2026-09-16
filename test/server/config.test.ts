@@ -1,4 +1,4 @@
-// Unit tests for server/config.js — pure resolution of paths + port from env.
+// Unit tests for server/config.ts — pure resolution of paths + port from env.
 // resolveConfig is exported precisely so precedence can be tested without
 // mutating process.env or re-importing the module.
 import { test } from 'node:test'

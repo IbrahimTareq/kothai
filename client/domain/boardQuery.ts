@@ -1,6 +1,6 @@
 // nav + chips → the server query for the Everything board.
 //
-// This is the client half of a contract with server/data/query.js, and it
+// This is the client half of a contract with server/data/query.ts, and it
 // lived as four const declarations in the middle of App's render. The rules it
 // encodes are not obvious and nothing checked them:
 //

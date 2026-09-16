@@ -1,4 +1,4 @@
-// Unit tests for server/ai/roles.js — residency resolution and the generic
+// Unit tests for server/ai/roles.ts — residency resolution and the generic
 // RoleManager lifecycle. The SDK loader and timers are injected fakes.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'

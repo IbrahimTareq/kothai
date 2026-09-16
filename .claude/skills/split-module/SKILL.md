@@ -9,7 +9,7 @@ A module is one noun. When a file has grown into several nouns wearing one
 filename, split it — one noun per file.
 
 `scripts/shape-baseline.json` is the debt register: every file over the flat
-budget (400 lines / 12 export statements, set in `scripts/lint-shape.mjs`) is
+budget (400 lines / 12 export statements, set in `scripts/lint-shape.ts`) is
 listed there with the size it's grandfathered at. As of this writing it holds
 23 entries (11 client, 12 server) — read the file for the current count and
 list, it changes as debt is paid down or newly incurred.
@@ -18,7 +18,7 @@ list, it changes as debt is paid down or newly incurred.
 
 1. **Name the nouns.** List the file's exports (`grep -n '^export ' <file>`)
    and group them by what they serve, not by what type of thing they are.
-   Worked example — `server/ai/meta.js` (25 exports, 818 lines) is six
+   Worked example — `server/ai/meta.ts` (25 exports, 818 lines) is six
    integrations sharing a filename:
    - Instagram: `isInstagramPost`, `instagramEmbedUrl`, `parseInstagramEmbed`,
      `unescapeEmbedUrl`, `parseInstagramCarousel`, `fetchInstagramSlides`,
@@ -55,10 +55,10 @@ list, it changes as debt is paid down or newly incurred.
 ## Important and non-obvious
 
 `pnpm lint:shape -- --update` can only **tighten** a baseline entry, never
-raise one (see `nextBaseline` in `scripts/lint-shape.mjs`). If a file grew
+raise one (see `nextBaseline` in `scripts/lint-shape.ts`). If a file grew
 instead of shrank, `--update` will not clear the failure — that is
 deliberate, not a bug to work around. Raising a baseline requires
-hand-editing `scripts/shape-baseline.json` directly — but `lint-shape.mjs`
+hand-editing `scripts/shape-baseline.json` directly — but `lint-shape.ts`
 diffs that file against the last commit and fails on anything widened there,
 so the hand-edit cannot pass `pnpm test` until it's committed to `main`
 (there is no PR review here to catch it otherwise). Never do this to make a

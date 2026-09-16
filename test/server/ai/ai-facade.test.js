@@ -1,4 +1,4 @@
-// Unit tests for server/ai/index.js — provider selection and the guard that
+// Unit tests for server/ai/index.ts — provider selection and the guard that
 // stops a sync accessor being called before a provider is resolved.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'

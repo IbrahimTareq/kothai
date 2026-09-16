@@ -4,7 +4,7 @@ Everything is JSON over one port. There's no versioning prefix — Kothai is
 single-user and the client ships with the server, so the API and its only
 consumer move together.
 
-All routes are registered in [`server/router.js`](../server/router.js), which is
+All routes are registered in [`server/router.ts`](../server/router.ts), which is
 short enough to read as the authoritative index.
 
 - [A worked example](#a-worked-example)
@@ -283,7 +283,7 @@ open.
 
 ### `POST /api/import`
 
-Multi-file upload, each tagged with its source. `server/import/index.js` selects
+Multi-file upload, each tagged with its source. `server/import/index.ts` selects
 the importer by name, so an unrecognised file gets *"that isn't an Instagram
 export"* rather than a generic dead end. Max 20 uploads per request.
 

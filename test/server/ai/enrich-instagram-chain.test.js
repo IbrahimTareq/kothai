@@ -28,7 +28,7 @@ function fakeAllNotes() {
 async function fakeUpdateNote(id, patch) {
   const n = notes.find(x => x.id === id)
   if (!n) return null
-  Object.assign(n, patch) // exactly server/data/notes.js's real updateNote
+  Object.assign(n, patch) // exactly server/data/notes.ts's real updateNote
   return n
 }
 
@@ -480,7 +480,7 @@ test('boot sweep: a note whose caption landed but whose reclassify never ran get
 test('hand-edited tags survive a reclassify (MUST FIX 2)', async () => {
   reset()
   const id = 'n8'
-  // ai.tagsEdited: true is what handleUpdateNote (server/routes/notes.js)
+  // ai.tagsEdited: true is what handleUpdateNote (server/routes/notes.ts)
   // sets when the user edits tags by hand — reclassifyWithCaption must
   // respect it even though it bypasses stepsFor's normal protection.
   seedNotes([

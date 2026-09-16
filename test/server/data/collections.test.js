@@ -1,4 +1,4 @@
-// Unit tests for server/data/collections.js — the Spaces store + membership logic.
+// Unit tests for server/data/collections.ts — the Spaces store + membership logic.
 // Runs against an isolated in-memory slate via _reset() (marks the module
 // "loaded" so load() never touches the real data/ dir and persist() writes are
 // ignored). All matching/backfill logic is pure, so no filesystem is needed.

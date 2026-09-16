@@ -56,7 +56,7 @@ interface ValidatedResidency {
 //
 // `preGate` is the one concession: an install configured before this gate
 // existed has names and no flag, and must not be dragged back through first
-// run. It is decided once when settings load (server/data/settings.js) rather
+// run. It is decided once when settings load (server/data/settings.ts) rather
 // than inferred here from whether names exist — because first run now WRITES
 // names partway through. The wizard seeds them so the embedding role can
 // resolve before the picker is drawn, and inferring from them meant the server

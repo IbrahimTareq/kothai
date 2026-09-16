@@ -1,6 +1,6 @@
 // Client-side type detection — the heart of "paste anything, it figures it
 // out". This drives only the live "detect chip" preview; the server re-classifies
-// authoritatively on save (see server/ai/normalise.js heuristicType/extractUrl).
+// authoritatively on save (see server/ai/normalise.ts heuristicType/extractUrl).
 // Remote providers skip first-run onboarding: /api/status reports configured
 // when the provider does not download weights, so this detector is unchanged.
 import type { Detection } from '../types'

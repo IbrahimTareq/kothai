@@ -1,4 +1,4 @@
-// Unit tests for server/lib/ssrf.js — the outbound-fetch guard that stands in
+// Unit tests for server/lib/ssrf.ts — the outbound-fetch guard that stands in
 // front of every link-preview / thumbnail fetch the app makes.
 //
 // The threat: og:image, oEmbed and Instagram embed URLs are all
@@ -173,7 +173,7 @@ test('assertPublicUrl: allowPrivate re-opens everything except the scheme check 
 
 // Real Response objects rather than Response-alikes: safeFetch hands its result
 // straight back to the caller, which reads res.ok and res.status
-// (server/ai/meta.js), so the fake has to be the same thing. Identity of the
+// (server/ai/meta.ts), so the fake has to be the same thing. Identity of the
 // returned object is what each test below asserts.
 const redirectTo = (location: string, status = 302): Response => new Response(null, { status, headers: { location } })
 

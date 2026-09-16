@@ -40,7 +40,7 @@ export function isSafeFetchUrl(url: string): boolean {
 // The one outbound fetch in the whole server: every og:image scrape, oEmbed
 // lookup, Instagram embed page and thumbnail download goes through here, and
 // all of those URLs come from content the user did not write. safeFetch applies
-// the SSRF guard (see server/lib/ssrf.js) to this URL and to every redirect hop.
+// the SSRF guard (see server/lib/ssrf.ts) to this URL and to every redirect hop.
 //
 // One AbortSignal covers the entire redirect chain rather than each hop, so a
 // server that redirects slowly forever still cannot hold a request open past

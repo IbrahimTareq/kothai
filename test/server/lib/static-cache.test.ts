@@ -1,4 +1,4 @@
-// Tests for the caching half of server/lib/http.js serveStatic. Before this,
+// Tests for the caching half of server/lib/http.ts serveStatic. Before this,
 // every response carried only Content-Type, so each reload of Everything
 // re-downloaded every thumbnail in full (hundreds of files, ~190KB average).
 // Two different policies are needed, which is why cacheControlFor is pure and

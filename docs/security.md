@@ -30,8 +30,8 @@ Set `STASH_PASSWORD` and the app requires login. Unset, there's no auth at
 all — that default stays so every LAN/Tailscale install is unaffected by
 upgrades. The server logs which mode it's in on every boot.
 
-Implemented in [`server/lib/auth.js`](../server/lib/auth.js), enforced once
-in `router.js` in front of every route and the static/uploads fallthrough.
+Implemented in [`server/lib/auth.ts`](../server/lib/auth.ts), enforced once
+in `router.ts` in front of every route and the static/uploads fallthrough.
 
 **Sessions**: token is `<expiry>.<hmac-sha256>`, signing key derived from the
 password via HKDF (no separate secret to lose, and changing the password
@@ -62,7 +62,7 @@ Every URL Kothai fetches for a link preview (`og:image`, oEmbed, scraped
 JSON) is attacker-influenced — anyone who can get a link saved chooses it.
 Unguarded, the server becomes a request proxy for its own network.
 
-[`server/lib/ssrf.js`](../server/lib/ssrf.js) resolves the hostname and
+[`server/lib/ssrf.ts`](../server/lib/ssrf.ts) resolves the hostname and
 checks the resolved address (not the string), and re-checks on every
 redirect (max 5 hops, by hand).
 
@@ -107,7 +107,7 @@ stored in the settings table.
 ## Untrusted uploads
 
 Data-export imports are ZIPs read by a hand-rolled parser
-([`server/lib/zip.js`](../server/lib/zip.js)):
+([`server/lib/zip.ts`](../server/lib/zip.ts)):
 
 - request bodies capped at 25 MB (64 MB for imports), 20 files per import
 - each importer's `sniff()` and `parse()` run in their own try/catch, so

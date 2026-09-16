@@ -1,4 +1,4 @@
-// Unit tests for server/lib/auth.js — the primitives behind the optional
+// Unit tests for server/lib/auth.ts — the primitives behind the optional
 // password gate. Everything here is pure or injectable: the token functions
 // take the password and the clock, so a test never depends on process.env or
 // on real time passing.

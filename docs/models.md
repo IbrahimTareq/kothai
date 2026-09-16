@@ -24,7 +24,7 @@ All three are optional. With every role off, Kothai is a working bookmark
 manager — that's the *"Skip for now"* path in the first-run flow, and it runs
 on about 1 GB.
 
-Each role also picks its own provider (see [`ai/routing.js`](../server/ai/routing.js)).
+Each role also picks its own provider (see [`ai/routing.ts`](../server/ai/routing.ts)).
 `STASH_AI_PROVIDER=local` puts all three on-device, unchanged. `STASH_AI_PROVIDER=remote`
 always sends `llm` and `vision` to the endpoint. `embed` is the one that varies,
 because endpoints differ: OpenAI and OpenRouter serve `/embeddings`, while
@@ -53,7 +53,7 @@ search down with it — over notes embedded weeks ago, not just new ones.
 ## Residency: the RAM dial
 
 Each role has a **residency policy**, set in Settings → Model Cores and
-implemented by `RoleManager` in [`server/ai/roles.js`](../server/ai/roles.js).
+implemented by `RoleManager` in [`server/ai/roles.ts`](../server/ai/roles.ts).
 
 | Policy | Behaviour |
 |---|---|
@@ -113,7 +113,7 @@ in the provider. That's what keeps applying settings fast and non-blocking.
 
 ## Presets
 
-Curated per role in [`server/ai/presets.js`](../server/ai/presets.js) — pure
+Curated per role in [`server/ai/presets.ts`](../server/ai/presets.ts) — pure
 data, no SDK import, because the settings store needs `DEFAULTS` even in the
 lite image.
 
@@ -133,16 +133,16 @@ the whole library re-indexes itself in the background.
 
 ## The provider facade
 
-[`server/ai/index.js`](../server/ai/index.js) is the only module the rest of the
+[`server/ai/index.ts`](../server/ai/index.ts) is the only module the rest of the
 app imports for inference. It resolves each role — `llm`, `embed`, `vision` —
-to a provider at boot, via the rule in [`ai/routing.js`](../server/ai/routing.js):
+to a provider at boot, via the rule in [`ai/routing.ts`](../server/ai/routing.ts):
 
 ```mermaid
 flowchart LR
-  APP["routes/ · enrich.js"] --> F["ai/index.js"]
-  F -->|"per role, see ai/routing.js"| L["providers/local.js<br/>@qvac/sdk"]
-  F -->|"per role, see ai/routing.js"| R["providers/remote.js<br/>OpenAI-compatible"]
-  L --- P["ai/prompts.js<br/>ai/normalise.js"]
+  APP["routes/ · enrich.ts"] --> F["ai/index.ts"]
+  F -->|"per role, see ai/routing.ts"| L["providers/local.ts<br/>@qvac/sdk"]
+  F -->|"per role, see ai/routing.ts"| R["providers/remote.ts<br/>OpenAI-compatible"]
+  L --- P["ai/prompts.ts<br/>ai/normalise.ts"]
   R --- P
 ```
 
@@ -168,7 +168,7 @@ surface is four calls:
 | `embed({ modelId, text })` | Vectorises every saved item and every question. |
 | `unloadModel` / `close` | Drops idle models, shuts down cleanly. |
 
-Weights live in `./models/`. `server/index.js` writes `qvac.config.json` with a
+Weights live in `./models/`. `server/index.ts` writes `qvac.config.json` with a
 `cacheDirectory` and sets `QVAC_CONFIG_PATH` **before** the SDK is imported, so
 downloads land in the project rather than your home directory. Every import
 after that line is dynamic for exactly this reason.
@@ -205,7 +205,7 @@ credentials in the URL path.
 
 ### The circuit breaker
 
-Remote calls go through [`Circuit`](../server/ai/circuit.js) — 5 consecutive
+Remote calls go through [`Circuit`](../server/ai/circuit.ts) — 5 consecutive
 failures opens it for a 60-second cooldown. Only the remote provider has one:
 local inference fails per-call, never systemically, so there's nothing to trip.
 
@@ -230,13 +230,13 @@ structurally valid by construction — parsing cannot fail, so there's no
 retry-on-malformed-JSON path to maintain.
 
 The model still needs supervision on *content*, which is what
-[`ai/normalise.js`](../server/ai/normalise.js) is for: dropping junk tags,
+[`ai/normalise.ts`](../server/ai/normalise.ts) is for: dropping junk tags,
 clamping lengths, stripping `<think>` blocks from reasoning models.
 
 ## The embedding recipe
 
 A note's vector is built from a defined set of fields (`EMBED_RECIPE` in
-`ai/prompts.js`), and the query gets its own task prefix.
+`ai/prompts.ts`), and the query gets its own task prefix.
 
 Vectors built under an *older* recipe — different prefixes, or a different set
 of fields — aren't comparable with new ones. So the recipe is versioned, and a

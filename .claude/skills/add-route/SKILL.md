@@ -10,7 +10,7 @@ unregistered route, then register it and watch that same test pass.
 
 ## 1. The handler
 
-Add a named `handleX` export to `server/routes/<area>.js` (create the file if
+Add a named `handleX` export to `server/routes/<area>.ts` (create the file if
 the area is new). Signature convention, by what the handler needs:
 
 - Sync, no body needed: `export function handleX(res) { ... }`
@@ -19,24 +19,24 @@ the area is new). Signature convention, by what the handler needs:
 - Async, reads a JSON body: `export async function handleX(req, res) { ... }`
 
 Real examples: `handleNotes(res, url)` and `handleGetNote(res, id)` in
-`server/routes/notes.js`; `handleSaveSettings(req, res)` in
-`server/routes/settings.js`.
+`server/routes/notes.ts`; `handleSaveSettings(req, res)` in
+`server/routes/settings.ts`.
 
-Reply with `json(res, code, obj)` from `server/lib/http.js` — never call
+Reply with `json(res, code, obj)` from `server/lib/http.ts` — never call
 `res.end` or `res.writeHead` directly from a handler. Other helpers there:
 `readBody(req)` to parse a JSON body, `downloadJson(res, filename, obj)` for a
 file-download response, `saveImage(dataUrl)` for pasted images.
 
 ## 2. Registration
 
-`server/router.js`'s `handleRequest` is the **only** place routes register.
+`server/router.ts`'s `handleRequest` is the **only** place routes register.
 Never register a route from inside a handler module — there is no route
 table anywhere else to keep in sync.
 
 Two edits:
 
-- Add the import to the group at the top of `router.js`, alongside the other
-  imports from the same `server/routes/<area>.js` file.
+- Add the import to the group at the top of `router.ts`, alongside the other
+  imports from the same `server/routes/<area>.ts` file.
 - Add one explicit `method + path` line inside `handleRequest`, matching the
   style already there:
 
@@ -51,7 +51,7 @@ the same resource — copy the nearest one rather than inventing a new style.
 
 ## 3. Auth
 
-Nothing to do. The gate sits above every route in `router.js`
+Nothing to do. The gate sits above every route in `router.ts`
 (`if (PASSWORD && (await authGate(...))) return`, before any route line), so
 handlers never check auth themselves. If you find yourself writing an auth
 check inside a handler, the gate was misread — remove it and register the
@@ -68,8 +68,8 @@ Do not add a third route in front of the gate without the same justification.
 
 Add `test/server/routes/<area>.test.js` (or extend the existing file for that
 area) mirroring the source layout — `notes-route.test.js` for
-`server/routes/notes.js`, `settings-route-remote.test.js` for a
-remote-provider slice of `server/routes/settings.js`. Import the handler
+`server/routes/notes.ts`, `settings-route-remote.test.js` for a
+remote-provider slice of `server/routes/settings.ts`. Import the handler
 directly and call it with a mock `res`:
 
 ```js
@@ -95,7 +95,7 @@ pnpm test
 
 ## Worked examples
 
-- `server/routes/notes.js` + `test/server/routes/notes-route.test.js` — sync
+- `server/routes/notes.ts` + `test/server/routes/notes-route.test.js` — sync
   handlers, URL search params, path-param extraction.
-- `server/routes/settings.js` + `test/server/routes/settings-route-remote.test.js`
+- `server/routes/settings.ts` + `test/server/routes/settings-route-remote.test.js`
   — async handlers, `readBody`, multi-step validation before replying.

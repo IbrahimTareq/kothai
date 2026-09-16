@@ -1,4 +1,4 @@
-// Tests for server/routes/import.js — the HTTP route tying the ZIP reader,
+// Tests for server/routes/import.ts — the HTTP route tying the ZIP reader,
 // the importer registry, and the phase-one save + background-enrich pattern
 // together. Runs the handler directly against a fake req/res: the real
 // server/import/* modules are pure (no disk/network), so only the note store,
@@ -49,7 +49,7 @@ async function fakeRemoveMany(ids) {
 }
 
 // ---- in-memory fake collections store ----------------------------------
-// Mirrors server/data/collections.js's attach()/create() semantics exactly:
+// Mirrors server/data/collections.ts's attach()/create() semantics exactly:
 // create() always sets removedIds: [] alongside itemIds: [], and addItem's
 // attach() both dedup-adds to itemIds AND removes the id from removedIds.
 let spaces
@@ -63,7 +63,7 @@ function fakeSpacesAll() {
 let nextSpaceId = 1
 async function fakeCreateSpace({ name, tags = [] }) {
   const s = { id: `space-${nextSpaceId++}`, name, tags, itemIds: [], removedIds: [] }
-  // Matches server/data/collections.js's real create(), which UNSHIFTS —
+  // Matches server/data/collections.ts's real create(), which UNSHIFTS —
   // an earlier version of this stub used push(), which made all() return
   // OLDEST-first instead of newest-first. That divergence masked a real
   // bug (MUST FIX N1): the route's spaceByLowerName index relied on

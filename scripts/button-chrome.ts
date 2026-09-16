@@ -4,8 +4,8 @@
  * rebuild one instead: a block declaring a pointer cursor AND padding AND a
  * border radius AND a font size is a button box, whatever it is called.
  *
- * Kept separate from lint-tokens.mjs, and pure, so it can be unit-tested —
- * lint-tokens.mjs runs its checks at import time and cannot be imported.
+ * Kept separate from lint-tokens.ts, and pure, so it can be unit-tested —
+ * lint-tokens.ts runs its checks at import time and cannot be imported.
  *
  * Escape hatch: put `token-lint-ignore: <reason>` anywhere inside the rule.
  */
