@@ -71,13 +71,19 @@ export function ConnectionPanel({ cfg, onChanged }: {
 
   const disconnect = () => commit(() => API.clearEndpoint(leaveSel || undefined), 'Could not disconnect.')
 
+  const host = cfg.endpoint.configured ? cfg.endpoint.host : ''
+
   return (
     <SettingsGroup label="CONNECTION">
       <div className="conn">
         <div className="conn-state">
-          <span className="conn-where mono">
+          {/* One element, two kinds of content — which is how a plain English
+              sentence ended up set in Geist Mono at 14px, the loudest of the
+              mismatches this surface had. A hostname is machine text and keeps
+              the mono face; the sentence is prose and takes the title role. */}
+          <span className={'conn-where' + (host ? ' mono' : '')}>
             {cfg.endpoint.configured
-              ? cfg.endpoint.host || 'a remote endpoint'
+              ? host || 'a remote endpoint'
               : 'Models run on this machine'}
           </span>
           <span className="conn-sub">

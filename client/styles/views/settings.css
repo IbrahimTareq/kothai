@@ -5,6 +5,60 @@
   overflow-y:auto;height:100%}
 /* title aligns with content: drop gal-head's own horizontal padding here */
 .settings-view .gal-head{padding-left:0;padding-right:0}
+
+/* ── the four type roles ──────────────────────────────────────────────────
+   Every piece of text on this surface plays one of four parts. Each section
+   used to style them for itself — CONNECTION set its title in Geist Mono at
+   14px, MODEL CORES set its own at 10px, the settings rows at sans/500/tight
+   — so one thing read as three fonts down a single page. Declaring the four
+   here, as one selector list each, is what stops that: a new section joins a
+   list rather than writing a fifth variant.
+
+     eyebrow  mono 10        a card's own header (.recent-h, .role-acc-title)
+     title    sans 14/500    the name of the thing a row acts on
+     desc     sans 12/1.55   the sentence explaining it
+     meta     mono 10 faint  a size or an id — read, never written
+
+   Mono always comes from the .mono class in markup, which carries
+   --tracking-mono with it; never from a hand-written font-family here. */
+.settings-row-title,
+.conn-where,
+.model-name,
+.wizard-choice-title {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+  color: var(--ink);
+  letter-spacing: var(--tracking-tight);
+}
+.settings-row-desc,
+.conn-sub,
+.conn-warn,
+.role-acc-sub,
+.model-desc,
+.wizard-choice-desc,
+.wizard-note,
+.residency-desc,
+.remote-model-desc {
+  font-size: var(--text-xs);
+  color: var(--ink-dim);
+  line-height: 1.55;
+  letter-spacing: var(--tracking-tight);
+}
+.model-size,
+.mf-size,
+.onboarding-size,
+.role-acc-current {
+  font-size: var(--text-2xs);
+  color: var(--ink-faint);
+}
+/* The eyebrow's other member, .recent-h, sits with the rest of the section
+   chrome in core.css. Sized here rather than left to inherit: the accordion
+   header is a <button>, and a button's font-size does not come from the page. */
+.role-acc-title {
+  font-size: var(--text-2xs);
+  color: var(--ink-dim);
+}
+
 .settings-loading{font-family:var(--font-mono);color:var(--ink-faint);font-size:var(--text-xs);
   letter-spacing:var(--tracking-mono);padding:var(--space-32) 0}
 .settings-progress{display:flex;align-items:center;gap:var(--space-14);margin-top:var(--space-14);padding:var(--space-12) var(--space-14);
@@ -39,10 +93,10 @@
   background:transparent;border:0;padding:var(--space-12) var(--space-14);color:var(--ink);transition:var(--dur-fast)}
 .role-acc-head:hover{background:var(--panel-2)}
 .role-acc-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--space-4)}
-.role-acc-title{font-size:var(--text-2xs);letter-spacing:var(--tracking-mono);color:var(--ink-dim)}
-.role-acc-sub{font-size:var(--text-xs);color:var(--ink-faint);line-height:1.4}
-.role-acc-current{font-size:var(--text-2xs);color:var(--ink);flex-shrink:0;text-align:right;
-  letter-spacing:var(--tracking-mono);max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* The selected model is the answer the collapsed header exists to give, so
+   it keeps full --ink where the rest of the meta role sits at --ink-faint. */
+.role-acc-current{color:var(--ink);flex-shrink:0;text-align:right;
+  max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .role-acc-chev{flex-shrink:0;display:grid;place-items:center;color:var(--ink-faint);
   transition:transform var(--dur-fast) ease}
 .role-acc.open .role-acc-chev{transform:rotate(180deg);color:var(--ink-dim)}
@@ -58,9 +112,8 @@
 .model-row.active .model-radio{border-color:var(--accent)}
 .model-radio-dot{width:8px;height:8px;border-radius:var(--radius-circle);background:var(--accent)}
 .model-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--space-4)}
-.model-name{font-size:var(--text-sm);display:flex;align-items:center;gap:var(--space-8);flex-wrap:wrap}
-.model-desc{font-size:var(--text-xs);color:var(--ink-dim);line-height:1.45}
-.model-size{font-family:var(--font-mono);font-size:var(--text-2xs);color:var(--ink-faint);flex-shrink:0}
+.model-name{display:flex;align-items:center;gap:var(--space-8);flex-wrap:wrap}
+.model-size{flex-shrink:0}
 
 /* ─────────────────────────── first-run onboarding ─────────────────────────── */
 /* brief splash while the first /api/status poll resolves */
@@ -82,8 +135,6 @@
   font-size:var(--text-2xs);letter-spacing:var(--tracking-mono)}
 .onboarding-picker{display:flex;flex-direction:column}
 .onboarding-foot{display:flex;align-items:center;justify-content:space-between;gap:var(--space-16);margin-top:var(--space-22)}
-.onboarding-size{font-family:var(--font-mono);font-size:var(--text-2xs);color:var(--ink-faint);
-  letter-spacing:var(--tracking-mono)}
 .onboarding-foot .btn{margin-left:auto}
 .onboarding-progress{display:flex;flex-direction:column;gap:var(--space-14);align-items:center;
   padding:var(--space-36) 0 var(--space-10)}
@@ -104,7 +155,7 @@
 }
 .residency-btn:last-child { border-right: none; }
 .residency-btn:disabled { opacity: 0.5; cursor: default; }
-.residency-desc { margin-top: var(--space-8); font-size:var(--text-xs); color: var(--ink-dim); }
+.residency-desc { margin-top: var(--space-8); }
 
 /* Backlog enrich banner */
 .backlog-banner {
@@ -137,19 +188,7 @@
 .settings-row + .settings-row { border-top: 1px solid var(--line); }
 .settings-row-head { display: flex; align-items: center; gap: var(--space-22); }
 .settings-row-main { flex: 1; min-width: 0; }
-.settings-row-title {
-  font-size: var(--text-sm);
-  font-weight: var(--fw-medium);
-  color: var(--ink);
-  letter-spacing: var(--tracking-tight);
-}
-.settings-row-desc {
-  margin-top: var(--space-4);
-  font-size: var(--text-xs);
-  color: var(--ink-dim);
-  line-height: 1.55;
-  letter-spacing: var(--tracking-tight);
-}
+.settings-row-desc { margin-top: var(--space-4); }
 .settings-row-desc b { color: var(--ink); font-weight: var(--fw-medium); }
 .settings-row-action { flex-shrink: 0; }
 .settings-row-extra { margin-top: var(--space-12); }
@@ -210,7 +249,8 @@
   font-size: var(--text-sm);
   line-height: 1.5;
 }
-.import-warnings { margin: var(--space-6) 0 0; padding-left: var(--space-18); color: var(--ink-dim); font-size: var(--text-xs); line-height: 1.5; }
+.import-warnings { margin: var(--space-6) 0 0; padding-left: var(--space-18); color: var(--ink-dim);
+  font-size: var(--text-xs); line-height: 1.55; letter-spacing: var(--tracking-tight); }
 .import-warnings li { margin-top: var(--space-2); }
 .row-error {
   margin-top: var(--space-10);
@@ -351,20 +391,20 @@
 } /* token-lint-ignore: combobox list option, not a standalone button */
 .remote-model-opt.active { color: var(--ink); background: var(--panel-3); }
 .remote-model-opt.picked { color: var(--accent); }
-.remote-model-empty { padding: var(--space-8) var(--space-10); font-size: var(--text-3xs); color: var(--ink-faint); }
+.remote-model-empty { padding: var(--space-8) var(--space-10); font-size: var(--text-xs); color: var(--ink-faint); }
 .remote-model-more {
   display: block; width: 100%;
   margin-top: var(--space-4);
   padding: var(--space-8) var(--space-10);
   text-align: left;
-  font-size: var(--text-3xs);
+  font-size: var(--text-xs);
   color: var(--ink-faint);
   background: none;
   border: 0; border-top: 1px solid var(--line);
   cursor: pointer;
 }
 .remote-model-more:hover { color: var(--ink-dim); }
-.remote-model-desc { margin-top: var(--space-6); font-size: var(--text-3xs); color: var(--ink-faint); }
+.remote-model-desc { margin-top: var(--space-6); }
 
 /* Re-tag everything — the same arm/confirm shape as the danger zone, but in
    the neutral palette: this rebuilds derived metadata rather than destroying
@@ -419,11 +459,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--ink);
-  font-family: var(--font-mono);
   font-size: var(--text-xs);
-  letter-spacing: var(--tracking-tight);
 }
-.mf-size { flex: none; color: var(--ink-dim); font-size: var(--text-xs); }
+.mf-size { flex: none; }
 /* Reads as a state, not a disabled button: there is no action here to enable,
    the file is spoken for until a different model is picked. */
 .mf-badge {
@@ -453,17 +491,17 @@
 .wizard-choice{display:flex;flex-direction:column;gap:var(--space-8);padding:var(--space-20);text-align:left;
   background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-lg);cursor:pointer}
 .wizard-choice:hover{border-color:var(--line-hover)}
-.wizard-choice-title{font-size:var(--text-sm);color:var(--ink);letter-spacing:var(--tracking-tight)}
-.wizard-choice-desc{font-size:var(--text-xs);color:var(--ink-mute);line-height:1.6}
 
 .wizard-providers{display:flex;flex-wrap:wrap;gap:var(--space-8);margin:var(--space-20) 0 var(--space-12)}
 .wizard-provider{display:inline-flex;align-items:center;gap:var(--space-8);padding:var(--space-8) var(--space-14);
   background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-full);cursor:pointer}
 .wizard-provider:hover{border-color:var(--line-hover)}
 .wizard-provider.picked{border-color:var(--accent)}
+/* Carries .mono in markup, so it keeps --tracking-mono — adding tracking-tight
+   here would recreate the mono-face/tight-tracking mismatch this pass removed. */
 .wizard-provider-label{font-size:var(--text-xs);color:var(--ink)}
 .wizard-provider-tag{font-size:var(--text-3xs);color:var(--ink-faint)}
-.wizard-note{font-size:var(--text-xs);color:var(--ink-mute);line-height:1.6;margin:0 0 var(--space-20)}
+.wizard-note{margin:0 0 var(--space-20)}
 
 .wizard-field{display:block;margin-bottom:var(--space-14)}
 .wizard-field-label{display:block;font-size:var(--text-3xs);color:var(--ink-faint);margin-bottom:var(--space-6)}
@@ -473,7 +511,7 @@
 .wizard-input:focus{border-color:var(--line-focus);outline:none}
 
 .wizard-probe{display:flex;align-items:center;gap:var(--space-12);margin-bottom:var(--space-20)}
-.wizard-probe-msg{font-size:var(--text-3xs)}
+.wizard-probe-msg{font-size:var(--text-xs)}
 .wizard-probe-msg.ok{color:var(--accent)}
 .wizard-probe-msg.fail{color:var(--ink-mute)}
 
@@ -481,12 +519,13 @@
 .conn{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-16);
   padding:var(--space-16);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg)}
 .conn-state{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--space-6)}
-.conn-where{font-size:var(--text-sm);color:var(--ink)}
-.conn-sub{font-size:var(--text-xs);color:var(--ink-faint);line-height:1.5}
 .conn-actions{display:flex;flex-wrap:wrap;gap:var(--space-8);flex-shrink:0}
 /* Two-step, like the wipe control: the second press is the one that acts. */
 .conn-armed{color:var(--ink);border-color:var(--line-focus)}
 .conn-edit{margin-top:var(--space-16);padding:var(--space-16);
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg)}
-.conn-warn{margin:var(--space-12) 0 0;font-size:var(--text-xs);color:var(--ink-dim);line-height:1.5}
-.conn-err{margin-top:var(--space-10);font-size:var(--text-xs);color:var(--ink)}
+.conn-warn{margin:var(--space-12) 0 0}
+/* Full --ink, not the desc role's --ink-dim: this is the failure the user
+   has to read before the field above it means anything. */
+.conn-err{margin-top:var(--space-10);font-size:var(--text-xs);line-height:1.55;
+  letter-spacing:var(--tracking-tight);color:var(--ink)}
