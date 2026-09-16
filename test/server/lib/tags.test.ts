@@ -8,7 +8,7 @@ import {
   buildVocabulary,
   extractHashtags,
   withAccountTag,
-} from '../../../server/lib/tags.js'
+} from '../../../server/lib/tags.ts'
 
 test('normalizeTag: lowercases, trims, collapses whitespace to single hyphen', () => {
   assert.equal(normalizeTag('  Machine   Learning '), 'machine-learning')

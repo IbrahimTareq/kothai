@@ -6,7 +6,7 @@
 // Canonicalize one tag: lowercase, trim, collapse internal whitespace runs to a
 // single hyphen, collapse repeated hyphens, strip stray leading/trailing ones.
 // Returns '' for empty/junk input.
-export function normalizeTag(tag) {
+export function normalizeTag(tag: unknown): string {
   return String(tag == null ? '' : tag)
     .trim()
     .toLowerCase()
@@ -16,13 +16,8 @@ export function normalizeTag(tag) {
 }
 
 // Normalize a list: drop empties, dedup preserving first-seen order, cap to max.
-/**
- * @param {unknown} tags
- * @param {{ max?: number }} [opts]
- * @returns {string[]}
- */
-export function normalizeTags(tags, { max } = {}) {
-  const out = []
+export function normalizeTags(tags: unknown, { max }: { max?: number } = {}): string[] {
+  const out: string[] = []
   const seen = new Set()
   for (const t of Array.isArray(tags) ? tags : []) {
     const n = normalizeTag(t)
@@ -41,8 +36,8 @@ export function normalizeTags(tags, { max } = {}) {
 // filter) same as any other candidate, since a hashtag can just as easily be
 // engagement/platform noise (#fyp, #viral) as a real topic. Unicode-aware so
 // non-Latin hashtags (Arabic, Indonesian, ...) aren't silently dropped.
-export function extractHashtags(text) {
-  const out = []
+export function extractHashtags(text: unknown): string[] {
+  const out: string[] = []
   const seen = new Set()
   for (const m of String(text || '').matchAll(/#([\p{L}\p{N}_]+)/gu)) {
     const t = normalizeTag(m[1])
@@ -57,8 +52,8 @@ export function extractHashtags(text) {
 // Top-N most-used tags across all notes, normalized then counted so variants
 // (e.g. "ML" and "ml") tally together. Ordered by count desc, then name asc for
 // deterministic output. Fed to the classify prompt to encourage reuse.
-export function buildVocabulary(notes, { limit = 60 } = {}) {
-  const counts = new Map()
+export function buildVocabulary(notes: unknown, { limit = 60 }: { limit?: number } = {}): string[] {
+  const counts = new Map<string, number>()
   for (const n of Array.isArray(notes) ? notes : []) {
     for (const t of normalizeTags(n?.tags)) {
       counts.set(t, (counts.get(t) || 0) + 1)
@@ -75,7 +70,7 @@ export function buildVocabulary(notes, { limit = 60 } = {}) {
 // canonicalization entirely, since a handle is an identity, not a concept to
 // judge as junk or snap to a semantic neighbor. No-op if there's no account
 // or the tag is already present (idempotent across repeated classify runs).
-export function withAccountTag(tagList, account) {
+export function withAccountTag(tagList: string[], account: string | null | undefined): string[] {
   if (!account) return tagList
   const t = normalizeTag(`@${account}`)
   if (!t || tagList.includes(t)) return tagList

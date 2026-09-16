@@ -4,7 +4,7 @@
 // builders so a note classified on-device and one classified against a
 // remote endpoint are asked exactly the same question. Inlining prompts in
 // a provider would guarantee drift the first time one gets tuned.
-import { normalizeTags } from '../lib/tags.js'
+import { normalizeTags } from '../lib/tags.ts'
 
 export const NOTE_TYPES = ['link', 'image', 'video', 'code', 'text']
 

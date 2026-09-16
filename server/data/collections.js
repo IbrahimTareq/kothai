@@ -7,7 +7,7 @@
 // and the logic trivially testable.
 import { randomUUID } from 'node:crypto'
 import { getDb, _resetDb } from './db.js'
-import { normalizeTag } from '../lib/tags.js'
+import { normalizeTag } from '../lib/tags.ts'
 import * as notesStore from './notes.js'
 
 let collections = []

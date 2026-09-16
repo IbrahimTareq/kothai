@@ -17,22 +17,25 @@ const HKDF_SALT = 'kothai-session-v1'
 // extra secret to generate, persist or lose (so a container restart does not
 // log you out, which a server-side session table would), and changing the
 // password invalidates every outstanding session without any revocation list.
-function signingKey(password) {
+function signingKey(password: string): Buffer {
   return Buffer.from(hkdfSync('sha256', password, HKDF_SALT, 'session-signing', 32))
 }
 
-function sign(exp, password) {
+function sign(exp: number | string, password: string): string {
   return createHmac('sha256', signingKey(password)).update(String(exp)).digest('base64url')
 }
 
 // Token is `<expiry>.<signature>`. The expiry travels in the clear — the
 // client can read it, and the signature is what stops it being edited.
-export function issueSession(password, { now = Date.now(), ttlMs = DEFAULT_TTL_MS } = {}) {
+export function issueSession(
+  password: string,
+  { now = Date.now(), ttlMs = DEFAULT_TTL_MS }: { now?: number; ttlMs?: number } = {},
+): string {
   const exp = now + ttlMs
   return `${exp}.${sign(exp, password)}`
 }
 
-export function verifySession(token, password, { now = Date.now() } = {}) {
+export function verifySession(token: unknown, password: string, { now = Date.now() }: { now?: number } = {}): boolean {
   if (typeof token !== 'string') return false
   const parts = token.split('.')
   if (parts.length !== 2) return false
@@ -52,16 +55,16 @@ export function verifySession(token, password, { now = Date.now() } = {}) {
 // timingSafeEqual requires equal lengths, and comparing the raw strings would
 // throw on a wrong-length guess — leaking the password's length through the
 // error path, and only for that guess.
-export function passwordMatches(input, password) {
+export function passwordMatches(input: unknown, password: unknown): boolean {
   if (typeof input !== 'string' || typeof password !== 'string') return false
-  const digest = s => createHash('sha256').update(s).digest()
+  const digest = (s: string) => createHash('sha256').update(s).digest()
   return timingSafeEqual(digest(input), digest(password))
 }
 
 // ---- cookies ------------------------------------------------------------
 
-export function parseCookies(header) {
-  const out = {}
+export function parseCookies(header: unknown): Record<string, string> {
+  const out: Record<string, string> = {}
   if (typeof header !== 'string') return out
   for (const part of header.split(';')) {
     const eq = part.indexOf('=')
@@ -73,7 +76,7 @@ export function parseCookies(header) {
   return out
 }
 
-function cookie(value, { secure, maxAgeSec }) {
+function cookie(value: string, { secure, maxAgeSec }: { secure: boolean; maxAgeSec: number }): string {
   // SameSite=Lax is the primary CSRF defence: a cross-site POST carries no
   // cookie at all under it. It is not the only one — see the JSON content-type
   // requirement in the router, which covers same-site-different-port, a case
@@ -86,18 +89,28 @@ function cookie(value, { secure, maxAgeSec }) {
   return bits.join('; ')
 }
 
-export function sessionCookie(token, { secure = false, maxAgeSec = DEFAULT_TTL_MS / 1000 } = {}) {
+export function sessionCookie(
+  token: string,
+  { secure = false, maxAgeSec = DEFAULT_TTL_MS / 1000 }: { secure?: boolean; maxAgeSec?: number } = {},
+): string {
   return cookie(token, { secure, maxAgeSec })
 }
 
-export function clearedCookie({ secure = false } = {}) {
+export function clearedCookie({ secure = false }: { secure?: boolean } = {}): string {
   return cookie('', { secure, maxAgeSec: 0 })
+}
+
+// Structural rather than http.IncomingMessage: `encrypted` lives on TLSSocket,
+// not on the plain Socket the IncomingMessage type declares.
+interface SecureRequestLike {
+  socket?: { encrypted?: boolean }
+  headers?: Record<string, string | string[] | undefined>
 }
 
 // Trusting x-forwarded-proto is safe for this one decision: the header is
 // spoofable when there is no proxy, but the worst a spoofer achieves is making
 // their OWN cookie Secure — a self-inflicted denial, not an escalation.
-export function isSecureRequest(req) {
+export function isSecureRequest(req: SecureRequestLike): boolean {
   if (req.socket?.encrypted) return true
   const proto = req.headers?.['x-forwarded-proto']
   return typeof proto === 'string' && proto.split(',')[0].trim().toLowerCase() === 'https'
@@ -111,10 +124,22 @@ export function isSecureRequest(req) {
 // which is the right trade for a single-user app.
 const MAX_KEYS = 5000
 
-export function createThrottle({ max = 10, windowMs = 15 * 60 * 1000 } = {}) {
-  const hits = new Map()
+interface Throttle {
+  check(key: string, now?: number): { allowed: boolean; retryAfterSec: number }
+  fail(key: string, now?: number): void
+  succeed(key: string): void
+}
 
-  const prune = (key, now) => {
+export function createThrottle({
+  max = 10,
+  windowMs = 15 * 60 * 1000,
+}: {
+  max?: number
+  windowMs?: number
+} = {}): Throttle {
+  const hits = new Map<string, number[]>()
+
+  const prune = (key: string, now: number) => {
     const kept = (hits.get(key) || []).filter(t => now - t < windowMs)
     if (kept.length) hits.set(key, kept)
     else hits.delete(key)
@@ -124,24 +149,24 @@ export function createThrottle({ max = 10, windowMs = 15 * 60 * 1000 } = {}) {
   // Per-key pruning only ever touches keys that come back. Spoofed source
   // addresses would otherwise grow this map without bound, so sweep the whole
   // thing once it gets big rather than tracking eviction per entry.
-  const sweep = now => {
+  const sweep = (now: number) => {
     if (hits.size <= MAX_KEYS) return
     for (const key of [...hits.keys()]) prune(key, now)
   }
 
   return {
-    check(key, now = Date.now()) {
+    check(key: string, now = Date.now()) {
       const kept = prune(key, now)
       if (kept.length < max) return { allowed: true, retryAfterSec: 0 }
       return { allowed: false, retryAfterSec: Math.ceil((windowMs - (now - kept[0])) / 1000) }
     },
-    fail(key, now = Date.now()) {
+    fail(key: string, now = Date.now()) {
       const kept = prune(key, now)
       kept.push(now)
       hits.set(key, kept)
       sweep(now)
     },
-    succeed(key) {
+    succeed(key: string) {
       hits.delete(key)
     },
   }

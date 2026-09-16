@@ -8,7 +8,7 @@
 // of staying heuristic forever. Any failure just leaves the heuristic version.
 import path from 'node:path'
 import * as store from '../data/notes.js'
-import * as tags from '../lib/tags.js'
+import * as tags from '../lib/tags.ts'
 import * as tagvocab from '../data/tagvocab.js'
 import * as inference from './index.js'
 import { fetchLinkMeta, isInstagramPost, isYouTubeVideo, fetchYouTubeCaptions } from './meta.js'

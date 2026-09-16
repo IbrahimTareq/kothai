@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { unlink } from 'node:fs/promises'
-import { normalizeTags } from '../lib/tags.js'
+import { normalizeTags } from '../lib/tags.ts'
 import * as store from '../data/notes.js'
 import * as ai from '../ai/index.js'
 import * as enrich from '../ai/enrich.js'

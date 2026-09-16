@@ -15,7 +15,7 @@ let linkMeta
 
 const realMeta = await import('../../../server/ai/meta.js')
 const realStore = await import('../../../server/data/notes.js')
-const realTags = await import('../../../server/lib/tags.js')
+const realTags = await import('../../../server/lib/tags.ts')
 const realTagvocab = await import('../../../server/data/tagvocab.js')
 const realNormalise = await import('../../../server/ai/normalise.js')
 const realCollections = await import('../../../server/data/collections.js')
@@ -36,7 +36,7 @@ mock.module('../../../server/data/notes.js', {
     },
   },
 })
-mock.module('../../../server/lib/tags.js', { namedExports: { ...realTags, buildVocabulary: () => [] } })
+mock.module('../../../server/lib/tags.ts', { namedExports: { ...realTags, buildVocabulary: () => [] } })
 mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async t => t } })
 mock.module('../../../server/ai/index.js', {
   namedExports: {
@@ -54,7 +54,7 @@ mock.module('../../../server/data/settings.js', {
 })
 
 const enrich = await import('../../../server/ai/enrich.js')
-const tags = await import('../../../server/lib/tags.js')
+const tags = await import('../../../server/lib/tags.ts')
 
 function meta(over = {}) {
   return {

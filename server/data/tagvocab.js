@@ -9,7 +9,7 @@
 // canonicalize — manual tag edits are left as the user typed them.
 import { getDb, _resetDb } from './db.js'
 import { encodeEmbedding, decodeEmbedding, cosine } from './embedding.js'
-import { normalizeTags } from '../lib/tags.js'
+import { normalizeTags } from '../lib/tags.ts'
 import * as ai from '../ai/index.js'
 
 export const THRESHOLD = 0.88

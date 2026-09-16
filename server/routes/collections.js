@@ -1,8 +1,8 @@
-import { normalizeTags } from '../lib/tags.js'
+import { normalizeTags } from '../lib/tags.ts'
 import * as store from '../data/notes.js'
 import * as collections from '../data/collections.js'
 import { json, readBody } from '../lib/http.js'
-import { sanitizeCanvas } from '../lib/canvas.js'
+import { sanitizeCanvas } from '../lib/canvas.ts'
 
 // ---- collections (Spaces) ----------------------------------------------
 export function handleCollections(res) {

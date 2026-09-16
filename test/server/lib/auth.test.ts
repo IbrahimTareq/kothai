@@ -13,7 +13,7 @@ import {
   clearedCookie,
   isSecureRequest,
   createThrottle,
-} from '../../../server/lib/auth.js'
+} from '../../../server/lib/auth.ts'
 
 const PW = 'correct horse battery staple'
 const T0 = 1_700_000_000_000

@@ -18,7 +18,7 @@ let storedProvider = null
 let savedPatches = []
 
 const realStore = await import('../../../server/data/notes.js')
-const realTags = await import('../../../server/lib/tags.js')
+const realTags = await import('../../../server/lib/tags.ts')
 const realTagvocab = await import('../../../server/data/tagvocab.js')
 const realNormalise = await import('../../../server/ai/normalise.js')
 const realCollections = await import('../../../server/data/collections.js')
@@ -38,7 +38,7 @@ mock.module('../../../server/data/notes.js', {
     flush: async () => {},
   },
 })
-mock.module('../../../server/lib/tags.js', { namedExports: { ...realTags, buildVocabulary: () => [] } })
+mock.module('../../../server/lib/tags.ts', { namedExports: { ...realTags, buildVocabulary: () => [] } })
 mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async t => t } })
 mock.module('../../../server/ai/index.js', {
   namedExports: {

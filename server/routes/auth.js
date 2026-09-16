@@ -16,7 +16,7 @@ import {
   passwordMatches,
   sessionCookie,
   verifySession,
-} from '../lib/auth.js'
+} from '../lib/auth.ts'
 
 const MUTATIONS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 // The login screen's only dependency. Font files carry no data, and the

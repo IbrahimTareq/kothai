@@ -5,7 +5,7 @@ import * as store from '../data/notes.js'
 import * as collections from '../data/collections.js'
 import * as enrich from '../ai/enrich.js'
 import { findImporter, getImporter, importerNames } from '../import/index.js'
-import { readZip, MAX_TOTAL_BYTES } from '../lib/zip.js'
+import { readZip, MAX_TOTAL_BYTES } from '../lib/zip.ts'
 import { json, readBody } from '../lib/http.js'
 import { runExclusiveImport } from '../data/import-lock.js'
 

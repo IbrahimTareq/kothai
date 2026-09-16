@@ -13,6 +13,7 @@
 // carries a `sha256(registryPath)[:16]_` prefix that is an @qvac/sdk internal
 // and can change under us. A basename collision between two presets makes both
 // files look in use — over-protective, never under-protective.
+import type { Dirent } from 'node:fs'
 import { readdir, stat, rm } from 'node:fs/promises'
 import path from 'node:path'
 
@@ -21,14 +22,14 @@ import path from 'node:path'
 // so this is the only thing standing between a DELETE and an arbitrary path —
 // no separators, no traversal, no leading dot (which would also let a request
 // name `.` or `..` and would only ever match OS cruft like .DS_Store anyway).
-export function isSafeEntryName(name) {
+export function isSafeEntryName(name: unknown): name is string {
   return typeof name === 'string' && name.length > 0 && /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name)
 }
 
 // Total bytes under a directory. Cheap enough to do eagerly: a companion set
 // is a handful of files, and the alternative (reporting a directory with no
 // size) makes the listing useless for deciding what to delete.
-async function dirSize(dir) {
+async function dirSize(dir: string): Promise<number> {
   let total = 0
   for (const e of await readdir(dir, { withFileTypes: true })) {
     const full = path.join(dir, e.name)
@@ -40,8 +41,8 @@ async function dirSize(dir) {
 
 // Every filename anywhere under a directory, so a set directory holding an
 // in-use file is protected as a whole.
-async function fileNames(dir) {
-  const out = []
+async function fileNames(dir: string): Promise<string[]> {
+  const out: string[] = []
   for (const e of await readdir(dir, { withFileTypes: true })) {
     if (e.isDirectory()) out.push(...(await fileNames(path.join(dir, e.name))))
     else out.push(e.name)
@@ -49,17 +50,26 @@ async function fileNames(dir) {
   return out
 }
 
-/**
- * List the model cache.
- *
- * @param {string} dir MODELS_DIR
- * @param {Record<string, string>} [inUse] registryBasename -> role — see the
- *   note above on why this is keyed by basename rather than cache filename.
- * @returns {Promise<{ entries: Array<{ name: string, kind: string, sizeBytes: number, inUse: boolean, usedBy: string | null }>, totalBytes: number, reclaimableBytes: number }>}
- *   entries largest first.
- */
-export async function scanWeights(dir, inUse = {}) {
-  let dirents
+interface WeightEntry {
+  name: string
+  kind: 'dir' | 'file'
+  sizeBytes: number
+  inUse: boolean
+  usedBy: string | null
+}
+
+// List the model cache, entries largest first. `inUse` is keyed
+// registryBasename -> role — see the note at the top of this file on why that
+// is the basename and not the SDK's cache filename.
+export async function scanWeights(
+  dir: string,
+  inUse: Record<string, string> = {},
+): Promise<{
+  entries: WeightEntry[]
+  totalBytes: number
+  reclaimableBytes: number
+}> {
+  let dirents: Dirent[]
   try {
     dirents = await readdir(dir, { withFileTypes: true })
   } catch {
@@ -68,7 +78,7 @@ export async function scanWeights(dir, inUse = {}) {
     return { entries: [], totalBytes: 0, reclaimableBytes: 0 }
   }
 
-  const entries = []
+  const entries: WeightEntry[] = []
   for (const e of dirents) {
     if (e.name.startsWith('.')) continue
     const full = path.join(dir, e.name)
@@ -96,13 +106,8 @@ export async function scanWeights(dir, inUse = {}) {
   }
 }
 
-/**
- * @param {string} code
- * @param {string} message
- * @returns {Error & { code: string }}
- */
-function fail(code, message) {
-  const err = /** @type {Error & { code: string }} */ (new Error(message))
+function fail(code: string, message: string): Error & { code: string } {
+  const err = new Error(message) as Error & { code: string }
   err.code = code
   return err
 }
@@ -110,10 +115,10 @@ function fail(code, message) {
 // Delete one cache entry. Callers decide whether the entry is deletable (see
 // the route's in-use check); this only enforces that the name addresses
 // something inside `dir`.
-export async function removeWeight(dir, name) {
+export async function removeWeight(dir: string, name: unknown): Promise<{ freedBytes: number }> {
   if (!isSafeEntryName(name)) throw fail('invalid_name', `Not a model cache entry: ${name}`)
   const full = path.join(dir, name)
-  let freedBytes
+  let freedBytes: number
   try {
     const s = await stat(full)
     freedBytes = s.isDirectory() ? await dirSize(full) : s.size

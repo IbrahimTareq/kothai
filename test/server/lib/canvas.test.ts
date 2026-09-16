@@ -1,9 +1,9 @@
 // Unit tests for server/lib/canvas.js — validation of a space's canvas doc.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { sanitizeCanvas } from '../../../server/lib/canvas.js'
+import { sanitizeCanvas } from '../../../server/lib/canvas.ts'
 
-const item = (id, extra = {}) => ({
+const item = (id: string, extra: Record<string, unknown> = {}) => ({
   id,
   type: 'item',
   itemId: `note-${id}`,
@@ -51,6 +51,7 @@ test('drops malformed nodes: bad type, non-finite numbers, non-positive size, mi
     ],
     edges: [],
   })
+  assert.ok(d)
   assert.deepEqual(
     d.nodes.map(n => n.id),
     ['a', 'g', 'h'],
@@ -66,8 +67,12 @@ test('truncates long text and labels', () => {
     ],
     edges: [],
   })
-  assert.equal(d.nodes[0].text.length, 20000)
-  assert.equal(d.nodes[1].label.length, 200)
+  assert.ok(d)
+  const [text, group] = d.nodes
+  assert.ok(text.type === 'text')
+  assert.ok(group.type === 'group')
+  assert.equal(text.text.length, 20000)
+  assert.equal(group.label?.length, 200)
 })
 
 test('keeps edges between surviving nodes with valid sides only; drops dangling and duplicate edges', () => {
@@ -81,6 +86,7 @@ test('keeps edges between surviving nodes with valid sides only; drops dangling 
       'garbage',
     ],
   })
+  assert.ok(d)
   assert.deepEqual(d.edges, [
     { id: 'e1', fromNode: 'a', toNode: 'b', fromSide: 'right' },
     { id: 'e3', fromNode: 'b', toNode: 'a', fromSide: 'top', toSide: 'left' },

@@ -16,11 +16,11 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'node:
 import os from 'node:os'
 import path from 'node:path'
 
-const { scanWeights, removeWeight, isSafeEntryName } = await import('../../../server/lib/weights.js')
+const { scanWeights, removeWeight, isSafeEntryName } = await import('../../../server/lib/weights.ts')
 
 // A throwaway models dir. Sizes are the file's byte length, so they're written
 // as fixed-length buffers and asserted exactly.
-function fixture(spec) {
+function fixture(spec: Record<string, number>) {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'kothai-weights-test-'))
   for (const [rel, bytes] of Object.entries(spec)) {
     const full = path.join(dir, rel)
@@ -57,6 +57,7 @@ test('scanWeights reports a companion-set directory as one entry summed recursiv
   try {
     const { entries } = await scanWeights(dir)
     const sets = entries.find(e => e.name === 'sets')
+    assert.ok(sets)
     assert.equal(sets.kind, 'dir')
     assert.equal(sets.sizeBytes, 42)
   } finally {
@@ -73,6 +74,8 @@ test('scanWeights marks the selected models in use by registry basename, ignorin
     const { entries, reclaimableBytes } = await scanWeights(dir, { 'Qwen3-4B-Q4_K_M.gguf': 'llm' })
     const active = entries.find(e => e.name.endsWith('Qwen3-4B-Q4_K_M.gguf'))
     const orphan = entries.find(e => e.name.endsWith('salamandrata_2b_inst_q4.gguf'))
+    assert.ok(active)
+    assert.ok(orphan)
     assert.equal(active.inUse, true)
     assert.equal(active.usedBy, 'llm')
     assert.equal(orphan.inUse, false)
@@ -89,6 +92,7 @@ test('scanWeights protects a directory that contains an in-use file', async () =
   try {
     const { entries } = await scanWeights(dir, { 'model.aren.bin': 'llm' })
     const sets = entries.find(e => e.name === 'sets')
+    assert.ok(sets)
     assert.equal(sets.inUse, true)
     assert.equal(sets.usedBy, 'llm')
   } finally {
@@ -161,7 +165,7 @@ test('removeWeight refuses a traversing name and leaves the target alone', async
   try {
     await assert.rejects(
       () => removeWeight(dir, `../${path.basename(dir)}-sibling.gguf`),
-      e => e.code === 'invalid_name',
+      e => (e as Error & { code: string }).code === 'invalid_name',
     )
     assert.equal(existsSync(outside), true)
   } finally {
@@ -175,7 +179,7 @@ test('removeWeight reports a missing entry rather than pretending it deleted som
   try {
     await assert.rejects(
       () => removeWeight(dir, 'gone.gguf'),
-      e => e.code === 'not_found',
+      e => (e as Error & { code: string }).code === 'not_found',
     )
   } finally {
     rmSync(dir, { recursive: true, force: true })

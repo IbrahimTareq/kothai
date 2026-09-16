@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { deflateRawSync } from 'node:zlib'
-import { readZip } from '../../../server/lib/zip.js'
+import { readZip } from '../../../server/lib/zip.ts'
 
 // Test-only minimal ZIP writer: local header + central directory + EOCD.
 // method: 0 = stored, 8 = deflated. `comment` (string or Buffer) becomes the
@@ -13,9 +13,18 @@ import { readZip } from '../../../server/lib/zip.js'
 // form lets a decompression-bomb test allocate one large raw buffer at a
 // time and let it go out of scope after deflating, instead of every raw
 // buffer in a multi-entry archive being alive simultaneously.
-function makeZip(entries, { method = 8, comment = '', localExtra = null } = {}) {
-  const locals = []
-  const centrals = []
+type ZipEntry = [name: string, content: string | Buffer | (() => Buffer)]
+
+function makeZip(
+  entries: ZipEntry[],
+  {
+    method = 8,
+    comment = '',
+    localExtra = null,
+  }: { method?: number; comment?: string | Buffer; localExtra?: Buffer | null } = {},
+): Buffer {
+  const locals: Buffer[] = []
+  const centrals: Buffer[] = []
   let offset = 0
   const extraBuf = localExtra ? Buffer.from(localExtra) : Buffer.alloc(0)
   for (const [name, text] of entries) {
@@ -60,7 +69,7 @@ function makeZip(entries, { method = 8, comment = '', localExtra = null } = {}) 
 }
 
 // Shared helper for the "corrupt one field of a valid zip" tests below.
-function cdStartOf(zip) {
+function cdStartOf(zip: Buffer): number {
   const eocdPos = zip.length - 22
   return eocdPos - zip.readUInt32LE(eocdPos + 12)
 }
@@ -72,13 +81,13 @@ test('readZip: extracts deflated entries by name', () => {
   ])
   const files = readZip(zip)
   assert.equal(files.size, 2)
-  assert.equal(files.get('your_instagram_activity/saved/saved_posts.json').toString(), '{"hello":"world"}')
-  assert.equal(files.get('media/readme.txt').toString(), 'nope')
+  assert.equal(files.get('your_instagram_activity/saved/saved_posts.json')?.toString(), '{"hello":"world"}')
+  assert.equal(files.get('media/readme.txt')?.toString(), 'nope')
 })
 
 test('readZip: extracts stored (uncompressed) entries', () => {
   const files = readZip(makeZip([['a.json', '[1,2,3]']], { method: 0 }))
-  assert.equal(files.get('a.json').toString(), '[1,2,3]')
+  assert.equal(files.get('a.json')?.toString(), '[1,2,3]')
 })
 
 test('readZip: skips directory entries', () => {
@@ -89,7 +98,7 @@ test('readZip: skips directory entries', () => {
     ]),
   )
   assert.equal(files.size, 1)
-  assert.equal(files.get('dir/f.txt').toString(), 'x')
+  assert.equal(files.get('dir/f.txt')?.toString(), 'x')
 })
 
 test('readZip: rejects non-zip input', () => {
@@ -132,7 +141,7 @@ test('readZip: archive comment with a forged EOCD signature does not confuse the
   const zip = makeZip([['a.txt', 'hello']], { comment: forged })
   const files = readZip(zip)
   assert.equal(files.size, 1)
-  assert.equal(files.get('a.txt').toString(), 'hello')
+  assert.equal(files.get('a.txt')?.toString(), 'hello')
 })
 
 test('readZip: local header extra field length differing from central directory is handled', () => {
@@ -142,7 +151,7 @@ test('readZip: local header extra field length differing from central directory 
   // header's own extra-length field, not the central directory's.
   const zip = makeZip([['a.txt', 'payload']], { localExtra: Buffer.from([0x01, 0x02, 0x03, 0x04]) })
   const files = readZip(zip)
-  assert.equal(files.get('a.txt').toString(), 'payload')
+  assert.equal(files.get('a.txt')?.toString(), 'payload')
 })
 
 test('readZip: rejects a truncated buffer (no full EOCD record present)', () => {
@@ -222,7 +231,7 @@ test('readZip: enforces the total decompressed-bytes budget across entries, not 
   // the archive - zeros compress ~1029:1, so what's retained afterward is
   // negligible until readZip itself decompresses each entry back out.
   const ENTRY_BYTES = 60 * 1024 * 1024 // comfortably under the 64 MiB per-entry cap
-  const entries = Array.from({ length: 9 }, (_, i) => [`z${i}.bin`, () => Buffer.alloc(ENTRY_BYTES)])
+  const entries: ZipEntry[] = Array.from({ length: 9 }, (_, i) => [`z${i}.bin`, () => Buffer.alloc(ENTRY_BYTES)])
   const zip = makeZip(entries)
   assert.throws(() => readZip(zip), /total/i)
 })

@@ -28,15 +28,15 @@ export const MAX_TOTAL_BYTES = 512 * 1024 * 1024
 // Buffer#read* throws a RangeError for that, which would leak past this
 // module as an uncaught-shape crash instead of the clean Error the HTTP
 // layer expects to catch and turn into a 400.
-function u16(buf, off) {
+function u16(buf: Buffer, off: number): number {
   if (off < 0 || off + 2 > buf.length) throw new Error('corrupt zip: offset out of range')
   return buf.readUInt16LE(off)
 }
-function u32(buf, off) {
+function u32(buf: Buffer, off: number): number {
   if (off < 0 || off + 4 > buf.length) throw new Error('corrupt zip: offset out of range')
   return buf.readUInt32LE(off)
 }
-function utf8(buf, start, end) {
+function utf8(buf: Buffer, start: number, end: number): string {
   if (start < 0 || end > buf.length || end < start) throw new Error('corrupt zip: offset out of range')
   return buf.toString('utf8', start, end)
 }
@@ -47,7 +47,7 @@ function utf8(buf, start, end) {
 // comment (or be forged there to redirect the scan), so a candidate only
 // counts once its comment-length field agrees with how far it actually sits
 // from the end of the buffer — that's what the standard EOCD scan checks.
-function findEocd(buf) {
+function findEocd(buf: Buffer): number {
   if (buf.length < 22) return -1
   const min = Math.max(0, buf.length - 22 - 0xffff)
   for (let i = buf.length - 22; i >= min; i--) {
@@ -59,7 +59,7 @@ function findEocd(buf) {
 // Path-traversal / absolute-path guard. The next task extracts these names
 // onto disk under an import directory, so this module — the trust boundary —
 // rejects anything that could escape it before that code ever sees the name.
-function assertSafeName(name) {
+function assertSafeName(name: string): void {
   if (
     name.length === 0 ||
     name.includes('\0') ||
@@ -78,7 +78,10 @@ function assertSafeName(name) {
 // server/routes/import.js), and a per-call cap would hand an attacker N x
 // MAX_TOTAL_BYTES simply by splitting one bomb across N archives — the
 // caller decrements a shared budget and passes what's left.
-export function readZip(buf, { maxTotalBytes = MAX_TOTAL_BYTES } = {}) {
+export function readZip(
+  buf: unknown,
+  { maxTotalBytes = MAX_TOTAL_BYTES }: { maxTotalBytes?: number } = {},
+): Map<string, Buffer> {
   if (!Buffer.isBuffer(buf)) throw new Error('readZip: expected a Buffer')
   // A non-positive or non-finite budget would make every entry below fail
   // in a confusing place; reject it up front as the caller's error.
@@ -104,7 +107,7 @@ export function readZip(buf, { maxTotalBytes = MAX_TOTAL_BYTES } = {}) {
     throw new Error('corrupt zip: central directory out of range')
   }
 
-  const files = new Map()
+  const files = new Map<string, Buffer>()
   const cdEnd = cdOffset + cdSize
   let total = 0 // running decompressed-bytes budget across the whole archive
   let p = cdOffset
@@ -152,11 +155,11 @@ export function readZip(buf, { maxTotalBytes = MAX_TOTAL_BYTES } = {}) {
       // entry's own cap, is what's actually binding — used below so the
       // thrown message names whichever limit really tripped.
       const budget = Math.min(MAX_ENTRY_BYTES, remaining)
-      let out
+      let out: Buffer
       try {
         out = inflateRawSync(data, { maxOutputLength: budget })
       } catch (err) {
-        if (err.code === 'ERR_BUFFER_TOO_LARGE') {
+        if ((err as NodeJS.ErrnoException).code === 'ERR_BUFFER_TOO_LARGE') {
           throw new Error(
             budget < MAX_ENTRY_BYTES
               ? `zip exceeds maximum total extracted size (at entry: ${name})`

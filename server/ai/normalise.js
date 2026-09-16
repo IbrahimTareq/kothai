@@ -4,7 +4,7 @@
 // Pure: no SDK, no HTTP. Both providers run their raw model output through
 // normaliseClassification, so a note classified on-device and one classified
 // remotely land in the same shape with the same junk filtering applied.
-import { normalizeTags } from '../lib/tags.js'
+import { normalizeTags } from '../lib/tags.ts'
 import { NOTE_TYPES } from './prompts.js'
 
 // Platform / engagement / filler words the model tends to emit for social links.

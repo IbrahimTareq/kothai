@@ -15,7 +15,7 @@
 // client: the UI's "in use" badge is a hint, this is the enforcement.
 import * as ai from '../ai/index.js'
 import * as settings from '../data/settings.js'
-import { scanWeights, removeWeight, isSafeEntryName } from '../lib/weights.js'
+import { scanWeights, removeWeight, isSafeEntryName } from '../lib/weights.ts'
 import { json } from '../lib/http.js'
 import { MODELS_DIR } from '../config.js'
 
