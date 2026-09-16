@@ -3,7 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { initProvider, _reset } from '../../../server/ai/index.ts'
-import { handleStatus, firstRunComplete } from '../../../server/routes/settings.js'
+import { handleStatus, firstRunComplete } from '../../../server/routes/settings.ts'
 
 function fakeRes() {
   return {

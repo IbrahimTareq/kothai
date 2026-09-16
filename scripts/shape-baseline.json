@@ -87,8 +87,8 @@
     "lines": 468,
     "exports": 1
   },
-  "server/routes/settings.js": {
-    "lines": 428,
+  "server/routes/settings.ts": {
+    "lines": 511,
     "exports": 13
   },
   "_governance": {

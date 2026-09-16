@@ -70,7 +70,7 @@ mock.module('../../../server/data/notes.ts', {
   namedExports: { ...realStore, allNotes: () => notes, getNote: id => notes.find(n => n.id === id) ?? null },
 })
 
-const { handlePrioritize } = await import('../../../server/routes/settings.js')
+const { handlePrioritize } = await import('../../../server/routes/settings.ts')
 
 // A real EventEmitter satisfies readBody's req.on('data'/'end') contract —
 // see test/import-route.test.js's identical fakeReq for the same reasoning.

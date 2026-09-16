@@ -1,7 +1,9 @@
 import path from 'node:path'
 import { unlink } from 'node:fs/promises'
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import { normalizeTags } from '../lib/tags.ts'
 import * as store from '../data/notes.ts'
+import type { NoteRecord } from '../data/notes.ts'
 import { UPLOAD_DIR } from '../config.ts'
 import * as ai from '../ai/index.ts'
 import * as enrich from '../ai/enrich.ts'
@@ -10,19 +12,29 @@ import * as collections from '../data/collections.ts'
 import * as query from '../data/query.ts'
 import { json, readBody, saveImage } from '../lib/http.ts'
 
+// readBody hands back `unknown` on purpose — the body is whatever a client
+// posted, and an annotation here would be a claim nothing checks at runtime.
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null
+}
+
 // ---- API handlers ------------------------------------------------------
 // Every save returns instantly with heuristic metadata (regex type, derived
 // title) — the AI pipeline (vision caption for images, then LLM classify +
 // embed) runs in the background and patches the note when done (`pending`
 // flags the card). A failure anywhere just leaves the heuristic version; the
 // note itself is never lost.
-export async function handleSave(req, res) {
+export async function handleSave(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const body = await readBody(req)
-  const text = (body.text || '').toString().trim()
-  const imageData = body.image // optional data URL
+  const fields = isRecord(body) ? body : {}
+  const text = (fields.text || '').toString().trim()
+  const imageData = fields.image // optional data URL
   if (!text && !imageData) return json(res, 400, { error: 'Provide text and/or an image.' })
 
-  const img = imageData ? await saveImage(imageData) : null
+  // The typeof stands in for saveImage's own coercion: it matches a data-URL
+  // regex against `dataUrl || ''`, so anything that is not a string was always
+  // going to come back null.
+  const img = typeof imageData === 'string' ? await saveImage(imageData) : null
   const isUrl = ai.isLikelyUrl(text)
 
   const note = await store.addNote({
@@ -39,13 +51,13 @@ export async function handleSave(req, res) {
 
 // One note by id. The client's deep-linked expanded view (/item/<id>) opens
 // before any page of the board has loaded, so it asks for just that item.
-export function handleGetNote(res, id) {
+export function handleGetNote(res: ServerResponse, id: string) {
   const note = store.getNote(id)
   if (!note) return json(res, 404, { error: 'not found' })
   json(res, 200, { note })
 }
 
-export function handleNotes(res, url) {
+export function handleNotes(res: ServerResponse, url: URL): void {
   const p = url.searchParams
   const all = store.allNotes()
   const collectionId = p.get('collection')
@@ -76,7 +88,7 @@ export function handleNotes(res, url) {
 // polling. A mismatched bootId (server restarted) or a since older than the
 // tombstone window (deletions may be missing) forces a resync instead of a
 // delta, since the client can't safely trust a partial answer.
-export function handleNotesDelta(res, url) {
+export function handleNotesDelta(res: ServerResponse, url: URL) {
   const p = url.searchParams
   const since = parseInt(p.get('since') || '0', 10) || 0
   const { rev, bootId } = store.revState()
@@ -92,7 +104,7 @@ export function handleNotesDelta(res, url) {
 // lazy rather than a bulk backfill. Always answers with the current note, so a
 // single-image post or a failed scrape just comes back deck-less rather than
 // erroring; the view keeps showing its single thumbnail either way.
-export async function handleNoteSlides(res, id) {
+export async function handleNoteSlides(res: ServerResponse, id: string): Promise<void> {
   const note = store.getNote(id)
   if (!note) return json(res, 404, { error: 'not found' })
   if (note.slidesFetched || !note.url || !isInstagramPost(note.url)) {
@@ -104,11 +116,12 @@ export async function handleNoteSlides(res, id) {
 
 // Patch user-editable fields of a note (tags + free-form "mind note"). Used by
 // the expanded item view. Only these two fields are writable from the client.
-export async function handleUpdateNote(req, res, id) {
+export async function handleUpdateNote(req: IncomingMessage, res: ServerResponse, id: string): Promise<void> {
   const body = await readBody(req)
-  const patch = {}
-  if (Array.isArray(body.tags)) {
-    patch.tags = normalizeTags(body.tags, { max: 40 })
+  const fields = isRecord(body) ? body : {}
+  const patch: Partial<NoteRecord> = {}
+  if (Array.isArray(fields.tags)) {
+    patch.tags = normalizeTags(fields.tags, { max: 40 })
     // Marks these tags hand-edited so a later Instagram re-classify pass
     // (server/ai/enrich.js's reclassifyWithCaption, which bypasses the
     // normal stepsFor "don't touch an already-classified note's tags"
@@ -118,7 +131,7 @@ export async function handleUpdateNote(req, res, id) {
     const existing = store.getNote(id)
     patch.ai = { ...existing?.ai, tagsEdited: true }
   }
-  if (typeof body.mindNote === 'string') patch.mindNote = body.mindNote.slice(0, 4000)
+  if (typeof fields.mindNote === 'string') patch.mindNote = fields.mindNote.slice(0, 4000)
   if (!Object.keys(patch).length) return json(res, 400, { error: 'nothing to update' })
 
   const note = await store.updateNote(id, patch)
@@ -135,7 +148,7 @@ export async function handleUpdateNote(req, res, id) {
           .join('\n')
         if (toEmbed) await store.updateNote(id, { embedding: await ai.embedText(toEmbed) })
       } catch (e) {
-        console.error('[update] re-embed failed for', id, '-', e.message)
+        console.error('[update] re-embed failed for', id, '-', e instanceof Error ? e.message : e)
       }
     })
   }
@@ -143,13 +156,13 @@ export async function handleUpdateNote(req, res, id) {
 
 // Force a full re-tag/re-classify of one note, discarding its current tags —
 // triggered by the "Re-tag" button in the item's detail view.
-export async function handleRetagNote(res, id) {
+export async function handleRetagNote(res: ServerResponse, id: string): Promise<void> {
   const note = await enrich.retagNote(id)
   if (!note) return json(res, 404, { error: 'note not found' })
   json(res, 200, { note })
 }
 
-export async function handleDeleteNote(res, id) {
+export async function handleDeleteNote(res: ServerResponse, id: string): Promise<void> {
   const note = store.getNote(id)
   const ok = await store.deleteNote(id)
   if (ok) await collections.deleteItemEverywhere(id)

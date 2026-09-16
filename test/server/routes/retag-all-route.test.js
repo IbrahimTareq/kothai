@@ -19,7 +19,7 @@ mock.module('../../../server/data/settings.ts', {
   namedExports: { ...realSettings, getResidency: () => residencyImpl() },
 })
 
-const { handleRetagAll } = await import('../../../server/routes/settings.js')
+const { handleRetagAll } = await import('../../../server/routes/settings.ts')
 
 function mockRes() {
   const r = { code: 0, body: null }

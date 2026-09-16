@@ -12,7 +12,7 @@ mock.module('../../../server/ai/enrich.ts', {
   namedExports: { ...realEnrich, retagNote: id => retagNoteImpl(id) },
 })
 
-const { handleRetagNote } = await import('../../../server/routes/notes.js')
+const { handleRetagNote } = await import('../../../server/routes/notes.ts')
 
 function mockRes() {
   const r = { code: 0, body: null }

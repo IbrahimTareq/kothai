@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import * as store from '../../../server/data/notes.ts'
 import * as collections from '../../../server/data/collections.ts'
-import { handleNotes, handleDeleteNote } from '../../../server/routes/notes.js'
+import { handleNotes, handleDeleteNote } from '../../../server/routes/notes.ts'
 
 function mockRes() {
   const r = { code: 0, body: null }

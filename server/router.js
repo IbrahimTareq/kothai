@@ -11,7 +11,7 @@ import {
   handleUpdateNote,
   handleDeleteNote,
   handleRetagNote,
-} from './routes/notes.js'
+} from './routes/notes.ts'
 import { handleImport } from './routes/import.js'
 import { handleAvailabilityScan, handleAvailabilityRemove } from './routes/availability.ts'
 import { handleExport } from './routes/export.ts'
@@ -41,7 +41,7 @@ import {
   handleEnrichBacklog,
   handlePrioritize,
   handleRetagAll,
-} from './routes/settings.js'
+} from './routes/settings.ts'
 import { handleSetupTest } from './routes/setup-test.ts'
 
 async function handleRequest(req, res) {

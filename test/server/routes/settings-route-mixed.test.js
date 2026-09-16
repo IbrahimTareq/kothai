@@ -32,7 +32,7 @@ mock.module('../../../server/ai/index.ts', {
   },
 })
 
-const { _validateModels, handleSaveSettings } = await import('../../../server/routes/settings.js')
+const { _validateModels, handleSaveSettings } = await import('../../../server/routes/settings.ts')
 
 test('validateModels splits a patch by the provider that owns each role', async () => {
   provider.caps = caps({ llm: 'remote', embed: 'local', vision: 'remote' }, true)
@@ -56,6 +56,19 @@ test('a pure-local install still reads every role from the body root', async () 
 
   const out = _validateModels({ llm: 'x', embed: 'y' })
   assert.deepEqual(out.local, { llm: 'x', embed: 'y' })
+  assert.deepEqual(out.remote, {})
+})
+
+// Regression. A model id that is not a string was never going to validate, but
+// the remote provider found that out by calling `key.trim()` on it — so a body
+// carrying `{ llm: 5 }` answered 500 with "(key || \"\").trim is not a
+// function" instead of the 400 a malformed body deserves. Rejected here now,
+// before either provider is asked.
+test('a model id that is not a string is rejected rather than handed to a provider', () => {
+  provider.caps = caps({ llm: 'remote', embed: 'local', vision: 'remote' }, true)
+
+  const out = _validateModels({ remote: { llm: 5 } })
+  assert.match(out.error, /invalid llm model/)
   assert.deepEqual(out.remote, {})
 })
 
