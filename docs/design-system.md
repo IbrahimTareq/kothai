@@ -55,14 +55,21 @@ and are deliberately off the duration scale.
 
 ## Components
 
-`client/styles/components/primitives.css` holds the shared primitives. **New buttons should
-use `.btn` plus a modifier** (`.btn--solid`, `.btn--ghost`, `.btn--icon`,
-`.btn--danger`) and nothing else.
+`client/styles/components/primitives.css` holds the shared primitives.
+**Buttons are `.btn`** plus a size and a tone, and the two compose freely:
 
-The older per-view button names (`.row-btn`, `.spaces-new-btn`, `.coll-menu-btn`,
-`.seg-btn`, `.residency-btn`, `.rail-btn`, `.send-btn`, `.attach-btn`) are grouped
-into the same rules rather than redefining them, so a change in `primitives.css`
-reaches all of them. Treat them as legacy aliases: don't add more.
+| axis | modifiers |
+|---|---|
+| size | `.btn--xs` `.btn--sm` (default) `.btn--lg` |
+| tone | `.btn--solid` `.btn--ghost` `.btn--icon` `.btn--danger` |
+
+The sizes were lifted from buttons that already existed rather than invented,
+so the scale describes the app. There are no per-view button classes left — the
+legacy aliases that used to be grouped into these rules are gone, and
+`npm run lint:tokens` fails any new ones.
+
+A view may still add a rule *on top of* `.btn` for genuine layout, the way
+`.chat-more` sets its own full width. What it may not do is rebuild the box.
 
 ## Deliberate exceptions
 
@@ -102,6 +109,17 @@ inline styles are the legitimate use and still pass — interpolations are
 stripped before the literals are examined, so
 ``style={{ transform: `translate3d(${x}px, 0, 0)` }}`` is fine while
 `style={{ padding: 9 }}` is not.
+
+It also fails any rule outside `primitives.css` that declares a whole button box
+— `cursor:pointer` with `padding`, `border-radius` and `font-size`. This is the
+rule that keeps `.btn` the default. It keys on the chrome rather than the class
+name, because a name-shaped rule would be satisfied by calling the next
+hand-rolled button `.wizard-test`, which is precisely how the last one happened.
+Sixteen controls are annotated exceptions: a floating action circle, a segment,
+an inline citation ref, a scroll affordance, two tag pills, a three-control
+danger-zone arm/confirm pattern, five popover/combobox list rows, an armed
+icon-delete, and a canvas toolbar (the last two — a tag pill and the canvas
+toolbar — annotated as deferred future migrations, not permanent exceptions).
 
 To allow a value that genuinely cannot be a token, annotate the line and say why:
 
