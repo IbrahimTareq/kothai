@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   checkFile,
+  measure,
   nextBaseline,
   HEADROOM,
   checkGovernance,
@@ -10,6 +11,18 @@ import {
 } from '../../scripts/lint-shape.mjs'
 
 const BUDGET = { lines: 400, exports: 12 }
+
+// Type-only exports are erased before the code runs, so they announce nothing
+// at runtime. Counting them made the export total un-satisfiable for a repo
+// migrating to TypeScript: 45f7fd6 tripped the ratchet by adding
+// server/types.ts, a file whose entire content is two type declarations.
+test('a type-only export is not counted; a runtime export is', () => {
+  const typesOnly = 'export type NoteType = string\nexport interface Note {\n  id: string\n}\nexport type { Note }\n'
+  assert.equal(measure(typesOnly).exports, 0)
+
+  const runtime = 'export function f() {}\nexport const x = 1\nexport class C {}\nexport { a, b }\nexport default f\n'
+  assert.equal(measure(runtime).exports, 5)
+})
 
 test('a file inside budget and absent from the baseline passes', () => {
   const r = checkFile('client/util/format.ts', { lines: 80, exports: 4 }, {}, BUDGET, HEADROOM)
@@ -142,6 +155,19 @@ test('total exports exceeding the recorded count fails — no headroom on the ex
   assert.match(r[0], /exports/)
   assert.match(r[0], /563/)
   assert.match(r[0], /562/)
+})
+
+test('one added runtime export trips the export ratchet; one added type does not', () => {
+  const before = 'export interface Note {\n  id: string\n}\nexport const save = () => {}\n'
+  const gov = { ...GOV, exportTotal: measure(before).exports }
+
+  const addedType = `${before}export type NoteType = string\n`
+  assert.deepEqual(checkGovernance(gov, { ...gov, exportTotal: measure(addedType).exports }, HEADROOM), [])
+
+  const addedRuntime = `${before}export const remove = () => {}\n`
+  const r = checkGovernance(gov, { ...gov, exportTotal: measure(addedRuntime).exports }, HEADROOM)
+  assert.equal(r.length, 1)
+  assert.match(r[0], /exports/)
 })
 
 test('total exports at or under the recorded count passes', () => {

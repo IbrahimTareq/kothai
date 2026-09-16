@@ -45,17 +45,17 @@ Claude Code contributors also need `jq` on `PATH` — the `SessionStart` hook
 | `pnpm dev` | Node server on `:5173` **and** Vite with HMR on `:5174`, concurrently. **This is the one you want.** |
 | `pnpm start` | Full build, then serve on `:5173`. What production does. |
 | `pnpm preview` | `vite preview` — serve the already-built `dist/` via Vite's own static server, not the Node server. |
-| `pnpm build` | Biome → token lint → typecheck (client + server) → Vite build. |
+| `pnpm build` | Biome → token lint → typecheck (three tsconfig projects) → Vite build. |
 | `pnpm test` | Biome → token lint → shape lint → 1114 tests. ~5s. |
-| `pnpm typecheck` | `tsc --noEmit` alone (client). |
-| `pnpm typecheck:server` | `tsc -p tsconfig.server.json` alone (server). |
+| `pnpm typecheck` | `tsc --noEmit` over all three projects: `tsconfig.json` (client), `tsconfig.server.json`, `tsconfig.server-js.json`. |
+| `pnpm typecheck:server` | `tsc -p tsconfig.server.json --noEmit` alone (the TypeScript server files). |
 | `pnpm lint` | Biome check alone. |
 | `pnpm format` | Apply formatting. Biome decides style; do not argue with it. |
 | `pnpm lint:tokens` | The design-token linter alone. |
 | `pnpm lint:shape` | The file-shape ratchet alone — see [Governance](#governance). |
 
-Note that `build` runs Biome, the token lint, and both typechecks (client and
-server), which is why CI has no separate lint or typecheck step. `test` runs
+Note that `build` runs Biome, the token lint, and all three typechecks, which
+is why CI has no separate lint or typecheck step. `test` runs
 that same Biome and token-lint pass plus the shape ratchet before the suite,
 so a red `pnpm test` can mean a lint or shape failure, not just a failing
 test.
@@ -177,7 +177,7 @@ asserted:
 | `CLAUDE.md` | 45 lines |
 | `.claude/clean-code-rules.md` | 41 lines |
 | `scripts/shape-baseline.json` | 23 entries |
-| Export statements (`client/` + `server/`) | 562 |
+| Export statements (`client/` + `server/`) | 499 |
 | Source files (`.js`/`.ts`/`.tsx`, `client/` + `server/`) | 104 |
 
 The prose files should not grow past this, the debt register should not gain
@@ -185,6 +185,13 @@ entries, and total exports should trend down — all four are recorded under
 `_governance` in `scripts/shape-baseline.json` and enforced by
 `scripts/lint-shape.mjs` alongside the per-file ratchet above, not left as
 prose to trust.
+
+The export count excludes `export type` and `export interface`: both are
+erased before the code runs, so they add no runtime API surface, which is what
+"trend down" is about. Counting them made the metric un-satisfiable during the
+TypeScript migration — 45f7fd6 tripped the ratchet by adding `server/types.ts`,
+two type declarations and nothing else. The 499 above is the new measure; the
+recorded `_governance.exportTotal` is still 562, from the old one.
 
 ## Conventions
 

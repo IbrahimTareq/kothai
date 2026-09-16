@@ -50,9 +50,15 @@ export const HEADROOM = { lines: 5, exports: 1 }
 // Counts export STATEMENTS, not exported bindings: `export { a, b }` is one.
 // Deliberate — the metric is "how many things does this module announce", and
 // a barrel re-exporting in one line is not the shape problem being guarded.
+//
+// `export type` and `export interface` are excluded: both are erased before
+// the code runs, so they announce nothing at runtime and add no API surface.
+// Counting them made the total un-satisfiable for a repo migrating to
+// TypeScript — server/types.ts tripped the ratchet in 45f7fd6 purely by
+// naming two types.
 export const measure = src => ({
   lines: src.split('\n').length,
-  exports: (src.match(/^export /gm) || []).length,
+  exports: (src.match(/^export (?!type\b|interface\b)/gm) || []).length,
 })
 
 export function checkFile(path, got, baseline, budget, headroom) {
