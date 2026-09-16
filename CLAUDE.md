@@ -3,9 +3,7 @@
 @.claude/clean-code-rules.md
 
 These rules bind everyone — human and agent alike. They hold only what no
-checker can verify; everything mechanizable lives in `pnpm test`. Code rules
-live in `.claude/clean-code-rules.md`, imported above so every session loads
-them. Detail lives in `docs/`.
+checker can verify; everything mechanizable lives in `pnpm test`. See `docs/`.
 
 ## Commands
 
@@ -21,15 +19,20 @@ misuse that only fails on 22 — switch first.
 
 ## Architecture invariants
 
-- `server/router.js` is the only place routes are registered. A new route is a
+- `server/router.ts` is the only place routes are registered. A new route is a
   `handleX` export in `server/routes/`, wired there. Never register from inside
   a handler module.
-- The auth gate sits above every route in `router.js`, so handlers never check
+- The auth gate sits above every route in `router.ts`, so handlers never check
   auth themselves. Only `/api/health` and `/up` sit in front of it, and they
   must stay silent about the install — the container healthcheck carries no
   credentials, and a 401 there restart-loops the container forever.
-- `server/lib/` is the security floor (`auth.js`, `ssrf.js`, `http.js`). A
+- `server/lib/` is the security floor (`auth.ts`, `ssrf.ts`, `http.ts`). A
   change there needs a test that fails without it.
+- The server ships as `.ts` and node strips the types at load — there is no
+  build step. So no `enum`, `namespace` or parameter properties (not erasable:
+  `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX` at load), and every type import says
+  `import type`, or node dies at load with "does not provide an export named".
+  `erasableSyntaxOnly` and `verbatimModuleSyntax` catch both.
 
 ## Etiquette
 

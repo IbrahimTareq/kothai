@@ -28,7 +28,7 @@ thing in it and the easiest thing to erode.
 
 - Explain **why**, never what. A comment restating the code is deleted on sight.
 - Every non-obvious guard, ordering constraint or workaround **names the failure
-  that caused it**. See the route comments in `server/router.js` (~line 51) —
+  that caused it**. See the route comments in `server/router.ts` (~line 51) —
   the file opens with imports, not a header comment.
 - Never delete an explanatory comment while editing around it. Update it if it
   has gone stale.
