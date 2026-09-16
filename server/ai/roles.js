@@ -158,7 +158,9 @@ export class RoleManager {
 
   _scheduleIdle() {
     this.timers.clear(this.idleTimer)
-    this.idleTimer = this.timers.set(() => { this.unload() }, this.idleMs)
+    this.idleTimer = this.timers.set(() => {
+      this.unload()
+    }, this.idleMs)
   }
 
   async _ensureLoaded() {
@@ -179,7 +181,7 @@ export class RoleManager {
         const modelId = await this.loader.load({
           modelSrc: targetSrc,
           modelConfig: targetConfig,
-          onProgress: (pct) => {
+          onProgress: pct => {
             this.status.progress = Math.round(pct)
             this.status.message = `${name}: ${Math.round(pct)}%`
           },
@@ -197,7 +199,7 @@ export class RoleManager {
         this.status.state = 'ready'
         this.status.progress = 100
         this.status.message = 'Ready'
-      })().catch((err) => {
+      })().catch(err => {
         this.status.state = 'error'
         this.status.message = err?.message || String(err)
         this.loadPromise = null

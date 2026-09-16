@@ -57,8 +57,6 @@ export function sniff(files) {
   return false
 }
 
-
-
 // Collects every array stored under `key`, at any depth. Depth-bounded for the
 // same reason instagram.js's walks are: JSON.parse is not recursive in V8, so a
 // maliciously deep document genuinely reaches our own walk and would otherwise
@@ -98,7 +96,11 @@ export function parseTikTokDate(str) {
 function isUsableLink(v) {
   if (typeof v !== 'string' || v.length > MAX_URL_LEN) return false
   if (!v.startsWith('http://') && !v.startsWith('https://')) return false
-  try { return TIKTOK_HOST.test(new URL(v).hostname.toLowerCase()) } catch { return false }
+  try {
+    return TIKTOK_HOST.test(new URL(v).hostname.toLowerCase())
+  } catch {
+    return false
+  }
 }
 
 // Share URL → the canonical form oEmbed answers. Anything already in a
@@ -124,7 +126,10 @@ export function parseFavorites(rows, maxItems = MAX_ITEMS) {
     }
     // Keep counting valid rows past the cap (without holding them) so parse()
     // can report an accurate "N skipped".
-    if (items.length >= maxItems) { skipped++; continue }
+    if (items.length >= maxItems) {
+      skipped++
+      continue
+    }
     items.push({
       url: canonicalVideoUrl(link),
       poster: clip(row?.Author || ''), // absent in every export seen so far; enrichment fills the handle in from oEmbed
@@ -161,7 +166,10 @@ export function parse(files) {
   for (const [key, buf] of files) {
     if (!USER_DATA_FILE.test(key) && !(Buffer.isBuffer(buf) && buf.includes(FAVORITES_MARKER))) continue
     const json = tryJson(buf)
-    if (!json) { warnings.push(`${key} could not be parsed`); continue }
+    if (!json) {
+      warnings.push(`${key} could not be parsed`)
+      continue
+    }
     sawFavoritesFile = true
 
     const videoLists = []
@@ -182,7 +190,9 @@ export function parse(files) {
   }
 
   if (sawFavoritesFile && items.length === 0 && !itemsSkippedByCap && !itemsWithUnusableUrl) {
-    warnings.push('That export contains no favourited videos. Favourites are the ones you saved with the bookmark icon — likes and watch history are deliberately not imported.')
+    warnings.push(
+      'That export contains no favourited videos. Favourites are the ones you saved with the bookmark icon — likes and watch history are deliberately not imported.',
+    )
   }
   if (itemsSkippedByCap > 0) warnings.push(`item cap reached; ${itemsSkippedByCap} videos skipped`)
   if (itemsWithUnusableUrl > 0) warnings.push(`${itemsWithUnusableUrl} videos had an unusable link`)

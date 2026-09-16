@@ -33,7 +33,7 @@ export async function load() {
     embedProvider = row.embed_provider || null
     // Names but no `configured` flag means this install was set up before the
     // gate existed. Read once, here, and never again.
-    preGate = !configured && ROLES.some((r) => Boolean(remote[r]))
+    preGate = !configured && ROLES.some(r => Boolean(remote[r]))
   } else {
     configured = false
     residency = resolveResidency({})
@@ -97,7 +97,13 @@ export function isConfigured() {
 // its current value — rather than silently reset to a fresh-install default,
 // which resolveResidency's migration semantics would otherwise produce.
 export async function save(patch) {
-  const { residency: rPatch, remote: remotePatch, embedRecipe: recipePatch, embedProvider: providerPatch, ...rest } = patch
+  const {
+    residency: rPatch,
+    remote: remotePatch,
+    embedRecipe: recipePatch,
+    embedProvider: providerPatch,
+    ...rest
+  } = patch
   for (const role of ROLES) if (rest[role]) settings[role] = rest[role]
   if (rest.configured) configured = true
   if (recipePatch !== undefined) embedRecipe = recipePatch
@@ -122,6 +128,19 @@ export async function save(patch) {
       remote_llm = excluded.remote_llm, remote_embed = excluded.remote_embed, remote_vision = excluded.remote_vision,
       embed_recipe = excluded.embed_recipe,
       embed_provider = excluded.embed_provider
-  `).run(settings.llm, settings.embed, settings.vision, residency.llm, residency.embed, residency.vision, configured ? 1 : 0, remote.llm, remote.embed, remote.vision, embedRecipe, embedProvider)
+  `).run(
+    settings.llm,
+    settings.embed,
+    settings.vision,
+    residency.llm,
+    residency.embed,
+    residency.vision,
+    configured ? 1 : 0,
+    remote.llm,
+    remote.embed,
+    remote.vision,
+    embedRecipe,
+    embedProvider,
+  )
   return get()
 }

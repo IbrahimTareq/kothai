@@ -51,7 +51,7 @@ test('a board path carries no item', () => {
 
 test('a dangling item segment is not an item', () => {
   assert.equal(pathToRoute('/item').item, undefined)
-  assert.equal(pathToRoute('/space/item').nav, 'space:item')  // a space literally named "item"
+  assert.equal(pathToRoute('/space/item').nav, 'space:item') // a space literally named "item"
   assert.equal(pathToRoute('/space/item').item, undefined)
 })
 

@@ -11,7 +11,13 @@ import { test, mock, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 
-const CLASSIFICATION = { type: 'link', category: 'Tech', title: 'A Title', summary: 'A summary.', tags: ['alpha', 'beta', 'instagram'] }
+const CLASSIFICATION = {
+  type: 'link',
+  category: 'Tech',
+  title: 'A Title',
+  summary: 'A summary.',
+  tags: ['alpha', 'beta', 'instagram'],
+}
 const VECTOR = [0.1, 0.2, 0.3]
 
 let server, base
@@ -19,23 +25,27 @@ let server, base
 before(async () => {
   server = createServer((req, res) => {
     let raw = ''
-    req.on('data', (c) => (raw += c))
+    req.on('data', c => (raw += c))
     req.on('end', () => {
       res.writeHead(200, { 'content-type': 'application/json' })
       if (req.url === '/models') return res.end(JSON.stringify({ data: [{ id: 'test-model' }] }))
       if (req.url === '/embeddings') return res.end(JSON.stringify({ data: [{ embedding: VECTOR }] }))
       const body = JSON.parse(raw)
       const isClassify = Boolean(body.response_format) || /return JSON only/.test(body.messages[0].content)
-      res.end(JSON.stringify({ choices: [{ message: { content: isClassify ? JSON.stringify(CLASSIFICATION) : 'An answer citing [1].' } }] }))
+      res.end(
+        JSON.stringify({
+          choices: [{ message: { content: isClassify ? JSON.stringify(CLASSIFICATION) : 'An answer citing [1].' } }],
+        }),
+      )
     })
   })
-  await new Promise((r) => server.listen(0, r))
+  await new Promise(r => server.listen(0, r))
   base = `http://127.0.0.1:${server.address().port}`
 })
 
 after(async () => {
   if (localMod) await localMod.shutdown()
-  await new Promise((r) => server.close(r))
+  await new Promise(r => server.close(r))
 })
 
 let localMod = null
@@ -50,7 +60,9 @@ async function localProvider() {
         embed: async () => ({ embedding: VECTOR }),
         cancel: async () => {},
         completion: ({ history }) => {
-          const text = /return JSON only/.test(history[0].content) ? JSON.stringify(CLASSIFICATION) : 'An answer citing [1].'
+          const text = /return JSON only/.test(history[0].content)
+            ? JSON.stringify(CLASSIFICATION)
+            : 'An answer citing [1].'
           return {
             requestId: 'req-1',
             // Chunked so the streaming path is exercised across a boundary
@@ -69,7 +81,9 @@ async function localProvider() {
       },
     })
     localMod = await import('../../../../server/ai/providers/local.js')
-    await localMod.init({ local: { llm: 'QWEN3_1_7B_INST_Q4', embed: 'EMBEDDINGGEMMA_300M_Q8_0', vision: 'QWEN3_5_2B_MULTIMODAL_Q4_K_M' } })
+    await localMod.init({
+      local: { llm: 'QWEN3_1_7B_INST_Q4', embed: 'EMBEDDINGGEMMA_300M_Q8_0', vision: 'QWEN3_5_2B_MULTIMODAL_Q4_K_M' },
+    })
     await localMod.applyResidency({ llm: 'ondemand', embed: 'ondemand', vision: 'ondemand' })
   }
   return localMod
@@ -77,7 +91,11 @@ async function localProvider() {
 
 async function remoteProvider() {
   const { createRemoteProvider } = await import('../../../../server/ai/providers/remote.js')
-  const p = createRemoteProvider({ baseUrl: base, apiKey: null, models: { llm: 'test-model', embed: 'test-model', vision: 'test-model' } })
+  const p = createRemoteProvider({
+    baseUrl: base,
+    apiKey: null,
+    models: { llm: 'test-model', embed: 'test-model', vision: 'test-model' },
+  })
   await p.init()
   return p
 }
@@ -124,7 +142,7 @@ for (const [name, build] of PROVIDERS) {
   test(`${name}: answerStream emits deltas and resolves to the same text as answer`, async () => {
     const p = await build()
     const seen = []
-    const out = await p.answerStream({ question: 'q', contextNotes: [], onToken: (t) => seen.push(t) })
+    const out = await p.answerStream({ question: 'q', contextNotes: [], onToken: t => seen.push(t) })
     assert.equal(typeof out, 'string')
     assert.equal(out, out.trim())
     assert.ok(seen.length > 0, 'at least one delta must be emitted')

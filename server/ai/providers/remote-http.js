@@ -21,13 +21,23 @@ export class RemoteError extends Error {
 function classify(status, body) {
   const detail = typeof body === 'string' ? body.slice(0, 200) : JSON.stringify(body).slice(0, 200)
   if (status === 401 || status === 403) {
-    return new RemoteError('auth_failed', `Endpoint rejected the credentials (${status}). Check STASH_AI_API_KEY.`, { transient: false, status })
+    return new RemoteError('auth_failed', `Endpoint rejected the credentials (${status}). Check STASH_AI_API_KEY.`, {
+      transient: false,
+      status,
+    })
   }
   if (status === 404) {
-    return new RemoteError('model_not_found', `Endpoint returned 404 — check the model name and STASH_AI_BASE_URL. ${detail}`, { transient: false, status })
+    return new RemoteError(
+      'model_not_found',
+      `Endpoint returned 404 — check the model name and STASH_AI_BASE_URL. ${detail}`,
+      { transient: false, status },
+    )
   }
   if (status === 400) {
-    return new RemoteError('bad_request', `Endpoint rejected the request (400). ${detail}`, { transient: false, status })
+    return new RemoteError('bad_request', `Endpoint rejected the request (400). ${detail}`, {
+      transient: false,
+      status,
+    })
   }
   if (status === 429) {
     return new RemoteError('rate_limited', 'Endpoint rate-limited the request.', { transient: true, status })
@@ -55,7 +65,7 @@ const RETRIES = 3
 const MAX_WAIT_MS = 30_000
 const BACKOFF_MS = [1_000, 4_000, 10_000]
 
-const realSleep = (ms) => new Promise((r) => setTimeout(r, ms))
+const realSleep = ms => new Promise(r => setTimeout(r, ms))
 
 // How long before the next attempt: what the endpoint asked for if it said,
 // our own backoff if it did not, capped either way. Jitter keeps several
@@ -65,13 +75,26 @@ function waitFor(err, attempt) {
   return Math.min(Math.round(asked), MAX_WAIT_MS)
 }
 
-const retryable = (err) => err instanceof RemoteError && err.transient && err.code !== 'bad_response'
+const retryable = err => err instanceof RemoteError && err.transient && err.code !== 'bad_response'
 
-export async function postJson(baseUrl, path, body, { apiKey = null, timeoutMs = 60_000, retries = RETRIES, sleep = realSleep } = {}) {
-  return withRetry(() => request(baseUrl, path, { method: 'POST', body: JSON.stringify(body), apiKey, timeoutMs }), retries, sleep)
+export async function postJson(
+  baseUrl,
+  path,
+  body,
+  { apiKey = null, timeoutMs = 60_000, retries = RETRIES, sleep = realSleep } = {},
+) {
+  return withRetry(
+    () => request(baseUrl, path, { method: 'POST', body: JSON.stringify(body), apiKey, timeoutMs }),
+    retries,
+    sleep,
+  )
 }
 
-export async function getJson(baseUrl, path, { apiKey = null, timeoutMs = 60_000, retries = RETRIES, sleep = realSleep } = {}) {
+export async function getJson(
+  baseUrl,
+  path,
+  { apiKey = null, timeoutMs = 60_000, retries = RETRIES, sleep = realSleep } = {},
+) {
   return withRetry(() => request(baseUrl, path, { method: 'GET', apiKey, timeoutMs }), retries, sleep)
 }
 

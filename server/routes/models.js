@@ -48,7 +48,7 @@ export async function handleDeleteModelFile(res, name) {
   }
 
   const { entries } = await scan()
-  const entry = entries.find((e) => e.name === name)
+  const entry = entries.find(e => e.name === name)
   if (!entry) return json(res, 404, { error: `No such model file: ${name}`, code: 'not_found' })
   if (entry.inUse) {
     return json(res, 409, {

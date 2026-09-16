@@ -2,7 +2,18 @@
 // the real /api endpoints. Server types: link/image/video/code/
 // text ("text" becomes "note" in the UI).
 import type {
-  CanvasDoc, Chat, ChatMessage, ChatSummary, Collection, ModelFilesResponse, ModelStatus, Residency, ServerNote, SettingsResponse, UIItem, UIType,
+  CanvasDoc,
+  Chat,
+  ChatMessage,
+  ChatSummary,
+  Collection,
+  ModelFilesResponse,
+  ModelStatus,
+  Residency,
+  ServerNote,
+  SettingsResponse,
+  UIItem,
+  UIType,
 } from '../types'
 
 function hostOf(url: string): string {
@@ -30,11 +41,34 @@ export function mapNote(n: ServerNote): UIItem {
   }
   switch (type) {
     case 'link':
-      return { ...base, url: n.url, host: hostOf(n.url || ''), title: n.siteTitle || n.title, note: n.siteDesc || '', thumb: n.thumb || null, slides: n.slides, siteName: n.siteName || null }
+      return {
+        ...base,
+        url: n.url,
+        host: hostOf(n.url || ''),
+        title: n.siteTitle || n.title,
+        note: n.siteDesc || '',
+        thumb: n.thumb || null,
+        slides: n.slides,
+        siteName: n.siteName || null,
+      }
     case 'video':
-      return { ...base, url: n.url, host: hostOf(n.url || '') || 'video', title: n.siteTitle || n.title, note: n.siteDesc || '', thumb: n.thumb || null, slides: n.slides, siteName: n.siteName || null }
+      return {
+        ...base,
+        url: n.url,
+        host: hostOf(n.url || '') || 'video',
+        title: n.siteTitle || n.title,
+        note: n.siteDesc || '',
+        thumb: n.thumb || null,
+        slides: n.slides,
+        siteName: n.siteName || null,
+      }
     case 'image':
-      return { ...base, img: n.image, name: n.title || 'image', note: n.pending ? 'analyzing…' : (n.summary || n.description || '') }
+      return {
+        ...base,
+        img: n.image,
+        name: n.title || 'image',
+        note: n.pending ? 'analyzing…' : n.summary || n.description || '',
+      }
     case 'code':
       return { ...base, lang: 'text', text: n.content, title: n.title }
     default:
@@ -69,16 +103,14 @@ function request<T = unknown>(
     ...(method && method !== 'GET' ? { headers: JSON_HEADERS } : {}),
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     ...(signal ? { signal } : {}),
-  }).then((r) => _json<T>(r))
+  }).then(r => _json<T>(r))
 }
 
 const apiGet = <T = unknown>(path: string) => request<T>(path)
 const apiPost = <T = unknown>(path: string, body?: unknown, signal?: AbortSignal) =>
   request<T>(path, { method: 'POST', body, signal })
-const apiPatch = <T = unknown>(path: string, body?: unknown) =>
-  request<T>(path, { method: 'PATCH', body })
-const apiDel = <T = unknown>(path: string, body?: unknown) =>
-  request<T>(path, { method: 'DELETE', body })
+const apiPatch = <T = unknown>(path: string, body?: unknown) => request<T>(path, { method: 'PATCH', body })
+const apiDel = <T = unknown>(path: string, body?: unknown) => request<T>(path, { method: 'DELETE', body })
 
 async function _json<T = unknown>(r: Response): Promise<T> {
   // The session expired, or the server was restarted with a password now set.
@@ -108,8 +140,15 @@ export function apiError(e: unknown, fallback: string, byCode: Record<string, st
   return err?.message || fallback
 }
 
-interface SavePayload { text?: string; image?: string | null }
-interface AskPayload { question?: string; image?: string | null; chatId?: string | null }
+interface SavePayload {
+  text?: string
+  image?: string | null
+}
+interface AskPayload {
+  question?: string
+  image?: string | null
+  chatId?: string | null
+}
 interface EndpointPatch {
   providerId: string
   baseUrl: string
@@ -127,10 +166,23 @@ interface SettingsPatch {
 export const API = {
   // paged/filtered/faceted fetch for the Everything board — see
   // server/routes/notes.js's handleNotes for the query contract.
-  async page(params: { offset: number; limit?: number; type?: string; source?: string; q?: string; collection?: string; unavailable?: boolean; sort?: string }): Promise<{
-    notes: UIItem[]; total: number; offset: number
+  async page(params: {
+    offset: number
+    limit?: number
+    type?: string
+    source?: string
+    q?: string
+    collection?: string
+    unavailable?: boolean
+    sort?: string
+  }): Promise<{
+    notes: UIItem[]
+    total: number
+    offset: number
     facets: { types: Record<string, number>; sources: Record<string, number>; unavailable?: number }
-    pendingTotal: number; rev: number; bootId: string
+    pendingTotal: number
+    rev: number
+    bootId: string
   }> {
     const qs = new URLSearchParams()
     qs.set('offset', String(params.offset))
@@ -142,18 +194,30 @@ export const API = {
     if (params.unavailable) qs.set('unavailable', '1')
     if (params.sort) qs.set('sort', params.sort)
     const d = await apiGet<{
-      notes: ServerNote[]; total: number; offset: number
+      notes: ServerNote[]
+      total: number
+      offset: number
       facets: { types: Record<string, number>; sources: Record<string, number>; unavailable?: number }
-      pendingTotal: number; rev: number; bootId: string
+      pendingTotal: number
+      rev: number
+      bootId: string
     }>('/api/notes?' + qs)
     return { ...d, notes: (d.notes || []).map(mapNote) }
   },
   // "what changed since rev X" — replaces refetching loaded pages on a timer.
   // A mismatched boot (server restarted) or a since predating the server's
   // tombstone window comes back as { resync: true } instead of a delta.
-  async delta(since: number, boot: string): Promise<
-    { resync?: boolean; rev: number; bootId: string; pendingTotal: number; notes?: ServerNote[]; deleted?: string[] }
-  > {
+  async delta(
+    since: number,
+    boot: string,
+  ): Promise<{
+    resync?: boolean
+    rev: number
+    bootId: string
+    pendingTotal: number
+    notes?: ServerNote[]
+    deleted?: string[]
+  }> {
     return apiGet(`/api/notes/delta?since=${since}&boot=${encodeURIComponent(boot)}`)
   },
   async save(payload: SavePayload): Promise<{ note: UIItem; aiClassified: boolean }> {
@@ -207,10 +271,15 @@ export const API = {
         const raw = /^data: (.*)$/m.exec(frame)?.[1]
         if (!event || raw == null) continue
         let d: { sources?: ServerNote[]; text?: string; chatId?: string; error?: string; code?: string }
-        try { d = JSON.parse(raw) } catch { continue }
+        try {
+          d = JSON.parse(raw)
+        } catch {
+          continue
+        }
         if (event === 'sources') on.onSources?.((d.sources || []).map(mapNote))
-        else if (event === 'delta') { if (d.text) on.onDelta?.(d.text) }
-        else if (event === 'done') chatId = d.chatId || ''
+        else if (event === 'delta') {
+          if (d.text) on.onDelta?.(d.text)
+        } else if (event === 'done') chatId = d.chatId || ''
         else if (event === 'error') failure = d
       }
     }
@@ -222,7 +291,10 @@ export const API = {
     return { chatId }
   },
   async renameChat(id: string, title: string): Promise<{ id: string; title: string; updatedAt: string }> {
-    const d = await apiPatch<{ chat: { id: string; title: string; updatedAt: string } }>('/api/chats/' + encodeURIComponent(id), { title })
+    const d = await apiPatch<{ chat: { id: string; title: string; updatedAt: string } }>(
+      '/api/chats/' + encodeURIComponent(id),
+      { title },
+    )
     return d.chat
   },
   // One note by id — hydrates a deep-linked expanded tile (/item/<id>), which
@@ -261,7 +333,7 @@ export const API = {
   },
   async chat(id: string): Promise<Chat> {
     const d = await apiGet<{ chat: Chat }>('/api/chats/' + id)
-    const messages: ChatMessage[] = (d.chat.messages || []).map((m) =>
+    const messages: ChatMessage[] = (d.chat.messages || []).map(m =>
       m.role === 'ai' ? { ...m, cited: (m.sources || []).map(mapNote) } : m,
     )
     return { ...d.chat, messages }
@@ -347,14 +419,31 @@ export const API = {
   // `files` carries every file of one export in a single request — an
   // Instagram export is saved_posts.json plus saved_collections.json, and
   // importing them separately used to lose the collections.
-  async importFile(payload: { source: string; files: { name: string; data: string }[] }): Promise<{ importer: string; imported: number; skipped: number; failed: number; collections: number; warnings: string[] }> {
+  async importFile(payload: { source: string; files: { name: string; data: string }[] }): Promise<{
+    importer: string
+    imported: number
+    skipped: number
+    failed: number
+    collections: number
+    warnings: string[]
+  }> {
     return apiPost('/api/import', payload)
   },
   // Availability: scan marks links whose content is gone, remove deletes the
   // marked ones. Two calls on purpose — the scan only writes a reversible flag,
   // and `expected` makes the destructive step refuse if the count moved between
   // the user seeing it and confirming it.
-  async scanAvailability(): Promise<{ checked: number; dead: number; alive: number; unknown: number; marked: number; cleared?: number; unavailable: number; aborted: boolean; error?: string }> {
+  async scanAvailability(): Promise<{
+    checked: number
+    dead: number
+    alive: number
+    unknown: number
+    marked: number
+    cleared?: number
+    unavailable: number
+    aborted: boolean
+    error?: string
+  }> {
     return apiPost('/api/availability/scan', {})
   },
   async removeUnavailable(expected: number): Promise<{ removed: number; unavailable: number }> {
@@ -362,7 +451,9 @@ export const API = {
   },
   // danger zone: erase all content (notes, spaces, chats, tags, uploads).
   // Model settings survive — see server/routes/wipe.js.
-  async wipeAll(confirm: string): Promise<{ cleared: { notes: number; collections: number; chats: number; tags: number } }> {
+  async wipeAll(
+    confirm: string,
+  ): Promise<{ cleared: { notes: number; collections: number; chats: number; tags: number } }> {
     return apiPost('/api/wipe', { confirm })
   },
 }
@@ -370,7 +461,7 @@ export const API = {
 export const Collections = {
   async list(): Promise<Collection[]> {
     const d = await apiGet<{ collections?: (Collection & { covers?: ServerNote[] })[] }>('/api/collections')
-    return (d.collections || []).map((c) => ({ ...c, covers: (c.covers || []).map(mapNote) }))
+    return (d.collections || []).map(c => ({ ...c, covers: (c.covers || []).map(mapNote) }))
   },
   async create(name: string, tags: string[] = []): Promise<Collection> {
     const d = await apiPost<{ collection: Collection }>('/api/collections', { name, tags })

@@ -63,7 +63,7 @@ export async function handleGetSettings(res) {
     residency: settings.getResidency(),
     presets: await ai.listModels(),
     capabilities: caps,
-    endpoint: ROLES.some((r) => caps.roles[r] === 'remote') ? endpointInfo() : { configured: false, host: null },
+    endpoint: ROLES.some(r => caps.roles[r] === 'remote') ? endpointInfo() : { configured: false, host: null },
     // Static catalogue, so the wizard can render provider tiles without a
     // second request. Contains no credentials — it is public reference data.
     endpoints: ENDPOINTS,
@@ -235,8 +235,8 @@ export async function handleSetup(req, res, opts = {}) {
   enrich.queueJob(async () => {
     const residency = settings.getResidency()
     await ai.applyResidency(residency)
-    await ai.boot()                 // load always-roles
-    await ai.warmCache(residency)   // pre-download on-demand roles, then free them
+    await ai.boot() // load always-roles
+    await ai.warmCache(residency) // pre-download on-demand roles, then free them
     if (residency.embed !== 'off') await tagvocab.rebuildFromNotes(store.allNotes())
   })
   json(res, 200, { ok: true, current })
@@ -312,7 +312,8 @@ export async function handleSaveSettings(req, res) {
   if (models.error) return json(res, 400, { error: models.error })
   const resPatch = caps.managesResidency ? validateResidency(body) : { patch: {} }
   if (resPatch.error) return json(res, 400, { error: resPatch.error })
-  const changing = Object.keys(models.local).length + Object.keys(models.remote).length + Object.keys(resPatch.patch).length
+  const changing =
+    Object.keys(models.local).length + Object.keys(models.remote).length + Object.keys(resPatch.patch).length
   if (!changing) return json(res, 400, { error: 'nothing to change' })
 
   // Endpoint ids are a plain store-and-apply: no weights, no residency, and no
@@ -364,7 +365,13 @@ export async function handleSaveSettings(req, res) {
     })
   }
 
-  json(res, 200, { ok: true, current, remote: settings.getRemote(), residency: settings.getResidency(), warnings: models.warnings })
+  json(res, 200, {
+    ok: true,
+    current,
+    remote: settings.getRemote(),
+    residency: settings.getResidency(),
+    warnings: models.warnings,
+  })
 }
 
 // ---- enrichment backlog ---------------------------------------------------
@@ -375,7 +382,7 @@ export function handleBacklog(res) {
 // Both bulk-enrichment routes refuse the same way when there is no reachable
 // provider, and the string is user-facing — two copies is two things to keep
 // in step with each other and with the client that matches on the code.
-const providerDown = (res) =>
+const providerDown = res =>
   json(res, 503, {
     error: 'Inference endpoint is unavailable — check the connection and try again.',
     code: 'provider_unavailable',
@@ -408,9 +415,9 @@ export async function handleRetagAll(res) {
 // still-unfetched Instagram notes to the front of the meta queue.
 export async function handlePrioritize(req, res) {
   const body = await readBody(req)
-  const ids = Array.isArray(body.ids) ? body.ids.filter((x) => typeof x === 'string').slice(0, 200) : []
-  const byId = new Map(store.allNotes().map((n) => [n.id, n]))
-  const eligible = ids.filter((id) => {
+  const ids = Array.isArray(body.ids) ? body.ids.filter(x => typeof x === 'string').slice(0, 200) : []
+  const byId = new Map(store.allNotes().map(n => [n.id, n]))
+  const eligible = ids.filter(id => {
     const n = byId.get(id)
     return n && n.url && isInstagramPost(n.url) && !n.metaFetched
   })

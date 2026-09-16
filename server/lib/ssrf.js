@@ -32,17 +32,17 @@ const MAX_HOPS = 5
 // here is deliberate, not collateral. 0/8 matters because 0.0.0.0 routes to
 // loopback on Linux, and 240/4 carries the 255.255.255.255 broadcast address.
 const V4_BLOCKED = [
-  ['0.0.0.0', 8],        // "this host on this network"
-  ['10.0.0.0', 8],       // RFC1918
-  ['100.64.0.0', 10],    // CGNAT / Tailscale
-  ['127.0.0.0', 8],      // loopback
-  ['169.254.0.0', 16],   // link-local + cloud instance metadata
-  ['172.16.0.0', 12],    // RFC1918
-  ['192.0.0.0', 24],     // IETF protocol assignments
-  ['192.168.0.0', 16],   // RFC1918
-  ['198.18.0.0', 15],    // benchmarking
-  ['224.0.0.0', 4],      // multicast
-  ['240.0.0.0', 4],      // reserved, incl. 255.255.255.255
+  ['0.0.0.0', 8], // "this host on this network"
+  ['10.0.0.0', 8], // RFC1918
+  ['100.64.0.0', 10], // CGNAT / Tailscale
+  ['127.0.0.0', 8], // loopback
+  ['169.254.0.0', 16], // link-local + cloud instance metadata
+  ['172.16.0.0', 12], // RFC1918
+  ['192.0.0.0', 24], // IETF protocol assignments
+  ['192.168.0.0', 16], // RFC1918
+  ['198.18.0.0', 15], // benchmarking
+  ['224.0.0.0', 4], // multicast
+  ['240.0.0.0', 4], // reserved, incl. 255.255.255.255
 ]
 
 function v4ToInt(ip) {
@@ -53,7 +53,7 @@ function v4ToInt(ip) {
 
 function v4Blocked(n) {
   if (n === null) return true
-  return V4_BLOCKED.some(([base, bits]) => ((n ^ v4ToInt(base)) >>> (32 - bits)) === 0)
+  return V4_BLOCKED.some(([base, bits]) => (n ^ v4ToInt(base)) >>> (32 - bits) === 0)
 }
 
 // IPv6 text → 16 bytes. Node validates the syntax (net.isIPv6) but exposes no
@@ -65,7 +65,7 @@ function v6ToBytes(ip) {
   const dbl = ip.indexOf('::')
   const head = dbl === -1 ? ip : ip.slice(0, dbl)
   const tail = dbl === -1 ? '' : ip.slice(dbl + 2)
-  const toGroups = (s) => {
+  const toGroups = s => {
     if (!s) return []
     const out = []
     for (const part of s.split(':')) {
@@ -85,7 +85,7 @@ function v6ToBytes(ip) {
   const fill = 8 - h.length - t.length
   if (fill < 0 || (dbl === -1 && fill !== 0)) return null
   const groups = [...h, ...Array(fill).fill(0), ...t]
-  return groups.flatMap((g) => [(g >> 8) & 0xff, g & 0xff])
+  return groups.flatMap(g => [(g >> 8) & 0xff, g & 0xff])
 }
 
 const startsWith = (bytes, prefix) => prefix.every((b, i) => bytes[i] === b)
@@ -97,15 +97,15 @@ function embeddedV4(bytes) {
   const mapped = startsWith(bytes, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff])
   const nat64 = startsWith(bytes, [0, 0x64, 0xff, 0x9b, 0, 0, 0, 0, 0, 0, 0, 0])
   if (!mapped && !nat64) return null
-  return (((bytes[12] << 24) | (bytes[13] << 16) | (bytes[14] << 8) | bytes[15]) >>> 0)
+  return ((bytes[12] << 24) | (bytes[13] << 16) | (bytes[14] << 8) | bytes[15]) >>> 0
 }
 
 function v6Blocked(b) {
-  if (b.every((x) => x === 0)) return true                       // ::
+  if (b.every(x => x === 0)) return true // ::
   if (startsWith(b, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])) return true // ::1
-  if ((b[0] & 0xfe) === 0xfc) return true                        // fc00::/7 unique-local
-  if (b[0] === 0xfe && (b[1] & 0xc0) === 0x80) return true       // fe80::/10 link-local
-  if (b[0] === 0xff) return true                                 // ff00::/8 multicast
+  if ((b[0] & 0xfe) === 0xfc) return true // fc00::/7 unique-local
+  if (b[0] === 0xfe && (b[1] & 0xc0) === 0x80) return true // fe80::/10 link-local
+  if (b[0] === 0xff) return true // ff00::/8 multicast
   return false
 }
 

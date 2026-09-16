@@ -47,9 +47,8 @@ const MAX_COLLECTION_HREFS = 200_000 // total href memberships retained per save
 // database, so "posts now, collections later" works. Requiring saved_posts
 // here would reject that upload as "not a recognized export".
 export function sniff(files) {
-  return [...files.keys()].some((k) => SAVED_POSTS_FILE.test(k) || COLLECTIONS_FILE.test(k))
+  return [...files.keys()].some(k => SAVED_POSTS_FILE.test(k) || COLLECTIONS_FILE.test(k))
 }
-
 
 // Only accept explicit http(s) — href.startsWith('http') would also admit
 // "httpfoo://" or worse, and these values eventually become clickable card
@@ -58,7 +57,6 @@ export function sniff(files) {
 function isHttpUrl(v) {
   return typeof v === 'string' && (v.startsWith('http://') || v.startsWith('https://'))
 }
-
 
 // Meta normally encodes "Saved on" as Unix seconds, but some export versions
 // (and hostile input) carry milliseconds instead — feeding that straight into
@@ -108,7 +106,7 @@ function nodeName(node) {
 function labelValuesName(node) {
   const rows = Array.isArray(node?.label_values) ? node.label_values : null
   if (!rows) return null
-  const hit = rows.find((e) => e?.label === 'Name' && typeof e.value === 'string' && e.value.trim())
+  const hit = rows.find(e => e?.label === 'Name' && typeof e.value === 'string' && e.value.trim())
   return hit ? clip(hit.value.trim()) : null
 }
 
@@ -135,10 +133,12 @@ function rowsOf(json) {
 // can't reliably single out the "URL" row, and a Caption that happens to be a
 // bare http(s) URL must not be mistaken for the post's own link.
 function pickUrl(entries) {
-  const hrefs = entries.map((e) => e?.href).filter(isUsableHref)
-  return hrefs.find((h) => IG_PERMALINK.test(h))
-    ?? entries.map((e) => e?.value).filter((v) => isUsableHref(v) && IG_PERMALINK.test(v))[0]
-    ?? hrefs[0]
+  const hrefs = entries.map(e => e?.href).filter(isUsableHref)
+  return (
+    hrefs.find(h => IG_PERMALINK.test(h)) ??
+    entries.map(e => e?.value).filter(v => isUsableHref(v) && IG_PERMALINK.test(v))[0] ??
+    hrefs[0]
+  )
 }
 
 // Owner is a nested dict-of-dicts: { title: 'Owner', dict: [{ dict: [{ label:
@@ -170,7 +170,10 @@ function readRow(row) {
       href,
       // The saved-on date lives on the row itself in this shape; an
       // entry-level timestamp is only a fallback for further drift.
-      timestamp: typeof row.timestamp === 'number' ? row.timestamp : entries.find((e) => isUsableHref(e?.href) && e.href === href)?.timestamp,
+      timestamp:
+        typeof row.timestamp === 'number'
+          ? row.timestamp
+          : entries.find(e => isUsableHref(e?.href) && e.href === href)?.timestamp,
       poster: labelIn(entries, 'Username') || labelIn(entries, 'Name') || row.title,
       // A row that carried an http(s) URL which just failed the length check
       // is a genuine near-miss worth warning about (see parseSavedPosts).
@@ -178,19 +181,20 @@ function readRow(row) {
       // only counts when it's permalink-shaped, so a Caption that merely
       // opens with a link ("https://makerworld.com/... check it out") isn't
       // miscounted as a post URL we failed to read.
-      hadHttpHref: entries.some((e) => isHttpUrl(e?.href) || (isHttpUrl(e?.value) && IG_PERMALINK.test(e.value))),
+      hadHttpHref: entries.some(e => isHttpUrl(e?.href) || (isHttpUrl(e?.value) && IG_PERMALINK.test(e.value))),
     }
   }
   const vals = Object.values(row?.string_map_data || {})
   // Resolve ONE entry and read both href and timestamp off it — selecting
   // them independently let a post pick up e.g. an "Owner" entry's
   // timestamp while using "Saved on"'s href, silently mismatching the two.
-  const entry = vals.find((v) => isUsableHref(v?.href) && IG_PERMALINK.test(v.href)) ?? vals.find((v) => isUsableHref(v?.href))
+  const entry =
+    vals.find(v => isUsableHref(v?.href) && IG_PERMALINK.test(v.href)) ?? vals.find(v => isUsableHref(v?.href))
   return {
     href: entry?.href,
     timestamp: entry?.timestamp,
     poster: row?.title,
-    hadHttpHref: vals.some((v) => isHttpUrl(v?.href)),
+    hadHttpHref: vals.some(v => isHttpUrl(v?.href)),
   }
 }
 
@@ -210,7 +214,10 @@ export function parseSavedPosts(json, maxItems = MAX_ITEMS) {
       if (hadHttpHref) unusableUrl++
       continue
     }
-    if (items.length >= maxItems) { skipped++; continue } // keep counting valid rows past the cap (without holding them) so parse() can report an accurate "N posts skipped"
+    if (items.length >= maxItems) {
+      skipped++
+      continue
+    } // keep counting valid rows past the cap (without holding them) so parse() can report an accurate "N posts skipped"
     items.push({ url: href, poster: clip(poster), savedAt: normalizeTimestamp(timestamp) })
   }
   // Read by parse() for warnings; harmless extra properties on the array.
@@ -228,7 +235,7 @@ export function parseSavedPosts(json, maxItems = MAX_ITEMS) {
 // known to be structural: only a `label_values` Name row names a collection,
 // and everything below a row is that row's members.
 function isLabelValuesCollections(json) {
-  return Array.isArray(json) && json.some((row) => labelValuesName(row))
+  return Array.isArray(json) && json.some(row => labelValuesName(row))
 }
 
 function parseCollectionsLabelValues(rows) {
@@ -239,8 +246,14 @@ function parseCollectionsLabelValues(rows) {
   // Same depth/count bounding as the generic walk — this reads the same
   // untrusted upload, so a hostile export must degrade, not crash.
   function collect(node, out, depth) {
-    if (depth > MAX_WALK_DEPTH) { truncated = true; return }
-    if (Array.isArray(node)) { for (const v of node) collect(v, out, depth + 1); return }
+    if (depth > MAX_WALK_DEPTH) {
+      truncated = true
+      return
+    }
+    if (Array.isArray(node)) {
+      for (const v of node) collect(v, out, depth + 1)
+      return
+    }
     if (!node || typeof node !== 'object') return
     if (isUsableHref(node.href)) out.push(node.href)
     for (const v of Object.values(node)) collect(v, out, depth + 1)
@@ -254,7 +267,10 @@ function parseCollectionsLabelValues(rows) {
     if (!hrefs.length) continue
     const set = map.get(name) || new Set()
     for (const h of hrefs) {
-      if (retained >= MAX_COLLECTION_HREFS) { truncated = true; break }
+      if (retained >= MAX_COLLECTION_HREFS) {
+        truncated = true
+        break
+      }
       if (!set.has(h)) retained++
       set.add(h)
     }
@@ -287,8 +303,14 @@ export function parseCollections(json) {
   // would have its href stolen into an invented "natgeo" collection instead
   // of staying under "Recipes".
   function collectHrefs(node, out, depth, isTop) {
-    if (depth > MAX_WALK_DEPTH) { truncated = true; return }
-    if (Array.isArray(node)) { for (const v of node) collectHrefs(v, out, depth + 1, false); return }
+    if (depth > MAX_WALK_DEPTH) {
+      truncated = true
+      return
+    }
+    if (Array.isArray(node)) {
+      for (const v of node) collectHrefs(v, out, depth + 1, false)
+      return
+    }
     if (node && typeof node === 'object') {
       if (!isTop && !isHttpUrl(node.href) && nodeName(node)) return // nested wrapper collection — claimed separately by walk()
       if (isHttpUrl(node.href)) out.push(node.href)
@@ -297,8 +319,14 @@ export function parseCollections(json) {
   }
 
   const walk = (node, depth) => {
-    if (depth > MAX_WALK_DEPTH) { truncated = true; return }
-    if (Array.isArray(node)) { for (const v of node) walk(v, depth + 1); return }
+    if (depth > MAX_WALK_DEPTH) {
+      truncated = true
+      return
+    }
+    if (Array.isArray(node)) {
+      for (const v of node) walk(v, depth + 1)
+      return
+    }
     if (!node || typeof node !== 'object') return
     // An href-bearing node is a link entry, not a collection, even if it
     // happens to carry a `title` (the poster's username, typically).
@@ -309,7 +337,10 @@ export function parseCollections(json) {
       if (hrefs.length) {
         const set = map.get(name) || new Set()
         for (const h of hrefs) {
-          if (retained >= MAX_COLLECTION_HREFS) { truncated = true; break }
+          if (retained >= MAX_COLLECTION_HREFS) {
+            truncated = true
+            break
+          }
           if (!set.has(h)) retained++
           set.add(h)
         }
@@ -337,7 +368,10 @@ export function parse(files) {
   for (const [key, buf] of files) {
     if (SAVED_POSTS_FILE.test(key)) {
       const json = tryJson(buf)
-      if (!json) { warnings.push(`${key} could not be parsed`); continue }
+      if (!json) {
+        warnings.push(`${key} could not be parsed`)
+        continue
+      }
       const parsed = parseSavedPosts(json, remaining)
       items = items.concat(parsed)
       remaining -= parsed.length
@@ -352,7 +386,10 @@ export function parse(files) {
       }
     } else if (COLLECTIONS_FILE.test(key)) {
       const json = tryJson(buf)
-      if (!json) { warnings.push(`${key} could not be parsed`); continue }
+      if (!json) {
+        warnings.push(`${key} could not be parsed`)
+        continue
+      }
       const parsed = parseCollections(json)
       if (parsed.truncated) collectionsTruncated = true
       for (const [n, set] of parsed) {
@@ -395,7 +432,11 @@ export function parse(files) {
 // a video.
 function isReelUrl(url) {
   let pathname = url
-  try { pathname = new URL(url).pathname } catch { /* keep raw string if URL parsing ever fails post-validation */ }
+  try {
+    pathname = new URL(url).pathname
+  } catch {
+    /* keep raw string if URL parsing ever fails post-validation */
+  }
   return /\/(reels?|tv)\//.test(pathname)
 }
 

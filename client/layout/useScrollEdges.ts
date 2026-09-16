@@ -24,9 +24,12 @@ export function useScrollEdges(
     // than leaving the last measurement's class behind.
     if (!el) return setEdges({ left: false, right: false })
     if (resetScroll) el.scrollTop = 0
-    const read = () => setEdges(axis === 'x'
-      ? scrollEdges(el.scrollLeft, el.scrollWidth, el.clientWidth)
-      : scrollEdges(el.scrollTop, el.scrollHeight, el.clientHeight))
+    const read = () =>
+      setEdges(
+        axis === 'x'
+          ? scrollEdges(el.scrollLeft, el.scrollWidth, el.clientWidth)
+          : scrollEdges(el.scrollTop, el.scrollHeight, el.clientHeight),
+      )
     read()
     el.addEventListener('scroll', read, { passive: true })
     // Catches the container being resized, and content that changes height
@@ -34,7 +37,10 @@ export function useScrollEdges(
     // finishing its load and growing the stage taller than it first measured.
     const ro = new ResizeObserver(read)
     ro.observe(el)
-    return () => { el.removeEventListener('scroll', read); ro.disconnect() }
+    return () => {
+      el.removeEventListener('scroll', read)
+      ro.disconnect()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, axis, resetScroll])
   return { ref, className: axis === 'x' ? edgeClass(edges) : edgeClassY(edges) }

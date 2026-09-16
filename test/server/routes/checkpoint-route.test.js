@@ -41,7 +41,7 @@ const { createServer } = await import('../../../server/router.js')
 await store.load()
 
 const server = createServer()
-await new Promise((r) => server.listen(0, '127.0.0.1', r))
+await new Promise(r => server.listen(0, '127.0.0.1', r))
 const BASE = `http://127.0.0.1:${server.address().port}`
 after(() => {
   server.close()
@@ -57,7 +57,10 @@ function contentsOfMainFileAlone(label) {
   const copy = path.join(DATA_DIR, `alone-${label}.db`)
   copyFileSync(path.join(DATA_DIR, 'kothai.db'), copy)
   const db = new DatabaseSync(copy, { readOnly: true })
-  return db.prepare('SELECT data FROM notes').all().map((r) => JSON.parse(r.data).content)
+  return db
+    .prepare('SELECT data FROM notes')
+    .all()
+    .map(r => JSON.parse(r.data).content)
 }
 
 test('a batched write reaches kothai.db itself, not just the in-memory queue', async () => {

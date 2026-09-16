@@ -17,17 +17,23 @@ const realAvail = await import('../../../server/ai/availability.js')
 mock.module('../../../server/data/notes.js', {
   namedExports: {
     ...realStore,
-    allNotes: () => notes.map((n) => ({ ...n })),
-    getNote: (id) => { const n = notes.find((x) => x.id === id); return n ? { ...n } : null },
+    allNotes: () => notes.map(n => ({ ...n })),
+    getNote: id => {
+      const n = notes.find(x => x.id === id)
+      return n ? { ...n } : null
+    },
     updateNote: async (id, patch) => {
-      const n = notes.find((x) => x.id === id)
+      const n = notes.find(x => x.id === id)
       if (n) Object.assign(n, patch)
       return n
     },
-    deleteNote: async (id) => {
+    deleteNote: async id => {
       const before = notes.length
-      notes = notes.filter((n) => n.id !== id)
-      if (notes.length !== before) { deleted.push(id); return true }
+      notes = notes.filter(n => n.id !== id)
+      if (notes.length !== before) {
+        deleted.push(id)
+        return true
+      }
       return false
     },
   },
@@ -38,8 +44,8 @@ mock.module('../../../server/data/collections.js', {
 mock.module('../../../server/ai/availability.js', {
   namedExports: {
     ...realAvail,
-    isCheckable: (url) => typeof url === 'string' && url.includes('tiktok.com'),
-    checkAvailability: async (url) => verdicts[url] || 'unknown',
+    isCheckable: url => typeof url === 'string' && url.includes('tiktok.com'),
+    checkAvailability: async url => verdicts[url] || 'unknown',
   },
 })
 
@@ -48,11 +54,23 @@ const { handleAvailabilityScan, handleAvailabilityRemove } = await import('../..
 function fakeReq(payload) {
   const req = new EventEmitter()
   req.destroy = () => {}
-  setImmediate(() => { req.emit('data', Buffer.from(JSON.stringify(payload))); req.emit('end') })
+  setImmediate(() => {
+    req.emit('data', Buffer.from(JSON.stringify(payload)))
+    req.emit('end')
+  })
   return req
 }
 function fakeRes() {
-  return { statusCode: null, body: null, writeHead(c) { this.statusCode = c }, end(s) { this.body = s ? JSON.parse(s) : null } }
+  return {
+    statusCode: null,
+    body: null,
+    writeHead(c) {
+      this.statusCode = c
+    },
+    end(s) {
+      this.body = s ? JSON.parse(s) : null
+    },
+  }
 }
 function seed(n, verdict) {
   notes = Array.from({ length: n }, (_, i) => ({ id: `n${i}`, url: `https://www.tiktok.com/video/${i}` }))
@@ -62,21 +80,27 @@ function seed(n, verdict) {
 }
 
 test('a scan marks gone links and leaves everything else alone', async () => {
-  seed(10, (n) => (n.id === 'n3' || n.id === 'n7' ? 'dead' : 'alive'))
+  seed(10, n => (n.id === 'n3' || n.id === 'n7' ? 'dead' : 'alive'))
   const res = fakeRes()
   await handleAvailabilityScan(fakeReq({}), res)
   assert.equal(res.body.dead, 2)
   assert.equal(res.body.marked, 2)
   assert.equal(res.body.unavailable, 2)
-  assert.deepEqual(notes.filter((n) => n.unavailable).map((n) => n.id).sort(), ['n3', 'n7'])
+  assert.deepEqual(
+    notes
+      .filter(n => n.unavailable)
+      .map(n => n.id)
+      .sort(),
+    ['n3', 'n7'],
+  )
   assert.equal(deleted.length, 0, 'a scan never deletes')
 })
 
 test('an unreachable link is left untouched — not marked, not cleared', async () => {
-  seed(10, (n) => (n.id === 'n1' ? 'unknown' : 'alive'))
-  notes.find((n) => n.id === 'n1').unavailable = true // marked by an earlier scan
+  seed(10, n => (n.id === 'n1' ? 'unknown' : 'alive'))
+  notes.find(n => n.id === 'n1').unavailable = true // marked by an earlier scan
   await handleAvailabilityScan(fakeReq({}), fakeRes())
-  assert.equal(notes.find((n) => n.id === 'n1').unavailable, true, 'an inconclusive check must not clear a mark either')
+  assert.equal(notes.find(n => n.id === 'n1').unavailable, true, 'an inconclusive check must not clear a mark either')
 })
 
 test('a link that comes back has its mark cleared', async () => {
@@ -96,12 +120,12 @@ test('an implausible number of dead links aborts the sweep without marking anyth
   await handleAvailabilityScan(fakeReq({}), res)
   assert.equal(res.body.aborted, true)
   assert.equal(res.body.marked, 0)
-  assert.equal(notes.filter((n) => n.unavailable).length, 0, 'nothing may be marked when the sweep is not believed')
+  assert.equal(notes.filter(n => n.unavailable).length, 0, 'nothing may be marked when the sweep is not believed')
   assert.match(res.body.error, /too many to believe/i)
 })
 
 test('a small sample is not judged by ratio — 3 of 4 gone is ordinary', async () => {
-  seed(4, (n) => (n.id === 'n0' ? 'alive' : 'dead'))
+  seed(4, n => (n.id === 'n0' ? 'alive' : 'dead'))
   const res = fakeRes()
   await handleAvailabilityScan(fakeReq({}), res)
   assert.equal(res.body.aborted, false)
@@ -109,7 +133,7 @@ test('a small sample is not judged by ratio — 3 of 4 gone is ordinary', async 
 })
 
 test('remove deletes exactly the marked items', async () => {
-  seed(6, (n) => (n.id === 'n1' || n.id === 'n4' ? 'dead' : 'alive'))
+  seed(6, n => (n.id === 'n1' || n.id === 'n4' ? 'dead' : 'alive'))
   await handleAvailabilityScan(fakeReq({}), fakeRes())
   const res = fakeRes()
   await handleAvailabilityRemove(fakeReq({ expected: 2 }), res)
@@ -121,7 +145,7 @@ test('remove deletes exactly the marked items', async () => {
 test('remove refuses when the count moved since the user saw it', async () => {
   // The user agreed to delete N things. If the set changed, they did not agree
   // to delete THIS set.
-  seed(6, (n) => (n.id === 'n1' ? 'dead' : 'alive'))
+  seed(6, n => (n.id === 'n1' ? 'dead' : 'alive'))
   await handleAvailabilityScan(fakeReq({}), fakeRes())
   const res = fakeRes()
   await handleAvailabilityRemove(fakeReq({ expected: 5 }), res)

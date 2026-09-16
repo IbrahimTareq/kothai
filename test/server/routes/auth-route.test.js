@@ -13,13 +13,12 @@ import test, { after } from 'node:test'
 import assert from 'node:assert/strict'
 
 const server = createServer()
-await new Promise((r) => server.listen(0, '127.0.0.1', r))
+await new Promise(r => server.listen(0, '127.0.0.1', r))
 const BASE = `http://127.0.0.1:${server.address().port}`
 after(() => server.close())
 
-const json = (body) => ({ headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-const login = (password, extra = {}) =>
-  fetch(`${BASE}/api/login`, { method: 'POST', ...json({ password }), ...extra })
+const json = body => ({ headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+const login = (password, extra = {}) => fetch(`${BASE}/api/login`, { method: 'POST', ...json({ password }), ...extra })
 
 // Grab the session cookie out of a login response.
 async function sessionOf(password = 'hunter2') {
@@ -145,7 +144,9 @@ test('a tampered session cookie is refused', async () => {
 
 test('logging out clears the cookie', async () => {
   const res = await fetch(`${BASE}/api/logout`, {
-    method: 'POST', ...json({}), headers: { 'Content-Type': 'application/json', cookie: await sessionOf() },
+    method: 'POST',
+    ...json({}),
+    headers: { 'Content-Type': 'application/json', cookie: await sessionOf() },
   })
   assert.equal(res.status, 200)
   assert.match(res.headers.get('set-cookie'), /Max-Age=0/)

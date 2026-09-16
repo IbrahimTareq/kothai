@@ -8,7 +8,9 @@ import { initProvider, reconfigure, capabilities, _reset } from '../../../server
 
 function fakeProvider(kind, log) {
   return {
-    init: async () => { log.push(`${kind}:init`) },
+    init: async () => {
+      log.push(`${kind}:init`)
+    },
     capabilities: () => ({ kind, managesResidency: kind === 'local', downloadsWeights: kind === 'local' }),
     statusSnapshot: () => ({ roles: {}, aggregate: { state: 'ready', progress: 100, message: 'Ready' } }),
     applySettings: async () => {},
@@ -20,7 +22,7 @@ beforeEach(() => _reset())
 
 test('re-boots the remote provider so it picks up the new endpoint', async () => {
   const log = []
-  const load = (kind) => Promise.resolve(fakeProvider(kind, log))
+  const load = kind => Promise.resolve(fakeProvider(kind, log))
   await initProvider('remote', {}, { load, localAvailable: false })
   log.length = 0
   await reconfigure({}, { load, provider: 'remote', localAvailable: false })
@@ -29,8 +31,8 @@ test('re-boots the remote provider so it picks up the new endpoint', async () =>
 
 test('leaves an already-initialised local provider untouched', async () => {
   const log = []
-  const load = (kind) => Promise.resolve(fakeProvider(kind, log))
-  await initProvider('remote', {}, { load, localAvailable: true })  // mixed: embed stays local
+  const load = kind => Promise.resolve(fakeProvider(kind, log))
+  await initProvider('remote', {}, { load, localAvailable: true }) // mixed: embed stays local
   assert.equal(capabilities().kind, 'mixed')
   log.length = 0
   await reconfigure({}, { load, provider: 'remote', localAvailable: true })
@@ -39,7 +41,7 @@ test('leaves an already-initialised local provider untouched', async () => {
 
 test('initialises a provider kind that was not in use before', async () => {
   const log = []
-  const load = (kind) => Promise.resolve(fakeProvider(kind, log))
+  const load = kind => Promise.resolve(fakeProvider(kind, log))
   await initProvider('local', {}, { load, localAvailable: true })
   log.length = 0
   await reconfigure({}, { load, provider: 'remote', localAvailable: true })
@@ -49,7 +51,7 @@ test('initialises a provider kind that was not in use before', async () => {
 
 test('a failure leaves the previous provider map live rather than half-built', async () => {
   const log = []
-  const load = (kind) =>
+  const load = kind =>
     kind === 'remote' && log.includes('poisoned')
       ? Promise.reject(new Error('endpoint provider exploded'))
       : Promise.resolve(fakeProvider(kind, log))

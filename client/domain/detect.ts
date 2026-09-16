@@ -31,7 +31,12 @@ export function detectType(raw: string): Detection | null {
   }
 
   // code heuristics
-  const codeSignals = [/[;{}]\s*$/m, /\b(function|const|let|var|=>|import|export|def|class|return|public|void|SELECT|FROM)\b/, /^\s{2,}\S/m, /<\/?[a-z][\s\S]*>/i]
+  const codeSignals = [
+    /[;{}]\s*$/m,
+    /\b(function|const|let|var|=>|import|export|def|class|return|public|void|SELECT|FROM)\b/,
+    /^\s{2,}\S/m,
+    /<\/?[a-z][\s\S]*>/i,
+  ]
   const codeScore = codeSignals.reduce((n, re) => n + (re.test(t) ? 1 : 0), 0)
   if (codeScore >= 2 && t.length < 1200) return { type: 'code', lang: guessLang(t) }
 

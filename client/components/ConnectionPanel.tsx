@@ -17,7 +17,10 @@ import type { SettingsResponse } from '../types'
 
 const ROLES = ['llm', 'embed', 'vision'] as const
 
-export function ConnectionPanel({ cfg, onChanged }: {
+export function ConnectionPanel({
+  cfg,
+  onChanged,
+}: {
   cfg: SettingsResponse
   /** Both paths rewrite roles, models and capabilities, so the view is handed
    *  the server's whole new answer rather than a patch to merge. */
@@ -38,9 +41,13 @@ export function ConnectionPanel({ cfg, onChanged }: {
   // "up to", not "exactly": a model already in the download cache costs
   // nothing, and Settings cannot see that cache while an endpoint serves every
   // role — the route that lists it is gated on the install downloading weights.
-  const leaveBytes = cfg.localPresets && leaveSel
-    ? ROLES.reduce((sum, role) => sum + (cfg.localPresets![role].find((p) => p.key === leaveSel[role])?.sizeBytes || 0), 0)
-    : 0
+  const leaveBytes =
+    cfg.localPresets && leaveSel
+      ? ROLES.reduce(
+          (sum, role) => sum + (cfg.localPresets![role].find(p => p.key === leaveSel[role])?.sizeBytes || 0),
+          0,
+        )
+      : 0
 
   // Both writes end the same way — adopt the server's new settings and close
   // whichever panel was open — so only the call and the message differ.
@@ -61,13 +68,16 @@ export function ConnectionPanel({ cfg, onChanged }: {
     setBusy(false)
   }
 
-  const saveEndpoint = () => choice && commit(
-    () => API.saveEndpoint(
-      { providerId: choice.providerId, baseUrl: choice.baseUrl, apiKey: choice.apiKey },
-      choice.defaults,
-    ),
-    'Could not save that endpoint.',
-  )
+  const saveEndpoint = () =>
+    choice &&
+    commit(
+      () =>
+        API.saveEndpoint(
+          { providerId: choice.providerId, baseUrl: choice.baseUrl, apiKey: choice.apiKey },
+          choice.defaults,
+        ),
+      'Could not save that endpoint.',
+    )
 
   const disconnect = () => commit(() => API.clearEndpoint(leaveSel || undefined), 'Could not disconnect.')
 
@@ -82,9 +92,7 @@ export function ConnectionPanel({ cfg, onChanged }: {
               mismatches this surface had. A hostname is machine text and keeps
               the mono face; the sentence is prose and takes the title role. */}
           <span className={'conn-where' + (host ? ' mono' : '')}>
-            {cfg.endpoint.configured
-              ? host || 'a remote endpoint'
-              : 'Models run on this machine'}
+            {cfg.endpoint.configured ? host || 'a remote endpoint' : 'Models run on this machine'}
           </span>
           <span className="conn-sub">
             {cfg.endpoint.configured
@@ -96,12 +104,25 @@ export function ConnectionPanel({ cfg, onChanged }: {
         </div>
         {!editing && !leaving && (
           <div className="conn-actions">
-            <button className="btn" onClick={() => { setEditing(true); setErr(null) }}>
+            <button
+              className="btn"
+              onClick={() => {
+                setEditing(true)
+                setErr(null)
+              }}
+            >
               {cfg.endpoint.configured ? 'Change' : 'Connect a service'}
             </button>
             {cfg.endpoint.configured && cfg.localSupported && (
-              <button className="btn" disabled={busy}
-                onClick={() => { setLeaving(true); setLeaveSel({ ...cfg.current }); setErr(null) }}>
+              <button
+                className="btn"
+                disabled={busy}
+                onClick={() => {
+                  setLeaving(true)
+                  setLeaveSel({ ...cfg.current })
+                  setErr(null)
+                }}
+              >
                 Disconnect
               </button>
             )}
@@ -112,25 +133,34 @@ export function ConnectionPanel({ cfg, onChanged }: {
       {leaving && cfg.localPresets && leaveSel && (
         <div className="conn-edit">
           <p className="conn-warn">
-            These will run on this machine instead. Nothing is sent anywhere, and there is no key
-            or bill — but the weights have to be downloaded the first time each one is used.
+            These will run on this machine instead. Nothing is sent anywhere, and there is no key or bill — but the
+            weights have to be downloaded the first time each one is used.
           </p>
-          {ROLES.map((role) => (
-            <RoleAccordion key={role} role={role}
+          {ROLES.map(role => (
+            <RoleAccordion
+              key={role}
+              role={role}
               presets={cfg.localPresets![role]}
               currentKey={leaveSel[role]}
               busy={busy}
               switching={false}
               pct={0}
               defaultOpen={false}
-              onPick={(key) => setLeaveSel((sel) => (sel ? { ...sel, [role]: key } : sel))} />
+              onPick={key => setLeaveSel(sel => (sel ? { ...sel, [role]: key } : sel))}
+            />
           ))}
           <div className="conn-actions">
             <button className="btn btn--solid" disabled={busy} onClick={disconnect}>
               {busy ? 'Switching…' : `Switch — up to ${fmtGB(leaveBytes)} to download`}
             </button>
-            <button className="btn" disabled={busy}
-              onClick={() => { setLeaving(false); setLeaveSel(null) }}>
+            <button
+              className="btn"
+              disabled={busy}
+              onClick={() => {
+                setLeaving(false)
+                setLeaveSel(null)
+              }}
+            >
               Cancel
             </button>
           </div>
@@ -149,19 +179,25 @@ export function ConnectionPanel({ cfg, onChanged }: {
           {/* Only when the change would move the embedding role: the
               whole library is re-embedded in the background, and a
               warning on every endpoint edit would be noise. */}
-          {choice && cfg.capabilities.roles.embed === 'local'
-            && Boolean(choice.defaults.embed) && (
+          {choice && cfg.capabilities.roles.embed === 'local' && Boolean(choice.defaults.embed) && (
             <p className="conn-warn">
-              This service serves embeddings, so search moves to it and every note is re-indexed
-              in the background. Search keeps working while that runs.
+              This service serves embeddings, so search moves to it and every note is re-indexed in the background.
+              Search keeps working while that runs.
             </p>
           )}
           <div className="conn-actions">
             <button className="btn btn--solid" disabled={!choice || busy} onClick={saveEndpoint}>
               {busy ? 'Saving…' : 'Save'}
             </button>
-            <button className="btn" disabled={busy}
-              onClick={() => { setEditing(false); setChoice(null); setErr(null) }}>
+            <button
+              className="btn"
+              disabled={busy}
+              onClick={() => {
+                setEditing(false)
+                setChoice(null)
+                setErr(null)
+              }}
+            >
               Cancel
             </button>
           </div>

@@ -35,7 +35,10 @@ export function nearestTag(vec, entries, threshold) {
 // type rather than on the rows, so an empty registry is migrated too — a table
 // left as TEXT would quietly take JSON text again on the next write.
 function needsBlobMigration(db) {
-  const col = db.prepare('PRAGMA table_info(tag_vocab)').all().find((c) => c.name === 'embedding')
+  const col = db
+    .prepare('PRAGMA table_info(tag_vocab)')
+    .all()
+    .find(c => c.name === 'embedding')
   return !!col && col.type.toUpperCase() !== 'BLOB'
 }
 

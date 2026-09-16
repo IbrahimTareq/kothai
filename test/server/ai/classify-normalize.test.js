@@ -83,26 +83,41 @@ test('stripThinking leaves ordinary output alone', () => {
 // thumbnail and the article stage all fetched but unused.
 test('a model "text" verdict on a bare URL is overruled by the heuristic', () => {
   const url = 'https://www.cnbc.com/2026/02/21/julia-holden-baby-hat-business.html'
-  const out = normaliseClassification({ type: 'text', title: 'Julia Holden' }, { hasImage: false, isUrl: true, text: url })
+  const out = normaliseClassification(
+    { type: 'text', title: 'Julia Holden' },
+    { hasImage: false, isUrl: true, text: url },
+  )
   assert.equal(out.type, 'link')
 })
 
 test('the override also fires when isUrl was not passed but the text is one', () => {
-  const out = normaliseClassification({ type: 'code' }, { hasImage: false, isUrl: false, text: 'https://example.com/a.html' })
+  const out = normaliseClassification(
+    { type: 'code' },
+    { hasImage: false, isUrl: false, text: 'https://example.com/a.html' },
+  )
   assert.equal(out.type, 'link')
 })
 
 test('a bare URL to a known video host still resolves to video', () => {
-  const out = normaliseClassification({ type: 'text' }, { hasImage: false, isUrl: true, text: 'https://youtu.be/abc123' })
+  const out = normaliseClassification(
+    { type: 'text' },
+    { hasImage: false, isUrl: true, text: 'https://youtu.be/abc123' },
+  )
   assert.equal(out.type, 'video')
 })
 
 test('an "image" verdict on a URL is left alone — the heuristic would call it a link', () => {
-  const out = normaliseClassification({ type: 'image' }, { hasImage: false, isUrl: true, text: 'https://cdn.example.com/cat.png' })
+  const out = normaliseClassification(
+    { type: 'image' },
+    { hasImage: false, isUrl: true, text: 'https://cdn.example.com/cat.png' },
+  )
   assert.equal(out.type, 'image')
 })
 
 test('a "text" verdict on real prose is untouched', () => {
-  const out = normaliseClassification({ type: 'text' }, { hasImage: false, isUrl: false, text: 'Remember to call the plumber' })
+  const out = normaliseClassification(
+    { type: 'text' },
+    { hasImage: false, isUrl: false, text: 'Remember to call the plumber' },
+  )
   assert.equal(out.type, 'text')
 })

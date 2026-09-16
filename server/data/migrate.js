@@ -54,7 +54,7 @@ export async function migrateLegacyJson(db) {
 // AUTOINCREMENT hand out seq ascending from oldest to newest, so notes.js's
 // `ORDER BY seq DESC` read reproduces the exact original order.
 async function migrateNotes(db) {
-  await withLegacyFile('notes.json', (notes) => {
+  await withLegacyFile('notes.json', notes => {
     if (!Array.isArray(notes) || !notes.length) return
     const ins = db.prepare('INSERT OR IGNORE INTO notes (id, data) VALUES (?, ?)')
     inTransaction(db, () => {
@@ -67,7 +67,7 @@ async function migrateNotes(db) {
 }
 
 async function migrateCollections(db) {
-  await withLegacyFile('collections.json', (collections) => {
+  await withLegacyFile('collections.json', collections => {
     if (!Array.isArray(collections) || !collections.length) return
     const ins = db.prepare('INSERT OR IGNORE INTO collections (id, data) VALUES (?, ?)')
     inTransaction(db, () => {
@@ -84,7 +84,7 @@ async function migrateCollections(db) {
 // AUTOINCREMENT — highest seq = front of the list, same convention chats.js
 // uses for a live touch.
 async function migrateChats(db) {
-  await withLegacyFile('chats.json', (chats) => {
+  await withLegacyFile('chats.json', chats => {
     if (!Array.isArray(chats) || !chats.length) return
     const ins = db.prepare('INSERT INTO chats (seq, id, data) VALUES (?, ?, ?) ON CONFLICT(id) DO NOTHING')
     inTransaction(db, () => {
@@ -97,7 +97,7 @@ async function migrateChats(db) {
 }
 
 async function migrateSettings(db) {
-  await withLegacyFile('settings.json', (saved) => {
+  await withLegacyFile('settings.json', saved => {
     const configured = saved.configured === true
     const residency = resolveResidency(saved)
     const settings = { ...DEFAULTS }
@@ -106,12 +106,20 @@ async function migrateSettings(db) {
       INSERT INTO settings (id, llm, embed, vision, residency_llm, residency_embed, residency_vision, configured)
       VALUES (1, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO NOTHING
-    `).run(settings.llm, settings.embed, settings.vision, residency.llm, residency.embed, residency.vision, configured ? 1 : 0)
+    `).run(
+      settings.llm,
+      settings.embed,
+      settings.vision,
+      residency.llm,
+      residency.embed,
+      residency.vision,
+      configured ? 1 : 0,
+    )
   })
 }
 
 async function migrateTagVocab(db) {
-  await withLegacyFile('tag-embeddings.json', (obj) => {
+  await withLegacyFile('tag-embeddings.json', obj => {
     const entries = Object.entries(obj || {})
     if (!entries.length) return
     const ins = db.prepare('INSERT INTO tag_vocab (tag, embedding) VALUES (?, ?) ON CONFLICT(tag) DO NOTHING')

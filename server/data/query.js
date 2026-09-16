@@ -14,12 +14,12 @@ function hostOf(url) {
 // test/source.test.ts — this is the one place those predicates are
 // duplicated, and facet counts are wrong if they drift.
 const PLATFORM_TESTS = [
-  ['github', (n) => /(^|\.)github\.com$/.test(hostOf(n.url || ''))],
-  ['reels', (n) => /instagram\.com\/reel/i.test(n.url || '')],
-  ['igposts', (n) => /instagram\.com\/p\//i.test(n.url || '')],
-  ['x', (n) => /(^|\.)(twitter\.com|x\.com)$/.test(hostOf(n.url || ''))],
-  ['tiktok', (n) => /(^|\.)tiktok\.com$/.test(hostOf(n.url || ''))],
-  ['reddit', (n) => /(^|\.)reddit\.com$/.test(hostOf(n.url || ''))],
+  ['github', n => /(^|\.)github\.com$/.test(hostOf(n.url || ''))],
+  ['reels', n => /instagram\.com\/reel/i.test(n.url || '')],
+  ['igposts', n => /instagram\.com\/p\//i.test(n.url || '')],
+  ['x', n => /(^|\.)(twitter\.com|x\.com)$/.test(hostOf(n.url || ''))],
+  ['tiktok', n => /(^|\.)tiktok\.com$/.test(hostOf(n.url || ''))],
+  ['reddit', n => /(^|\.)reddit\.com$/.test(hostOf(n.url || ''))],
 ]
 
 export function sourceKey(n) {
@@ -32,7 +32,9 @@ export function sourceKey(n) {
 // content, titles, descriptions, tags, host.
 export function matchesQ(n, q) {
   const hay = [n.content, n.title, n.siteTitle, n.siteDesc, (n.tags || []).join(' '), hostOf(n.url || '')]
-    .filter(Boolean).join(' ').toLowerCase()
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
   return hay.includes(q.toLowerCase())
 }
 
@@ -45,17 +47,21 @@ export function matchesQ(n, q) {
 // would always be empty (nothing is both a video and a note).
 function toList(v) {
   if (Array.isArray(v)) return v.filter(Boolean)
-  if (typeof v === 'string' && v) return v.split(',').map((s) => s.trim()).filter(Boolean)
+  if (typeof v === 'string' && v)
+    return v
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean)
   return []
 }
 
 export function applyFilters(notes, { type, source, q, collection, unavailable } = {}) {
   let out = notes
-  if (collection) out = out.filter((n) => collection.has(n.id))
+  if (collection) out = out.filter(n => collection.has(n.id))
   const types = toList(type)
-  if (types.length) out = out.filter((n) => types.includes(n.type))
+  if (types.length) out = out.filter(n => types.includes(n.type))
   const sources = toList(source)
-  if (sources.length) out = out.filter((n) => sources.includes(sourceKey(n)))
+  if (sources.length) out = out.filter(n => sources.includes(sourceKey(n)))
   // Three states, not a boolean, because "don't filter on this at all" is a
   // real case: the facet base has to still SEE unavailable notes or the chip
   // that reveals them would always read 0.
@@ -68,10 +74,10 @@ export function applyFilters(notes, { type, source, q, collection, unavailable }
   // Cuts ACROSS type and source rather than being one of them: a dead link can
   // be a video or a post from any platform. It is a state of the note, not a
   // kind of note.
-  const avail = unavailable === true ? 'only' : (unavailable || 'hide')
-  if (avail === 'only') out = out.filter((n) => !!n.unavailable)
-  else if (avail !== 'all') out = out.filter((n) => !n.unavailable)
-  if (q && q.trim()) out = out.filter((n) => matchesQ(n, q.trim()))
+  const avail = unavailable === true ? 'only' : unavailable || 'hide'
+  if (avail === 'only') out = out.filter(n => !!n.unavailable)
+  else if (avail !== 'all') out = out.filter(n => !n.unavailable)
+  if (q && q.trim()) out = out.filter(n => matchesQ(n, q.trim()))
   return out
 }
 
@@ -85,7 +91,10 @@ export function facetsOf(notes) {
   const sources = {}
   let unavailable = 0
   for (const n of notes) {
-    if (n.unavailable) { unavailable++; continue }
+    if (n.unavailable) {
+      unavailable++
+      continue
+    }
     types[n.type] = (types[n.type] || 0) + 1
     const s = sourceKey(n)
     if (s) sources[s] = (sources[s] || 0) + 1
@@ -132,7 +141,7 @@ export function sortNotes(notes, sort) {
     if (d) return oldestFirst ? d : -d
     return oldestFirst ? y[1] - x[1] : x[1] - y[1]
   })
-  return out.map((e) => e[0])
+  return out.map(e => e[0])
 }
 
 export function pageOf(notes, offset, limit) {

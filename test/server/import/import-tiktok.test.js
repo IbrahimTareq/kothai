@@ -4,14 +4,22 @@
 // fixture.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { sniff, parse, parseFavorites, parseCollectionNames, parseTikTokDate, canonicalVideoUrl, deriveNote } from '../../../server/import/tiktok.js'
+import {
+  sniff,
+  parse,
+  parseFavorites,
+  parseCollectionNames,
+  parseTikTokDate,
+  canonicalVideoUrl,
+  deriveNote,
+} from '../../../server/import/tiktok.js'
 import { findImporter } from '../../../server/import/index.js'
 
 function files(obj) {
   return new Map(Object.entries(obj).map(([k, v]) => [k, Buffer.from(typeof v === 'string' ? v : JSON.stringify(v))]))
 }
 
-const share = (id) => `https://www.tiktokv.com/share/video/${id}/`
+const share = id => `https://www.tiktokv.com/share/video/${id}/`
 
 const EXPORT = {
   'Likes and Favorites': {
@@ -44,7 +52,15 @@ test('sniff: matches the export by filename, and by content when it has been ren
 test('findImporter: an Instagram export still routes to Instagram, a TikTok one to TikTok', () => {
   assert.equal(findImporter(files({ 'user_data_tiktok.json': EXPORT }))?.name, 'tiktok')
   assert.equal(
-    findImporter(files({ 'your_instagram_activity/saved/saved_posts.json': { saved_saved_media: [{ title: 'x', string_map_data: { 'Saved on': { href: 'https://www.instagram.com/p/A/', timestamp: 1 } } }] } }))?.name,
+    findImporter(
+      files({
+        'your_instagram_activity/saved/saved_posts.json': {
+          saved_saved_media: [
+            { title: 'x', string_map_data: { 'Saved on': { href: 'https://www.instagram.com/p/A/', timestamp: 1 } } },
+          ],
+        },
+      }),
+    )?.name,
     'instagram',
   )
 })
@@ -54,7 +70,11 @@ test('canonicalVideoUrl: the export link is rewritten to the form oEmbed answers
   // for /video/<id>, and a bare 400 for the tiktokv.com/share form.
   assert.equal(canonicalVideoUrl(share('7325881953608158497')), 'https://www.tiktok.com/video/7325881953608158497')
   assert.equal(canonicalVideoUrl('https://www.tiktok.com/@someone/video/123'), 'https://www.tiktok.com/video/123')
-  assert.equal(canonicalVideoUrl('https://vm.tiktok.com/ZMabcdef/'), 'https://vm.tiktok.com/ZMabcdef/', 'a short link has no readable id — left alone rather than guessed at')
+  assert.equal(
+    canonicalVideoUrl('https://vm.tiktok.com/ZMabcdef/'),
+    'https://vm.tiktok.com/ZMabcdef/',
+    'a short link has no readable id — left alone rather than guessed at',
+  )
 })
 
 test('parseTikTokDate: the bare export timestamp is read as UTC, not local time', () => {
@@ -66,13 +86,13 @@ test('parseTikTokDate: the bare export timestamp is read as UTC, not local time'
 test('parse: favourites become items; likes and collection membership do not', () => {
   const result = parse(files({ 'user_data_tiktok.json': EXPORT }))
   assert.equal(result.items.length, 2, 'the Like List is deliberately not imported')
-  assert.deepEqual(result.items.map((i) => i.url), [
-    'https://www.tiktok.com/video/7325881953608158497',
-    'https://www.tiktok.com/video/7078467411363515691',
-  ])
+  assert.deepEqual(
+    result.items.map(i => i.url),
+    ['https://www.tiktok.com/video/7325881953608158497', 'https://www.tiktok.com/video/7078467411363515691'],
+  )
   assert.deepEqual(result.collections, [], 'no membership in the export, so no Spaces to create')
   assert.ok(
-    result.warnings.some((w) => /2 TikTok collection\(s\) found/.test(w) && /Umrah/.test(w)),
+    result.warnings.some(w => /2 TikTok collection\(s\) found/.test(w) && /Umrah/.test(w)),
     `expected the collections to be reported, got ${JSON.stringify(result.warnings)}`,
   )
 })
@@ -80,7 +100,9 @@ test('parse: favourites become items; likes and collection membership do not', (
 test('parse: an older export nesting the same lists under a different wrapper still reads', () => {
   // Only the WRAPPER has drifted between export versions; the list keys have
   // not, which is why the parser walks for them instead of pinning a path.
-  const older = { Activity: { 'Favorite Videos': { FavoriteVideoList: [{ Date: '2024-01-01 00:00:00', Link: share('555') }] } } }
+  const older = {
+    Activity: { 'Favorite Videos': { FavoriteVideoList: [{ Date: '2024-01-01 00:00:00', Link: share('555') }] } },
+  }
   const result = parse(files({ 'user_data.json': older }))
   assert.equal(result.items.length, 1)
   assert.equal(result.items[0].url, 'https://www.tiktok.com/video/555')
@@ -90,7 +112,10 @@ test('parse: an export with no favourites says so instead of reporting a silent 
   const empty = { 'Likes and Favorites': { 'Favorite Videos': { FavoriteVideoList: [] } } }
   const result = parse(files({ 'user_data_tiktok.json': empty }))
   assert.equal(result.items.length, 0)
-  assert.ok(result.warnings.some((w) => /no favourited videos/.test(w)), JSON.stringify(result.warnings))
+  assert.ok(
+    result.warnings.some(w => /no favourited videos/.test(w)),
+    JSON.stringify(result.warnings),
+  )
 })
 
 test('parseFavorites: off-platform, non-http and oversized links are refused', () => {
@@ -127,24 +152,36 @@ test('parse: a maliciously deep export degrades to a warning instead of blowing 
   const nested = `${'{"nested":'.repeat(depth)}${leaf}${'}'.repeat(depth)}`
   const result = parse(files({ 'user_data_tiktok.json': nested }))
   assert.equal(result.items.length, 0)
-  assert.ok(result.warnings.some((w) => /too deeply nested/.test(w)), JSON.stringify(result.warnings))
+  assert.ok(
+    result.warnings.some(w => /too deeply nested/.test(w)),
+    JSON.stringify(result.warnings),
+  )
 })
 
 test('parse: corrupt JSON is reported, not thrown', () => {
   const result = parse(new Map([['user_data_tiktok.json', Buffer.from('{"FavoriteVideoList": broken')]]))
   assert.equal(result.items.length, 0)
-  assert.ok(result.warnings.some((w) => /could not be parsed/.test(w)))
+  assert.ok(result.warnings.some(w => /could not be parsed/.test(w)))
 })
 
 test('parseCollectionNames: names are deduped and read from either key', () => {
   assert.deepEqual(
-    parseCollectionNames([{ FavoriteCollection: 'Umrah' }, { FavoriteCollection: 'Umrah' }, { Name: 'Tools' }, { FavoriteCollection: '' }]),
+    parseCollectionNames([
+      { FavoriteCollection: 'Umrah' },
+      { FavoriteCollection: 'Umrah' },
+      { Name: 'Tools' },
+      { FavoriteCollection: '' },
+    ]),
     ['Umrah', 'Tools'],
   )
 })
 
 test('deriveNote: a favourite becomes a video note keeping its saved-on date', () => {
-  const note = deriveNote({ url: 'https://www.tiktok.com/video/1', poster: '', savedAt: parseTikTokDate('2025-08-09 10:20:53') })
+  const note = deriveNote({
+    url: 'https://www.tiktok.com/video/1',
+    poster: '',
+    savedAt: parseTikTokDate('2025-08-09 10:20:53'),
+  })
   assert.equal(note.type, 'video')
   assert.deepEqual(note.tags, ['tiktok'])
   assert.equal(note.url, 'https://www.tiktok.com/video/1')

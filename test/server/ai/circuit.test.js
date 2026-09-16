@@ -9,7 +9,10 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { Circuit } from '../../../server/ai/circuit.js'
 
-const clock = (start = 0) => { const o = { t: start, now: () => o.t }; return o }
+const clock = (start = 0) => {
+  const o = { t: start, now: () => o.t }
+  return o
+}
 
 test('starts closed and allows calls', () => {
   assert.equal(new Circuit({ now: clock().now }).allow(), true)
@@ -17,21 +20,26 @@ test('starts closed and allows calls', () => {
 
 test('stays closed below the failure threshold', () => {
   const c = new Circuit({ threshold: 3, now: clock().now })
-  c.recordFailure(); c.recordFailure()
+  c.recordFailure()
+  c.recordFailure()
   assert.equal(c.allow(), true)
 })
 
 test('opens on the threshold-th consecutive failure', () => {
   const c = new Circuit({ threshold: 3, now: clock().now })
-  c.recordFailure(); c.recordFailure(); c.recordFailure()
+  c.recordFailure()
+  c.recordFailure()
+  c.recordFailure()
   assert.equal(c.allow(), false)
 })
 
 test('a success resets the consecutive-failure count', () => {
   const c = new Circuit({ threshold: 3, now: clock().now })
-  c.recordFailure(); c.recordFailure()
+  c.recordFailure()
+  c.recordFailure()
   c.recordSuccess()
-  c.recordFailure(); c.recordFailure()
+  c.recordFailure()
+  c.recordFailure()
   assert.equal(c.allow(), true)
 })
 

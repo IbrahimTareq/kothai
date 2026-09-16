@@ -13,7 +13,7 @@ import { postJson, RemoteError } from '../../../../server/ai/providers/remote-ht
 let server, base, handler
 before(async () => {
   server = createServer((req, res) => handler(req, res))
-  await new Promise((r) => server.listen(0, r))
+  await new Promise(r => server.listen(0, r))
   base = `http://127.0.0.1:${server.address().port}`
 })
 after(() => server.close())
@@ -21,7 +21,12 @@ after(() => server.close())
 // Injected so the tests assert the WAITS without serving them.
 const spy = () => {
   const waits = []
-  return { waits, sleep: async (ms) => { waits.push(ms) } }
+  return {
+    waits,
+    sleep: async ms => {
+      waits.push(ms)
+    },
+  }
 }
 
 // Fails with `status` the first `times` calls, then succeeds.
@@ -76,7 +81,10 @@ test('a server error is retried too — it is the same kind of transient', async
 test('a bad key is NOT retried — every attempt costs money and none can succeed', async () => {
   flaky(401, 99)
   const { sleep, waits } = spy()
-  await assert.rejects(() => postJson(base, '/x', {}, { sleep }), (e) => e.code === 'auth_failed')
+  await assert.rejects(
+    () => postJson(base, '/x', {}, { sleep }),
+    e => e.code === 'auth_failed',
+  )
   assert.equal(waits.length, 0, 'no retry, no wait')
 })
 
@@ -90,7 +98,10 @@ test('an unknown model is not retried either', async () => {
 test('retries are bounded — a permanently limited account fails rather than spinning', async () => {
   flaky(429, 99)
   const { sleep, waits } = spy()
-  await assert.rejects(() => postJson(base, '/x', {}, { sleep }), (e) => e instanceof RemoteError && e.code === 'rate_limited')
+  await assert.rejects(
+    () => postJson(base, '/x', {}, { sleep }),
+    e => e instanceof RemoteError && e.code === 'rate_limited',
+  )
   assert.ok(waits.length <= 3, `gave up after ${waits.length} waits`)
 })
 
@@ -106,6 +117,6 @@ test('the final error still carries retryAfterMs for the circuit breaker', async
   const { sleep } = spy()
   await assert.rejects(
     () => postJson(base, '/x', {}, { sleep }),
-    (e) => e.retryAfterMs === 12_000,
+    e => e.retryAfterMs === 12_000,
   )
 })

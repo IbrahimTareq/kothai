@@ -2,7 +2,16 @@ import http from 'node:http'
 import { json, serveStatic } from './lib/http.js'
 import { PASSWORD } from './config.js'
 import { authGate } from './routes/auth.js'
-import { handleSave, handleNotes, handleNotesDelta, handleGetNote, handleNoteSlides, handleUpdateNote, handleDeleteNote, handleRetagNote } from './routes/notes.js'
+import {
+  handleSave,
+  handleNotes,
+  handleNotesDelta,
+  handleGetNote,
+  handleNoteSlides,
+  handleUpdateNote,
+  handleDeleteNote,
+  handleRetagNote,
+} from './routes/notes.js'
 import { handleImport } from './routes/import.js'
 import { handleAvailabilityScan, handleAvailabilityRemove } from './routes/availability.js'
 import { handleExport } from './routes/export.js'
@@ -13,13 +22,24 @@ import { handleModelFiles, handleDeleteModelFile } from './routes/models.js'
 import { handleAsk } from './routes/ask.js'
 import { handleChats, handleChat, handleRenameChat, handleDeleteChat } from './routes/chats.js'
 import {
-  handleCollections, handleCreateCollection, handleUpdateCollection,
-  handleAddItem, handleRemoveItem, handleDeleteCollection,
+  handleCollections,
+  handleCreateCollection,
+  handleUpdateCollection,
+  handleAddItem,
+  handleRemoveItem,
+  handleDeleteCollection,
 } from './routes/collections.js'
 import {
-  handleStatus, handleGetSettings, handleSaveSettings, handleSetup, handleSetupEndpoint,
-  handleSaveEndpoint, handleClearEndpoint,
-  handleBacklog, handleEnrichBacklog, handlePrioritize,
+  handleStatus,
+  handleGetSettings,
+  handleSaveSettings,
+  handleSetup,
+  handleSetupEndpoint,
+  handleSaveEndpoint,
+  handleClearEndpoint,
+  handleBacklog,
+  handleEnrichBacklog,
+  handlePrioritize,
   handleRetagAll,
 } from './routes/settings.js'
 import { handleSetupTest } from './routes/setup-test.js'
@@ -42,16 +62,18 @@ async function handleRequest(req, res) {
     // Guards every route below AND the static/uploads fallthrough, which is why
     // it lives here rather than being repeated per handler. No-op when
     // STASH_PASSWORD is unset.
-    if (PASSWORD && await authGate(req, res, p, { password: PASSWORD })) return
+    if (PASSWORD && (await authGate(req, res, p, { password: PASSWORD }))) return
 
     if (req.method === 'POST' && p === '/api/save') return await handleSave(req, res)
     if (req.method === 'POST' && p === '/api/ask') return await handleAsk(req, res)
     if (req.method === 'GET' && p === '/api/notes/delta') return handleNotesDelta(res, url)
     if (req.method === 'GET' && p === '/api/notes') return handleNotes(res, url)
-    if (req.method === 'GET' && /^\/api\/notes\/[^/]+$/.test(p)) return handleGetNote(res, decodeURIComponent(p.slice(11)))
+    if (req.method === 'GET' && /^\/api\/notes\/[^/]+$/.test(p))
+      return handleGetNote(res, decodeURIComponent(p.slice(11)))
     if (req.method === 'GET' && p === '/api/chats') return handleChats(res, url.searchParams)
     if (req.method === 'GET' && p.startsWith('/api/chats/')) return handleChat(res, p.split('/').pop())
-    if (req.method === 'PATCH' && p.startsWith('/api/chats/')) return await handleRenameChat(req, res, p.split('/').pop())
+    if (req.method === 'PATCH' && p.startsWith('/api/chats/'))
+      return await handleRenameChat(req, res, p.split('/').pop())
     if (req.method === 'DELETE' && p.startsWith('/api/chats/')) return await handleDeleteChat(res, p.split('/').pop())
     if (req.method === 'GET' && p === '/api/status') return handleStatus(res)
     if (req.method === 'GET' && p === '/api/settings') return await handleGetSettings(res)
@@ -101,7 +123,8 @@ async function handleRequest(req, res) {
     if (req.method === 'POST' && /^\/api\/notes\/[^/]+\/slides$/.test(p)) {
       return await handleNoteSlides(res, decodeURIComponent(p.split('/')[3]))
     }
-    if (req.method === 'PATCH' && p.startsWith('/api/notes/')) return await handleUpdateNote(req, res, p.split('/').pop())
+    if (req.method === 'PATCH' && p.startsWith('/api/notes/'))
+      return await handleUpdateNote(req, res, p.split('/').pop())
     if (req.method === 'DELETE' && p.startsWith('/api/notes/')) return await handleDeleteNote(res, p.split('/').pop())
     if (req.method === 'GET') return await serveStatic(req, res, p)
     json(res, 405, { error: 'method not allowed' })
@@ -111,4 +134,6 @@ async function handleRequest(req, res) {
   }
 }
 
-export function createServer() { return http.createServer(handleRequest) }
+export function createServer() {
+  return http.createServer(handleRequest)
+}

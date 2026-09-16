@@ -19,7 +19,7 @@ import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 
 let responses // url → { json?, text?, contentType }
-let fetched   // every url safeFetch saw, in order
+let fetched // every url safeFetch saw, in order
 
 function respond(url) {
   const r = responses[url]
@@ -37,7 +37,7 @@ const realSsrf = await import('../../../server/lib/ssrf.js')
 mock.module('../../../server/lib/ssrf.js', {
   namedExports: {
     ...realSsrf,
-    safeFetch: async (url) => {
+    safeFetch: async url => {
       fetched.push(url)
       return respond(url)
     },
@@ -114,7 +114,11 @@ test('fetchLinkMeta: a TikTok URL is resolved via the registry and fetched throu
   // and it is the only text a saved TikTok has to be retrieved by.
   assert.equal(meta.siteTitle, 'three ingredient brown butter pasta #pasta #recipe')
   assert.equal(meta.siteName, 'TikTok')
-  assert.equal(meta.siteDesc, 'by chef', 'author_name still becomes the weak-signal siteDesc when the page has no og:description')
+  assert.equal(
+    meta.siteDesc,
+    'by chef',
+    'author_name still becomes the weak-signal siteDesc when the page has no og:description',
+  )
 })
 
 test('fetchLinkMeta: mergeSiteDesc behaviour is unchanged — the real og:description wins, the oEmbed author line trails it', async () => {

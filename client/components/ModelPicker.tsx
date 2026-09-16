@@ -30,19 +30,37 @@ const ROLE_PLACEHOLDER: Record<Role, string> = {
 // Human copy for the three residency policies, in display order.
 export const POLICY_META: { key: Residency; label: string; desc: string }[] = [
   { key: 'off', label: 'Off', desc: 'No download, no RAM. Features that need this model are disabled.' },
-  { key: 'ondemand', label: 'On demand', desc: 'Loads when needed, frees its RAM after a few idle minutes. First use after idle takes a moment.' },
+  {
+    key: 'ondemand',
+    label: 'On demand',
+    desc: 'Loads when needed, frees its RAM after a few idle minutes. First use after idle takes a moment.',
+  },
   { key: 'always', label: 'Always on', desc: 'Fastest responses — stays in RAM the whole time the app runs.' },
 ]
 
 // Segmented Off / On demand / Always control + a one-line tradeoff blurb.
-export function ResidencyControl({ value, busy, onPick }: { value: Residency; busy: boolean; onPick: (p: Residency) => void }) {
-  const current = POLICY_META.find((p) => p.key === value)
+export function ResidencyControl({
+  value,
+  busy,
+  onPick,
+}: {
+  value: Residency
+  busy: boolean
+  onPick: (p: Residency) => void
+}) {
+  const current = POLICY_META.find(p => p.key === value)
   return (
     <div className="residency">
       <div className="residency-seg" role="radiogroup">
-        {POLICY_META.map((p) => (
-          <button key={p.key} className={'residency-btn mono' + (value === p.key ? ' active' : '')}
-            disabled={busy} onClick={() => onPick(p.key)}>{p.label}</button>
+        {POLICY_META.map(p => (
+          <button
+            key={p.key}
+            className={'residency-btn mono' + (value === p.key ? ' active' : '')}
+            disabled={busy}
+            onClick={() => onPick(p.key)}
+          >
+            {p.label}
+          </button>
         ))}
       </div>
       {current && <div className="residency-desc">{current.desc}</div>}
@@ -89,13 +107,24 @@ interface RoleAccordionProps {
 
 // One collapsible model role. Collapsed, the header still communicates state by
 // showing the selected model's label.
-export function RoleAccordion({ role, presets, currentKey, busy, switching, pct, defaultOpen, onPick, policy, onPolicy }: RoleAccordionProps) {
+export function RoleAccordion({
+  role,
+  presets,
+  currentKey,
+  busy,
+  switching,
+  pct,
+  defaultOpen,
+  onPick,
+  policy,
+  onPolicy,
+}: RoleAccordionProps) {
   const [open, setOpen] = useState(!!defaultOpen)
-  const current = presets.find((p) => p.key === currentKey)
+  const current = presets.find(p => p.key === currentKey)
   const meta = ROLE_META[role]
   return (
     <div className={'role-acc' + (open ? ' open' : '')}>
-      <button className="role-acc-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+      <button className="role-acc-head" onClick={() => setOpen(o => !o)} aria-expanded={open}>
         <span className="role-acc-info">
           <span className="role-acc-title mono">{meta.title}</span>
           <span className="role-acc-sub">{meta.sub}</span>
@@ -103,18 +132,23 @@ export function RoleAccordion({ role, presets, currentKey, busy, switching, pct,
         <span className="role-acc-current mono">
           {switching ? <span className="model-dl">↓ {pct}%</span> : policy === 'off' ? 'OFF' : current?.label || '—'}
         </span>
-        <span className="role-acc-chev"><Icon name="chevron" size={16} /></span>
+        <span className="role-acc-chev">
+          <Icon name="chevron" size={16} />
+        </span>
       </button>
       {open && (
         <div className="model-list">
           {policy && onPolicy && <ResidencyControl value={policy} busy={busy} onPick={onPolicy} />}
-          {presets.map((p) => (
-            <ModelRow key={p.key} p={p}
+          {presets.map(p => (
+            <ModelRow
+              key={p.key}
+              p={p}
               active={currentKey === p.key}
               busy={busy}
               switching={switching}
               pct={pct}
-              onPick={() => onPick(p.key)} />
+              onPick={() => onPick(p.key)}
+            />
           ))}
         </div>
       )}
@@ -157,13 +191,13 @@ export function RemoteModelField({
     return () => document.removeEventListener('mousedown', away)
   }, [open])
 
-  const ids = options.map((o) => o.key)
+  const ids = options.map(o => o.key)
   const { matched, rest } = relevantModels(role, ids)
   const pool = showAll ? [...matched, ...rest] : matched
   // Typing filters; an exact match should not collapse the list to one row the
   // user then cannot escape, so a draft equal to the value shows everything.
   const q = draft.trim().toLowerCase()
-  const shown = q && q !== value.toLowerCase() ? pool.filter((id) => id.toLowerCase().includes(q)) : pool
+  const shown = q && q !== value.toLowerCase() ? pool.filter(id => id.toLowerCase().includes(q)) : pool
 
   const commit = (id: string) => {
     setDraft(id)
@@ -176,7 +210,7 @@ export function RemoteModelField({
       e.preventDefault()
       if (!open) return setOpen(true)
       const step = e.key === 'ArrowDown' ? 1 : -1
-      setActive((i) => (shown.length ? (i + step + shown.length) % shown.length : 0))
+      setActive(i => (shown.length ? (i + step + shown.length) % shown.length : 0))
       return
     }
     if (e.key === 'Enter') {
@@ -202,17 +236,23 @@ export function RemoteModelField({
           aria-expanded={open}
           aria-controls={`models-${role}`}
           placeholder={ROLE_PLACEHOLDER[role]}
-          onChange={(e) => { setDraft(e.target.value); setOpen(true); setActive(0) }}
+          onChange={e => {
+            setDraft(e.target.value)
+            setOpen(true)
+            setActive(0)
+          }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKey}
-          onBlur={() => { if (!open && draft.trim() !== value) onCommit(draft.trim()) }}
+          onBlur={() => {
+            if (!open && draft.trim() !== value) onCommit(draft.trim())
+          }}
         />
         <button
           className="btn btn--icon remote-model-toggle"
           type="button"
           disabled={busy || !ids.length}
           aria-label={open ? 'Hide models' : 'Show models'}
-          onClick={() => setOpen((o) => !o)}
+          onClick={() => setOpen(o => !o)}
         >
           <Icon name="chevron" size={14} />
         </button>
@@ -230,7 +270,10 @@ export function RemoteModelField({
                 onMouseEnter={() => setActive(i)}
                 // mousedown, not click: the input's blur would otherwise fire
                 // first and close the list out from under the click.
-                onMouseDown={(e) => { e.preventDefault(); commit(id) }}
+                onMouseDown={e => {
+                  e.preventDefault()
+                  commit(id)
+                }}
               >
                 {id}
               </button>
@@ -239,8 +282,14 @@ export function RemoteModelField({
           {!shown.length && <li className="remote-model-empty mono">No match — type the name and press Enter.</li>}
           {Boolean(rest.length) && !showAll && (
             <li>
-              <button type="button" className="remote-model-more mono"
-                onMouseDown={(e) => { e.preventDefault(); setShowAll(true) }}>
+              <button
+                type="button"
+                className="remote-model-more mono"
+                onMouseDown={e => {
+                  e.preventDefault()
+                  setShowAll(true)
+                }}
+              >
                 Show {rest.length} more this endpoint serves
               </button>
             </li>

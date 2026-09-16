@@ -13,7 +13,11 @@
 const MAX_FIELD_LEN = 500
 
 export function tryJson(buf) {
-  try { return JSON.parse(buf.toString('utf8')) } catch { return null }
+  try {
+    return JSON.parse(buf.toString('utf8'))
+  } catch {
+    return null
+  }
 }
 
 // Collapses whitespace before clipping: these strings ride into an LLM

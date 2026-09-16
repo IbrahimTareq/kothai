@@ -10,7 +10,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { reciprocalRankFusion } from '../../../server/data/notes.js'
 
-const ids = (out) => out.map((n) => n.id)
+const ids = out => out.map(n => n.id)
 
 test('a note both retrievers rank well beats a note only one of them ranks first', () => {
   const dense = [{ id: 'a' }, { id: 'b' }, { id: 'c' }]
@@ -31,8 +31,14 @@ test('ranking depends only on position, never on the incoming scores', () => {
   // Same order, wildly different score scales on each side. If a raw score
   // leaked into the ranking, these two calls would disagree.
   const withScores = reciprocalRankFusion([
-    [{ id: 'a', score: 0.81 }, { id: 'b', score: 0.79 }],
-    [{ id: 'b', score: 1 }, { id: 'c', score: 0.33 }],
+    [
+      { id: 'a', score: 0.81 },
+      { id: 'b', score: 0.79 },
+    ],
+    [
+      { id: 'b', score: 1 },
+      { id: 'c', score: 0.33 },
+    ],
   ])
   const withoutScores = reciprocalRankFusion([
     [{ id: 'a' }, { id: 'b' }],
@@ -50,11 +56,8 @@ test('the output score is the fused rank score, and it orders the result', () =>
   assert.ok(out[0].score > out[1].score)
 })
 
-test('duplicated notes are merged once, keeping the first list\'s copy of the fields', () => {
-  const out = reciprocalRankFusion([
-    [{ id: 'a', title: 'from dense' }],
-    [{ id: 'a', title: 'from sparse' }],
-  ])
+test("duplicated notes are merged once, keeping the first list's copy of the fields", () => {
+  const out = reciprocalRankFusion([[{ id: 'a', title: 'from dense' }], [{ id: 'a', title: 'from sparse' }]])
   assert.equal(out.length, 1)
   assert.equal(out[0].title, 'from dense')
 })
@@ -70,7 +73,7 @@ test('a smaller K sharpens the advantage of a first-place rank; the default damp
   // At K=60 the gap between rank 1 and rank 3 is tiny; at K=1 it is large.
   const damped = reciprocalRankFusion(lists)
   const sharp = reciprocalRankFusion(lists, { k: 1 })
-  const gap = (out) => out[0].score / out[out.length - 1].score
+  const gap = out => out[0].score / out[out.length - 1].score
   assert.ok(gap(sharp) > gap(damped))
 })
 

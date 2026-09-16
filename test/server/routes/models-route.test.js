@@ -41,9 +41,14 @@ function seedCache() {
 
 function fakeRes() {
   return {
-    statusCode: 0, body: null,
-    writeHead(code) { this.statusCode = code },
-    end(body) { this.body = JSON.parse(body) },
+    statusCode: 0,
+    body: null,
+    writeHead(code) {
+      this.statusCode = code
+    },
+    end(body) {
+      this.body = JSON.parse(body)
+    },
   }
 }
 
@@ -72,7 +77,7 @@ beforeEach(async () => {
 test('GET /api/models/files lists the cache with the selected models marked in use', async () => {
   const res = await list()
   assert.equal(res.statusCode, 200)
-  const byName = Object.fromEntries(res.body.entries.map((e) => [e.name, e]))
+  const byName = Object.fromEntries(res.body.entries.map(e => [e.name, e]))
   assert.equal(byName[ACTIVE_LLM].inUse, true)
   assert.equal(byName[ACTIVE_LLM].usedBy, 'llm')
   assert.equal(byName[ACTIVE_PROJ].usedBy, 'vision')
@@ -146,7 +151,7 @@ test('the model cache endpoints are not offered by a provider that downloads no 
 // where a `..%2F` escape attempt would be handed to the handler.
 const { createServer } = await import('../../../server/router.js')
 const server = createServer()
-await new Promise((r) => server.listen(0, '127.0.0.1', r))
+await new Promise(r => server.listen(0, '127.0.0.1', r))
 const BASE = `http://127.0.0.1:${server.address().port}`
 after(() => server.close())
 
@@ -154,7 +159,10 @@ test('the routes are reachable over HTTP', async () => {
   const res = await fetch(`${BASE}/api/models/files`)
   const body = await res.json()
   assert.equal(res.status, 200)
-  assert.equal(body.entries.some((e) => e.name === ORPHAN), true)
+  assert.equal(
+    body.entries.some(e => e.name === ORPHAN),
+    true,
+  )
 
   const del = await fetch(`${BASE}/api/models/files/${ORPHAN}`, { method: 'DELETE' })
   assert.equal(del.status, 200)

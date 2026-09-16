@@ -14,7 +14,11 @@ mock.module('../../../server/ai/meta.js', {
 const { checkAvailability, isCheckable, ALIVE, DEAD, UNKNOWN } = await import('../../../server/ai/availability.js')
 
 const TT = 'https://www.tiktok.com/video/7325881953608158497'
-const httpError = (status) => { const e = new Error(`HTTP ${status}`); e.status = status; return e }
+const httpError = status => {
+  const e = new Error(`HTTP ${status}`)
+  e.status = status
+  return e
+}
 
 test('a 200 with a JSON body means the content is alive', async () => {
   getImpl = async () => ({ json: async () => ({ title: 'a caption' }) })
@@ -23,7 +27,9 @@ test('a 200 with a JSON body means the content is alive', async () => {
 
 test('400/404/410 are the only statuses that mean the content is gone', async () => {
   for (const status of [400, 404, 410]) {
-    getImpl = async () => { throw httpError(status) }
+    getImpl = async () => {
+      throw httpError(status)
+    }
     assert.equal(await checkAvailability(TT), DEAD, `${status} should read as gone`)
   }
 })
@@ -31,18 +37,26 @@ test('400/404/410 are the only statuses that mean the content is gone', async ()
 test('a throttle or a server error is NEVER read as gone', async () => {
   // The case that would turn one bad afternoon into mass deletion.
   for (const status of [401, 403, 429, 500, 502, 503]) {
-    getImpl = async () => { throw httpError(status) }
+    getImpl = async () => {
+      throw httpError(status)
+    }
     assert.equal(await checkAvailability(TT), UNKNOWN, `${status} must not read as gone`)
   }
 })
 
 test('a network failure with no status is not a verdict', async () => {
-  getImpl = async () => { throw new Error('fetch failed') }
+  getImpl = async () => {
+    throw new Error('fetch failed')
+  }
   assert.equal(await checkAvailability(TT), UNKNOWN)
 })
 
 test('a 200 that is not JSON proves nothing — an error page would pass on status alone', async () => {
-  getImpl = async () => ({ json: async () => { throw new Error('not json') } })
+  getImpl = async () => ({
+    json: async () => {
+      throw new Error('not json')
+    },
+  })
   assert.equal(await checkAvailability(TT), UNKNOWN)
 })
 

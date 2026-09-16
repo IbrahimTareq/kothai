@@ -31,10 +31,18 @@ function respond(url) {
 
 const realSsrf = await import('../../../server/lib/ssrf.js')
 mock.module('../../../server/lib/ssrf.js', {
-  namedExports: { ...realSsrf, safeFetch: async (url) => { fetched.push(url); return respond(url) } },
+  namedExports: {
+    ...realSsrf,
+    safeFetch: async url => {
+      fetched.push(url)
+      return respond(url)
+    },
+  },
 })
 
-const { isRedditPost, isRedditShare, redditJsonUrl, parseRedditPost, fetchLinkMeta } = await import('../../../server/ai/meta.js')
+const { isRedditPost, isRedditShare, redditJsonUrl, parseRedditPost, fetchLinkMeta } = await import(
+  '../../../server/ai/meta.js'
+)
 
 const POST_URL = 'https://www.reddit.com/r/breadit/comments/abc123/my_first_sourdough/'
 
@@ -62,7 +70,7 @@ function payload({ post = {}, comments = [] } = {}) {
         ],
       },
     },
-    { kind: 'Listing', data: { children: comments.map((data) => ({ kind: 't1', data })) } },
+    { kind: 'Listing', data: { children: comments.map(data => ({ kind: 't1', data })) } },
   ]
 }
 
@@ -70,7 +78,7 @@ test('isRedditPost matches post permalinks on reddit.com and its subdomains, not
   assert.equal(isRedditPost(POST_URL), true)
   assert.equal(isRedditPost('https://old.reddit.com/r/breadit/comments/abc123/'), true)
   assert.equal(isRedditPost('https://np.reddit.com/comments/abc123'), true)
-  assert.equal(isRedditPost('https://www.reddit.com/r/breadit/'), false)     // subreddit index
+  assert.equal(isRedditPost('https://www.reddit.com/r/breadit/'), false) // subreddit index
   assert.equal(isRedditPost('https://www.reddit.com/user/baker99'), false)
   assert.equal(isRedditPost('https://evil.com/reddit.com/comments/x'), false)
   assert.equal(isRedditPost('not a url'), false)
@@ -84,12 +92,14 @@ test('redditJsonUrl appends .json to the path, dropping any tracking query the s
 })
 
 test('parseRedditPost pulls the title, selftext and top comments into the right fields', () => {
-  const p = parseRedditPost(payload({
-    comments: [
-      { author: 'proofer', body: 'That crumb is textbook. What flour?' },
-      { author: 'baker99', body: 'Bread flour, 12.7% protein.' },
-    ],
-  }))
+  const p = parseRedditPost(
+    payload({
+      comments: [
+        { author: 'proofer', body: 'That crumb is textbook. What flour?' },
+        { author: 'baker99', body: 'Bread flour, 12.7% protein.' },
+      ],
+    }),
+  )
   assert.equal(p.siteTitle, 'My first sourdough')
   assert.equal(p.siteName, 'Reddit')
   assert.match(p.siteDesc, /open crumb/)
@@ -104,14 +114,16 @@ test('parseRedditPost pulls the title, selftext and top comments into the right 
 })
 
 test('parseRedditPost drops stickied bot comments and deleted bodies', () => {
-  const p = parseRedditPost(payload({
-    comments: [
-      { author: 'AutoModerator', body: 'Please read the rules.', stickied: true },
-      { author: 'ghost', body: '[deleted]' },
-      { author: 'ghost2', body: '[removed]' },
-      { author: 'real', body: 'Looks great.' },
-    ],
-  }))
+  const p = parseRedditPost(
+    payload({
+      comments: [
+        { author: 'AutoModerator', body: 'Please read the rules.', stickied: true },
+        { author: 'ghost', body: '[deleted]' },
+        { author: 'ghost2', body: '[removed]' },
+        { author: 'real', body: 'Looks great.' },
+      ],
+    }),
+  )
   assert.doesNotMatch(p.article, /read the rules/)
   assert.doesNotMatch(p.article, /\[deleted\]|\[removed\]/)
   assert.match(p.article, /u\/real: Looks great\./)
@@ -143,11 +155,15 @@ test('parseRedditPost prefers the preview image, then a real thumbnail, and neve
   const noPreview = parseRedditPost(payload({ post: { preview: undefined, thumbnail: 'self' } }))
   assert.equal(noPreview.thumbUrl, null)
 
-  const realThumb = parseRedditPost(payload({ post: { preview: undefined, thumbnail: 'https://b.thumbs.redditmedia.com/x.jpg' } }))
+  const realThumb = parseRedditPost(
+    payload({ post: { preview: undefined, thumbnail: 'https://b.thumbs.redditmedia.com/x.jpg' } }),
+  )
   assert.equal(realThumb.thumbUrl, 'https://b.thumbs.redditmedia.com/x.jpg')
 
   // A direct image submission: the post's own url IS the picture.
-  const direct = parseRedditPost(payload({ post: { preview: undefined, thumbnail: 'default', url: 'https://i.redd.it/loaf.png' } }))
+  const direct = parseRedditPost(
+    payload({ post: { preview: undefined, thumbnail: 'default', url: 'https://i.redd.it/loaf.png' } }),
+  )
   assert.equal(direct.thumbUrl, 'https://i.redd.it/loaf.png')
 })
 
@@ -160,8 +176,11 @@ test('fetchLinkMeta routes a Reddit permalink to the .json fetcher, not to oEmbe
   }
   const meta = await fetchLinkMeta(POST_URL, 'note-r1')
 
-  assert.deepEqual(fetched, [redditJsonUrl(POST_URL), 'https://preview.redd.it/loaf.jpg?width=1080'],
-    'exactly the JSON fetch and the thumbnail download — no oEmbed call, no page scrape')
+  assert.deepEqual(
+    fetched,
+    [redditJsonUrl(POST_URL), 'https://preview.redd.it/loaf.jpg?width=1080'],
+    'exactly the JSON fetch and the thumbnail download — no oEmbed call, no page scrape',
+  )
   assert.equal(meta.siteTitle, 'My first sourdough')
   assert.equal(meta.siteName, 'Reddit')
   assert.match(meta.siteDesc, /open crumb/)
@@ -177,7 +196,9 @@ test('a walled JSON endpoint degrades to oEmbed/OpenGraph instead of leaving the
   const oembed = 'https://www.reddit.com/oembed?url=' + encodeURIComponent(POST_URL) + '&format=json'
   responses = {
     // no entry for the .json url → 403-equivalent, get() throws
-    [oembed]: { json: { title: 'Why did the Roman Empire fall?', author_name: 'PatsHobbyJP', provider_name: 'reddit' } },
+    [oembed]: {
+      json: { title: 'Why did the Roman Empire fall?', author_name: 'PatsHobbyJP', provider_name: 'reddit' },
+    },
     [POST_URL]: { text: '<html><head><title>Reddit</title></head></html>', contentType: 'text/html' },
   }
   const meta = await fetchLinkMeta(POST_URL, 'note-r2')
@@ -230,8 +251,11 @@ test('fetchLinkMeta resolves a share link to the canonical post before fetching 
   }
   const meta = await fetchLinkMeta(SHARE_URL, 'note-r4')
 
-  assert.deepEqual(fetched, [SHARE_URL, redditJsonUrl(POST_URL), 'https://preview.redd.it/loaf.jpg?width=1080'],
-    'the share link is followed once, then the canonical URL drives the rest')
+  assert.deepEqual(
+    fetched,
+    [SHARE_URL, redditJsonUrl(POST_URL), 'https://preview.redd.it/loaf.jpg?width=1080'],
+    'the share link is followed once, then the canonical URL drives the rest',
+  )
   assert.equal(meta.siteTitle, 'My first sourdough', 'the real post title, not the "Reddit" shell title')
 })
 
@@ -249,5 +273,5 @@ test('a share link that does not resolve to a post falls back to the generic pat
   }
   const meta = await fetchLinkMeta(SUB_SHARE, 'note-r5')
   assert.equal(meta.siteTitle, 'r/breadit')
-  assert.ok(!fetched.some((u) => u.endsWith('.json?raw_json=1&limit=20')), 'no .json fetch for a non-post')
+  assert.ok(!fetched.some(u => u.endsWith('.json?raw_json=1&limit=20')), 'no .json fetch for a non-post')
 })

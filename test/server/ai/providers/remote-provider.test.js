@@ -13,21 +13,27 @@ let server, base, routes
 before(async () => {
   server = createServer((req, res) => {
     let raw = ''
-    req.on('data', (c) => (raw += c))
+    req.on('data', c => (raw += c))
     req.on('end', () => {
       const fn = routes[req.url]
-      if (!fn) { res.writeHead(404, { 'content-type': 'application/json' }); return res.end('{}') }
+      if (!fn) {
+        res.writeHead(404, { 'content-type': 'application/json' })
+        return res.end('{}')
+      }
       fn(req, res, raw ? JSON.parse(raw) : null)
     })
   })
-  await new Promise((r) => server.listen(0, r))
+  await new Promise(r => server.listen(0, r))
   base = `http://127.0.0.1:${server.address().port}`
 })
 
 after(() => server.close())
 
-const okJson = (res, body) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)) }
-const chatReply = (content) => ({ choices: [{ message: { content } }] })
+const okJson = (res, body) => {
+  res.writeHead(200, { 'content-type': 'application/json' })
+  res.end(JSON.stringify(body))
+}
+const chatReply = content => ({ choices: [{ message: { content } }] })
 
 beforeEach(() => {
   routes = { '/models': (req, res) => okJson(res, { data: [{ id: 'llama3.2:3b' }, { id: 'nomic-embed-text' }] }) }
@@ -42,7 +48,10 @@ test('capabilities reports a remote provider that neither manages residency nor 
 
 test('embedText posts to /embeddings and returns the vector', async () => {
   let seen = null
-  routes['/embeddings'] = (req, res, body) => { seen = body; okJson(res, { data: [{ embedding: [0.1, 0.2] }] }) }
+  routes['/embeddings'] = (req, res, body) => {
+    seen = body
+    okJson(res, { data: [{ embedding: [0.1, 0.2] }] })
+  }
   const p = make()
   await p.init()
   assert.deepEqual(await p.embedText('hello'), [0.1, 0.2])
@@ -54,7 +63,10 @@ test('embedText prefixes query and document differently when the endpoint is ser
   // The prefix decision is keyed on the configured model NAME, because a
   // remote endpoint may be serving anything — see prompts.js's embedInput.
   let seen
-  routes['/embeddings'] = (req, res, body) => { seen = body; okJson(res, { data: [{ embedding: [1] }] }) }
+  routes['/embeddings'] = (req, res, body) => {
+    seen = body
+    okJson(res, { data: [{ embedding: [1] }] })
+  }
   const p = make({ llm: 'llama3.2:3b', embed: 'embeddinggemma:300m', vision: 'llava' })
 
   await p.embedText('brown butter pasta', { mode: 'query' })
@@ -69,7 +81,10 @@ test('embedText prefixes query and document differently when the endpoint is ser
 
 test('embedText leaves input untouched for an endpoint serving a model that is not prompt-instructed', async () => {
   let seen
-  routes['/embeddings'] = (req, res, body) => { seen = body; okJson(res, { data: [{ embedding: [1] }] }) }
+  routes['/embeddings'] = (req, res, body) => {
+    seen = body
+    okJson(res, { data: [{ embedding: [1] }] })
+  }
   await make().embedText('brown butter pasta', { mode: 'query' }) // default model: nomic-embed-text
   assert.equal(seen.input, 'brown butter pasta')
 })
@@ -78,7 +93,10 @@ test('embedText truncates very long input to a TOKEN budget, the same way the lo
   // A character cap cannot keep the request inside the model's fixed batch
   // size, because characters are not tokens — see prompts.js's clipToTokens.
   let seen = null
-  routes['/embeddings'] = (req, res, body) => { seen = body; okJson(res, { data: [{ embedding: [1] }] }) }
+  routes['/embeddings'] = (req, res, body) => {
+    seen = body
+    okJson(res, { data: [{ embedding: [1] }] })
+  }
   const p = make()
   await p.init()
 
@@ -96,7 +114,10 @@ test('classify requests json_schema and normalises the result', async () => {
   let seen = null
   routes['/chat/completions'] = (req, res, body) => {
     seen = body
-    okJson(res, chatReply(JSON.stringify({ type: 'link', category: 'Tech', title: 'T', summary: 'S', tags: ['a', 'instagram'] })))
+    okJson(
+      res,
+      chatReply(JSON.stringify({ type: 'link', category: 'Tech', title: 'T', summary: 'S', tags: ['a', 'instagram'] })),
+    )
   }
   const p = make()
   await p.init()
@@ -111,7 +132,10 @@ test('classify retries without json_schema when the endpoint rejects it', async 
   const bodies = []
   routes['/chat/completions'] = (req, res, body) => {
     bodies.push(body)
-    if (bodies.length === 1) { res.writeHead(400, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ error: 'response_format unsupported' })) }
+    if (bodies.length === 1) {
+      res.writeHead(400, { 'content-type': 'application/json' })
+      return res.end(JSON.stringify({ error: 'response_format unsupported' }))
+    }
     okJson(res, chatReply(JSON.stringify({ type: 'text', category: 'C', title: 'T', summary: 'S', tags: ['x'] })))
   }
   const p = make()
@@ -126,7 +150,10 @@ test('classify json_schema 400 does not open the circuit when plain retry succee
   const bodies = []
   routes['/chat/completions'] = (req, res, body) => {
     bodies.push(body)
-    if (bodies.length === 1) { res.writeHead(400, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ error: 'response_format unsupported' })) }
+    if (bodies.length === 1) {
+      res.writeHead(400, { 'content-type': 'application/json' })
+      return res.end(JSON.stringify({ error: 'response_format unsupported' }))
+    }
     okJson(res, chatReply(JSON.stringify({ type: 'text', category: 'C', title: 'T', summary: 'S', tags: [] })))
   }
   const p = make()
@@ -142,7 +169,11 @@ test('classify opens the circuit on a genuine failure, not just on the plain-pro
   // real outage (endpoint unreachable, auth failure, 5xx) must still count.
   // classify() is the backlog's dominant call, so if failures here never
   // reach the circuit, a dead endpoint never halts the enrich queue.
-  const dead = createRemoteProvider({ baseUrl: 'http://127.0.0.1:1', apiKey: null, models: { llm: 'm', embed: 'e', vision: 'v' } })
+  const dead = createRemoteProvider({
+    baseUrl: 'http://127.0.0.1:1',
+    apiKey: null,
+    models: { llm: 'm', embed: 'e', vision: 'v' },
+  })
   await dead.init()
   for (let i = 0; i < 5; i++) {
     await dead.classify({ text: 'hi', now: 'now' }).catch(() => {})
@@ -164,7 +195,10 @@ test('describeImage inlines the file as a base64 data URL content part', async (
   const file = path.join(dir, 'a.png')
   writeFileSync(file, Buffer.from([0x89, 0x50, 0x4e, 0x47]))
   let seen = null
-  routes['/chat/completions'] = (req, res, body) => { seen = body; okJson(res, chatReply('a png')) }
+  routes['/chat/completions'] = (req, res, body) => {
+    seen = body
+    okJson(res, chatReply('a png'))
+  }
   const p = make()
   await p.init()
   assert.equal(await p.describeImage({ absPath: file }), 'a png')
@@ -176,7 +210,10 @@ test('describeImage inlines the file as a base64 data URL content part', async (
 
 test('answer posts the shared system prompt and returns trimmed text', async () => {
   let seen = null
-  routes['/chat/completions'] = (req, res, body) => { seen = body; okJson(res, chatReply('  the answer  ')) }
+  routes['/chat/completions'] = (req, res, body) => {
+    seen = body
+    okJson(res, chatReply('  the answer  '))
+  }
   const p = make()
   await p.init()
   const out = await p.answer({ question: 'q', contextNotes: [] })
@@ -190,7 +227,7 @@ test('a role with no model name configured is disabled, not attempted', async ()
   await p.init()
   assert.equal(p.roleEnabled('embed'), false)
   assert.equal(p.roleEnabled('llm'), true)
-  const e = await p.embedText('x').catch((x) => x)
+  const e = await p.embedText('x').catch(x => x)
   assert.equal(e.code, 'embed_off')
 })
 
@@ -202,19 +239,27 @@ test('no base URL at all means every role is disabled and init does not throw', 
 })
 
 test('an unreachable endpoint reports error in the aggregate but still serves the app', async () => {
-  const p = createRemoteProvider({ baseUrl: 'http://127.0.0.1:1', apiKey: null, models: { llm: 'm', embed: 'e', vision: 'v' } })
+  const p = createRemoteProvider({
+    baseUrl: 'http://127.0.0.1:1',
+    apiKey: null,
+    models: { llm: 'm', embed: 'e', vision: 'v' },
+  })
   await p.init()
   assert.equal(p.statusSnapshot().aggregate.state, 'error')
 })
 
 test('a non-transient failure opens the circuit and later calls fail fast without hitting the network', async () => {
   let hits = 0
-  routes['/chat/completions'] = (req, res) => { hits++; res.writeHead(401, { 'content-type': 'application/json' }); res.end('{}') }
+  routes['/chat/completions'] = (req, res) => {
+    hits++
+    res.writeHead(401, { 'content-type': 'application/json' })
+    res.end('{}')
+  }
   const p = make()
   await p.init()
   await p.answer({ question: 'q', contextNotes: [] }).catch(() => {})
   assert.equal(hits, 1)
-  const e = await p.answer({ question: 'q', contextNotes: [] }).catch((x) => x)
+  const e = await p.answer({ question: 'q', contextNotes: [] }).catch(x => x)
   assert.equal(hits, 1, 'circuit must be open — no second request')
   assert.equal(e.code, 'circuit_open')
   assert.equal(p.available(), false)
@@ -234,5 +279,8 @@ test('listModels returns the endpoint catalogue for every role', async () => {
   const p = make()
   await p.init()
   const m = await p.listModels()
-  assert.deepEqual(m.llm.map((x) => x.key), ['llama3.2:3b', 'nomic-embed-text'])
+  assert.deepEqual(
+    m.llm.map(x => x.key),
+    ['llama3.2:3b', 'nomic-embed-text'],
+  )
 })

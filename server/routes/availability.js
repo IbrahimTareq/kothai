@@ -35,7 +35,7 @@ export async function handleAvailabilityScan(req, res) {
   }
   scanInProgress = true
   try {
-    const candidates = store.allNotes().filter((n) => isCheckable(n.url))
+    const candidates = store.allNotes().filter(n => isCheckable(n.url))
     if (!candidates.length) {
       return json(res, 200, { checked: 0, dead: 0, alive: 0, unknown: 0, marked: 0, unavailable: 0, aborted: false })
     }
@@ -46,22 +46,29 @@ export async function handleAvailabilityScan(req, res) {
     // when the guard trips.
     const verdicts = []
     let cursor = 0
-    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, candidates.length) }, async () => {
-      while (cursor < candidates.length) {
-        const n = candidates[cursor++]
-        verdicts.push({ note: n, verdict: await checkAvailability(n.url) })
-      }
-    }))
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, candidates.length) }, async () => {
+        while (cursor < candidates.length) {
+          const n = candidates[cursor++]
+          verdicts.push({ note: n, verdict: await checkAvailability(n.url) })
+        }
+      }),
+    )
 
-    const dead = verdicts.filter((v) => v.verdict === DEAD)
-    const alive = verdicts.filter((v) => v.verdict === ALIVE)
+    const dead = verdicts.filter(v => v.verdict === DEAD)
+    const alive = verdicts.filter(v => v.verdict === ALIVE)
     const unknown = verdicts.length - dead.length - alive.length
     const conclusive = dead.length + alive.length
 
     if (conclusive >= RATIO_MIN_SAMPLE && dead.length / conclusive > IMPLAUSIBLE_DEAD_RATIO) {
       return json(res, 200, {
-        checked: verdicts.length, dead: dead.length, alive: alive.length, unknown,
-        marked: 0, unavailable: countUnavailable(), aborted: true,
+        checked: verdicts.length,
+        dead: dead.length,
+        alive: alive.length,
+        unknown,
+        marked: 0,
+        unavailable: countUnavailable(),
+        aborted: true,
         error: `${dead.length} of ${conclusive} links reported gone — that is too many to believe. Nothing was marked; the check itself is likely being rate-limited. Try again later.`,
       })
     }
@@ -83,8 +90,14 @@ export async function handleAvailabilityScan(req, res) {
     }
 
     json(res, 200, {
-      checked: verdicts.length, dead: dead.length, alive: alive.length, unknown,
-      marked, cleared, unavailable: countUnavailable(), aborted: false,
+      checked: verdicts.length,
+      dead: dead.length,
+      alive: alive.length,
+      unknown,
+      marked,
+      cleared,
+      unavailable: countUnavailable(),
+      aborted: false,
     })
   } finally {
     scanInProgress = false
@@ -92,7 +105,7 @@ export async function handleAvailabilityScan(req, res) {
 }
 
 function countUnavailable() {
-  return store.allNotes().filter((n) => n.unavailable).length
+  return store.allNotes().filter(n => n.unavailable).length
 }
 
 export async function handleAvailabilityRemove(req, res) {
@@ -102,7 +115,7 @@ export async function handleAvailabilityRemove(req, res) {
   } catch {
     return json(res, 400, { error: 'Could not read the request.' })
   }
-  const targets = store.allNotes().filter((n) => n.unavailable)
+  const targets = store.allNotes().filter(n => n.unavailable)
   // The client sends the count it showed the user. If the library changed since
   // (a scan cleared a mark, another tab deleted something), the number in front
   // of them was not the number about to be deleted — so refuse rather than

@@ -33,11 +33,19 @@ export interface CollectionSource {
 export function useCollections(): CollectionSource {
   const [collections, setCollections] = useState<Collection[]>([])
 
-  const refetch = () => { Collections.list().then(setCollections).catch(() => {}) }
-  const sync = (c: Collection) => setCollections((prev) => prev.map((x) => (x.id === c.id ? c : x)))
+  const refetch = () => {
+    Collections.list()
+      .then(setCollections)
+      .catch(() => {})
+  }
+  const sync = (c: Collection) => setCollections(prev => prev.map(x => (x.id === c.id ? c : x)))
   // Await the server and adopt its answer; on failure fall back to the truth.
   const commit = async (run: () => Promise<Collection>) => {
-    try { sync(await run()) } catch { refetch() }
+    try {
+      sync(await run())
+    } catch {
+      refetch()
+    }
   }
 
   useEffect(refetch, [])
@@ -46,23 +54,23 @@ export function useCollections(): CollectionSource {
     collections,
     createCollection: async (name, tags) => {
       const c = await Collections.create(name, tags)
-      setCollections((prev) => [c, ...prev])
+      setCollections(prev => [c, ...prev])
       return c
     },
     renameCollection: (id, name) => {
-      setCollections((prev) => prev.map((c) => (c.id === id ? { ...c, name } : c)))
+      setCollections(prev => prev.map(c => (c.id === id ? { ...c, name } : c)))
       Collections.update(id, { name }).catch(() => {})
     },
     // The mounted canvas is the authority for the space it shows; this only
     // keeps the app's copy current so leaving and returning shows the latest
     // board. A failed write refetches, since a stale canvas is a lost layout.
     saveCanvas: (id, canvas) => {
-      setCollections((prev) => prev.map((c) => (c.id === id ? { ...c, canvas } : c)))
+      setCollections(prev => prev.map(c => (c.id === id ? { ...c, canvas } : c)))
       Collections.update(id, { canvas }).catch(refetch)
     },
     editCollectionTags: (id, tags) => commit(() => Collections.update(id, { tags })),
-    deleteCollection: (id) => {
-      setCollections((prev) => prev.filter((c) => c.id !== id))
+    deleteCollection: id => {
+      setCollections(prev => prev.filter(c => c.id !== id))
       Collections.remove(id).catch(() => {})
     },
     addToCollection: (cid, itemId) => commit(() => Collections.addItem(cid, itemId)),

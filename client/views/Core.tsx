@@ -39,8 +39,34 @@ interface CoreViewProps {
   warming: string
 }
 
-
-export function CoreView({ focus, onFocus, onBlur, onKey, text, setText, submit, taRef, coreRef, thread, jumpTo, pendingImg, onImageFile, clearImg, chatList, openChat, newChat, deleteChat, renameChat, chatId, chatTotal, loadMoreChats, llmOff, busy, stop, warming }: CoreViewProps) {
+export function CoreView({
+  focus,
+  onFocus,
+  onBlur,
+  onKey,
+  text,
+  setText,
+  submit,
+  taRef,
+  coreRef,
+  thread,
+  jumpTo,
+  pendingImg,
+  onImageFile,
+  clearImg,
+  chatList,
+  openChat,
+  newChat,
+  deleteChat,
+  renameChat,
+  chatId,
+  chatTotal,
+  loadMoreChats,
+  llmOff,
+  busy,
+  stop,
+  warming,
+}: CoreViewProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   const threadRef = useRef<HTMLDivElement>(null)
   const hasThread = thread.length > 0
@@ -56,20 +82,27 @@ export function CoreView({ focus, onFocus, onBlur, onKey, text, setText, submit,
   // stays the source of truth because the pinning below runs in layout effects
   // and observer callbacks, where a state read would be stale.
   const [pinned, setPinned] = useState(true)
-  const setStick = (v: boolean) => { stick.current = v; setPinned(v) }
+  const setStick = (v: boolean) => {
+    stick.current = v
+    setPinned(v)
+  }
   // "Scrolled up" has to mean a real gesture rather than any scroll event: a
   // cited preview's image lands after the answer commits and the composer
   // grows as it fills, and either makes the browser clamp scrollTop and fire a
   // scroll of its own. Reading `stick` from those would strand the view
   // mid-thread — the same symptom, one layer down.
   const gesture = useRef(0)
-  const noteGesture = () => { gesture.current = Date.now() }
+  const noteGesture = () => {
+    gesture.current = Date.now()
+  }
   const onThreadScroll = () => {
     const el = threadRef.current
     if (!el || Date.now() - gesture.current > 700) return
     setStick(el.scrollHeight - el.scrollTop - el.clientHeight < 80)
   }
-  useLayoutEffect(() => { if (!hasThread) setStick(true) }, [hasThread])
+  useLayoutEffect(() => {
+    if (!hasThread) setStick(true)
+  }, [hasThread])
   // Streaming rewrites the last message many times a second. This pin is
   // synchronous and cheap, and runs on every one of those commits; the
   // heavier machinery below only rebuilds when a message is added or removed.
@@ -81,7 +114,9 @@ export function CoreView({ focus, onFocus, onBlur, onKey, text, setText, submit,
   useLayoutEffect(() => {
     const el = threadRef.current
     if (!el) return
-    const pin = () => { if (stick.current) el.scrollTop = el.scrollHeight }
+    const pin = () => {
+      if (stick.current) el.scrollTop = el.scrollHeight
+    }
     pin()
 
     // One pin is never enough: the thread keeps growing after this commit,
@@ -93,11 +128,18 @@ export function CoreView({ focus, onFocus, onBlur, onKey, text, setText, submit,
     // 1. A short frame loop, for layout that settles within a few frames.
     let raf = 0
     let until = Date.now() + 400
-    const tick = () => { pin(); if (Date.now() < until) raf = requestAnimationFrame(tick) }
+    const tick = () => {
+      pin()
+      if (Date.now() < until) raf = requestAnimationFrame(tick)
+    }
     raf = requestAnimationFrame(tick)
 
     // 2. Each preview image as it lands. `load` doesn't bubble, hence capture.
-    const onLoad = () => { until = Date.now() + 300; if (!raf) raf = requestAnimationFrame(tick); pin() }
+    const onLoad = () => {
+      until = Date.now() + 300
+      if (!raf) raf = requestAnimationFrame(tick)
+      pin()
+    }
     el.addEventListener('load', onLoad, true)
 
     // 3. The window changing shape — a rotation or a resize long after the
@@ -119,7 +161,10 @@ export function CoreView({ focus, onFocus, onBlur, onKey, text, setText, submit,
 
   // Sending always pulls the view back to the bottom, however far up the user
   // had scrolled — their own message is the one thing they always want to see.
-  const send = () => { setStick(true); submit() }
+  const send = () => {
+    setStick(true)
+    submit()
+  }
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) setStick(true)
     onKey(e)
@@ -145,36 +190,58 @@ export function CoreView({ focus, onFocus, onBlur, onKey, text, setText, submit,
       <div className="console">
         {hasThread && (
           <div className="mode-toggle">
-            <button className="newchat" onClick={newChat} title="Start a new chat">✚ New chat</button>
+            <button className="newchat" onClick={newChat} title="Start a new chat">
+              ✚ New chat
+            </button>
           </div>
         )}
 
         {hasThread && (
           <div className="thread-wrap">
-            <div className="thread" ref={threadRef} onScroll={onThreadScroll}
-              onWheel={noteGesture} onTouchMove={noteGesture} onPointerDown={noteGesture}
-              role="log" aria-live="polite" aria-relevant="additions text" aria-label="Conversation">
-              {thread.map((m, i) => m.role === 'user'
-                ? <div key={i} className="msg-user-row">
-                  <div className="msg-user">{m.img && <img className="msg-img" src={m.img} alt="attachment" />}{m.text}</div>
-                  {m.ts ? <div className="msg-time mono">{clockTime(m.ts)}</div> : null}
-                </div>
-                : <div key={i} className="msg-ai">
-                  <div className="ai-body">
-                    {m.pending
-                      ? <div className="thinking"><span></span><span></span><span></span>
-                        {warming && <span className="warming mono">{warming}</span>}
-                      </div>
-                      : m.stopped && !m.lead
+            <div
+              className="thread"
+              ref={threadRef}
+              onScroll={onThreadScroll}
+              onWheel={noteGesture}
+              onTouchMove={noteGesture}
+              onPointerDown={noteGesture}
+              role="log"
+              aria-live="polite"
+              aria-relevant="additions text"
+              aria-label="Conversation"
+            >
+              {thread.map((m, i) =>
+                m.role === 'user' ? (
+                  <div key={i} className="msg-user-row">
+                    <div className="msg-user">
+                      {m.img && <img className="msg-img" src={m.img} alt="attachment" />}
+                      {m.text}
+                    </div>
+                    {m.ts ? <div className="msg-time mono">{clockTime(m.ts)}</div> : null}
+                  </div>
+                ) : (
+                  <div key={i} className="msg-ai">
+                    <div className="ai-body">
+                      {m.pending ? (
+                        <div className="thinking">
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                          {warming && <span className="warming mono">{warming}</span>}
+                        </div>
+                      ) : m.stopped && !m.lead ? (
                         // Stopped before it said anything: a state, not a reply,
                         // so none of the answer furniture applies.
-                        ? <div className="msg-stopped">
+                        <div className="msg-stopped">
                           <span>Stopped.</span>
                           {m.ts ? <span className="msg-time mono">{clockTime(m.ts)}</span> : null}
                         </div>
-                        : <AiAnswer m={m} jumpTo={jumpTo} />}
+                      ) : (
+                        <AiAnswer m={m} jumpTo={jumpTo} />
+                      )}
+                    </div>
                   </div>
-                </div>,
+                ),
               )}
             </div>
             {!pinned && (
@@ -188,35 +255,79 @@ export function CoreView({ focus, onFocus, onBlur, onKey, text, setText, submit,
         {llmOff ? (
           <div className="ask-off">
             <span className="mono">ASK IS OFF</span>
-            <span>The language model is disabled, so questions can't be answered. Turn it on under Settings → Model Cores.</span>
+            <span>
+              The language model is disabled, so questions can't be answered. Turn it on under Settings → Model Cores.
+            </span>
           </div>
         ) : (
           <div className={'input-shell' + (focus ? ' focus' : '')}>
             {pendingImg && (
               <span className="attach-preview">
                 <img src={pendingImg} alt="attachment" />
-                <button className="attach-x" aria-label="Remove attached image" title="Remove attached image" onClick={clearImg}>✕</button>
+                <button
+                  className="attach-x"
+                  aria-label="Remove attached image"
+                  title="Remove attached image"
+                  onClick={clearImg}
+                >
+                  ✕
+                </button>
               </span>
             )}
-            <textarea ref={taRef} rows={1} value={text} disabled={llmOff}
+            <textarea
+              ref={taRef}
+              rows={1}
+              value={text}
+              disabled={llmOff}
               aria-label="Ask a question about your vault"
               placeholder={'Ask anything...'}
-              onChange={(e) => setText(e.target.value)} onFocus={onFocus} onBlur={onBlur} onKeyDown={onKeyDown}
-              onPaste={(e) => { const it = Array.from(e.clipboardData?.items || []).find((x) => x.type.startsWith('image/')); if (it) { e.preventDefault(); onImageFile(it.getAsFile()) } }} />
-            <input type="file" accept="image/*" ref={fileRef} style={{ display: 'none' }} onChange={(e) => { onImageFile(e.target.files?.[0]); e.target.value = '' }} />
-            <button className="attach-btn" aria-label="Attach an image" title="Attach an image" onClick={() => fileRef.current && fileRef.current.click()}>
+              onChange={e => setText(e.target.value)}
+              onFocus={onFocus}
+              onBlur={onBlur}
+              onKeyDown={onKeyDown}
+              onPaste={e => {
+                const it = Array.from(e.clipboardData?.items || []).find(x => x.type.startsWith('image/'))
+                if (it) {
+                  e.preventDefault()
+                  onImageFile(it.getAsFile())
+                }
+              }}
+            />
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileRef}
+              style={{ display: 'none' }}
+              onChange={e => {
+                onImageFile(e.target.files?.[0])
+                e.target.value = ''
+              }}
+            />
+            <button
+              className="attach-btn"
+              aria-label="Attach an image"
+              title="Attach an image"
+              onClick={() => fileRef.current && fileRef.current.click()}
+            >
               <Icon name="image" size={17} />
             </button>
             {/* One control in one place: while an answer is in flight the send
               button becomes the way to abandon it, rather than a second button
               appearing next to a dead one. */}
-            {busy
-              ? <button className="send-btn stop" aria-label="Stop generating" title="Stop generating" onClick={stop}>
+            {busy ? (
+              <button className="send-btn stop" aria-label="Stop generating" title="Stop generating" onClick={stop}>
                 <Icon name="stop" size={18} />
               </button>
-              : <button className="send-btn" aria-label="Send question" disabled={llmOff || (!text.trim() && !pendingImg)} onClick={send}>
+            ) : (
+              <button
+                className="send-btn"
+                aria-label="Send question"
+                disabled={llmOff || (!text.trim() && !pendingImg)}
+                onClick={send}
+              >
                 <Icon name="ask" size={18} />
-              </button>}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -225,14 +336,23 @@ export function CoreView({ focus, onFocus, onBlur, onKey, text, setText, submit,
         <div className="recent">
           <div className="recent-h">CHAT HISTORY</div>
           <div className="chat-list">
-            {chatList.map((c) => (
-              <ChatRow key={c.id} chat={c} active={c.id === chatId}
-                open={openChat} rename={renameChat} remove={deleteChat} />
+            {chatList.map(c => (
+              <ChatRow
+                key={c.id}
+                chat={c}
+                active={c.id === chatId}
+                open={openChat}
+                rename={renameChat}
+                remove={deleteChat}
+              />
             ))}
           </div>
           {chatList.length < chatTotal && (
             <button className="btn chat-more" onClick={loadMoreChats}>
-              Load more <span className="mono dim">{chatList.length} / {chatTotal}</span>
+              Load more{' '}
+              <span className="mono dim">
+                {chatList.length} / {chatTotal}
+              </span>
             </button>
           )}
         </div>
@@ -251,25 +371,37 @@ function AiAnswer({ m, jumpTo }: { m: ThreadMsg; jumpTo: (item: UIItem) => void 
   const nums: number[] = []
   for (const match of (m.lead || '').matchAll(/\[(\d+)\]/g)) {
     const n = parseInt(match[1], 10)
-    if (n >= 1 && n <= cited.length && !seen.has(n)) { seen.add(n); nums.push(n) }
+    if (n >= 1 && n <= cited.length && !seen.has(n)) {
+      seen.add(n)
+      nums.push(n)
+    }
   }
-  const featured = nums.map((n) => ({ n, item: cited[n - 1] }))
-  const featIds = new Set(featured.map((f) => f.item.id))
-  const others = cited.filter((c) => !featIds.has(c.id))
+  const featured = nums.map(n => ({ n, item: cited[n - 1] }))
+  const featIds = new Set(featured.map(f => f.item.id))
+  const others = cited.filter(c => !featIds.has(c.id))
   return (
     <>
       <div className={'ai-lead' + (m.streaming ? ' streaming' : '')}>{renderLead(m, jumpTo)}</div>
       {featured.length > 0 && (
-        <div className="preview-list">{featured.map((f) => <PreviewCard key={f.item.id} n={f.n} item={f.item} onJump={jumpTo} />)}</div>
+        <div className="preview-list">
+          {featured.map(f => (
+            <PreviewCard key={f.item.id} n={f.n} item={f.item} onJump={jumpTo} />
+          ))}
+        </div>
       )}
       {others.length > 0 && (
         <div className="also">
-          <button className="also-toggle mono" onClick={() => setShowOthers((v) => !v)} aria-expanded={showOthers}>
+          <button className="also-toggle mono" onClick={() => setShowOthers(v => !v)} aria-expanded={showOthers}>
             <span className={'also-caret' + (showOthers ? ' open' : '')}></span>
-            {featured.length > 0 ? 'ALSO CONSIDERED' : 'SOURCES SEARCHED'} <span className="also-count">{others.length}</span>
+            {featured.length > 0 ? 'ALSO CONSIDERED' : 'SOURCES SEARCHED'}{' '}
+            <span className="also-count">{others.length}</span>
           </button>
           {showOthers && (
-            <div className="cited-list">{others.map((c) => <CitedCard key={c.id} item={c} onJump={jumpTo} />)}</div>
+            <div className="cited-list">
+              {others.map(c => (
+                <CitedCard key={c.id} item={c} onJump={jumpTo} />
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -290,7 +422,12 @@ function AiAnswer({ m, jumpTo }: { m: ThreadMsg; jumpTo: (item: UIItem) => void 
 // the difference between a button that works and one that silently does
 // nothing, which is how this first shipped.
 async function writeClipboard(text: string): Promise<boolean> {
-  try { await navigator.clipboard.writeText(text); return true } catch { /* try the fallback */ }
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    /* try the fallback */
+  }
   try {
     const ta = document.createElement('textarea')
     ta.value = text
@@ -301,7 +438,9 @@ async function writeClipboard(text: string): Promise<boolean> {
     const ok = document.execCommand('copy')
     document.body.removeChild(ta)
     return ok
-  } catch { return false }
+  } catch {
+    return false
+  }
 }
 
 // Copy the answer as the model wrote it — the Markdown source, not the
@@ -318,8 +457,12 @@ function CopyAnswer({ text }: { text: string }) {
   }
   const label = state === 'done' ? 'Copied' : state === 'failed' ? "Couldn't copy" : 'Copy'
   return (
-    <button className={'msg-copy' + (state === 'idle' ? '' : ' ' + state)} onClick={copy}
-      aria-label={state === 'idle' ? 'Copy answer' : label} title={label}>
+    <button
+      className={'msg-copy' + (state === 'idle' ? '' : ' ' + state)}
+      onClick={copy}
+      aria-label={state === 'idle' ? 'Copy answer' : label}
+      title={label}
+    >
       <Icon name={state === 'done' ? 'check' : 'copy'} size={13} />
       <span>{label}</span>
     </button>
@@ -335,9 +478,15 @@ function linkifyCites(text: string, m: ThreadMsg, jumpTo: (item: UIItem) => void
     const n = parseInt(match[1], 10)
     const item = n >= 1 && n <= cited.length ? cited[n - 1] : null
     out.push(text.slice(last, match.index))
-    out.push(item
-      ? <button key={keyBase + match.index} className="cite-ref mono" title="Show note" onClick={() => jumpTo(item)}>{n}</button>
-      : match[0])
+    out.push(
+      item ? (
+        <button key={keyBase + match.index} className="cite-ref mono" title="Show note" onClick={() => jumpTo(item)}>
+          {n}
+        </button>
+      ) : (
+        match[0]
+      ),
+    )
     last = match.index + match[0].length
   }
   out.push(text.slice(last))
@@ -353,15 +502,33 @@ function renderLead(m: ThreadMsg, jumpTo: (item: UIItem) => void): ReactNode {
   return parseMarkdown(m.lead || '').map((b, i) => {
     switch (b.kind) {
       case 'pre':
-        return <pre key={i} className="ai-pre"><code>{b.text}</code></pre>
+        return (
+          <pre key={i} className="ai-pre">
+            <code>{b.text}</code>
+          </pre>
+        )
       case 'h':
-        return <p key={i} className="ai-h">{renderSpans(b.spans, m, jumpTo, String(i))}</p>
+        return (
+          <p key={i} className="ai-h">
+            {renderSpans(b.spans, m, jumpTo, String(i))}
+          </p>
+        )
       case 'ul':
-        return <ul key={i} className="ai-list">{b.items.map((it, j) =>
-          <li key={j}>{renderSpans(it, m, jumpTo, i + '.' + j)}</li>)}</ul>
+        return (
+          <ul key={i} className="ai-list">
+            {b.items.map((it, j) => (
+              <li key={j}>{renderSpans(it, m, jumpTo, i + '.' + j)}</li>
+            ))}
+          </ul>
+        )
       case 'ol':
-        return <ol key={i} className="ai-list" start={b.start}>{b.items.map((it, j) =>
-          <li key={j}>{renderSpans(it, m, jumpTo, i + '.' + j)}</li>)}</ol>
+        return (
+          <ol key={i} className="ai-list" start={b.start}>
+            {b.items.map((it, j) => (
+              <li key={j}>{renderSpans(it, m, jumpTo, i + '.' + j)}</li>
+            ))}
+          </ol>
+        )
       default:
         return <p key={i}>{renderSpans(b.spans, m, jumpTo, String(i))}</p>
     }
@@ -373,7 +540,12 @@ function renderSpans(spans: Inline[], m: ThreadMsg, jumpTo: (item: UIItem) => vo
     const k = keyBase + ':' + i
     if (s.kind === 'br') return <br key={k} />
     // A code span is verbatim by definition — no citations, no question echo.
-    if (s.kind === 'code') return <code key={k} className="ai-code">{s.text}</code>
+    if (s.kind === 'code')
+      return (
+        <code key={k} className="ai-code">
+          {s.text}
+        </code>
+      )
     const inner = decorate(s.text, m, jumpTo, k)
     if (s.kind === 'strong') return <strong key={k}>{inner}</strong>
     if (s.kind === 'em') return <em key={k}>{inner}</em>
@@ -387,11 +559,14 @@ function decorate(text: string, m: ThreadMsg, jumpTo: (item: UIItem) => void, ke
   const q = m.q?.trim()
   if (q) {
     const parts = text.split('“' + q + '”')
-    if (parts.length === 2) return [
-      ...linkifyCites(parts[0], m, jumpTo, keyBase + 'a'),
-      <Fragment key={keyBase + 'q'}>“<span className="q">{q}</span>”</Fragment>,
-      ...linkifyCites(parts[1], m, jumpTo, keyBase + 'b'),
-    ]
+    if (parts.length === 2)
+      return [
+        ...linkifyCites(parts[0], m, jumpTo, keyBase + 'a'),
+        <Fragment key={keyBase + 'q'}>
+          “<span className="q">{q}</span>”
+        </Fragment>,
+        ...linkifyCites(parts[1], m, jumpTo, keyBase + 'b'),
+      ]
   }
   return linkifyCites(text, m, jumpTo, keyBase)
 }

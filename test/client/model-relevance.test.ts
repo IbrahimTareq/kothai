@@ -9,11 +9,23 @@ import { relevantModels } from '../../client/domain/modelRelevance.ts'
 
 // A realistic slice of what OpenAI actually lists.
 const OPENAI = [
-  'gpt-4o', 'gpt-4o-mini', 'gpt-4.1', 'gpt-4.1-mini', 'o3-mini',
-  'text-embedding-3-small', 'text-embedding-3-large', 'text-embedding-ada-002',
-  'dall-e-3', 'tts-1', 'tts-1-hd', 'whisper-1',
-  'omni-moderation-latest', 'babbage-002', 'davinci-002',
-  'gpt-4o-audio-preview', 'gpt-4o-realtime-preview',
+  'gpt-4o',
+  'gpt-4o-mini',
+  'gpt-4.1',
+  'gpt-4.1-mini',
+  'o3-mini',
+  'text-embedding-3-small',
+  'text-embedding-3-large',
+  'text-embedding-ada-002',
+  'dall-e-3',
+  'tts-1',
+  'tts-1-hd',
+  'whisper-1',
+  'omni-moderation-latest',
+  'babbage-002',
+  'davinci-002',
+  'gpt-4o-audio-preview',
+  'gpt-4o-realtime-preview',
 ]
 
 test('the embedding role offers only embedding models', () => {

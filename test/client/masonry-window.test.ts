@@ -6,7 +6,16 @@
 // number of mounted cards stays constant no matter how large the library is.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { columnCount, packColumns, visibleBoxes, columnWidth, clampScrollTop, HeightBook, OVERSCAN, GAP } from '../../client/layout/masonry.ts'
+import {
+  columnCount,
+  packColumns,
+  visibleBoxes,
+  columnWidth,
+  clampScrollTop,
+  HeightBook,
+  OVERSCAN,
+  GAP,
+} from '../../client/layout/masonry.ts'
 
 // --- columnCount ---------------------------------------------------------
 //
@@ -35,7 +44,7 @@ const boardWidth = (viewport: number, scrollbar = 0) =>
 
 // Every column count this viewport can produce across the scrollbar band.
 const countsAt = (viewport: number, view: 'grid4' | 'grid6' | 'grid8') =>
-  SCROLLBARS.map((sb) => columnCount(boardWidth(viewport, sb), view))
+  SCROLLBARS.map(sb => columnCount(boardWidth(viewport, sb), view))
 
 // The width one card actually gets, for the assertions about legibility.
 const cardWidth = (viewport: number, view: 'grid4' | 'grid6' | 'grid8') => {
@@ -83,8 +92,10 @@ test('a scrollbar never moves the column count by more than one', () => {
   for (let viewport = 320; viewport <= 1920; viewport++) {
     for (const v of VIEWS) {
       const counts = countsAt(viewport, v)
-      assert.ok(Math.max(...counts) - Math.min(...counts) <= 1,
-        `${v} @ ${viewport} gave ${counts.join('/')} across scrollbar widths ${SCROLLBARS.join('/')}`)
+      assert.ok(
+        Math.max(...counts) - Math.min(...counts) <= 1,
+        `${v} @ ${viewport} gave ${counts.join('/')} across scrollbar widths ${SCROLLBARS.join('/')}`,
+      )
     }
   }
 })
@@ -105,8 +116,7 @@ test('columnCount steps by one, so no width doubles the column count', () => {
       // The board itself jumps ~100px narrower at 641 when the rail appears,
       // so only compare where the chrome is continuous.
       if (viewport !== 641) {
-        assert.ok(Math.abs(next - prev) <= 1,
-          `${v} jumped ${prev} -> ${next} at viewport ${viewport}`)
+        assert.ok(Math.abs(next - prev) <= 1, `${v} jumped ${prev} -> ${next} at viewport ${viewport}`)
       }
       prev = next
     }
@@ -125,11 +135,14 @@ const h = (heights: Record<string, number>) => (id: string) => heights[id] ?? 10
 test('packColumns places each item in the shortest column and stacks with the gap', () => {
   const items = ['a', 'b', 'c']
   const { boxes, total } = packColumns(items, 2, h({ a: 100, b: 50, c: 30 }), 10)
-  assert.deepEqual(boxes.map((b) => [b.id, b.col, b.top]), [
-    ['a', 0, 0],   // both columns empty -> first
-    ['b', 1, 0],   // column 1 still empty -> next
-    ['c', 1, 60],  // column 1 (50) is shorter than column 0 (100)
-  ])
+  assert.deepEqual(
+    boxes.map(b => [b.id, b.col, b.top]),
+    [
+      ['a', 0, 0], // both columns empty -> first
+      ['b', 1, 0], // column 1 still empty -> next
+      ['c', 1, 60], // column 1 (50) is shorter than column 0 (100)
+    ],
+  )
   assert.equal(total, 100, 'total is the tallest column')
 })
 
@@ -137,7 +150,7 @@ test('packColumns keeps every item, and total covers the tallest column includin
   const ids = Array.from({ length: 100 }, (_, i) => 'i' + i)
   const { boxes, total } = packColumns(ids, 4, () => 50, 10)
   assert.equal(boxes.length, 100)
-  assert.equal(new Set(boxes.map((b) => b.id)).size, 100, 'no item dropped or duplicated')
+  assert.equal(new Set(boxes.map(b => b.id)).size, 100, 'no item dropped or duplicated')
   // 100 items / 4 columns = 25 per column: 25 cards + 24 gaps
   assert.equal(total, 25 * 50 + 24 * 10)
 })
@@ -150,7 +163,13 @@ test('packColumns handles an empty list without producing a negative total', () 
 
 // --- visibleBoxes: the actual windowing --------------------------------
 
-const grid = (n: number) => packColumns(Array.from({ length: n }, (_, i) => 'i' + i), 4, () => 200, 14)
+const grid = (n: number) =>
+  packColumns(
+    Array.from({ length: n }, (_, i) => 'i' + i),
+    4,
+    () => 200,
+    14,
+  )
 
 test('visibleBoxes returns only what is near the viewport, not the whole library', () => {
   const { boxes } = grid(4000) // 1000 rows deep
@@ -168,7 +187,7 @@ test('visibleBoxes window size stays CONSTANT as the library grows — the whole
 test('visibleBoxes includes an overscan margin so scrolling never reveals empty space', () => {
   const { boxes } = grid(4000)
   const vis = visibleBoxes(boxes, 5000, 900)
-  const tops = vis.map((b) => b.top)
+  const tops = vis.map(b => b.top)
   assert.ok(Math.min(...tops) <= 5000 - OVERSCAN + 200, 'must reach above the viewport')
   assert.ok(Math.max(...tops) >= 5000 + 900, 'must reach below the viewport')
 })
@@ -182,7 +201,7 @@ test('visibleBoxes at the very top and very bottom still returns cards', () => {
 test('visibleBoxes excludes a card that is far above the scroll position', () => {
   const { boxes } = grid(4000)
   const vis = visibleBoxes(boxes, 20000, 900)
-  assert.ok(!vis.some((b) => b.top + b.height < 20000 - OVERSCAN), 'nothing far above may be mounted')
+  assert.ok(!vis.some(b => b.top + b.height < 20000 - OVERSCAN), 'nothing far above may be mounted')
 })
 
 // --- columnWidth: never hand the DOM a negative width -------------------

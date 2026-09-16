@@ -54,7 +54,7 @@ export function verifySession(token, password, { now = Date.now() } = {}) {
 // error path, and only for that guess.
 export function passwordMatches(input, password) {
   if (typeof input !== 'string' || typeof password !== 'string') return false
-  const digest = (s) => createHash('sha256').update(s).digest()
+  const digest = s => createHash('sha256').update(s).digest()
   return timingSafeEqual(digest(input), digest(password))
 }
 
@@ -115,7 +115,7 @@ export function createThrottle({ max = 10, windowMs = 15 * 60 * 1000 } = {}) {
   const hits = new Map()
 
   const prune = (key, now) => {
-    const kept = (hits.get(key) || []).filter((t) => now - t < windowMs)
+    const kept = (hits.get(key) || []).filter(t => now - t < windowMs)
     if (kept.length) hits.set(key, kept)
     else hits.delete(key)
     return kept
@@ -124,7 +124,7 @@ export function createThrottle({ max = 10, windowMs = 15 * 60 * 1000 } = {}) {
   // Per-key pruning only ever touches keys that come back. Spoofed source
   // addresses would otherwise grow this map without bound, so sweep the whole
   // thing once it gets big rather than tracking eviction per entry.
-  const sweep = (now) => {
+  const sweep = now => {
     if (hits.size <= MAX_KEYS) return
     for (const key of [...hits.keys()]) prune(key, now)
   }

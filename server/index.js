@@ -60,10 +60,15 @@ server.listen(PORT, () => {
   // default and safe on a LAN, but it is exactly the thing you want to notice
   // before pointing a public hostname at this.
   if (PASSWORD) console.log('  Auth: password required (STASH_PASSWORD is set)\n')
-  else console.log('  Auth: none — anyone who can reach this port has full access. Set STASH_PASSWORD to require a password.\n')
-  if (reembedding || providerReembedding) console.log('  Re-embedding the library in the background after an embedding change…\n')
+  else
+    console.log(
+      '  Auth: none — anyone who can reach this port has full access. Set STASH_PASSWORD to require a password.\n',
+    )
+  if (reembedding || providerReembedding)
+    console.log('  Re-embedding the library in the background after an embedding change…\n')
   if (!ai.capabilities().downloadsWeights) console.log(`  Inference: remote endpoint\n`)
-  else if (settings.isConfigured()) console.log('  Loading local QVAC models in the background (first run downloads them)…\n')
+  else if (settings.isConfigured())
+    console.log('  Loading local QVAC models in the background (first run downloads them)…\n')
   else console.log('  Waiting for first-run model selection at the app before downloading models…\n')
 })
 if (settings.isConfigured()) ai.boot().catch(() => {})

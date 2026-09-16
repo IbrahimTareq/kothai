@@ -8,8 +8,13 @@ import { computeAggregate } from '../../../../server/ai/providers/local.js'
 
 const idle = (model = '') => ({ state: 'idle', progress: 0, message: '', model })
 const off = () => ({ state: 'off', progress: 0, message: '', model: '' })
-const ready = (model) => ({ state: 'ready', progress: 100, message: 'Ready', model })
-const loading = (model, progress, message) => ({ state: 'loading', progress, message: message ?? `${model}: ${progress}%`, model })
+const ready = model => ({ state: 'ready', progress: 100, message: 'Ready', model })
+const loading = (model, progress, message) => ({
+  state: 'loading',
+  progress,
+  message: message ?? `${model}: ${progress}%`,
+  model,
+})
 const error = (model, message = 'boom') => ({ state: 'error', progress: 0, message, model })
 
 test('all roles off → ready', () => {

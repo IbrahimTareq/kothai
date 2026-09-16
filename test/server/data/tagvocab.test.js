@@ -26,7 +26,7 @@ const VECS = {
   cooking: [0.97, 0.24, 0],
   travel: [0, 1, 0],
 }
-const fakeEmbed = async (tag) => VECS[tag] || [0, 0, 1]
+const fakeEmbed = async tag => VECS[tag] || [0, 0, 1]
 
 test('canonicalize: snaps a near-duplicate to the existing tag', async () => {
   tagvocab._reset()
@@ -46,7 +46,7 @@ test('canonicalize: below threshold registers as new (unchanged)', async () => {
 test('canonicalize: exact match does not re-embed', async () => {
   tagvocab._reset()
   let calls = 0
-  const counting = async (t) => {
+  const counting = async t => {
     calls++
     return VECS[t] || [0, 0, 1]
   }

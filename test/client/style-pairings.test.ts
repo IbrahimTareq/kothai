@@ -20,7 +20,10 @@ import { loadThemes, pairContrast } from '../../scripts/token-colors.mjs'
 const STYLES = fileURLToPath(new URL('../../client/styles/', import.meta.url))
 const TOKENS = new URL('../../client/styles/foundation/tokens.css', import.meta.url)
 const { dark, light } = loadThemes(TOKENS)
-const THEMES: [string, Record<string, string>][] = [['dark', dark], ['light', light]]
+const THEMES: [string, Record<string, string>][] = [
+  ['dark', dark],
+  ['light', light],
+]
 
 // Two tiers, because the system has two kinds of pairing.
 //
@@ -46,14 +49,15 @@ const MEDIA_BACKDROP = new Set(['--overlay'])
 // the same exclusion the token linter makes.
 const SKIP = new Set(['tweaks.css'])
 
-const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true })
-  .flatMap(e => e.isDirectory() ? walk(join(dir, e.name))
-    : e.name.endsWith('.css') && !SKIP.has(e.name) ? [join(dir, e.name)] : [])
+const walk = (dir: string): string[] =>
+  readdirSync(dir, { withFileTypes: true }).flatMap(e =>
+    e.isDirectory() ? walk(join(dir, e.name)) : e.name.endsWith('.css') && !SKIP.has(e.name) ? [join(dir, e.name)] : [],
+  )
 
-type Pairing = { file: string, selector: string, fg: string, bg: string }
+type Pairing = { file: string; selector: string; fg: string; bg: string }
 
 /** Every rule declaring both colour and background as a single var() token. */
-function pairings (): Pairing[] {
+function pairings(): Pairing[] {
   const found: Pairing[] = []
   for (const path of walk(STYLES)) {
     const src = readFileSync(path, 'utf8')
@@ -86,13 +90,16 @@ for (const [themeName, theme] of THEMES) {
     const failures: string[] = []
     for (const { file, selector, fg, bg } of RULES) {
       const r = pairContrast(fg, bg, theme)
-      if (r === null) continue   // one side is not a colour token; not our bug class
+      if (r === null) continue // one side is not a colour token; not our bug class
       const floor = RECESSIVE_INK.has(fg) || MEDIA_BACKDROP.has(bg) ? PERCEPTIBLE : AA_LARGE
       if (r < floor) {
         failures.push(`${file}  ${selector}\n    ${fg} on ${bg} = ${r.toFixed(2)}:1, floor ${floor}:1`)
       }
     }
-    assert.equal(failures.length, 0,
-      `${failures.length} unreadable pairing(s) in ${themeName}:\n  ${failures.join('\n  ')}`)
+    assert.equal(
+      failures.length,
+      0,
+      `${failures.length} unreadable pairing(s) in ${themeName}:\n  ${failures.join('\n  ')}`,
+    )
   })
 }

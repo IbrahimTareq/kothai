@@ -37,11 +37,13 @@ export function useNotes(query: PagerQuery, enabled = true): NoteSource {
   const mounted = useRef(true)
   useEffect(() => {
     mounted.current = true
-    return () => { mounted.current = false }
+    return () => {
+      mounted.current = false
+    }
   }, [])
   const [, bump] = useState(0)
   const [ready, setReady] = useState(false)
-  const rerender = () => bump((v) => v + 1)
+  const rerender = () => bump(v => v + 1)
   // Serialize the query so effect deps compare by value, and debounce q.
   const [live, setLive] = useState(query)
   const key = JSON.stringify(live)
@@ -55,7 +57,11 @@ export function useNotes(query: PagerQuery, enabled = true): NoteSource {
     const q = JSON.parse(key) as PagerQuery
     pager.current.markInflight(offset)
     API.page({ offset, limit: PAGE, ...q })
-      .then((p) => { pager.current.applyPage(p); setReady(true); rerender() })
+      .then(p => {
+        pager.current.applyPage(p)
+        setReady(true)
+        rerender()
+      })
       .catch(() => pager.current.clearInflight(offset)) // next scroll tick retries
   }
 
@@ -100,52 +106,63 @@ export function useNotes(query: PagerQuery, enabled = true): NoteSource {
           pager.current.bootId = d.bootId
           rerender()
         }
-      } catch { /* next tick retries */ }
+      } catch {
+        /* next tick retries */
+      }
       // Bump a plain counter so the dependency array's value changes every
       // tick, forcing the effect to re-arm — a boolean (or a rev number that
       // could plateau) that stays constant across renders would never
       // retrigger it. Same reasoning as the pendingTotal/loadedPending
       // dependency this loop replaced.
-      setTickCount((v) => v + 1)
+      setTickCount(v => v + 1)
     }, delay)
     return () => clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, anyPending, hot, key, ready, tickCount])
 
-  return useMemo(() => ({
-    slots: pager.current.slots(),
-    total: pager.current.total,
-    facets: pager.current.facets,
-    ready,
-    ensure: (first: number, last: number) => {
-      // One page of lookahead beyond the visible window.
-      for (const off of pager.current.neededPages(Math.max(0, first - PAGE / 2), last + PAGE)) fetchPage(off)
-      // Debounced viewport-priority ping: wait for scrolling to settle
-      // before telling the server which thumbless Instagram notes are
-      // actually on screen, rather than firing one per scroll tick.
-      clearTimeout(priorityTimer.current)
-      priorityTimer.current = window.setTimeout(() => {
-        if (!mounted.current) return
-        const ids = pager.current.thumbless(first, last).filter((id) => !sentPriority.current.has(id))
-        if (!ids.length) return
-        ids.forEach((id) => sentPriority.current.add(id))
-        pager.current.markAwaitingThumb(ids, Date.now(), 20_000)
+  return useMemo(
+    () => ({
+      slots: pager.current.slots(),
+      total: pager.current.total,
+      facets: pager.current.facets,
+      ready,
+      ensure: (first: number, last: number) => {
+        // One page of lookahead beyond the visible window.
+        for (const off of pager.current.neededPages(Math.max(0, first - PAGE / 2), last + PAGE)) fetchPage(off)
+        // Debounced viewport-priority ping: wait for scrolling to settle
+        // before telling the server which thumbless Instagram notes are
+        // actually on screen, rather than firing one per scroll tick.
+        clearTimeout(priorityTimer.current)
+        priorityTimer.current = window.setTimeout(() => {
+          if (!mounted.current) return
+          const ids = pager.current.thumbless(first, last).filter(id => !sentPriority.current.has(id))
+          if (!ids.length) return
+          ids.forEach(id => sentPriority.current.add(id))
+          pager.current.markAwaitingThumb(ids, Date.now(), 20_000)
+          rerender()
+          API.prioritize(ids)
+        }, 500)
+      },
+      insertLocal: (item: UIItem) => {
+        if (!matchesLocal(item, JSON.parse(key))) return
+        pager.current.insertLocal(item)
+        // A fresh save lands with heuristic metadata only; watch it so the
+        // delta poll runs hot until the server's enrichment pass replaces it.
+        // The TTL just bounds the fast cadence — an item still pending after
+        // it lapses falls back to the normal poll rather than stopping.
+        if (item.pending) pager.current.watch([item.id], Date.now(), 90_000)
         rerender()
-        API.prioritize(ids)
-      }, 500)
-    },
-    insertLocal: (item: UIItem) => {
-      if (!matchesLocal(item, JSON.parse(key))) return
-      pager.current.insertLocal(item)
-      // A fresh save lands with heuristic metadata only; watch it so the
-      // delta poll runs hot until the server's enrichment pass replaces it.
-      // The TTL just bounds the fast cadence — an item still pending after
-      // it lapses falls back to the normal poll rather than stopping.
-      if (item.pending) pager.current.watch([item.id], Date.now(), 90_000)
-      rerender()
-    },
-    removeLocal: (id: string) => { pager.current.removeLocal(id); rerender() },
-    patchLocal: (id: string, patch: Partial<UIItem>) => { pager.current.patchLocal(id, patch); rerender() },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [pager.current.slots(), ready, key])
+      },
+      removeLocal: (id: string) => {
+        pager.current.removeLocal(id)
+        rerender()
+      },
+      patchLocal: (id: string, patch: Partial<UIItem>) => {
+        pager.current.patchLocal(id, patch)
+        rerender()
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }),
+    [pager.current.slots(), ready, key],
+  )
 }

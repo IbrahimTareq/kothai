@@ -34,9 +34,18 @@ test('scanWeights lists cache files with their sizes, largest first', async () =
   const dir = fixture({ 'aaa_small.gguf': 10, 'bbb_big.gguf': 100, 'ccc_mid.gguf': 50 })
   try {
     const { entries, totalBytes } = await scanWeights(dir)
-    assert.deepEqual(entries.map((e) => e.name), ['bbb_big.gguf', 'ccc_mid.gguf', 'aaa_small.gguf'])
-    assert.deepEqual(entries.map((e) => e.sizeBytes), [100, 50, 10])
-    assert.equal(entries.every((e) => e.kind === 'file'), true)
+    assert.deepEqual(
+      entries.map(e => e.name),
+      ['bbb_big.gguf', 'ccc_mid.gguf', 'aaa_small.gguf'],
+    )
+    assert.deepEqual(
+      entries.map(e => e.sizeBytes),
+      [100, 50, 10],
+    )
+    assert.equal(
+      entries.every(e => e.kind === 'file'),
+      true,
+    )
     assert.equal(totalBytes, 160)
   } finally {
     rmSync(dir, { recursive: true, force: true })
@@ -47,7 +56,7 @@ test('scanWeights reports a companion-set directory as one entry summed recursiv
   const dir = fixture({ 'sets/abc123/model.bin': 30, 'sets/abc123/vocab.spm': 12, 'plain.gguf': 5 })
   try {
     const { entries } = await scanWeights(dir)
-    const sets = entries.find((e) => e.name === 'sets')
+    const sets = entries.find(e => e.name === 'sets')
     assert.equal(sets.kind, 'dir')
     assert.equal(sets.sizeBytes, 42)
   } finally {
@@ -62,8 +71,8 @@ test('scanWeights marks the selected models in use by registry basename, ignorin
   })
   try {
     const { entries, reclaimableBytes } = await scanWeights(dir, { 'Qwen3-4B-Q4_K_M.gguf': 'llm' })
-    const active = entries.find((e) => e.name.endsWith('Qwen3-4B-Q4_K_M.gguf'))
-    const orphan = entries.find((e) => e.name.endsWith('salamandrata_2b_inst_q4.gguf'))
+    const active = entries.find(e => e.name.endsWith('Qwen3-4B-Q4_K_M.gguf'))
+    const orphan = entries.find(e => e.name.endsWith('salamandrata_2b_inst_q4.gguf'))
     assert.equal(active.inUse, true)
     assert.equal(active.usedBy, 'llm')
     assert.equal(orphan.inUse, false)
@@ -79,7 +88,7 @@ test('scanWeights protects a directory that contains an in-use file', async () =
   const dir = fixture({ 'sets/abc123/model.aren.bin': 30, 'sets/abc123/metadata.json': 2 })
   try {
     const { entries } = await scanWeights(dir, { 'model.aren.bin': 'llm' })
-    const sets = entries.find((e) => e.name === 'sets')
+    const sets = entries.find(e => e.name === 'sets')
     assert.equal(sets.inUse, true)
     assert.equal(sets.usedBy, 'llm')
   } finally {
@@ -91,7 +100,10 @@ test('scanWeights skips dotfiles so .DS_Store never shows up as a deletable mode
   const dir = fixture({ '.DS_Store': 8, 'model.gguf': 4 })
   try {
     const { entries, totalBytes } = await scanWeights(dir)
-    assert.deepEqual(entries.map((e) => e.name), ['model.gguf'])
+    assert.deepEqual(
+      entries.map(e => e.name),
+      ['model.gguf'],
+    )
     assert.equal(totalBytes, 4)
   } finally {
     rmSync(dir, { recursive: true, force: true })
@@ -99,7 +111,9 @@ test('scanWeights skips dotfiles so .DS_Store never shows up as a deletable mode
 })
 
 test('scanWeights returns an empty listing for a models dir that does not exist yet', async () => {
-  const { entries, totalBytes, reclaimableBytes } = await scanWeights(path.join(os.tmpdir(), 'kothai-weights-absent-dir'))
+  const { entries, totalBytes, reclaimableBytes } = await scanWeights(
+    path.join(os.tmpdir(), 'kothai-weights-absent-dir'),
+  )
   assert.deepEqual(entries, [])
   assert.equal(totalBytes, 0)
   assert.equal(reclaimableBytes, 0)
@@ -147,7 +161,7 @@ test('removeWeight refuses a traversing name and leaves the target alone', async
   try {
     await assert.rejects(
       () => removeWeight(dir, `../${path.basename(dir)}-sibling.gguf`),
-      (e) => e.code === 'invalid_name',
+      e => e.code === 'invalid_name',
     )
     assert.equal(existsSync(outside), true)
   } finally {
@@ -159,7 +173,10 @@ test('removeWeight refuses a traversing name and leaves the target alone', async
 test('removeWeight reports a missing entry rather than pretending it deleted something', async () => {
   const dir = fixture({ 'keep.gguf': 8 })
   try {
-    await assert.rejects(() => removeWeight(dir, 'gone.gguf'), (e) => e.code === 'not_found')
+    await assert.rejects(
+      () => removeWeight(dir, 'gone.gguf'),
+      e => e.code === 'not_found',
+    )
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

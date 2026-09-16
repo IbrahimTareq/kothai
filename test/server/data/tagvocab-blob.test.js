@@ -14,10 +14,13 @@ import * as tagvocab from '../../../server/data/tagvocab.js'
 import { encodeEmbedding } from '../../../server/data/embedding.js'
 import { getDb } from '../../../server/data/db.js'
 
-const fakeEmbed = async (tag) => (tag === 'recipes' ? [1, 0, 0, 0] : [0, 1, 0, 0])
+const fakeEmbed = async tag => (tag === 'recipes' ? [1, 0, 0, 0] : [0, 1, 0, 0])
 
-const columnType = (db) =>
-  db.prepare('PRAGMA table_info(tag_vocab)').all().find((c) => c.name === 'embedding').type
+const columnType = db =>
+  db
+    .prepare('PRAGMA table_info(tag_vocab)')
+    .all()
+    .find(c => c.name === 'embedding').type
 
 const rowFor = (db, tag) => db.prepare('SELECT embedding FROM tag_vocab WHERE tag = ?').get(tag).embedding
 
@@ -67,7 +70,10 @@ test('load rehydrates blobs into vectors the similarity code can use', async () 
 test('legacy JSON-text rows are converted to blobs on load, and the column is rebuilt as BLOB', async () => {
   tagvocab._reset({ loaded: false })
   const db = await getDb()
-  seedLegacy(db, [['recipes', [1, 0, 0, 0]], ['travel', [0, 1, 0, 0]]])
+  seedLegacy(db, [
+    ['recipes', [1, 0, 0, 0]],
+    ['travel', [0, 1, 0, 0]],
+  ])
   assert.equal(columnType(db), 'TEXT', 'precondition: the old shape')
 
   await tagvocab.load()

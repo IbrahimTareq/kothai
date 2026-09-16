@@ -123,11 +123,14 @@ export async function initProvider(kind = getAiConfig().provider, current = {}, 
   // loading the whole on-device stack into a process that will never call it
   // is pure cost — and, on a host where the native binding is broken, risk.
   const needsProbe = kind === 'remote' && embedProvider !== 'remote'
-  const localAvailable = opts.localAvailable ?? (needsProbe ? await _localAvailable(load ? () => load('local') : null) : kind !== 'remote')
+  const localAvailable =
+    opts.localAvailable ?? (needsProbe ? await _localAvailable(load ? () => load('local') : null) : kind !== 'remote')
   // `current` is { local, remote } — the endpoint's embedding model name is
   // what decides whether that role goes out. See routing.js.
   const roles = resolveRoleProviders({
-    provider: kind, embedProvider, localAvailable,
+    provider: kind,
+    embedProvider,
+    localAvailable,
     remoteEmbedModel: current?.remote?.embed || '',
   })
 
@@ -167,7 +170,9 @@ export async function reconfigure(current = {}, opts = {}) {
     (Boolean(impls.local) ||
       (needsProbe ? await _localAvailable(load ? () => load('local') : null) : provider !== 'remote'))
   const roles = resolveRoleProviders({
-    provider, embedProvider, localAvailable,
+    provider,
+    embedProvider,
+    localAvailable,
     remoteEmbedModel: current?.remote?.embed || '',
   })
 
@@ -206,12 +211,16 @@ export async function listModels() {
 // Every provider in use must be reachable for the app to claim availability.
 export function available() {
   ready()
-  return kindsInUse(byRole).every((k) => impls[k].available())
+  return kindsInUse(byRole).every(k => impls[k].available())
 }
 
 // ---- per-role -------------------------------------------------------------
-export function roleEnabled(role) { return R(role).roleEnabled(role) }
-export function validateModel(role, key) { return R(role).validateModel(role, key) }
+export function roleEnabled(role) {
+  return R(role).roleEnabled(role)
+}
+export function validateModel(role, key) {
+  return R(role).validateModel(role, key)
+}
 
 export const classify = (...a) => R('llm').classify(...a)
 export const embedText = (...a) => R('embed').embedText(...a)
@@ -220,7 +229,7 @@ export const answer = (...a) => R('llm').answer(...a)
 // Streaming answers, with a fallback for any provider that doesn't implement
 // them: the whole answer arrives as one delta, so callers never branch on
 // whether the provider can stream.
-export const answerStream = async (args) => {
+export const answerStream = async args => {
   const p = R('llm')
   if (p.answerStream) return p.answerStream(args)
   const text = await p.answer(args)
@@ -269,9 +278,9 @@ function localOnly(patch = {}) {
 
 export const boot = (...a) => L()?.boot?.(...a) ?? Promise.resolve()
 export const warmRole = (...a) => L()?.warmRole?.(...a) ?? Promise.resolve()
-export const warmCache = (residency) => L()?.warmCache?.(localResidency(residency)) ?? Promise.resolve()
-export const applyResidency = (residency) => L()?.applyResidency?.(localResidency(residency)) ?? Promise.resolve()
-export const configureModels = (patch) => L()?.configureModels?.(localOnly(patch)) ?? Promise.resolve()
+export const warmCache = residency => L()?.warmCache?.(localResidency(residency)) ?? Promise.resolve()
+export const applyResidency = residency => L()?.applyResidency?.(localResidency(residency)) ?? Promise.resolve()
+export const configureModels = patch => L()?.configureModels?.(localOnly(patch)) ?? Promise.resolve()
 // Model files on disk, for the cache-management routes. A provider that
 // downloads nothing claims no files, so the routes' capability gate is the
 // only thing that has to know about the difference.
@@ -280,4 +289,4 @@ export const configureModels = (patch) => L()?.configureModels?.(localOnly(patch
 // disk belong to no running role, so the cache route must be free to reclaim
 // them. Claiming them would leave a mixed install unable to delete the exact
 // multi-gigabyte files it switched to an endpoint to avoid.
-export const weightsInUse = (selection) => L()?.weightsInUse?.(localOnly(selection)) ?? {}
+export const weightsInUse = selection => L()?.weightsInUse?.(localOnly(selection)) ?? {}

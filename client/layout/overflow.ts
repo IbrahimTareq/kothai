@@ -8,7 +8,10 @@
 // place it is certainly wrong.
 const EPSILON = 1
 
-export interface Edges { left: boolean; right: boolean }
+export interface Edges {
+  left: boolean
+  right: boolean
+}
 
 export function scrollEdges(scrollLeft: number, scrollWidth: number, clientWidth: number): Edges {
   const max = scrollWidth - clientWidth

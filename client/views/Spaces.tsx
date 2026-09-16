@@ -29,14 +29,22 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
   const submit = async () => {
     const nm = name.trim()
     if (!nm) return
-    const tagList = tags.split(',').map((t) => t.trim()).filter(Boolean)
+    const tagList = tags
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean)
     const c = await createCollection(nm, tagList)
-    setName(''); setTags(''); setCreating(false)
+    setName('')
+    setTags('')
+    setCreating(false)
     navigate('space:' + c.id)
   }
 
   const coverFor = (c: Collection): string | null => {
-    for (const it of c.covers ?? []) { const src = it.thumb || it.img; if (src) return src }
+    for (const it of c.covers ?? []) {
+      const src = it.thumb || it.img
+      if (src) return src
+    }
     return null
   }
 
@@ -44,44 +52,74 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
     <div className="spaces-view">
       <header className="spaces-head">
         <h1 className="spaces-title">Spaces</h1>
-        <button className="btn" onClick={() => setCreating((v) => !v)}>＋ New space</button>
+        <button className="btn" onClick={() => setCreating(v => !v)}>
+          ＋ New space
+        </button>
       </header>
 
       {creating && (
         <div className="space-form">
-          <input className="space-form-name" autoFocus placeholder="Space name…" value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') setCreating(false) }} />
-          <input className="space-form-tags mono" placeholder="smart tags (comma-separated, optional)" value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') setCreating(false) }} />
-          <button className="btn btn--solid" onClick={submit}>Create</button>
+          <input
+            className="space-form-name"
+            autoFocus
+            placeholder="Space name…"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') submit()
+              if (e.key === 'Escape') setCreating(false)
+            }}
+          />
+          <input
+            className="space-form-tags mono"
+            placeholder="smart tags (comma-separated, optional)"
+            value={tags}
+            onChange={e => setTags(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') submit()
+              if (e.key === 'Escape') setCreating(false)
+            }}
+          />
+          <button className="btn btn--solid" onClick={submit}>
+            Create
+          </button>
         </div>
       )}
 
       <div className="spaces-scroll">
-        {collections.length === 0 && !creating
-          ? <div className="empty"><img src="/empty.svg" alt="" width={60} height={60} /><p>NO SPACES ADDED YET</p></div>
-          : <div className="spaces-grid">
-              {collections.map((c) => {
-                const cover = coverFor(c)
-                return (
-                  // The same .tile the Ask thread's citations use — a space
-                  // card and a citation card are both a cover, a name and a
-                  // line of small print, so they share one shape.
-                  <button key={c.id} className="tile space-card" onClick={() => navigate('space:' + c.id)}>
-                    <div className="tile-media" style={cover ? { backgroundImage: `url(${cover})` } : undefined}>
-                      {!cover && <Icon name="spark" size={26} />}
-                      {c.tags.length > 0 && <span className="tile-plate right" title="Smart space"><Icon name="spark" size={11} /></span>}
-                    </div>
-                    <div className="tile-cap">
-                      <span className="tile-title">{c.name}</span>
-                      <span className="tile-meta">{c.count} item{c.count === 1 ? '' : 's'}</span>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>}
+        {collections.length === 0 && !creating ? (
+          <div className="empty">
+            <img src="/empty.svg" alt="" width={60} height={60} />
+            <p>NO SPACES ADDED YET</p>
+          </div>
+        ) : (
+          <div className="spaces-grid">
+            {collections.map(c => {
+              const cover = coverFor(c)
+              return (
+                // The same .tile the Ask thread's citations use — a space
+                // card and a citation card are both a cover, a name and a
+                // line of small print, so they share one shape.
+                <button key={c.id} className="tile space-card" onClick={() => navigate('space:' + c.id)}>
+                  <div className="tile-media" style={cover ? { backgroundImage: `url(${cover})` } : undefined}>
+                    {!cover && <Icon name="spark" size={26} />}
+                    {c.tags.length > 0 && (
+                      <span className="tile-plate right" title="Smart space">
+                        <Icon name="spark" size={11} />
+                      </span>
+                    )}
+                  </div>
+                  <div className="tile-cap">
+                    <span className="tile-title">{c.name}</span>
+                    <span className="tile-meta">
+                      {c.count} item{c.count === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -109,12 +147,27 @@ interface CollectionViewProps {
   notesRef?: MutableRefObject<NoteSource | null>
 }
 
-export function CollectionView({ collection, view, setView, deleteItem, onExpand, collections, addToCollection, removeFromCollection, renameCollection, editCollectionTags, saveCanvas, deleteCollection, navigate, notesRef }: CollectionViewProps) {
+export function CollectionView({
+  collection,
+  view,
+  setView,
+  deleteItem,
+  onExpand,
+  collections,
+  addToCollection,
+  removeFromCollection,
+  renameCollection,
+  editCollectionTags,
+  saveCanvas,
+  deleteCollection,
+  navigate,
+  notesRef,
+}: CollectionViewProps) {
   const [renaming, setRenaming] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [tagDraft, setTagDraft] = useState('')
   const [addingTag, setAddingTag] = useState(false)
-  const [board, setBoard] = useState(false)  // false = grid, true = canvas
+  const [board, setBoard] = useState(false) // false = grid, true = canvas
   const [armed, setArmed] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -144,7 +197,9 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
   useEffect(() => {
     if (!notesRef) return
     notesRef.current = notes
-    return () => { notesRef.current = null }
+    return () => {
+      notesRef.current = null
+    }
   }, [notesRef, notes])
 
   // Collections are bounded (unlike Everything), so load every page up front
@@ -154,15 +209,27 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
     if (notes.total > 0) notes.ensure(0, notes.total - 1)
   }, [notes.total])
 
-  useEffect(() => { setArmed(false) }, [collection?.id])
+  useEffect(() => {
+    setArmed(false)
+  }, [collection?.id])
 
   if (!collection) {
-    return <div className="collection-view"><div className="empty"><Icon name="spark" size={40} /><p>SPACE NOT FOUND</p></div></div>
+    return (
+      <div className="collection-view">
+        <div className="empty">
+          <Icon name="spark" size={40} />
+          <p>SPACE NOT FOUND</p>
+        </div>
+      </div>
+    )
   }
 
   // Board-originated delete/remove: also drop the item from this collection's
   // own pager immediately, rather than waiting on the next fetch.
-  const handleDelete = (id: string) => { notes.removeLocal(id); deleteItem(id) }
+  const handleDelete = (id: string) => {
+    notes.removeLocal(id)
+    deleteItem(id)
+  }
   const handleRemoveFrom = (cid: string, itemId: string) => {
     if (cid === collection.id) notes.removeLocal(itemId)
     removeFromCollection(cid, itemId)
@@ -173,19 +240,32 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
     if (nm && nm !== collection.name) renameCollection(collection.id, nm)
     setRenaming(false)
   }
-  const startRename = () => { setNameDraft(collection.name); setRenaming(true) }
-  const removeTag = (t: string) => editCollectionTags(collection.id, collection.tags.filter((x) => x !== t))
-  const del = () => { deleteCollection(collection.id); navigate('spaces') }
+  const startRename = () => {
+    setNameDraft(collection.name)
+    setRenaming(true)
+  }
+  const removeTag = (t: string) =>
+    editCollectionTags(
+      collection.id,
+      collection.tags.filter(x => x !== t),
+    )
+  const del = () => {
+    deleteCollection(collection.id)
+    navigate('spaces')
+  }
 
   // ---- rule-tag builder ---------------------------------------------------
   // A smart space auto-includes any vault item carrying one of its rule tags,
   // so the picker surfaces every tag in the vault with a live item-count — you
   // pick a rule and see its reach, instead of typing a tag string blind.
-  const closeRuleAdd = () => { setAddingTag(false); setTagDraft('') }
+  const closeRuleAdd = () => {
+    setAddingTag(false)
+    setTagDraft('')
+  }
   const addRule = (tag: string) => {
     const t = tag.trim().toLowerCase()
     if (t && !collection.tags.includes(t)) editCollectionTags(collection.id, [...collection.tags, t])
-    setTagDraft('')  // keep the popover open for adding several rules in a row
+    setTagDraft('') // keep the popover open for adding several rules in a row
   }
   // The rule strip scrolls sideways on phones, so it carries the same fade
   // hints the Everything filter bar does — one module, one behaviour.
@@ -202,45 +282,63 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
         {/* Tier 1 — identity: what this space is called and how big it is.
             The board below is the content; this tier only ever says that. */}
         <div className="coll-head-top">
-          {renaming
-            ? <input className="coll-name-input" autoFocus value={nameDraft}
-                onChange={(e) => setNameDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') commitName(); if (e.key === 'Escape') setRenaming(false) }}
-                onBlur={commitName} />
-            : // The name, its pencil and the count are one group: the pencil
-              // stays faint until the group is hovered, so the title reads as
-              // a title rather than as a row of controls.
-              <div className="coll-title">
-                {collection.tags.length > 0 && (
-                  <span className="coll-smart" tabIndex={0} aria-label="Smart space">
-                    <Icon name="spark" size={13} />
-                    <span className="coll-smart-pop" role="tooltip">
-                      <b>Smart space</b>
-                      Any item tagged with a rule below joins this space automatically.
-                    </span>
+          {renaming ? (
+            <input
+              className="coll-name-input"
+              autoFocus
+              value={nameDraft}
+              onChange={e => setNameDraft(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') commitName()
+                if (e.key === 'Escape') setRenaming(false)
+              }}
+              onBlur={commitName}
+            />
+          ) : (
+            // The name, its pencil and the count are one group: the pencil
+            // stays faint until the group is hovered, so the title reads as
+            // a title rather than as a row of controls.
+            <div className="coll-title">
+              {collection.tags.length > 0 && (
+                <span className="coll-smart" tabIndex={0} aria-label="Smart space">
+                  <Icon name="spark" size={13} />
+                  <span className="coll-smart-pop" role="tooltip">
+                    <b>Smart space</b>
+                    Any item tagged with a rule below joins this space automatically.
                   </span>
-                )}
-                <h1 className="coll-name" onClick={startRename}>{collection.name}</h1>
-                {/* The count belongs to the name, so it sits against it — with
+                </span>
+              )}
+              <h1 className="coll-name" onClick={startRename}>
+                {collection.name}
+              </h1>
+              {/* The count belongs to the name, so it sits against it — with
                     the pencil between them it read as a detached third thing. */}
-                <span className="coll-count mono">{collItems.length} item{collItems.length === 1 ? '' : 's'}</span>
-                {/* Rename and delete are what you do to the SPACE, so they live
+              <span className="coll-count mono">
+                {collItems.length} item{collItems.length === 1 ? '' : 's'}
+              </span>
+              {/* Rename and delete are what you do to the SPACE, so they live
                     with its name. Delete used to sit on the view toolbar with
                     only a hairline between it and "Canvas", which gave an
                     irreversible action the same weight as a view switch. */}
-                <span className="coll-idactions">
-                  <button className="coll-rename" title="Rename space" aria-label="Rename space" onClick={startRename}>
-                    <Icon name="edit" size={14} />
-                  </button>
-                  <button className={'coll-del' + (armed ? ' armed' : '')} aria-label={armed ? 'Confirm delete space' : 'Delete space'}
-                    title={armed ? '' : 'Delete space'}
-                    onClick={() => (armed ? del() : setArmed(true))}
-                    onBlur={() => setArmed(false)}
-                    onKeyDown={(e) => { if (e.key === 'Escape') setArmed(false) }}>
-                    {armed ? 'Delete space?' : <Icon name="trash" size={16} />}
-                  </button>
-                </span>
-              </div>}
+              <span className="coll-idactions">
+                <button className="coll-rename" title="Rename space" aria-label="Rename space" onClick={startRename}>
+                  <Icon name="edit" size={14} />
+                </button>
+                <button
+                  className={'coll-del' + (armed ? ' armed' : '')}
+                  aria-label={armed ? 'Confirm delete space' : 'Delete space'}
+                  title={armed ? '' : 'Delete space'}
+                  onClick={() => (armed ? del() : setArmed(true))}
+                  onBlur={() => setArmed(false)}
+                  onKeyDown={e => {
+                    if (e.key === 'Escape') setArmed(false)
+                  }}
+                >
+                  {armed ? 'Delete space?' : <Icon name="trash" size={16} />}
+                </button>
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Tier 2 — one bar: what fills the space on the left, how you look at
@@ -248,24 +346,48 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
             dropping it in canvas mode never moves the view switch or the bin. */}
         <div className="coll-bar">
           <div className={'coll-rule' + ruleFade} ref={ruleRef}>
-            {collection.tags.map((t) => (
-              <button key={t} className="chip coll-tag" title="Remove rule tag" onClick={() => removeTag(t)}>{t}<span className="coll-tag-x">×</span></button>
+            {collection.tags.map(t => (
+              <button key={t} className="chip coll-tag" title="Remove rule tag" onClick={() => removeTag(t)}>
+                {t}
+                <span className="coll-tag-x">×</span>
+              </button>
             ))}
             <div className="coll-ruleadd">
-              <button className={'chip coll-addtag' + (addingTag ? ' on' : '')} aria-haspopup="dialog" aria-expanded={addingTag} onClick={() => (addingTag ? closeRuleAdd() : setAddingTag(true))}>+ rule tag</button>
+              <button
+                className={'chip coll-addtag' + (addingTag ? ' on' : '')}
+                aria-haspopup="dialog"
+                aria-expanded={addingTag}
+                onClick={() => (addingTag ? closeRuleAdd() : setAddingTag(true))}
+              >
+                + rule tag
+              </button>
               {addingTag && (
                 <>
                   <div className="menu-backdrop" onClick={closeRuleAdd} />
                   <div className="rulepop" role="dialog" aria-label="Add rule tag">
                     <p className="rulepop-hint">Items tagged with any of these automatically join this space.</p>
-                    <input className="rulepop-input mono" autoFocus value={tagDraft} placeholder="filter or add a tag…"
-                      onChange={(e) => setTagDraft(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const pick = suggestions[0]?.tag ?? q; if (pick) addRule(pick) } if (e.key === 'Escape') closeRuleAdd() }} />
+                    <input
+                      className="rulepop-input mono"
+                      autoFocus
+                      value={tagDraft}
+                      placeholder="filter or add a tag…"
+                      onChange={e => setTagDraft(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const pick = suggestions[0]?.tag ?? q
+                          if (pick) addRule(pick)
+                        }
+                        if (e.key === 'Escape') closeRuleAdd()
+                      }}
+                    />
                     <div className="rulepop-list">
                       {suggestions.map(({ tag, count }) => (
                         <button key={tag} className="rulepop-item" onClick={() => addRule(tag)}>
                           <span className="rulepop-tag">{tag}</span>
-                          <span className="rulepop-count">{count} item{count === 1 ? '' : 's'}</span>
+                          <span className="rulepop-count">
+                            {count} item{count === 1 ? '' : 's'}
+                          </span>
                         </button>
                       ))}
                       {canAddNew && (
@@ -287,37 +409,84 @@ export function CollectionView({ collection, view, setView, deleteItem, onExpand
           <div className="coll-tools">
             {!board && (
               <div className="view-toggle">
-                <button className={view === 'grid4' ? 'on' : ''} onClick={() => setView('grid4')} title="4 columns"><Icon name="grid4" size={16} /></button>
-                <button className={view === 'grid6' ? 'on' : ''} onClick={() => setView('grid6')} title="6 columns"><Icon name="grid6" size={16} /></button>
-                <button className={view === 'grid8' ? 'on' : ''} onClick={() => setView('grid8')} title="8 columns"><Icon name="grid8" size={16} /></button>
+                <button className={view === 'grid4' ? 'on' : ''} onClick={() => setView('grid4')} title="4 columns">
+                  <Icon name="grid4" size={16} />
+                </button>
+                <button className={view === 'grid6' ? 'on' : ''} onClick={() => setView('grid6')} title="6 columns">
+                  <Icon name="grid6" size={16} />
+                </button>
+                <button className={view === 'grid8' ? 'on' : ''} onClick={() => setView('grid8')} title="8 columns">
+                  <Icon name="grid8" size={16} />
+                </button>
               </div>
             )}
             <div className="seg" role="tablist" aria-label="View mode">
-              <button role="tab" aria-selected={!board} className={'seg-btn' + (!board ? ' on' : '')} onClick={() => setBoard(false)}>Grid</button>
-              <button role="tab" aria-selected={board} className={'seg-btn' + (board ? ' on' : '')} onClick={() => setBoard(true)}>Canvas</button>
+              <button
+                role="tab"
+                aria-selected={!board}
+                className={'seg-btn' + (!board ? ' on' : '')}
+                onClick={() => setBoard(false)}
+              >
+                Grid
+              </button>
+              <button
+                role="tab"
+                aria-selected={board}
+                className={'seg-btn' + (board ? ' on' : '')}
+                onClick={() => setBoard(true)}
+              >
+                Canvas
+              </button>
             </div>
           </div>
         </div>
       </header>
 
-      {board
-        ? (membersReady
-            ? <Canvas collectionId={collection.id} items={collItems} doc={collection.canvas}
-                onSave={(d) => saveCanvas(collection.id, d)} onExpand={onExpand}
-                onRemoveItem={(id) => handleRemoveFrom(collection.id, id)} />
-            // Membership isn't fully loaded yet — mounting Canvas now would have
-            // it treat not-yet-loaded members as departed and delete their cards
-            // (see membersReady above). Wait rather than risk that.
-            : <div className="empty"><Icon name="spark" size={40} /><p>LOADING CANVAS…</p></div>)
-        : <div className="gal-scroll" ref={scrollRef}>
-            {collItems.length === 0
-              ? <div className="empty"><Icon name="spark" size={40} /><p>{collection.tags.length > 0 ? 'NO ITEMS MATCH YET' : 'ADD ITEMS FROM EVERYTHING'}</p></div>
-              : <WindowedBoard items={collItems} view={view} scroller={scrollRef}
-                  renderItem={(it) => (
-                    <ItemCard item={it} onDelete={handleDelete} onExpand={onExpand}
-                      collections={collections} onAddTo={addToCollection} onRemoveFrom={handleRemoveFrom} />
-                  )} />}
-          </div>}
+      {board ? (
+        membersReady ? (
+          <Canvas
+            collectionId={collection.id}
+            items={collItems}
+            doc={collection.canvas}
+            onSave={d => saveCanvas(collection.id, d)}
+            onExpand={onExpand}
+            onRemoveItem={id => handleRemoveFrom(collection.id, id)}
+          />
+        ) : (
+          // Membership isn't fully loaded yet — mounting Canvas now would have
+          // it treat not-yet-loaded members as departed and delete their cards
+          // (see membersReady above). Wait rather than risk that.
+          <div className="empty">
+            <Icon name="spark" size={40} />
+            <p>LOADING CANVAS…</p>
+          </div>
+        )
+      ) : (
+        <div className="gal-scroll" ref={scrollRef}>
+          {collItems.length === 0 ? (
+            <div className="empty">
+              <Icon name="spark" size={40} />
+              <p>{collection.tags.length > 0 ? 'NO ITEMS MATCH YET' : 'ADD ITEMS FROM EVERYTHING'}</p>
+            </div>
+          ) : (
+            <WindowedBoard
+              items={collItems}
+              view={view}
+              scroller={scrollRef}
+              renderItem={it => (
+                <ItemCard
+                  item={it}
+                  onDelete={handleDelete}
+                  onExpand={onExpand}
+                  collections={collections}
+                  onAddTo={addToCollection}
+                  onRemoveFrom={handleRemoveFrom}
+                />
+              )}
+            />
+          )}
+        </div>
+      )}
     </div>
   )
 }

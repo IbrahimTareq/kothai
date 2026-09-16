@@ -15,14 +15,21 @@ const realSettings = await import('../../../server/data/settings.js')
 
 mock.module('../../../server/ai/enrich.js', { namedExports: { ...realEnrich, retagAll: () => retagAllImpl() } })
 mock.module('../../../server/ai/index.js', { namedExports: { ...realAi, available: () => availableImpl() } })
-mock.module('../../../server/data/settings.js', { namedExports: { ...realSettings, getResidency: () => residencyImpl() } })
+mock.module('../../../server/data/settings.js', {
+  namedExports: { ...realSettings, getResidency: () => residencyImpl() },
+})
 
 const { handleRetagAll } = await import('../../../server/routes/settings.js')
 
 function mockRes() {
   const r = { code: 0, body: null }
-  r.writeHead = (c) => { r.code = c; return r }
-  r.end = (s) => { r.body = JSON.parse(s) }
+  r.writeHead = c => {
+    r.code = c
+    return r
+  }
+  r.end = s => {
+    r.body = JSON.parse(s)
+  }
   r.setHeader = () => {}
   return r
 }
@@ -45,7 +52,10 @@ test('503 when the inference provider is unavailable, and nothing is queued', as
   ok()
   availableImpl = () => false
   let called = false
-  retagAllImpl = async () => { called = true; return 0 }
+  retagAllImpl = async () => {
+    called = true
+    return 0
+  }
 
   const res = mockRes()
   await handleRetagAll(res)
@@ -58,7 +68,10 @@ test('409 when the language model is off — re-tagging is entirely an LLM job',
   ok()
   residencyImpl = () => ({ llm: 'off', embed: 'always', vision: 'ondemand' })
   let called = false
-  retagAllImpl = async () => { called = true; return 0 }
+  retagAllImpl = async () => {
+    called = true
+    return 0
+  }
 
   const res = mockRes()
   await handleRetagAll(res)

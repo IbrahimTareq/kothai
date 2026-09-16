@@ -15,7 +15,9 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "node scripts/lint-tokens.mjs && node --experimental-test-module-mocks --test 'test/**/*.test.js' 'test/**/*.test.ts'",
-    "lint:tokens": "node scripts/lint-tokens.mjs"
+    "lint:tokens": "node scripts/lint-tokens.mjs",
+    "format": "biome format --write .",
+    "lint": "biome check ."
   },
   "license": "AGPL-3.0-or-later",
   "homepage": "https://github.com/IbrahimTareq/kothai#readme",
@@ -44,6 +46,7 @@
     }
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.14",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",

@@ -16,10 +16,12 @@ let answerBehaviour = null
 mock.module('../../../server/ai/index.js', {
   namedExports: {
     FeatureDisabledError: class FeatureDisabledError extends Error {},
-    statusSnapshot: () => ({ roles: { llm: { state: 'ready' }, embed: { state: 'ready' }, vision: { state: 'ready' } } }),
+    statusSnapshot: () => ({
+      roles: { llm: { state: 'ready' }, embed: { state: 'ready' }, vision: { state: 'ready' } },
+    }),
     embedText: async () => [0.1, 0.2],
     answer: async () => ANSWER,
-    answerStream: (args) => answerBehaviour(args),
+    answerStream: args => answerBehaviour(args),
     describeImage: async () => 'an image',
   },
 })
@@ -28,7 +30,9 @@ mock.module('../../../server/data/settings.js', {
 })
 mock.module('../../../server/data/notes.js', {
   namedExports: {
-    count: () => 3, hybridSearch: () => SOURCES, textSearch: () => SOURCES,
+    count: () => 3,
+    hybridSearch: () => SOURCES,
+    textSearch: () => SOURCES,
   },
 })
 
@@ -37,11 +41,17 @@ let server, base, handleAsk, chats
 before(async () => {
   ;({ handleAsk } = await import('../../../server/routes/ask.js'))
   chats = await import('../../../server/data/chats.js')
-  server = createServer((req, res) => { handleAsk(req, res).catch(() => { if (!res.writableEnded) res.end() }) })
-  await new Promise((r) => server.listen(0, r))
+  server = createServer((req, res) => {
+    handleAsk(req, res).catch(() => {
+      if (!res.writableEnded) res.end()
+    })
+  })
+  await new Promise(r => server.listen(0, r))
   base = `http://127.0.0.1:${server.address().port}/api/ask`
 })
-after(async () => { await new Promise((r) => server.close(r)) })
+after(async () => {
+  await new Promise(r => server.close(r))
+})
 
 beforeEach(() => {
   chats._reset()
@@ -79,9 +89,9 @@ test('streams sources, then deltas, then done', async () => {
   assert.deepEqual(frames[0].data.sources, SOURCES)
   assert.equal(frames[frames.length - 1].event, 'done')
 
-  const deltas = frames.filter((f) => f.event === 'delta')
+  const deltas = frames.filter(f => f.event === 'delta')
   assert.ok(deltas.length > 1, 'the answer must arrive in more than one piece')
-  assert.equal(deltas.map((d) => d.data.text).join(''), ANSWER, 'deltas must reconstruct the answer exactly')
+  assert.equal(deltas.map(d => d.data.text).join(''), ANSWER, 'deltas must reconstruct the answer exactly')
 })
 
 test('done carries a chat id that the exchange was recorded under', async () => {
@@ -104,21 +114,27 @@ test('a follow-up appends to the same chat rather than starting a new one', asyn
 
 test('a newline in the answer cannot break the frame delimiter', async () => {
   const multiline = 'line one\n\nline two'
-  answerBehaviour = async ({ onToken }) => { onToken?.(multiline); return multiline }
+  answerBehaviour = async ({ onToken }) => {
+    onToken?.(multiline)
+    return multiline
+  }
   const { frames } = await askStream({ question: 'q' })
-  const deltas = frames.filter((f) => f.event === 'delta')
+  const deltas = frames.filter(f => f.event === 'delta')
   assert.equal(deltas.length, 1, 'a blank line inside the payload must not split it into two frames')
   assert.equal(deltas[0].data.text, multiline)
 })
 
 test('a provider failure mid-stream arrives as an error frame, not a dead connection', async () => {
-  answerBehaviour = async ({ onToken }) => { onToken?.('partial'); throw new Error('model exploded') }
+  answerBehaviour = async ({ onToken }) => {
+    onToken?.('partial')
+    throw new Error('model exploded')
+  }
   const { res, frames } = await askStream({ question: 'q' })
   assert.equal(res.status, 200, 'the status line is already sent — the failure has to travel down the stream')
-  const err = frames.find((f) => f.event === 'error')
+  const err = frames.find(f => f.event === 'error')
   assert.ok(err, 'an error frame must be sent')
   assert.match(err.data.error, /model exploded/)
-  assert.equal(frames.filter((f) => f.event === 'done').length, 0)
+  assert.equal(frames.filter(f => f.event === 'done').length, 0)
 })
 
 // This asserts the mechanism, not just the outcome. An earlier version only
@@ -131,16 +147,16 @@ test('a client hangup is observed by the provider as an abort', async () => {
   answerBehaviour = async ({ onToken, signal }) => {
     onToken?.('partial ')
     gate.abort()
-    await new Promise((r) => {
+    await new Promise(r => {
       if (signal?.aborted) return r()
       signal?.addEventListener('abort', r, { once: true })
-      setTimeout(r, 2000)   // generous, so a real failure reads as "never fired"
+      setTimeout(r, 2000) // generous, so a real failure reads as "never fired"
     })
     sawAbort = Boolean(signal?.aborted)
     return 'partial '
   }
   await askStream({ question: 'q' }, { signal: gate.signal }).catch(() => {})
-  await new Promise((r) => setTimeout(r, 100))
+  await new Promise(r => setTimeout(r, 100))
   assert.equal(sawAbort, true, 'the signal handed to the provider must fire when the client goes away')
 })
 
@@ -149,7 +165,7 @@ test('an aborted request records nothing — a stopped question is not a saved a
   answerBehaviour = async ({ onToken, signal }) => {
     onToken?.('partial ')
     gate.abort()
-    await new Promise((r) => {
+    await new Promise(r => {
       if (signal?.aborted) return r()
       signal?.addEventListener('abort', r, { once: true })
       setTimeout(r, 2000)
@@ -157,7 +173,7 @@ test('an aborted request records nothing — a stopped question is not a saved a
     return 'partial '
   }
   await askStream({ question: 'q' }, { signal: gate.signal }).catch(() => {})
-  await new Promise((r) => setTimeout(r, 100))
+  await new Promise(r => setTimeout(r, 100))
   assert.equal(chats.list().total, 0, 'no chat should have been written')
 })
 

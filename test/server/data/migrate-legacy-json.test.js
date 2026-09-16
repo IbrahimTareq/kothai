@@ -50,8 +50,14 @@ test('notes: array order (newest-first) survives the round trip via seq', async 
   ])
   const db = freshDb()
   await migrateLegacyJson(db)
-  const rows = db.prepare('SELECT data FROM notes ORDER BY seq DESC').all().map((r) => JSON.parse(r.data))
-  assert.deepEqual(rows.map((r) => r.id), ['newest', 'middle', 'oldest'])
+  const rows = db
+    .prepare('SELECT data FROM notes ORDER BY seq DESC')
+    .all()
+    .map(r => JSON.parse(r.data))
+  assert.deepEqual(
+    rows.map(r => r.id),
+    ['newest', 'middle', 'oldest'],
+  )
   assert.equal(rows[0].title, 'C') // full record preserved, not just id/order
   assert.equal(existsSync(path.join(scratch, 'notes.json')), false)
   assert.equal(existsSync(path.join(scratch, 'notes.json.migrated')), true)
@@ -66,7 +72,10 @@ test('collections: array order (newest-first) survives the round trip', async ()
   const db = freshDb()
   await migrateLegacyJson(db)
   const rows = db.prepare('SELECT id FROM collections ORDER BY seq DESC').all()
-  assert.deepEqual(rows.map((r) => r.id), ['s-new', 's-old'])
+  assert.deepEqual(
+    rows.map(r => r.id),
+    ['s-new', 's-old'],
+  )
 })
 
 test('chats: MRU order survives via an explicit seq (not insertion order)', async () => {
@@ -76,13 +85,23 @@ test('chats: MRU order survives via an explicit seq (not insertion order)', asyn
   ])
   const db = freshDb()
   await migrateLegacyJson(db)
-  const rows = db.prepare('SELECT data FROM chats ORDER BY seq DESC').all().map((r) => JSON.parse(r.data))
-  assert.deepEqual(rows.map((r) => r.id), ['front', 'back'])
+  const rows = db
+    .prepare('SELECT data FROM chats ORDER BY seq DESC')
+    .all()
+    .map(r => JSON.parse(r.data))
+  assert.deepEqual(
+    rows.map(r => r.id),
+    ['front', 'back'],
+  )
   assert.deepEqual(rows[1].messages, [{ role: 'user', text: 'hi' }])
 })
 
 test('settings: legacy shape maps onto the typed row', async () => {
-  write('settings.json', { llm: 'CUSTOM_LLM', configured: true, residency: { llm: 'always', embed: 'off', vision: 'ondemand' } })
+  write('settings.json', {
+    llm: 'CUSTOM_LLM',
+    configured: true,
+    residency: { llm: 'always', embed: 'off', vision: 'ondemand' },
+  })
   const db = freshDb()
   await migrateLegacyJson(db)
   const row = db.prepare('SELECT * FROM settings WHERE id = 1').get()
@@ -97,7 +116,10 @@ test('tag_vocab: registry entries all land, order-independent', async () => {
   const db = freshDb()
   await migrateLegacyJson(db)
   const rows = db.prepare('SELECT tag, embedding FROM tag_vocab ORDER BY tag').all()
-  assert.deepEqual(rows.map((r) => r.tag), ['cooking', 'travel'])
+  assert.deepEqual(
+    rows.map(r => r.tag),
+    ['cooking', 'travel'],
+  )
   // Stored as float32 bytes now, so compare decoded and allow the precision.
   const vec = decodeEmbedding(rows[0].embedding)
   assert.equal(vec.length, 2)

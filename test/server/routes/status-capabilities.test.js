@@ -7,9 +7,16 @@ import { handleStatus, firstRunComplete } from '../../../server/routes/settings.
 
 function fakeRes() {
   return {
-    statusCode: 0, body: null, headers: {},
-    writeHead(code, headers) { this.statusCode = code; this.headers = headers },
-    end(body) { this.body = JSON.parse(body) },
+    statusCode: 0,
+    body: null,
+    headers: {},
+    writeHead(code, headers) {
+      this.statusCode = code
+      this.headers = headers
+    },
+    end(body) {
+      this.body = JSON.parse(body)
+    },
   }
 }
 

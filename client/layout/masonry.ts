@@ -17,7 +17,12 @@ import type { UIItem, ViewMode } from '../types'
 // a few dozen cards.
 export const OVERSCAN = 800
 
-export interface Box { id: string; col: number; top: number; height: number }
+export interface Box {
+  id: string
+  col: number
+  top: number
+  height: number
+}
 
 // Gutter between cards, both axes. Lives here rather than in Board.tsx because
 // columnCount needs it to know how many columns actually fit.
@@ -113,7 +118,7 @@ export function clampScrollTop(scrollTop: number, total: number, viewportH: numb
 export function visibleBoxes(boxes: Box[], scrollTop: number, viewportH: number): Box[] {
   const top = scrollTop - OVERSCAN
   const bottom = scrollTop + viewportH + OVERSCAN
-  return boxes.filter((b) => b.top + b.height >= top && b.top <= bottom)
+  return boxes.filter(b => b.top + b.height >= top && b.top <= bottom)
 }
 
 // Height guess for a card we haven't measured yet. Only ever used for cards

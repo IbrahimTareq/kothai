@@ -23,26 +23,36 @@ type ImportResult = Awaited<ReturnType<typeof API.importFile>>
 const INSTRUCTIONS: Record<string, ReactNode> = {
   instagram: (
     <>
-      Accounts Center → Your information and permissions → Export your information → format <b>JSON</b>.
-      Drop <code>saved_posts.json</code> and <code>saved_collections.json</code> together — your collections
-      become spaces — or the whole ZIP. Posts and collections can also be imported separately, in either order.
+      Accounts Center → Your information and permissions → Export your information → format <b>JSON</b>. Drop{' '}
+      <code>saved_posts.json</code> and <code>saved_collections.json</code> together — your collections become spaces —
+      or the whole ZIP. Posts and collections can also be imported separately, in either order.
     </>
   ),
   tiktok: (
     <>
-      Profile → Settings and privacy → Account → Download your data, with file format <b>JSON</b>.
-      Drop <code>user_data_tiktok.json</code> or the ZIP. Only your <b>favourites</b> come across — the videos you
-      bookmarked — not likes or watch history. TikTok's export names your collections but doesn't say
-      which videos are in them, so favourites arrive as one list.
+      Profile → Settings and privacy → Account → Download your data, with file format <b>JSON</b>. Drop{' '}
+      <code>user_data_tiktok.json</code> or the ZIP. Only your <b>favourites</b> come across — the videos you bookmarked
+      — not likes or watch history. TikTok's export names your collections but doesn't say which videos are in them, so
+      favourites arrive as one list.
     </>
   ),
 }
 
 export function ImportSection() {
   return (
-    <SettingsGroup label="IMPORT" sub={<>Bring across what you've already saved elsewhere. Every platform exports differently, so each has its own steps.</>}>
+    <SettingsGroup
+      label="IMPORT"
+      sub={
+        <>
+          Bring across what you've already saved elsewhere. Every platform exports differently, so each has its own
+          steps.
+        </>
+      }
+    >
       <div className="settings-rows">
-        {IMPORT_SOURCES.map((source) => <ImportSourceRow key={source.id} source={source} />)}
+        {IMPORT_SOURCES.map(source => (
+          <ImportSourceRow key={source.id} source={source} />
+        ))}
       </div>
     </SettingsGroup>
   )
@@ -65,16 +75,20 @@ function ImportSourceRow({ source }: { source: ImportSource }) {
     setImporting(true)
     setError(null)
     try {
-      const payload = await Promise.all(files.map(async (file) => ({
-        name: file.name,
-        data: await readAsDataUrl(file),
-      })))
+      const payload = await Promise.all(
+        files.map(async file => ({
+          name: file.name,
+          data: await readAsDataUrl(file),
+        })),
+      )
       setResult(await API.importFile({ source: source.id, files: payload }))
     } catch (e) {
-      setError(apiError(e, 'Import failed — check the server and try again.', {
-        import_in_progress: 'Another import is already running — wait for it to finish.',
-        import_rolled_back: 'Nothing was saved — the disk write failed. Try again.',
-      }))
+      setError(
+        apiError(e, 'Import failed — check the server and try again.', {
+          import_in_progress: 'Another import is already running — wait for it to finish.',
+          import_rolled_back: 'Nothing was saved — the disk write failed. Try again.',
+        }),
+      )
       setResult(null)
     }
     setImporting(false)
@@ -102,7 +116,10 @@ function ImportSourceRow({ source }: { source: ImportSource }) {
   // Drag-and-drop onto the same target as the picker. preventDefault on
   // dragover is what actually makes an element a drop target; without it the
   // browser navigates away to the dropped file, losing the whole page.
-  const endDrag = () => { dragDepth.current = 0; setDragging(false) }
+  const endDrag = () => {
+    dragDepth.current = 0
+    setDragging(false)
+  }
   const onDragEnter = (e: DragEvent) => {
     if (importing) return
     e.preventDefault()
@@ -129,32 +146,35 @@ function ImportSourceRow({ source }: { source: ImportSource }) {
   }
 
   return (
-    <SettingsRow title={source.label}
+    <SettingsRow
+      title={source.label}
       desc={INSTRUCTIONS[source.id] || <>Drop this platform's export files here, or choose them.</>}
       data-drag={dragging || undefined}
-      onDragEnter={onDragEnter} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
       action={
         <label className="btn import-pick" aria-disabled={importing}>
           <input type="file" multiple accept={source.accept} disabled={importing} onChange={onFileChange} />
-          <span aria-live="polite">
-            {importing ? 'Importing…' : dragging ? 'Drop to import' : 'Choose files'}
-          </span>
+          <span aria-live="polite">{importing ? 'Importing…' : dragging ? 'Drop to import' : 'Choose files'}</span>
         </label>
       }
-      hint={<>or drop here</>}>
+      hint={<>or drop here</>}
+    >
       {result && (
         <RowStatus>
           <div>{summarizeImport(result)}</div>
           {result.warnings.length > 0 && (
             <ul className="import-warnings">
-              {result.warnings.map((w, i) => <li key={i}>{w}</li>)}
+              {result.warnings.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
             </ul>
           )}
         </RowStatus>
       )}
-      {error && (
-        <RowStatus tone="error">{error}</RowStatus>
-      )}
+      {error && <RowStatus tone="error">{error}</RowStatus>}
     </SettingsRow>
   )
 }

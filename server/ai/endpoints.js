@@ -70,5 +70,5 @@ export const ENDPOINTS = [
 ]
 
 export function findEndpoint(id) {
-  return ENDPOINTS.find((e) => e.id === id) || null
+  return ENDPOINTS.find(e => e.id === id) || null
 }

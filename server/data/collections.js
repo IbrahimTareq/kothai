@@ -16,7 +16,10 @@ let loaded = false
 export async function load() {
   if (loaded) return
   const db = await getDb()
-  collections = db.prepare('SELECT data FROM collections ORDER BY seq DESC').all().map((r) => JSON.parse(r.data))
+  collections = db
+    .prepare('SELECT data FROM collections ORDER BY seq DESC')
+    .all()
+    .map(r => JSON.parse(r.data))
   loaded = true
 }
 
@@ -29,7 +32,7 @@ function updateRow(db, c) {
 }
 
 async function deleteRow(id) {
-  (await getDb()).prepare('DELETE FROM collections WHERE id = ?').run(id)
+  ;(await getDb()).prepare('DELETE FROM collections WHERE id = ?').run(id)
 }
 
 // test-only: clean in-memory slate against a fresh in-memory database.
@@ -48,11 +51,11 @@ function norm(tags) {
 export function matchesRule(noteTags, ruleTags) {
   if (!ruleTags || ruleTags.length === 0) return false
   const rule = new Set(norm(ruleTags))
-  return norm(noteTags).some((t) => rule.has(t))
+  return norm(noteTags).some(t => rule.has(t))
 }
 
 function find(id) {
-  return collections.find((c) => c.id === id)
+  return collections.find(c => c.id === id)
 }
 
 function withCount(c) {
@@ -63,8 +66,11 @@ function withCount(c) {
 // membership first (itemIds order), embeddings already stripped by allNotes().
 const COVER_COUNT = 3
 function withCovers(c) {
-  const byId = new Map(notesStore.allNotes().map((n) => [n.id, n]))
-  const covers = c.itemIds.map((id) => byId.get(id)).filter(Boolean).slice(0, COVER_COUNT)
+  const byId = new Map(notesStore.allNotes().map(n => [n.id, n]))
+  const covers = c.itemIds
+    .map(id => byId.get(id))
+    .filter(Boolean)
+    .slice(0, COVER_COUNT)
   return { ...withCount(c), covers }
 }
 
@@ -89,7 +95,7 @@ export function get(id) {
 // Prepend an id (dedup) and clear any prior manual removal.
 function attach(c, itemId) {
   if (!c.itemIds.includes(itemId)) c.itemIds.unshift(itemId)
-  c.removedIds = c.removedIds.filter((x) => x !== itemId)
+  c.removedIds = c.removedIds.filter(x => x !== itemId)
 }
 
 // Drop the canvas card for an item that left the space, plus any line that
@@ -97,11 +103,11 @@ function attach(c, itemId) {
 // the doc changed.
 function pruneCanvas(c, itemId) {
   if (!c.canvas) return false
-  const gone = new Set(c.canvas.nodes.filter((n) => n.type === 'item' && n.itemId === itemId).map((n) => n.id))
+  const gone = new Set(c.canvas.nodes.filter(n => n.type === 'item' && n.itemId === itemId).map(n => n.id))
   if (!gone.size) return false
   c.canvas = {
-    nodes: c.canvas.nodes.filter((n) => !gone.has(n.id)),
-    edges: c.canvas.edges.filter((e) => !gone.has(e.fromNode) && !gone.has(e.toNode)),
+    nodes: c.canvas.nodes.filter(n => !gone.has(n.id)),
+    edges: c.canvas.edges.filter(e => !gone.has(e.fromNode) && !gone.has(e.toNode)),
   }
   return true
 }
@@ -153,7 +159,7 @@ export async function update(id, patch, notes = []) {
 
 export async function remove(id) {
   const before = collections.length
-  collections = collections.filter((c) => c.id !== id)
+  collections = collections.filter(c => c.id !== id)
   const changed = collections.length !== before
   if (changed) await deleteRow(id)
   return changed
@@ -200,7 +206,7 @@ export async function addItems(id, itemIds) {
 export async function removeItem(id, itemId) {
   const c = find(id)
   if (!c) return null
-  c.itemIds = c.itemIds.filter((x) => x !== itemId)
+  c.itemIds = c.itemIds.filter(x => x !== itemId)
   if (!c.removedIds.includes(itemId)) c.removedIds.push(itemId)
   pruneCanvas(c, itemId)
   updateRow(await getDb(), c)
@@ -232,8 +238,8 @@ export async function deleteItemEverywhere(itemId) {
   for (const c of collections) {
     const bi = c.itemIds.length
     const br = c.removedIds.length
-    c.itemIds = c.itemIds.filter((x) => x !== itemId)
-    c.removedIds = c.removedIds.filter((x) => x !== itemId)
+    c.itemIds = c.itemIds.filter(x => x !== itemId)
+    c.removedIds = c.removedIds.filter(x => x !== itemId)
     const pruned = pruneCanvas(c, itemId)
     if (pruned || c.itemIds.length !== bi || c.removedIds.length !== br) touched.push(c)
   }

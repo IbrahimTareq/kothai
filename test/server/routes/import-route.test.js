@@ -24,10 +24,10 @@ let flushImpl
 let addNoteCalls
 let removeManyCalls
 function seedNotes(list) {
-  notes = list.map((n) => ({ ...n }))
+  notes = list.map(n => ({ ...n }))
 }
 function fakeAllNotes() {
-  return notes.map((n) => ({ ...n }))
+  return notes.map(n => ({ ...n }))
 }
 let nextId = 1
 let addNoteImpl = async () => {}
@@ -45,7 +45,7 @@ async function fakeFlush() {
 async function fakeRemoveMany(ids) {
   removeManyCalls.push([...ids])
   const idSet = new Set(ids)
-  notes = notes.filter((n) => !idSet.has(n.id))
+  notes = notes.filter(n => !idSet.has(n.id))
 }
 
 // ---- in-memory fake collections store ----------------------------------
@@ -55,10 +55,10 @@ async function fakeRemoveMany(ids) {
 let spaces
 let addItemCalls
 function seedSpaces(list) {
-  spaces = list.map((s) => ({ ...s, itemIds: [...s.itemIds], removedIds: [...(s.removedIds || [])] }))
+  spaces = list.map(s => ({ ...s, itemIds: [...s.itemIds], removedIds: [...(s.removedIds || [])] }))
 }
 function fakeSpacesAll() {
-  return spaces.map((s) => ({ ...s }))
+  return spaces.map(s => ({ ...s }))
 }
 let nextSpaceId = 1
 async function fakeCreateSpace({ name, tags = [] }) {
@@ -73,11 +73,11 @@ async function fakeCreateSpace({ name, tags = [] }) {
   return { ...s }
 }
 async function fakeAddItem(id, itemId) {
-  const s = spaces.find((x) => x.id === id)
+  const s = spaces.find(x => x.id === id)
   if (!s) return null
   addItemCalls.push({ id, itemId })
   if (!s.itemIds.includes(itemId)) s.itemIds.unshift(itemId)
-  s.removedIds = s.removedIds.filter((x) => x !== itemId)
+  s.removedIds = s.removedIds.filter(x => x !== itemId)
   return { ...s }
 }
 // Mirrors the real addItems(): identical attach() semantics per id, ONE row
@@ -89,14 +89,14 @@ async function fakeAddItem(id, itemId) {
 // back to per-membership writes.
 let rowWrites
 async function fakeAddItems(id, itemIds) {
-  const s = spaces.find((x) => x.id === id)
+  const s = spaces.find(x => x.id === id)
   if (!s) return null
   let changed = false
   for (const itemId of itemIds) {
     addItemCalls.push({ id, itemId })
     const before = s.itemIds.length + s.removedIds.length
     if (!s.itemIds.includes(itemId)) s.itemIds.unshift(itemId)
-    s.removedIds = s.removedIds.filter((x) => x !== itemId)
+    s.removedIds = s.removedIds.filter(x => x !== itemId)
     if (s.itemIds.length + s.removedIds.length !== before) changed = true
   }
   if (changed) rowWrites++
@@ -136,17 +136,17 @@ mock.module('../../../server/data/notes.js', {
   namedExports: {
     ...realStore,
     allNotes: () => fakeAllNotes(),
-    getNote: (id) => fakeAllNotes().find((n) => n.id === id) ?? null,
+    getNote: id => fakeAllNotes().find(n => n.id === id) ?? null,
     addNote: (note, opts) => fakeAddNote(note, opts),
     flush: () => fakeFlush(),
-    removeMany: (ids) => fakeRemoveMany(ids),
+    removeMany: ids => fakeRemoveMany(ids),
   },
 })
 mock.module('../../../server/data/collections.js', {
   namedExports: {
     ...realCollections,
     all: () => fakeSpacesAll(),
-    create: (input) => fakeCreateSpace(input),
+    create: input => fakeCreateSpace(input),
     addItem: (id, itemId) => fakeAddItem(id, itemId),
     addItems: (id, itemIds) => fakeAddItems(id, itemIds),
   },
@@ -154,13 +154,15 @@ mock.module('../../../server/data/collections.js', {
 mock.module('../../../server/ai/enrich.js', {
   namedExports: {
     ...realEnrich,
-    queueEnrich: (id, job) => { queueEnrichCalls.push({ id, job }) },
+    queueEnrich: (id, job) => {
+      queueEnrichCalls.push({ id, job })
+    },
   },
 })
 mock.module('../../../server/import/index.js', {
   namedExports: {
     ...realImportIndex,
-    findImporter: (files) => (importerOverride ?? realImportIndex.findImporter(files)),
+    findImporter: files => importerOverride ?? realImportIndex.findImporter(files),
   },
 })
 
@@ -185,8 +187,12 @@ function fakeRes() {
   return {
     statusCode: null,
     body: null,
-    writeHead(code) { this.statusCode = code },
-    end(str) { this.body = str ? JSON.parse(str) : null },
+    writeHead(code) {
+      this.statusCode = code
+    },
+    end(str) {
+      this.body = str ? JSON.parse(str) : null
+    },
   }
 }
 
@@ -204,13 +210,22 @@ function savedPostsPayload(rows) {
 // can only be exercised through a real two-entry ZIP (see makeZip below).
 function savedPostsAndCollectionsZip(rows, collectionRows) {
   return makeZip([
-    { name: 'your_instagram_activity/saved/saved_posts.json', data: Buffer.from(JSON.stringify(savedPostsPayload(rows))) },
-    { name: 'your_instagram_activity/saved/saved_collections.json', data: Buffer.from(JSON.stringify({ saved_saved_collections: collectionRows })) },
+    {
+      name: 'your_instagram_activity/saved/saved_posts.json',
+      data: Buffer.from(JSON.stringify(savedPostsPayload(rows))),
+    },
+    {
+      name: 'your_instagram_activity/saved/saved_collections.json',
+      data: Buffer.from(JSON.stringify({ saved_saved_collections: collectionRows })),
+    },
   ])
 }
 
 function post(poster, code, ts = 1718000000, { path = 'p' } = {}) {
-  return { title: poster, string_map_data: { 'Saved on': { href: `https://www.instagram.com/${path}/${code}/`, timestamp: ts } } }
+  return {
+    title: poster,
+    string_map_data: { 'Saved on': { href: `https://www.instagram.com/${path}/${code}/`, timestamp: ts } },
+  }
 }
 
 // parseSavedPosts falls back to ANY usable http(s) href when a row has no
@@ -225,15 +240,17 @@ function nonIgPost(title, href, ts = 1718000000) {
 // third-party zip library — deliberately reuses the "PK" sniff the route uses.
 function crc32(buf) {
   let c
-  const table = crc32.table || (crc32.table = (() => {
-    const t = []
-    for (let n = 0; n < 256; n++) {
-      c = n
-      for (let k = 0; k < 8; k++) c = c & 1 ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1)
-      t[n] = c >>> 0
-    }
-    return t
-  })())
+  const table =
+    crc32.table ||
+    (crc32.table = (() => {
+      const t = []
+      for (let n = 0; n < 256; n++) {
+        c = n
+        for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
+        t[n] = c >>> 0
+      }
+      return t
+    })())
   let crc = 0xffffffff
   for (let i = 0; i < buf.length; i++) crc = table[(crc ^ buf[i]) & 0xff] ^ (crc >>> 8)
   return (crc ^ 0xffffffff) >>> 0
@@ -324,7 +341,9 @@ test('happy path: imports posts, queues enrich, reports counts', async () => {
 test('enrich is not queued while notes are still being added — only after the batch flush succeeds', async () => {
   reset()
   const seenDuringAdd = []
-  addNoteImpl = async () => { seenDuringAdd.push(queueEnrichCalls.length) }
+  addNoteImpl = async () => {
+    seenDuringAdd.push(queueEnrichCalls.length)
+  }
   const payload = savedPostsPayload([post('natgeo', 'AAA111'), post('chefsteps', 'BBB222')])
   await handleImport(fakeReq({ name: 'saved_posts.json', data: b64(payload) }), fakeRes())
   assert.deepEqual(seenDuringAdd, [0, 0], 'queueEnrich must not have fired yet while the add loop is still running')
@@ -502,7 +521,7 @@ test('a post in multiple IG collections lands in each corresponding Space', asyn
 
   assert.equal(res.body.imported, 1)
   assert.equal(res.body.collections, 2)
-  const names = spaces.map((s) => s.name).sort()
+  const names = spaces.map(s => s.name).sort()
   assert.deepEqual(names, ['Recipes', 'Travel'])
   const noteId = notes[0].id
   for (const s of spaces) assert.ok(s.itemIds.includes(noteId), `note filed into ${s.name}`)
@@ -548,7 +567,7 @@ test('re-import with a NEWLY-added IG collection files the already-existing note
   assert.equal(res2.body.imported, 0, 'the post itself is still a dedup-skip')
   assert.equal(res2.body.skipped, 1)
   assert.equal(res2.body.collections, 1, 'a Space was still created/filed for the already-existing note')
-  const space = spaces.find((s) => s.name === 'Recipes')
+  const space = spaces.find(s => s.name === 'Recipes')
   assert.ok(space, 'the Recipes Space was created')
   assert.ok(space.itemIds.includes(noteId), 'the EXISTING note (not a new one) was filed into it')
 })
@@ -577,7 +596,7 @@ test('re-importing an unchanged export skips redundant addItem calls entirely (n
   await handleImport(fakeReq({ name: 'export.zip', data: zip.toString('base64') }), res2)
   assert.equal(addItemCalls.length, 1, 'no redundant addItem call for membership that already exists')
   assert.equal(res2.body.collections, 0, 'nothing actually changed, so this collection is not reported as touched')
-  const space = spaces.find((s) => s.name === 'Recipes')
+  const space = spaces.find(s => s.name === 'Recipes')
   assert.deepEqual(space.itemIds, [noteId])
 })
 
@@ -600,7 +619,7 @@ test('a re-import does not resurrect an item the user hand-removed from a PLAIN 
   const res = fakeRes()
   await handleImport(fakeReq({ name: 'export.zip', data: zip.toString('base64') }), res)
 
-  const space = spaces.find((s) => s.id === 'plain-1')
+  const space = spaces.find(s => s.id === 'plain-1')
   assert.deepEqual(space.itemIds, [], 'hand-removed item must not be re-added')
   assert.deepEqual(space.removedIds, ['existing-1'], 'removal must stick — not cleared by the import')
   assert.equal(addItemCalls.length, 0, 'addItem must not even be called for a hand-removed id')
@@ -613,9 +632,15 @@ test('a re-import does not resurrect an item the user hand-removed from a PLAIN 
 // deliberately hand-removed from it.
 test('a name collision with a SMART Space creates a distinct "(Instagram)" Space instead of reusing it', async () => {
   reset()
-  seedSpaces([{
-    id: 'smart-1', name: 'Recipes', tags: ['cooking'], itemIds: ['note-hand-added'], removedIds: ['note-hand-removed'],
-  }])
+  seedSpaces([
+    {
+      id: 'smart-1',
+      name: 'Recipes',
+      tags: ['cooking'],
+      itemIds: ['note-hand-added'],
+      removedIds: ['note-hand-removed'],
+    },
+  ])
   const zip = savedPostsAndCollectionsZip(
     [post('natgeo', 'AAA111')],
     [{ title: 'Recipes', list: [{ href: 'https://www.instagram.com/p/AAA111/' }] }],
@@ -624,11 +649,11 @@ test('a name collision with a SMART Space creates a distinct "(Instagram)" Space
   await handleImport(fakeReq({ name: 'export.zip', data: zip.toString('base64') }), res)
 
   assert.equal(res.body.collections, 1)
-  const smart = spaces.find((s) => s.id === 'smart-1')
-  assert.deepEqual(smart.itemIds, ['note-hand-added'], 'the smart Space\'s membership is untouched')
+  const smart = spaces.find(s => s.id === 'smart-1')
+  assert.deepEqual(smart.itemIds, ['note-hand-added'], "the smart Space's membership is untouched")
   assert.deepEqual(smart.removedIds, ['note-hand-removed'], 'a hand-removed item must NOT be resurrected')
 
-  const mirror = spaces.find((s) => s.name === 'Recipes (Instagram)')
+  const mirror = spaces.find(s => s.name === 'Recipes (Instagram)')
   assert.ok(mirror, 'a distinct Space was created for the IG collection instead')
   assert.ok(mirror.itemIds.includes(notes[0].id))
   assert.equal(spaces.length, 2, 'exactly one new Space, the smart one untouched')
@@ -652,14 +677,14 @@ test('if the "(Instagram)" fallback name is ALSO a smart Space, a further fresh 
   const res = fakeRes()
   await handleImport(fakeReq({ name: 'export.zip', data: zip.toString('base64') }), res)
 
-  const smart1 = spaces.find((s) => s.id === 'smart-1')
-  const smart2 = spaces.find((s) => s.id === 'smart-2')
+  const smart1 = spaces.find(s => s.id === 'smart-1')
+  const smart2 = spaces.find(s => s.id === 'smart-2')
   assert.deepEqual(smart1.itemIds, [], 'the first smart Space is untouched')
   assert.deepEqual(smart2.itemIds, ['note-x'], 'the "(Instagram)"-named smart Space must ALSO be untouched')
   assert.deepEqual(smart2.removedIds, ['note-y'])
 
   const noteId = notes[0].id
-  const freshMirror = spaces.find((s) => s.itemIds.includes(noteId))
+  const freshMirror = spaces.find(s => s.itemIds.includes(noteId))
   assert.ok(freshMirror, 'a third Space was created to hold the imported note')
   assert.notEqual(freshMirror.id, 'smart-1')
   assert.notEqual(freshMirror.id, 'smart-2')
@@ -690,12 +715,12 @@ test('four consecutive re-imports against a same-named smart Space produce exact
   }
 
   assert.equal(spaces.length, 3, 'exactly one mirror Space total, not one freshly minted per re-import')
-  const mirrors = spaces.filter((s) => s.name === 'Recipes (Instagram)' && (!s.tags || s.tags.length === 0))
+  const mirrors = spaces.filter(s => s.name === 'Recipes (Instagram)' && (!s.tags || s.tags.length === 0))
   assert.equal(mirrors.length, 1)
   assert.ok(mirrors[0].itemIds.includes(notes[0].id))
 
-  const smartRecipes = spaces.find((s) => s.id === 'smart-recipes')
-  const smartRecipesIg = spaces.find((s) => s.id === 'smart-recipes-ig')
+  const smartRecipes = spaces.find(s => s.id === 'smart-recipes')
+  const smartRecipesIg = spaces.find(s => s.id === 'smart-recipes-ig')
   assert.deepEqual(smartRecipes.itemIds, [], 'the smart "Recipes" Space is never touched')
   assert.deepEqual(smartRecipesIg.itemIds, [], 'the smart "Recipes (Instagram)" Space is never touched')
 })
@@ -720,7 +745,9 @@ test('corrupt ZIP -> 400, not a 500', async () => {
 test('a well-formed ZIP containing saved_posts.json imports correctly', async () => {
   reset()
   const payload = savedPostsPayload([post('natgeo', 'AAA111')])
-  const zip = makeZip([{ name: 'your_instagram_activity/saved/saved_posts.json', data: Buffer.from(JSON.stringify(payload)) }])
+  const zip = makeZip([
+    { name: 'your_instagram_activity/saved/saved_posts.json', data: Buffer.from(JSON.stringify(payload)) },
+  ])
   const res = fakeRes()
   await handleImport(fakeReq({ name: 'export.zip', data: zip.toString('base64') }), res)
   assert.equal(res.statusCode, 200)
@@ -748,7 +775,7 @@ test('an importer returning non-array warnings is guarded against, not trusted b
   importerOverride = {
     name: 'fake',
     parse: () => ({ items: [], collections: [], warnings: undefined }),
-    deriveNote: (item) => ({ type: 'link', title: 'x', content: item.url, url: item.url, tags: [] }),
+    deriveNote: item => ({ type: 'link', title: 'x', content: item.url, url: item.url, tags: [] }),
   }
   const res = fakeRes()
   await handleImport(fakeReq({ name: 'whatever.json', data: b64({ anything: true }) }), res)
@@ -758,7 +785,7 @@ test('an importer returning non-array warnings is guarded against, not trusted b
 
 test('a failed per-item addNote is counted as failed, not silently dropped or counted as skipped', async () => {
   reset()
-  addNoteImpl = async (note) => {
+  addNoteImpl = async note => {
     if (note.url && note.url.includes('BBB222')) throw new Error('simulated add failure')
   }
   const payload = savedPostsPayload([post('natgeo', 'AAA111'), post('chefsteps', 'BBB222')])
@@ -767,7 +794,7 @@ test('a failed per-item addNote is counted as failed, not silently dropped or co
   assert.equal(res.body.imported, 1)
   assert.equal(res.body.skipped, 0)
   assert.equal(res.body.failed, 1)
-  assert.ok(res.body.warnings.some((w) => /1 post/.test(w)))
+  assert.ok(res.body.warnings.some(w => /1 post/.test(w)))
 })
 
 // MUST FIX 3 / MUST FIX F3 (review round): a failed flush must not leave
@@ -780,7 +807,9 @@ test('a failed per-item addNote is counted as failed, not silently dropped or co
 // permanent ghost id in a smart collection.
 test('a failed disk flush is rolled back and reported as a hard failure, not a clean/partial success', async () => {
   reset()
-  flushImpl = async () => { throw new Error('ENOSPC: no space left on device') }
+  flushImpl = async () => {
+    throw new Error('ENOSPC: no space left on device')
+  }
   const payload = savedPostsPayload([post('natgeo', 'AAA111')])
   const res = fakeRes()
   await handleImport(fakeReq({ name: 'saved_posts.json', data: b64(payload) }), res)
@@ -868,19 +897,30 @@ function collectionsPayload(rows) {
 test('multi-file: posts and collections uploaded as two loose JSON files create Spaces', async () => {
   reset()
   const res = fakeRes()
-  await handleImport(fakeReq({
-    source: 'instagram',
-    files: [
-      { name: 'saved_posts.json', data: b64(savedPostsPayload([post('chefsteps', 'DEF456', 1718000000, { path: 'reel' })])) },
-      { name: 'saved_collections.json', data: b64(collectionsPayload([{ title: 'Recipes', list: [{ href: 'https://www.instagram.com/reel/DEF456/' }] }])) },
-    ],
-  }), res)
+  await handleImport(
+    fakeReq({
+      source: 'instagram',
+      files: [
+        {
+          name: 'saved_posts.json',
+          data: b64(savedPostsPayload([post('chefsteps', 'DEF456', 1718000000, { path: 'reel' })])),
+        },
+        {
+          name: 'saved_collections.json',
+          data: b64(
+            collectionsPayload([{ title: 'Recipes', list: [{ href: 'https://www.instagram.com/reel/DEF456/' }] }]),
+          ),
+        },
+      ],
+    }),
+    res,
+  )
 
   assert.equal(res.statusCode, 200)
   assert.equal(res.body.imported, 1)
   assert.equal(res.body.collections, 1)
   assert.deepEqual(res.body.warnings, [])
-  const space = spaces.find((s) => s.name === 'Recipes')
+  const space = spaces.find(s => s.name === 'Recipes')
   assert.ok(space, 'a Space named after the IG collection was created')
   assert.deepEqual(space.itemIds, [notes[0].id])
 })
@@ -888,10 +928,18 @@ test('multi-file: posts and collections uploaded as two loose JSON files create 
 test('order-independent: a collections file imported AFTER its posts still fills the Space', async () => {
   reset()
   const first = fakeRes()
-  await handleImport(fakeReq({
-    source: 'instagram',
-    files: [{ name: 'saved_posts.json', data: b64(savedPostsPayload([post('chefsteps', 'DEF456', 1718000000, { path: 'reel' })])) }],
-  }), first)
+  await handleImport(
+    fakeReq({
+      source: 'instagram',
+      files: [
+        {
+          name: 'saved_posts.json',
+          data: b64(savedPostsPayload([post('chefsteps', 'DEF456', 1718000000, { path: 'reel' })])),
+        },
+      ],
+    }),
+    first,
+  )
   assert.equal(first.body.imported, 1)
   assert.equal(first.body.collections, 0, 'no collections file yet, so no Spaces')
   const noteId = notes[0].id
@@ -899,57 +947,99 @@ test('order-independent: a collections file imported AFTER its posts still fills
   // A separate request, later. The posts are already in the store, so
   // membership has to resolve through the existing-notes url index.
   const second = fakeRes()
-  await handleImport(fakeReq({
-    source: 'instagram',
-    files: [{ name: 'saved_collections.json', data: b64(collectionsPayload([{ title: 'Recipes', list: [{ href: 'https://www.instagram.com/reel/DEF456/' }] }])) }],
-  }), second)
+  await handleImport(
+    fakeReq({
+      source: 'instagram',
+      files: [
+        {
+          name: 'saved_collections.json',
+          data: b64(
+            collectionsPayload([{ title: 'Recipes', list: [{ href: 'https://www.instagram.com/reel/DEF456/' }] }]),
+          ),
+        },
+      ],
+    }),
+    second,
+  )
 
   assert.equal(second.statusCode, 200)
   assert.equal(second.body.imported, 0)
   assert.equal(second.body.collections, 1)
-  const space = spaces.find((s) => s.name === 'Recipes')
+  const space = spaces.find(s => s.name === 'Recipes')
   assert.deepEqual(space.itemIds, [noteId])
 })
 
 test('collections-only: members with no saved post are reported, not silently dropped', async () => {
   reset()
   const res = fakeRes()
-  await handleImport(fakeReq({
-    source: 'instagram',
-    files: [{ name: 'saved_collections.json', data: b64(collectionsPayload([
-      { title: 'Recipes', list: [{ href: 'https://www.instagram.com/reel/DEF456/' }, { href: 'https://www.instagram.com/p/GHI789/' }] },
-    ])) }],
-  }), res)
+  await handleImport(
+    fakeReq({
+      source: 'instagram',
+      files: [
+        {
+          name: 'saved_collections.json',
+          data: b64(
+            collectionsPayload([
+              {
+                title: 'Recipes',
+                list: [
+                  { href: 'https://www.instagram.com/reel/DEF456/' },
+                  { href: 'https://www.instagram.com/p/GHI789/' },
+                ],
+              },
+            ]),
+          ),
+        },
+      ],
+    }),
+    res,
+  )
 
   assert.equal(res.statusCode, 200)
   assert.equal(res.body.imported, 0)
   assert.equal(res.body.collections, 0, 'nothing resolved, so no Space was touched')
   assert.ok(
-    res.body.warnings.some((w) => /2 post\(s\) in these collections aren't saved yet/.test(w)),
+    res.body.warnings.some(w => /2 post\(s\) in these collections aren't saved yet/.test(w)),
     `expected an unresolved-members warning, got ${JSON.stringify(res.body.warnings)}`,
   )
 })
 
-test("collections: a post in two collections counts once in the unresolved warning", async () => {
+test('collections: a post in two collections counts once in the unresolved warning', async () => {
   reset()
   const res = fakeRes()
-  await handleImport(fakeReq({
-    source: 'instagram',
-    files: [{ name: 'saved_collections.json', data: b64(collectionsPayload([
-      { title: 'Recipes', list: [{ href: 'https://www.instagram.com/reel/DEF456/' }] },
-      { title: 'Favorites', list: [{ href: 'https://www.instagram.com/reel/DEF456/' }] },
-    ])) }],
-  }), res)
-  assert.ok(res.body.warnings.some((w) => /^1 post\(s\)/.test(w)), JSON.stringify(res.body.warnings))
+  await handleImport(
+    fakeReq({
+      source: 'instagram',
+      files: [
+        {
+          name: 'saved_collections.json',
+          data: b64(
+            collectionsPayload([
+              { title: 'Recipes', list: [{ href: 'https://www.instagram.com/reel/DEF456/' }] },
+              { title: 'Favorites', list: [{ href: 'https://www.instagram.com/reel/DEF456/' }] },
+            ]),
+          ),
+        },
+      ],
+    }),
+    res,
+  )
+  assert.ok(
+    res.body.warnings.some(w => /^1 post\(s\)/.test(w)),
+    JSON.stringify(res.body.warnings),
+  )
 })
 
 test('source tagging: an upload that is not that platform gets a source-specific error', async () => {
   reset()
   const res = fakeRes()
-  await handleImport(fakeReq({
-    source: 'instagram',
-    files: [{ name: 'bookmarks.json', data: b64({ nothing: 'here' }) }],
-  }), res)
+  await handleImport(
+    fakeReq({
+      source: 'instagram',
+      files: [{ name: 'bookmarks.json', data: b64({ nothing: 'here' }) }],
+    }),
+    res,
+  )
   assert.equal(res.statusCode, 400)
   assert.equal(res.body.code, 'import_source_mismatch')
   assert.match(res.body.error, /Instagram/)
@@ -959,10 +1049,13 @@ test('source tagging: an upload that is not that platform gets a source-specific
 test('source tagging: an unknown source names the ones that exist', async () => {
   reset()
   const res = fakeRes()
-  await handleImport(fakeReq({
-    source: 'myspace',
-    files: [{ name: 'saved_posts.json', data: b64(savedPostsPayload([post('natgeo', 'AAA111')])) }],
-  }), res)
+  await handleImport(
+    fakeReq({
+      source: 'myspace',
+      files: [{ name: 'saved_posts.json', data: b64(savedPostsPayload([post('natgeo', 'AAA111')])) }],
+    }),
+    res,
+  )
   assert.equal(res.statusCode, 400)
   assert.match(res.body.error, /Unknown import source/)
   assert.match(res.body.error, /instagram/)
@@ -972,13 +1065,16 @@ test('multi-file: two uploads carrying the same path do not overwrite each other
   reset()
   const res = fakeRes()
   // Meta splits large exports into parts, each with its own saved_posts.json.
-  await handleImport(fakeReq({
-    source: 'instagram',
-    files: [
-      { name: 'saved_posts.json', data: b64(savedPostsPayload([post('natgeo', 'AAA111')])) },
-      { name: 'saved_posts.json', data: b64(savedPostsPayload([post('chefsteps', 'BBB222')])) },
-    ],
-  }), res)
+  await handleImport(
+    fakeReq({
+      source: 'instagram',
+      files: [
+        { name: 'saved_posts.json', data: b64(savedPostsPayload([post('natgeo', 'AAA111')])) },
+        { name: 'saved_posts.json', data: b64(savedPostsPayload([post('chefsteps', 'BBB222')])) },
+      ],
+    }),
+    res,
+  )
   assert.equal(res.statusCode, 200)
   assert.equal(res.body.imported, 2, 'both parts were read, not just the last one')
 })
@@ -986,16 +1082,27 @@ test('multi-file: two uploads carrying the same path do not overwrite each other
 test('multi-file: a ZIP and a loose JSON in one request are merged', async () => {
   reset()
   const zip = makeZip([
-    { name: 'your_instagram_activity/saved/saved_posts.json', data: Buffer.from(JSON.stringify(savedPostsPayload([post('chefsteps', 'DEF456', 1718000000, { path: 'reel' })]))) },
+    {
+      name: 'your_instagram_activity/saved/saved_posts.json',
+      data: Buffer.from(JSON.stringify(savedPostsPayload([post('chefsteps', 'DEF456', 1718000000, { path: 'reel' })]))),
+    },
   ])
   const res = fakeRes()
-  await handleImport(fakeReq({
-    source: 'instagram',
-    files: [
-      { name: 'export.zip', data: zip.toString('base64') },
-      { name: 'saved_collections.json', data: b64(collectionsPayload([{ title: 'Recipes', list: [{ href: 'https://www.instagram.com/reel/DEF456/' }] }])) },
-    ],
-  }), res)
+  await handleImport(
+    fakeReq({
+      source: 'instagram',
+      files: [
+        { name: 'export.zip', data: zip.toString('base64') },
+        {
+          name: 'saved_collections.json',
+          data: b64(
+            collectionsPayload([{ title: 'Recipes', list: [{ href: 'https://www.instagram.com/reel/DEF456/' }] }]),
+          ),
+        },
+      ],
+    }),
+    res,
+  )
   assert.equal(res.statusCode, 200)
   assert.equal(res.body.imported, 1)
   assert.equal(res.body.collections, 1)
@@ -1017,12 +1124,21 @@ test('tiktok: an export imports as videos, and its three URL forms dedup to one 
   reset()
   const exportJson = {
     'Likes and Favorites': {
-      'Favorite Videos': { FavoriteVideoList: [{ Date: '2025-08-09 10:20:53', Link: 'https://www.tiktokv.com/share/video/7325881953608158497/' }] },
-      'Like List': { ItemFavoriteList: [{ Date: '2025-01-01 00:00:00', Link: 'https://www.tiktokv.com/share/video/999/' }] },
+      'Favorite Videos': {
+        FavoriteVideoList: [
+          { Date: '2025-08-09 10:20:53', Link: 'https://www.tiktokv.com/share/video/7325881953608158497/' },
+        ],
+      },
+      'Like List': {
+        ItemFavoriteList: [{ Date: '2025-01-01 00:00:00', Link: 'https://www.tiktokv.com/share/video/999/' }],
+      },
     },
   }
   const res = fakeRes()
-  await handleImport(fakeReq({ source: 'tiktok', files: [{ name: 'user_data_tiktok.json', data: b64(exportJson) }] }), res)
+  await handleImport(
+    fakeReq({ source: 'tiktok', files: [{ name: 'user_data_tiktok.json', data: b64(exportJson) }] }),
+    res,
+  )
   assert.equal(res.statusCode, 200)
   assert.equal(res.body.importer, 'tiktok')
   assert.equal(res.body.imported, 1, 'the Like List is not imported')
@@ -1033,12 +1149,26 @@ test('tiktok: an export imports as videos, and its three URL forms dedup to one 
   // The same video saved by hand from the app carries the @handle form. A
   // second import must recognise it as already saved, not store it twice.
   const again = fakeRes()
-  await handleImport(fakeReq({
-    source: 'tiktok',
-    files: [{ name: 'user_data_tiktok.json', data: b64({ 'Likes and Favorites': { 'Favorite Videos': { FavoriteVideoList: [
-      { Date: '2025-08-09 10:20:53', Link: 'https://www.tiktok.com/@someone/video/7325881953608158497' },
-    ] } } }) }],
-  }), again)
+  await handleImport(
+    fakeReq({
+      source: 'tiktok',
+      files: [
+        {
+          name: 'user_data_tiktok.json',
+          data: b64({
+            'Likes and Favorites': {
+              'Favorite Videos': {
+                FavoriteVideoList: [
+                  { Date: '2025-08-09 10:20:53', Link: 'https://www.tiktok.com/@someone/video/7325881953608158497' },
+                ],
+              },
+            },
+          }),
+        },
+      ],
+    }),
+    again,
+  )
   assert.equal(again.body.imported, 0)
   assert.equal(again.body.skipped, 1)
   assert.equal(notes.length, 1)
@@ -1047,10 +1177,13 @@ test('tiktok: an export imports as videos, and its three URL forms dedup to one 
 test('tiktok: an Instagram export dropped on the TikTok source is refused by name', async () => {
   reset()
   const res = fakeRes()
-  await handleImport(fakeReq({
-    source: 'tiktok',
-    files: [{ name: 'saved_posts.json', data: b64(savedPostsPayload([post('natgeo', 'AAA111')])) }],
-  }), res)
+  await handleImport(
+    fakeReq({
+      source: 'tiktok',
+      files: [{ name: 'saved_posts.json', data: b64(savedPostsPayload([post('natgeo', 'AAA111')])) }],
+    }),
+    res,
+  )
   assert.equal(res.statusCode, 400)
   assert.equal(res.body.code, 'import_source_mismatch')
   assert.match(res.body.error, /TikTok/)
@@ -1065,19 +1198,22 @@ test('bulk: filing many memberships into one Space costs ONE row write, not one 
   const rows = Array.from({ length: 50 }, (_, i) => post('natgeo', `CODE${i}`))
   const hrefs = rows.map((_, i) => ({ href: `https://www.instagram.com/p/CODE${i}/` }))
   const res = fakeRes()
-  await handleImport(fakeReq({
-    source: 'instagram',
-    files: [
-      { name: 'saved_posts.json', data: b64(savedPostsPayload(rows)) },
-      { name: 'saved_collections.json', data: b64({ saved_saved_collections: [{ title: 'Recipes', list: hrefs }] }) },
-    ],
-  }), res)
+  await handleImport(
+    fakeReq({
+      source: 'instagram',
+      files: [
+        { name: 'saved_posts.json', data: b64(savedPostsPayload(rows)) },
+        { name: 'saved_collections.json', data: b64({ saved_saved_collections: [{ title: 'Recipes', list: hrefs }] }) },
+      ],
+    }),
+    res,
+  )
 
   assert.equal(res.body.imported, 50)
   assert.equal(res.body.collections, 1)
   assert.equal(addItemCalls.length, 50, 'all 50 memberships were filed')
   assert.equal(rowWrites, 1, 'but persisted in a single write')
-  assert.equal(spaces.find((s) => s.name === 'Recipes').itemIds.length, 50)
+  assert.equal(spaces.find(s => s.name === 'Recipes').itemIds.length, 50)
 })
 
 test('bulk: a no-op re-import writes the Space row zero times', async () => {

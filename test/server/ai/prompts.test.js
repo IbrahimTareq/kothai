@@ -58,7 +58,14 @@ test('classifyUserPrompt substitutes a placeholder for empty text', () => {
 
 test('answerUserPrompt numbers notes for citation and caps each one', () => {
   const notes = [
-    { createdAt: '2026-01-01T00:00:00Z', type: 'link', category: 'Tech', title: 'A', content: 'body-a', url: 'https://a' },
+    {
+      createdAt: '2026-01-01T00:00:00Z',
+      type: 'link',
+      category: 'Tech',
+      title: 'A',
+      content: 'body-a',
+      url: 'https://a',
+    },
     { createdAt: '2026-01-02T00:00:00Z', type: 'text', category: 'Work', title: 'B', content: 'body-b' },
   ]
   const p = answerUserPrompt({ question: 'what?', contextNotes: notes })
@@ -104,14 +111,18 @@ test('noteContextBody surfaces every field the embedding was built from', () => 
 test('noteContextBody drops duplicates rather than spending budget repeating them', () => {
   const body = noteContextBody({
     title: 'Same Thing',
-    siteTitle: 'Same Thing',          // equals title
-    summary: 'Same Thing',            // equals title
+    siteTitle: 'Same Thing', // equals title
+    summary: 'Same Thing', // equals title
     content: 'https://x.test/a',
-    url: 'https://x.test/a',          // content IS the url for a saved link
+    url: 'https://x.test/a', // content IS the url for a saved link
     tags: [],
   })
   assert.equal(body.match(/Same Thing/g), null, 'text already in the header line is not repeated')
-  assert.equal(body.match(/https:\/\/x\.test\/a/g)?.length ?? 0, 0, 'the url is printed once, by answerUserPrompt, not twice')
+  assert.equal(
+    body.match(/https:\/\/x\.test\/a/g)?.length ?? 0,
+    0,
+    'the url is printed once, by answerUserPrompt, not twice',
+  )
 })
 
 test('answerUserPrompt shows a reel its caption and thumbnail description, not just title + URL', () => {
@@ -207,7 +218,7 @@ test('retrievalQuery prepends the previous user turn so a subject-less follow-up
   assert.match(q, /what else did they make\?/)
 })
 
-test('retrievalQuery never folds in the assistant\'s own answer', () => {
+test("retrievalQuery never folds in the assistant's own answer", () => {
   // A generated answer can be several hundred words about the wrong thing;
   // embedding it drags retrieval along with it.
   const q = retrievalQuery('what else?', HISTORY)

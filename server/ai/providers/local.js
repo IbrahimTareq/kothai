@@ -16,18 +16,26 @@ import {
   answerSystemPrompt,
   answerUserPrompt,
 } from '../prompts.js'
-import { normaliseClassification, isJunkTag, heuristicType, deriveTitle, isLikelyUrl, extractUrl, stripThinking } from '../normalise.js'
+import {
+  normaliseClassification,
+  isJunkTag,
+  heuristicType,
+  deriveTitle,
+  isLikelyUrl,
+  extractUrl,
+  stripThinking,
+} from '../normalise.js'
 export { FeatureDisabledError, PRESETS, DEFAULTS }
 export { normaliseClassification, isJunkTag, heuristicType, deriveTitle, isLikelyUrl, extractUrl }
 
 // ---- model selection ---------------------------------------------------
 function presetFor(role, key) {
-  return PRESETS[role].find((p) => p.key === key) || PRESETS[role].find((p) => p.key === DEFAULTS[role])
+  return PRESETS[role].find(p => p.key === key) || PRESETS[role].find(p => p.key === DEFAULTS[role])
 }
 
 // Preset list with sizes resolved from the SDK registry, for the settings UI.
 export function presetInfo() {
-  const withSize = (p) => ({
+  const withSize = p => ({
     ...p,
     sizeBytes: (MODELS[p.key]?.expectedSize || 0) + (p.proj ? MODELS[p.proj]?.expectedSize || 0 : 0),
   })
@@ -62,11 +70,11 @@ const IDLE_MS = { llm: 10 * 60 * 1000, embed: 5 * 60 * 1000, vision: 3 * 60 * 10
 function makeLoader(modelType) {
   return {
     load: ({ modelSrc, modelConfig, onProgress }) => {
-      const opts = { modelSrc, modelType, onProgress: (p) => onProgress(p.percentage ?? 0) }
+      const opts = { modelSrc, modelType, onProgress: p => onProgress(p.percentage ?? 0) }
       if (modelConfig) opts.modelConfig = modelConfig
       return loadModel(opts)
     },
-    unload: (id) => unloadModel({ modelId: id }),
+    unload: id => unloadModel({ modelId: id }),
   }
 }
 
@@ -320,9 +328,14 @@ const completionQueue = {}
 function serialise(role, fn) {
   const prev = completionQueue[role] || Promise.resolve()
   let done
-  completionQueue[role] = new Promise((r) => { done = r })
+  completionQueue[role] = new Promise(r => {
+    done = r
+  })
   // A failed turn must not break the chain for the ones behind it.
-  return prev.catch(() => {}).then(fn).finally(done)
+  return prev
+    .catch(() => {})
+    .then(fn)
+    .finally(done)
 }
 
 // Streaming form of the above. Emits each content delta as it arrives and
@@ -341,16 +354,21 @@ export async function answerStream({ question, contextNotes, history = [], onTok
           { role: 'user', content: answerUserPrompt({ question, contextNotes, history }) },
         ],
         stream: true,
-        captureThinking: true,   // keeps <think> out of contentDelta, as the non-streaming path does
+        captureThinking: true, // keeps <think> out of contentDelta, as the non-streaming path does
       })
       let teardown = null
-      const abort = () => { teardown = Promise.resolve(cancel({ requestId: run.requestId })).catch(() => {}) }
+      const abort = () => {
+        teardown = Promise.resolve(cancel({ requestId: run.requestId })).catch(() => {})
+      }
       if (signal?.aborted) abort()
       else signal?.addEventListener('abort', abort, { once: true })
       let acc = ''
       try {
         for await (const ev of run.events) {
-          if (ev.type === 'contentDelta' && ev.text) { acc += ev.text; onToken?.(ev.text) }
+          if (ev.type === 'contentDelta' && ev.text) {
+            acc += ev.text
+            onToken?.(ev.text)
+          }
         }
         // Cancelling ends the event stream, but `final` belongs to a run that is
         // no longer going to produce one — awaiting it here held the role lock
@@ -370,10 +388,11 @@ export async function answerStream({ question, contextNotes, history = [], onTok
         // while the model still considered the old one live, and it came back
         // "rejected by registry concurrency policy". Bounded, because a teardown
         // that never settles must not wedge the model for the whole session.
-        if (teardown) await Promise.race([
-          teardown.then(() => run.final).catch(() => {}),
-          new Promise((r) => setTimeout(r, TEARDOWN_GRACE_MS)),
-        ])
+        if (teardown)
+          await Promise.race([
+            teardown.then(() => run.final).catch(() => {}),
+            new Promise(r => setTimeout(r, TEARDOWN_GRACE_MS)),
+          ])
       }
     } finally {
       managers.llm.release()
@@ -414,7 +433,7 @@ export function available() {
 }
 
 export function validateModel(role, key) {
-  if (PRESETS[role].some((p) => p.key === key)) return { ok: true }
+  if (PRESETS[role].some(p => p.key === key)) return { ok: true }
   return { ok: false, error: `unknown ${role} model: ${key}` }
 }
 

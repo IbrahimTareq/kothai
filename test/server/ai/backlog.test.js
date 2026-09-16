@@ -31,16 +31,23 @@ test('stepsFor: vision only applies to image notes', () => {
 
 test('backlogCount: counts notes with at least one needed step', () => {
   const notes = [
-    { ai: { classify: true, embed: true } },      // done
-    { ai: {} },                                    // needs both
-    { image: '/u/a.png', ai: { classify: true, embed: true } },  // needs vision
+    { ai: { classify: true, embed: true } }, // done
+    { ai: {} }, // needs both
+    { image: '/u/a.png', ai: { classify: true, embed: true } }, // needs vision
   ]
   assert.equal(backlogCount(notes, ALL_ON), 2)
   assert.equal(backlogCount(notes, ALL_OFF), 0)
 })
 
 test('deriveAiMarkers: legacy enriched note infers embed + vision, never classify', () => {
-  const legacy = { category: 'Recipes', tags: ['x'], summary: 's', embedding: [0.1], image: '/u/a.png', description: 'a cat' }
+  const legacy = {
+    category: 'Recipes',
+    tags: ['x'],
+    summary: 's',
+    embedding: [0.1],
+    image: '/u/a.png',
+    description: 'a cat',
+  }
   assert.deepEqual(deriveAiMarkers(legacy), { embed: true, vision: true })
 })
 

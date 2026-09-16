@@ -5,8 +5,16 @@ import type { HTMLAttributes, ReactNode } from 'react'
 
 // Reusable settings block: a mono label + optional sub-line, hosting any content.
 // Drop a new <SettingsGroup label="…">…</SettingsGroup> to add a section.
-export function SettingsGroup({ label, sub, className, children }: {
-  label: string; sub?: ReactNode; className?: string; children: ReactNode
+export function SettingsGroup({
+  label,
+  sub,
+  className,
+  children,
+}: {
+  label: string
+  sub?: ReactNode
+  className?: string
+  children: ReactNode
 }) {
   return (
     <section className={'settings-group' + (className ? ' ' + className : '')}>
@@ -20,7 +28,15 @@ export function SettingsGroup({ label, sub, className, children }: {
 // One row of the settings row list: title + explanation on the left, its
 // control on the right. `children` renders full-width beneath the row — the
 // confirmation steps and result/error messages expand there in place.
-export function SettingsRow({ title, desc, action, hint, danger, children, ...rest }: {
+export function SettingsRow({
+  title,
+  desc,
+  action,
+  hint,
+  danger,
+  children,
+  ...rest
+}: {
   title: string
   desc: ReactNode
   action?: ReactNode

@@ -5,12 +5,17 @@ import { handleNotesDelta, handleNotes } from '../../../server/routes/notes.js'
 
 function mockRes() {
   const r = { code: 0, body: null }
-  r.writeHead = (c) => { r.code = c; return r }
-  r.end = (s) => { r.body = JSON.parse(s) }
+  r.writeHead = c => {
+    r.code = c
+    return r
+  }
+  r.end = s => {
+    r.body = JSON.parse(s)
+  }
   r.setHeader = () => {}
   return r
 }
-const urlOf = (qs) => new URL('http://x/api/notes/delta' + qs)
+const urlOf = qs => new URL('http://x/api/notes/delta' + qs)
 
 test('rev bumps on add/update/delete and changedSince reports patches', async () => {
   store._reset()
@@ -21,7 +26,10 @@ test('rev bumps on add/update/delete and changedSince reports patches', async ()
   assert.ok(r1 > r0)
   await store.updateNote(a.id, { title: 'patched' })
   const changed = store.changedSince(r1)
-  assert.deepEqual(changed.map((n) => n.id), [a.id])
+  assert.deepEqual(
+    changed.map(n => n.id),
+    [a.id],
+  )
   assert.equal(changed[0].title, 'patched')
   assert.ok(!('_rev' in changed[0]), 'internal rev never leaves the store')
   assert.ok(!('embedding' in changed[0]))
@@ -61,7 +69,10 @@ test('GET /api/notes/delta with matching boot returns notes/deleted', async () =
   const res = mockRes()
   handleNotesDelta(res, urlOf(`?since=${r1}&boot=${encodeURIComponent(bootId)}`))
   assert.equal(res.body.resync, undefined)
-  assert.deepEqual(res.body.notes.map((n) => n.id), [a.id])
+  assert.deepEqual(
+    res.body.notes.map(n => n.id),
+    [a.id],
+  )
   assert.deepEqual(res.body.deleted, [])
   assert.equal(res.body.bootId, bootId)
 })

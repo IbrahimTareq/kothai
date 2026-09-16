@@ -97,7 +97,7 @@ export interface RoleStatus {
 export interface ModelStatus {
   roles: { llm: RoleStatus; embed: RoleStatus; vision: RoleStatus }
   aggregate: { state: 'loading' | 'ready' | 'error'; progress: number; message: string }
-  configured: boolean   // false until the first-run model picker is completed
+  configured: boolean // false until the first-run model picker is completed
   count: number
 }
 
@@ -147,8 +147,8 @@ export interface ThreadMsg {
   lead?: string
   cited?: UIItem[]
   q?: string
-  ts?: number         // when the message was sent, for the thread's clock stamps
-  stopped?: boolean   // the user pressed stop before this answer finished
+  ts?: number // when the message was sent, for the thread's clock stamps
+  stopped?: boolean // the user pressed stop before this answer finished
   streaming?: boolean // tokens are still arriving into `lead`
 }
 
@@ -232,12 +232,12 @@ export interface Collection {
   id: string
   createdAt: string
   name: string
-  tags: string[]      // smart rule; [] = pure manual collection
-  itemIds: string[]   // membership, newest-first
+  tags: string[] // smart rule; [] = pure manual collection
+  itemIds: string[] // membership, newest-first
   removedIds: string[]
-  count: number       // resolved by the server (= itemIds.length)
-  covers?: UIItem[]   // tile preview — first few members, newest-first; absent on endpoints that don't join it
-  canvas?: CanvasDoc  // the space's freeform board; absent until first saved
+  count: number // resolved by the server (= itemIds.length)
+  covers?: UIItem[] // tile preview — first few members, newest-first; absent on endpoints that don't join it
+  canvas?: CanvasDoc // the space's freeform board; absent until first saved
 }
 
 // ── Space canvas ────────────────────────────────────────────────────────────
@@ -245,7 +245,13 @@ export interface Collection {
 // member card. Coordinates are absolute canvas pixels; a node sits inside a
 // column (`group`) when its centre lies inside the column's rectangle.
 export type CanvasSide = 'top' | 'right' | 'bottom' | 'left'
-interface CanvasNodeBase { id: string; x: number; y: number; width: number; height: number }
+interface CanvasNodeBase {
+  id: string
+  x: number
+  y: number
+  width: number
+  height: number
+}
 export type CanvasItemNode = CanvasNodeBase & { type: 'item'; itemId: string }
 export type CanvasTextNode = CanvasNodeBase & { type: 'text'; text: string }
 export type CanvasGroupNode = CanvasNodeBase & { type: 'group'; label?: string }
@@ -257,4 +263,7 @@ export interface CanvasEdge {
   fromSide?: CanvasSide
   toSide?: CanvasSide
 }
-export interface CanvasDoc { nodes: CanvasNode[]; edges: CanvasEdge[] }
+export interface CanvasDoc {
+  nodes: CanvasNode[]
+  edges: CanvasEdge[]
+}

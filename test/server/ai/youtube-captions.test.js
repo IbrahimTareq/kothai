@@ -19,14 +19,16 @@ const realYt = await import('youtube-transcript')
 mock.module('youtube-transcript', {
   namedExports: {
     ...realYt,
-    fetchTranscript: async (id) => {
+    fetchTranscript: async id => {
       transcriptCalls.push(id)
       return transcriptImpl(id)
     },
   },
 })
 
-const { youtubeVideoId, isYouTubeVideo, joinCaptions, fetchYouTubeCaptions } = await import('../../../server/ai/meta.js')
+const { youtubeVideoId, isYouTubeVideo, joinCaptions, fetchYouTubeCaptions } = await import(
+  '../../../server/ai/meta.js'
+)
 
 // ---- pure helpers --------------------------------------------------------
 
@@ -41,9 +43,9 @@ test('youtubeVideoId recognises every URL shape a saved YouTube link actually ar
 })
 
 test('youtubeVideoId rejects anything that is not a single YouTube video', () => {
-  assert.equal(youtubeVideoId('https://www.youtube.com/'), null)                        // home page
-  assert.equal(youtubeVideoId('https://www.youtube.com/@channel'), null)                // channel
-  assert.equal(youtubeVideoId('https://www.youtube.com/watch?list=PL123'), null)        // playlist, no v=
+  assert.equal(youtubeVideoId('https://www.youtube.com/'), null) // home page
+  assert.equal(youtubeVideoId('https://www.youtube.com/@channel'), null) // channel
+  assert.equal(youtubeVideoId('https://www.youtube.com/watch?list=PL123'), null) // playlist, no v=
   assert.equal(youtubeVideoId('https://vimeo.com/12345'), null)
   assert.equal(youtubeVideoId('https://evil.com/youtube.com/watch?v=abc123XYZ'), null)
   // The id is validated before the package ever sees it, so a URL cannot be
@@ -83,7 +85,9 @@ test('a video with captions disabled is a final answer, not an error — recorde
   ]
   for (const err of permanent) {
     transcriptCalls = []
-    transcriptImpl = async () => { throw err }
+    transcriptImpl = async () => {
+      throw err
+    }
     const r = await fetchYouTubeCaptions(WATCH)
     assert.equal(r.text, null)
     assert.equal(r.done, true, `${err.constructor.name} is permanent — the marker should be set`)
@@ -92,7 +96,9 @@ test('a video with captions disabled is a final answer, not an error — recorde
 
 test('a rate limit or a network blip stays retryable', async () => {
   for (const err of [new realYt.YoutubeTranscriptTooManyRequestError('slow down'), new Error('ECONNRESET')]) {
-    transcriptImpl = async () => { throw err }
+    transcriptImpl = async () => {
+      throw err
+    }
     const r = await fetchYouTubeCaptions(WATCH)
     assert.equal(r.text, null)
     assert.equal(r.done, false, 'a transient failure must not permanently mark the video as captionless')
@@ -127,32 +133,46 @@ let residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand
 mock.module('../../../server/ai/meta.js', {
   namedExports: {
     ...realMeta,
-    fetchLinkMeta: async () => ({ siteTitle: 'Rick Astley - Never Gonna Give You Up', siteDesc: null, siteName: 'YouTube', thumb: null, article: null }),
+    fetchLinkMeta: async () => ({
+      siteTitle: 'Rick Astley - Never Gonna Give You Up',
+      siteDesc: null,
+      siteName: 'YouTube',
+      thumb: null,
+      article: null,
+    }),
   },
 })
 mock.module('../../../server/data/notes.js', {
   namedExports: {
     ...realStore,
     allNotes: () => notes,
-    getNote: (id) => notes.find((n) => n.id === id) ?? null,
+    getNote: id => notes.find(n => n.id === id) ?? null,
     updateNote: async (id, patch) => {
-      const n = notes.find((x) => x.id === id)
+      const n = notes.find(x => x.id === id)
       if (n) Object.assign(n, patch)
       return n
     },
   },
 })
 mock.module('../../../server/lib/tags.js', { namedExports: { ...realTags, buildVocabulary: () => [] } })
-mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async (t) => t } })
+mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async t => t } })
 mock.module('../../../server/ai/index.js', {
   namedExports: {
     ...realNormalise,
-    classify: async (args) => { classifyCalls.push(args.text); return { type: 'video', category: 'Music', title: 'T', summary: 'S', tags: [] } },
-    embedText: async (text) => { embedCalls.push(text); return [0, 0, 0] },
+    classify: async args => {
+      classifyCalls.push(args.text)
+      return { type: 'video', category: 'Music', title: 'T', summary: 'S', tags: [] }
+    },
+    embedText: async text => {
+      embedCalls.push(text)
+      return [0, 0, 0]
+    },
   },
 })
 mock.module('../../../server/data/collections.js', { namedExports: { ...realCollections, autoAdd: async () => {} } })
-mock.module('../../../server/data/settings.js', { namedExports: { ...realSettings, getResidency: () => residencyImpl() } })
+mock.module('../../../server/data/settings.js', {
+  namedExports: { ...realSettings, getResidency: () => residencyImpl() },
+})
 
 const enrich = await import('../../../server/ai/enrich.js')
 
@@ -177,7 +197,9 @@ test('a transcript reaches classify, embed and the stored article field', async 
 
 test('a video with no captions is marked done once and never fetched again', async () => {
   seed()
-  transcriptImpl = async () => { throw new realYt.YoutubeTranscriptDisabledError('off') }
+  transcriptImpl = async () => {
+    throw new realYt.YoutubeTranscriptDisabledError('off')
+  }
   await enrich.queueEnrich('y1', { absPath: null, text: WATCH, isUrl: true, hasImage: false })
   assert.equal(transcriptCalls.length, 1)
   assert.equal(notes[0].ai.captions, true)
@@ -190,7 +212,9 @@ test('a video with no captions is marked done once and never fetched again', asy
 
 test('a transient caption failure leaves the note eligible for a later retry', async () => {
   seed()
-  transcriptImpl = async () => { throw new realYt.YoutubeTranscriptTooManyRequestError('429') }
+  transcriptImpl = async () => {
+    throw new realYt.YoutubeTranscriptTooManyRequestError('429')
+  }
   await enrich.queueEnrich('y1', { absPath: null, text: WATCH, isUrl: true, hasImage: false })
   assert.equal(notes[0].ai.captions, undefined)
 
@@ -266,7 +290,10 @@ test('a real failure is not masked by the language fallback', async () => {
   // Only "no track in this language" earns a second attempt; anything else is
   // the real error and must surface as-is.
   let attempts = 0
-  transcriptImpl = async () => { attempts++; throw new realYt.YoutubeTranscriptDisabledError('dQw4w9WgXcQ') }
+  transcriptImpl = async () => {
+    attempts++
+    throw new realYt.YoutubeTranscriptDisabledError('dQw4w9WgXcQ')
+  }
   const r = await fetchYouTubeCaptions(WATCH)
   assert.equal(attempts, 1, 'no pointless retry')
   assert.equal(r.done, true)

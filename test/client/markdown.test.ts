@@ -7,7 +7,7 @@ import type { Block, Inline } from '../../client/util/markdown.ts'
 // the handful of marks a local answer model emits, and leave everything else
 // alone rather than guess.
 
-const text = (spans: Inline[]) => spans.map((s) => (s.kind === 'br' ? '\n' : s.text)).join('')
+const text = (spans: Inline[]) => spans.map(s => (s.kind === 'br' ? '\n' : s.text)).join('')
 
 test('plain prose is one paragraph', () => {
   const b = parseMarkdown('The notes do not mention Kubernetes.')
@@ -18,14 +18,17 @@ test('plain prose is one paragraph', () => {
 
 test('a blank line starts a new paragraph', () => {
   const b = parseMarkdown('First point.\n\nSecond point.')
-  assert.deepEqual(b.map((x) => x.kind), ['p', 'p'])
+  assert.deepEqual(
+    b.map(x => x.kind),
+    ['p', 'p'],
+  )
 })
 
 test('a single newline inside a paragraph is a hard break, not a lost line', () => {
   const b = parseMarkdown('Line one\nLine two')
   assert.equal(b.length, 1)
   const spans = (b[0] as Extract<Block, { kind: 'p' }>).spans
-  assert.ok(spans.some((s) => s.kind === 'br'))
+  assert.ok(spans.some(s => s.kind === 'br'))
   assert.equal(text(spans), 'Line one\nLine two')
 })
 
@@ -51,7 +54,10 @@ test('numbered lists keep the number they started at', () => {
 
 test('a paragraph before a list is not absorbed into it', () => {
   const b = parseMarkdown('Here is what I found:\n- alpha\n- beta')
-  assert.deepEqual(b.map((x) => x.kind), ['p', 'ul'])
+  assert.deepEqual(
+    b.map(x => x.kind),
+    ['p', 'ul'],
+  )
 })
 
 test('headings become headings instead of literal hashes', () => {
@@ -81,7 +87,10 @@ test('markdown inside a fence is left alone', () => {
 
 test('a horizontal rule is dropped rather than shown as dashes', () => {
   const b = parseMarkdown('before\n\n---\n\nafter')
-  assert.deepEqual(b.map((x) => x.kind), ['p', 'p'])
+  assert.deepEqual(
+    b.map(x => x.kind),
+    ['p', 'p'],
+  )
 })
 
 test('bold, italic and code spans are recognised', () => {

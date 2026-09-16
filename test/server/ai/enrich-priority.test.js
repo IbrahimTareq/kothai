@@ -66,7 +66,9 @@ function reset() {
 }
 
 const realStore = await import('../../../server/data/notes.js')
-mock.module('../../../server/data/notes.js', { namedExports: { ...realStore, allNotes: () => notes, getNote: (id) => notes.find((n) => n.id === id) ?? null } })
+mock.module('../../../server/data/notes.js', {
+  namedExports: { ...realStore, allNotes: () => notes, getNote: id => notes.find(n => n.id === id) ?? null },
+})
 
 const { handlePrioritize } = await import('../../../server/routes/settings.js')
 
@@ -85,8 +87,12 @@ function fakeRes() {
   return {
     statusCode: null,
     body: null,
-    writeHead(code) { this.statusCode = code },
-    end(str) { this.body = str ? JSON.parse(str) : null },
+    writeHead(code) {
+      this.statusCode = code
+    },
+    end(str) {
+      this.body = str ? JSON.parse(str) : null
+    },
   }
 }
 

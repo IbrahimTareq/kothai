@@ -47,7 +47,7 @@ export function resolveRoleProviders({
 // Distinct provider kinds a role map needs, so the facade initialises exactly
 // the providers it will use and no more.
 export function kindsInUse(byRole) {
-  return [...new Set(ROLES.map((role) => byRole[role]))]
+  return [...new Set(ROLES.map(role => byRole[role]))]
 }
 
 // Each merge below short-circuits when one kind is in use: pure-local and
@@ -66,10 +66,10 @@ export function mergeStatus(byRole, snapshots) {
   // re-derived here: local gates a fault on the role's residency (an ondemand
   // role retries on next acquire) and remote gates it on its circuit breaker,
   // and neither rule is recoverable from the role states alone.
-  const aggregates = kinds.map((kind) => snapshots[kind].aggregate)
-  const errored = aggregates.find((a) => a.state === 'error')
+  const aggregates = kinds.map(kind => snapshots[kind].aggregate)
+  const errored = aggregates.find(a => a.state === 'error')
   if (errored) return { roles, aggregate: errored }
-  const loading = aggregates.filter((a) => a.state === 'loading')
+  const loading = aggregates.filter(a => a.state === 'loading')
   if (loading.length) {
     const progress = Math.round(loading.reduce((sum, a) => sum + (a.progress || 0), 0) / loading.length)
     return { roles, aggregate: { state: 'loading', progress, message: loading[0].message || '' } }
@@ -89,15 +89,16 @@ export function mergeListModels(byRole, lists) {
 // way to ask who serves a role instead of inferring it from `kind`.
 export function mergeCapabilities(byRole, caps) {
   const kinds = kindsInUse(byRole)
-  const hasLocal = ROLES.some((role) => byRole[role] === 'local')
-  const base = kinds.length === 1
-    ? caps[kinds[0]]
-    : {
-        kind: 'mixed',
-        // True when ANY role is local: the residency panel and the model-cache
-        // row both exist as soon as one role has weights on disk.
-        managesResidency: hasLocal,
-        downloadsWeights: hasLocal,
-      }
+  const hasLocal = ROLES.some(role => byRole[role] === 'local')
+  const base =
+    kinds.length === 1
+      ? caps[kinds[0]]
+      : {
+          kind: 'mixed',
+          // True when ANY role is local: the residency panel and the model-cache
+          // row both exist as soon as one role has weights on disk.
+          managesResidency: hasLocal,
+          downloadsWeights: hasLocal,
+        }
   return { ...base, roles: { ...byRole } }
 }

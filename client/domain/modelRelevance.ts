@@ -16,8 +16,14 @@ export type Role = 'llm' | 'embed' | 'vision'
 
 // Never a sensible answer for any of our three roles, whatever the provider.
 const NEVER = [
-  /(^|[-/])dall-e/i, /(^|[-/])tts(-|$)/i, /whisper/i, /moderation/i,
-  /(^|[-/])sora/i, /image-(gen|edit)/i, /^stable-diffusion/i, /(^|[-/])rerank/i,
+  /(^|[-/])dall-e/i,
+  /(^|[-/])tts(-|$)/i,
+  /whisper/i,
+  /moderation/i,
+  /(^|[-/])sora/i,
+  /image-(gen|edit)/i,
+  /^stable-diffusion/i,
+  /(^|[-/])rerank/i,
   /audio|realtime|transcribe|speech/i,
 ]
 
@@ -26,9 +32,19 @@ const EMBED = [/embed/i, /^text-embedding/i, /(^|[-/])bge(-|$)/i, /(^|[-/])gte(-
 // Vision is the hardest to infer: most providers fold it into their general
 // chat models and say so nowhere in the id. An explicit marker is trusted, and
 // otherwise the model families that are multimodal across the board.
-const VISION = [/vision/i, /(^|[-/])vl(-|:|$)/i, /multimodal/i, /llava/i, /gpt-4o/i, /gpt-4\.1/i, /claude-3/i, /gemini/i, /pixtral/i]
+const VISION = [
+  /vision/i,
+  /(^|[-/])vl(-|:|$)/i,
+  /multimodal/i,
+  /llava/i,
+  /gpt-4o/i,
+  /gpt-4\.1/i,
+  /claude-3/i,
+  /gemini/i,
+  /pixtral/i,
+]
 
-const anyOf = (patterns: RegExp[], id: string) => patterns.some((re) => re.test(id))
+const anyOf = (patterns: RegExp[], id: string) => patterns.some(re => re.test(id))
 
 function isCandidate(role: Role, id: string): boolean {
   if (anyOf(NEVER, id)) return false

@@ -2,7 +2,13 @@
 // No filesystem or model access: every function is a pure transform.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { normalizeTag, normalizeTags, buildVocabulary, extractHashtags, withAccountTag } from '../../../server/lib/tags.js'
+import {
+  normalizeTag,
+  normalizeTags,
+  buildVocabulary,
+  extractHashtags,
+  withAccountTag,
+} from '../../../server/lib/tags.js'
 
 test('normalizeTag: lowercases, trims, collapses whitespace to single hyphen', () => {
   assert.equal(normalizeTag('  Machine   Learning '), 'machine-learning')
@@ -24,12 +30,7 @@ test('normalizeTags: dedups (order-preserving), drops empties, respects max', ()
 })
 
 test('buildVocabulary: counts normalized tags, orders by frequency then name', () => {
-  const notes = [
-    { tags: ['Recipe', 'dinner'] },
-    { tags: ['recipe', 'ML'] },
-    { tags: ['ml'] },
-    { tags: null },
-  ]
+  const notes = [{ tags: ['Recipe', 'dinner'] }, { tags: ['recipe', 'ML'] }, { tags: ['ml'] }, { tags: null }]
   // recipe:2, ml:2, dinner:1 → freq desc, then alpha for ties
   assert.deepEqual(buildVocabulary(notes), ['ml', 'recipe', 'dinner'])
 })

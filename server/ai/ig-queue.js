@@ -22,18 +22,20 @@ import { applyMeta } from './meta-fields.js'
 // re-classifying on. enrich.js registers the real handler at import; the
 // default no-op keeps this module usable (and testable) on its own.
 let onCaptionLanded = () => {}
-export function setCaptionHandler(fn) { onCaptionLanded = fn }
+export function setCaptionHandler(fn) {
+  onCaptionLanded = fn
+}
 
 // Instagram embed fetches get their OWN queue, separate from enrichChain
 // (same reasoning as before: the >=2.5s throttle must not park classify/embed
 // work). Now an explicit deque instead of a promise chain, so the scrolling
 // client can PROMOTE the notes actually on screen to the front — thumbnails
 // materialize where the user is looking, not in insertion order.
-const igQueue = []          // [{ noteId, url, slides?, resolve? }]
-const igQueued = new Set()  // noteIds present in igQueue
+const igQueue = [] // [{ noteId, url, slides?, resolve? }]
+const igQueued = new Set() // noteIds present in igQueue
 const igInFlight = new Set() // noteIds currently mid-runIgJob (shifted out, not yet settled)
 let igPumping = false
-let igPaused = false        // test hook
+let igPaused = false // test hook
 
 // ---- meta retry policy --------------------------------------------------
 // A failed Instagram fetch used to permanently set metaFetched — one bad
@@ -144,13 +146,15 @@ async function runSlidesJob({ noteId, url }) {
 // Enqueued at the FRONT for the same reason promoteIgMeta exists: this note is
 // the one on screen right now. Concurrent callers share one fetch rather than
 // each burning a throttle slot on the same post.
-const slidesWaiters = new Map()  // noteId → in-flight promise
+const slidesWaiters = new Map() // noteId → in-flight promise
 
 export function queueIgSlides(noteId, url) {
   const running = slidesWaiters.get(noteId)
   if (running) return running
   let resolve
-  const done = new Promise((r) => { resolve = r })
+  const done = new Promise(r => {
+    resolve = r
+  })
   const p = done.finally(() => slidesWaiters.delete(noteId))
   slidesWaiters.set(noteId, p)
   igQueue.unshift({ noteId, url, slides: true, resolve })
@@ -162,11 +166,11 @@ export function queueIgSlides(noteId, url) {
 // caller's order. Unknown / already-fetched ids are ignored — callers send
 // whatever is on screen without checking.
 export function promoteIgMeta(ids) {
-  const want = ids.filter((id) => igQueued.has(id))
+  const want = ids.filter(id => igQueued.has(id))
   if (!want.length) return 0
   const wantSet = new Set(want)
-  const rest = igQueue.filter((j) => !wantSet.has(j.noteId))
-  const front = want.map((id) => igQueue.find((j) => j.noteId === id)).filter(Boolean)
+  const rest = igQueue.filter(j => !wantSet.has(j.noteId))
+  const front = want.map(id => igQueue.find(j => j.noteId === id)).filter(Boolean)
   igQueue.length = 0
   igQueue.push(...front, ...rest)
   return front.length
@@ -174,10 +178,26 @@ export function promoteIgMeta(ids) {
 
 // test-only inspection/pause hooks
 export const _igQueueState = {
-  pause() { igPaused = true },
-  resume() { igPaused = false; pumpIg() },
-  clear() { igQueue.length = 0; igQueued.clear(); igInFlight.clear(); igPaused = false },
-  ids() { return igQueue.map((j) => j.noteId) },
-  pumping() { return igPumping },
-  inFlight() { return [...igInFlight] },
+  pause() {
+    igPaused = true
+  },
+  resume() {
+    igPaused = false
+    pumpIg()
+  },
+  clear() {
+    igQueue.length = 0
+    igQueued.clear()
+    igInFlight.clear()
+    igPaused = false
+  },
+  ids() {
+    return igQueue.map(j => j.noteId)
+  },
+  pumping() {
+    return igPumping
+  },
+  inFlight() {
+    return [...igInFlight]
+  },
 }

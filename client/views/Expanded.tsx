@@ -23,7 +23,9 @@ function GithubPanel({ item }: { item: UIItem }): ReactElement {
   const desc = item.note || item.summary
   return (
     <div className="exp-card gh">
-      <div className="exp-card-logo"><Icon name="github" size={44} /></div>
+      <div className="exp-card-logo">
+        <Icon name="github" size={44} />
+      </div>
       <Field label="Project name" value={repo || item.title || ''} big />
       {desc && <Field label="Description" value={desc} />}
       {(owner || item.siteName) && <Field label="Owner" value={owner || item.siteName || ''} />}
@@ -37,7 +39,9 @@ function GithubPanel({ item }: { item: UIItem }): ReactElement {
 function RedditPanel({ item }: { item: UIItem }): ReactElement {
   return (
     <div className="exp-card reddit">
-      <div className="exp-reddit-head"><Icon name="reddit" size={56} /></div>
+      <div className="exp-reddit-head">
+        <Icon name="reddit" size={56} />
+      </div>
       <div className="exp-reddit-body">
         <div className="exp-reddit-tag">reddit</div>
         <div className="exp-reddit-text">{item.title || item.note || item.summary}</div>
@@ -63,17 +67,34 @@ function MediaPanel({ item, slidesLoading }: { item: UIItem; slidesLoading?: boo
         slides={item.slides}
         alt={item.title || ''}
         onOpen={() => openUrl(item.url)}
-        badge={brand ? <span className="exp-media-badge"><Icon name={brand} size={15} /></span> : null}
+        badge={
+          brand ? (
+            <span className="exp-media-badge">
+              <Icon name={brand} size={15} />
+            </span>
+          ) : null
+        }
       />
     )
   }
   return (
     <div className="exp-media" onClick={() => openUrl(item.url)}>
-      <div className="exp-media-frame" style={media ? undefined : { background: imgGradient((item.title || 'v').length * 7) }}>
+      <div
+        className="exp-media-frame"
+        style={media ? undefined : { background: imgGradient((item.title || 'v').length * 7) }}
+      >
         {media && <img className={slidesLoading ? 'loading' : ''} src={media} alt={item.title || ''} loading="lazy" />}
         <div className="exp-media-scan" />
-        {item.type === 'video' && <div className="exp-play"><Icon name="play" size={30} /></div>}
-        {brand && <span className="exp-media-badge"><Icon name={brand} size={15} /></span>}
+        {item.type === 'video' && (
+          <div className="exp-play">
+            <Icon name="play" size={30} />
+          </div>
+        )}
+        {brand && (
+          <span className="exp-media-badge">
+            <Icon name={brand} size={15} />
+          </span>
+        )}
         {slidesLoading && <SlidesLoading />}
       </div>
     </div>
@@ -88,7 +109,11 @@ function MediaPanel({ item, slidesLoading }: { item: UIItem; slidesLoading?: boo
 function SlidesLoading(): ReactElement {
   return (
     <div className="exp-slides-loading mono" role="status">
-      <span className="exp-slides-dots"><span /><span /><span /></span>
+      <span className="exp-slides-dots">
+        <span />
+        <span />
+        <span />
+      </span>
       Loading carousel
     </div>
   )
@@ -110,8 +135,13 @@ function ArticlePanel({ item }: { item: UIItem }): ReactElement {
   return (
     <div className="exp-article">
       {item.thumb && (
-        <img className="exp-article-hero" src={item.thumb} alt={item.title || ''} loading="lazy"
-          onClick={() => openUrl(item.url)} />
+        <img
+          className="exp-article-hero"
+          src={item.thumb}
+          alt={item.title || ''}
+          loading="lazy"
+          onClick={() => openUrl(item.url)}
+        />
       )}
       <div className="exp-article-src mono">
         <Icon name={brand || 'article'} size={15} />
@@ -131,9 +161,13 @@ function ArticlePanel({ item }: { item: UIItem }): ReactElement {
 function ImagePanel({ item }: { item: UIItem }): ReactElement {
   return (
     <div className="exp-img">
-      {item.img
-        ? <img src={item.img} alt={item.name || 'image'} />
-        : <div className="exp-img-ph" style={{ background: imgGradient(item.seed ?? 1) }}><Icon name="image" size={40} /></div>}
+      {item.img ? (
+        <img src={item.img} alt={item.name || 'image'} />
+      ) : (
+        <div className="exp-img-ph" style={{ background: imgGradient(item.seed ?? 1) }}>
+          <Icon name="image" size={40} />
+        </div>
+      )}
     </div>
   )
 }
@@ -141,7 +175,12 @@ function ImagePanel({ item }: { item: UIItem }): ReactElement {
 function CodePanel({ item }: { item: UIItem }): ReactElement {
   return (
     <div className="exp-code">
-      <div className="code-head mono"><span className="code-dot" /><span className="code-dot" /><span className="code-dot" /><span className="code-lang">{item.lang}</span></div>
+      <div className="code-head mono">
+        <span className="code-dot" />
+        <span className="code-dot" />
+        <span className="code-dot" />
+        <span className="code-lang">{item.lang}</span>
+      </div>
       <pre className="code-block mono">{item.text}</pre>
     </div>
   )
@@ -195,7 +234,18 @@ interface ExpandedProps {
   slidesLoading?: boolean
 }
 
-export function ExpandedView({ item, onClose, onDelete, onUpdate, onRetag, collections, onAddTo, onRemoveFrom, onNav, slidesLoading }: ExpandedProps) {
+export function ExpandedView({
+  item,
+  onClose,
+  onDelete,
+  onUpdate,
+  onRetag,
+  collections,
+  onAddTo,
+  onRemoveFrom,
+  onNav,
+  slidesLoading,
+}: ExpandedProps) {
   const [tags, setTags] = useState<string[]>(item.tags || [])
   const [note, setNote] = useState<string>(item.mindNote || '')
   const [adding, setAdding] = useState(false)
@@ -230,17 +280,23 @@ export function ExpandedView({ item, onClose, onDelete, onUpdate, onRetag, colle
   // new item could open already "scrolled" partway down.
   const { ref: mainRef, className: mainFade } = useScrollEdges('y', [item.id], { resetScroll: true })
 
-  const inSpaces = collections.filter((c) => c.itemIds.includes(item.id))
-  const openSpaces = collections.filter((c) => !c.itemIds.includes(item.id))
+  const inSpaces = collections.filter(c => c.itemIds.includes(item.id))
+  const openSpaces = collections.filter(c => !c.itemIds.includes(item.id))
 
   // reset local editing state when a different item is opened
   useEffect(() => {
-    setTags(item.tags || []); setNote(item.mindNote || ''); setAdding(false); setDraft(''); setPicking(false)
+    setTags(item.tags || [])
+    setNote(item.mindNote || '')
+    setAdding(false)
+    setDraft('')
+    setPicking(false)
     // A nav swipe already resets these itself before the item changes, but a
     // deep link or a jump from an Ask citation opens a different item without
     // going through that path — this is the backstop that guarantees no
     // leftover drag offset survives into a freshly opened item either way.
-    gesture.current = null; setDragging(false); setDragY(0)
+    gesture.current = null
+    setDragging(false)
+    setDragY(0)
   }, [item.id, item.tags, item.mindNote])
 
   // Only ever attaches on a touch pointer (see the guard in onGestureStart),
@@ -285,7 +341,10 @@ export function ExpandedView({ item, onClose, onDelete, onUpdate, onRetag, colle
     const dy = e.clientY - g.startY
     if (g.axis === 'vertical') {
       setDragging(false)
-      if (shouldDismiss(dy)) { onClose(); return }
+      if (shouldDismiss(dy)) {
+        onClose()
+        return
+      }
       setDragY(0)
       return
     }
@@ -307,7 +366,8 @@ export function ExpandedView({ item, onClose, onDelete, onUpdate, onRetag, colle
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
-      if (picking) setPicking(false); else onClose()
+      if (picking) setPicking(false)
+      else onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -323,17 +383,28 @@ export function ExpandedView({ item, onClose, onDelete, onUpdate, onRetag, colle
     return () => document.removeEventListener('mousedown', onDown)
   }, [picking])
 
-  const commitTags = (next: string[]) => { setTags(next); onUpdate(item.id, { tags: next }) }
+  const commitTags = (next: string[]) => {
+    setTags(next)
+    onUpdate(item.id, { tags: next })
+  }
   const addTag = () => {
     const t = draft.trim()
     if (t && !tags.includes(t)) commitTags([...tags, t])
-    setDraft(''); setAdding(false)
+    setDraft('')
+    setAdding(false)
   }
-  const removeTag = (t: string) => commitTags(tags.filter((x) => x !== t))
-  const commitNote = () => { if (note !== (item.mindNote || '')) onUpdate(item.id, { mindNote: note }) }
+  const removeTag = (t: string) => commitTags(tags.filter(x => x !== t))
+  const commitNote = () => {
+    if (note !== (item.mindNote || '')) onUpdate(item.id, { mindNote: note })
+  }
 
   // brand glyph + label, shared by the linked and unlinked forms below
-  const srcInner = <>{brand ? <Icon name={brand} size={12} /> : <Icon name="external" size={12} />}{sourceLabel(item)}</>
+  const srcInner = (
+    <>
+      {brand ? <Icon name={brand} size={12} /> : <Icon name="external" size={12} />}
+      {sourceLabel(item)}
+    </>
+  )
 
   // Follows the drag 1:1 and fades toward (never quite reaching) transparent,
   // so the board underneath is visibly there before the release decides
@@ -344,79 +415,134 @@ export function ExpandedView({ item, onClose, onDelete, onUpdate, onRetag, colle
 
   return (
     <div className="exp-overlay" onClick={onClose}>
-      <div className={'exp-shell' + (dragging ? ' dragging' : '')} style={shellStyle} onClick={(e) => e.stopPropagation()}>
-        <button className="exp-close-m" aria-label="Close" onClick={onClose}><Icon name="close" size={16} /></button>
+      <div
+        className={'exp-shell' + (dragging ? ' dragging' : '')}
+        style={shellStyle}
+        onClick={e => e.stopPropagation()}
+      >
+        <button className="exp-close-m" aria-label="Close" onClick={onClose}>
+          <Icon name="close" size={16} />
+        </button>
         {/* The gesture area. Pointer handlers live here (not on .exp-shell or
             .exp-overlay) so .exp-side's own vertical scroll — the tags/notes/
             spaces form — is never in competition with them. */}
-        <div className={'exp-main' + mainFade} ref={mainRef}
+        <div
+          className={'exp-main' + mainFade}
+          ref={mainRef}
           onPointerDown={onGestureStart}
           onPointerMove={onGestureMove}
           onPointerUp={onGestureEnd}
           onPointerCancel={onGestureCancel}
-        ><MainPanel item={item} slidesLoading={slidesLoading} /></div>
+        >
+          <MainPanel item={item} slidesLoading={slidesLoading} />
+        </div>
 
         <aside className="exp-side">
           <div className="exp-side-scroll">
             <h2 className="exp-title">{item.title || item.name || (item.text || '').slice(0, 60) || 'Untitled'}</h2>
             <div className="exp-meta">
               {relTime(item.ts)}
-              {item.url
-                ? <a className="exp-src" href={item.url} target="_blank" rel="noreferrer">{srcInner}</a>
-                : <span className="exp-src">{srcInner}</span>}
+              {item.url ? (
+                <a className="exp-src" href={item.url} target="_blank" rel="noreferrer">
+                  {srcInner}
+                </a>
+              ) : (
+                <span className="exp-src">{srcInner}</span>
+              )}
             </div>
 
             <section className="exp-sec">
-              <div className="exp-sec-h">Tags <span className="exp-sec-n">{tags.length}</span></div>
+              <div className="exp-sec-h">
+                Tags <span className="exp-sec-n">{tags.length}</span>
+              </div>
               <div className="exp-tags">
-                <button className="exp-addtag" onClick={() => setAdding(true)}>+ Add tag</button>
-                {tags.map((t) => (
+                <button className="exp-addtag" onClick={() => setAdding(true)}>
+                  + Add tag
+                </button>
+                {tags.map(t => (
                   <button key={t} className="exp-tag" title="Remove tag" onClick={() => removeTag(t)}>
-                    {t}<span className="exp-tag-x">×</span>
+                    {t}
+                    <span className="exp-tag-x">×</span>
                   </button>
                 ))}
                 {adding && (
-                  <input className="exp-tag-input mono" autoFocus value={draft} placeholder="tag…"
-                    onChange={(e) => setDraft(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') addTag(); if (e.key === 'Escape') { setAdding(false); setDraft('') } }}
-                    onBlur={addTag} />
+                  <input
+                    className="exp-tag-input mono"
+                    autoFocus
+                    value={draft}
+                    placeholder="tag…"
+                    onChange={e => setDraft(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') addTag()
+                      if (e.key === 'Escape') {
+                        setAdding(false)
+                        setDraft('')
+                      }
+                    }}
+                    onBlur={addTag}
+                  />
                 )}
               </div>
             </section>
 
             <section className="exp-sec">
               <div className="exp-sec-h">Notes</div>
-              <textarea className="exp-note" placeholder="Type here to add a note…"
-                value={note} onChange={(e) => setNote(e.target.value)} onBlur={commitNote} />
+              <textarea
+                className="exp-note"
+                placeholder="Type here to add a note…"
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                onBlur={commitNote}
+              />
             </section>
 
             <section className="exp-sec">
-              <div className="exp-sec-h">Spaces <span className="exp-sec-n">{inSpaces.length}</span></div>
+              <div className="exp-sec-h">
+                Spaces <span className="exp-sec-n">{inSpaces.length}</span>
+              </div>
               <div className="exp-colls">
-                {inSpaces.map((c) => (
+                {inSpaces.map(c => (
                   <div key={c.id} className="exp-coll">
                     {c.tags.length > 0 && <Icon name="spark" size={11} />}
                     <span className="exp-coll-name">{c.name}</span>
-                    <button className="exp-coll-x" aria-label={'Remove from ' + c.name}
-                      onClick={() => onRemoveFrom(c.id, item.id)}><Icon name="close" size={11} /></button>
+                    <button
+                      className="exp-coll-x"
+                      aria-label={'Remove from ' + c.name}
+                      onClick={() => onRemoveFrom(c.id, item.id)}
+                    >
+                      <Icon name="close" size={11} />
+                    </button>
                   </div>
                 ))}
                 <div className="exp-coll-add" ref={pickRef}>
-                  <button className={'exp-coll-plus' + (picking ? ' open' : '')} aria-expanded={picking}
-                    onClick={() => setPicking(!picking)}>
+                  <button
+                    className={'exp-coll-plus' + (picking ? ' open' : '')}
+                    aria-expanded={picking}
+                    onClick={() => setPicking(!picking)}
+                  >
                     <Icon name="plus" size={12} /> Add to space
                   </button>
                   {picking && (
                     <div className="exp-coll-menu">
-                      {openSpaces.length === 0
-                        ? <span className="exp-coll-menu-empty mono dim">{collections.length === 0 ? 'No spaces yet' : 'In every space'}</span>
-                        : openSpaces.map((c) => (
-                          <button key={c.id} className="exp-coll-opt"
-                            onClick={() => { onAddTo(c.id, item.id); setPicking(false) }}>
+                      {openSpaces.length === 0 ? (
+                        <span className="exp-coll-menu-empty mono dim">
+                          {collections.length === 0 ? 'No spaces yet' : 'In every space'}
+                        </span>
+                      ) : (
+                        openSpaces.map(c => (
+                          <button
+                            key={c.id}
+                            className="exp-coll-opt"
+                            onClick={() => {
+                              onAddTo(c.id, item.id)
+                              setPicking(false)
+                            }}
+                          >
                             {c.tags.length > 0 && <Icon name="spark" size={11} />}
                             <span className="exp-coll-name">{c.name}</span>
                           </button>
-                        ))}
+                        ))
+                      )}
                     </div>
                   )}
                 </div>
@@ -425,17 +551,37 @@ export function ExpandedView({ item, onClose, onDelete, onUpdate, onRetag, colle
           </div>
 
           <div className="exp-side-actions">
-            <button className="btn btn--icon btn--ghost" aria-label="Copy link" onClick={() => item.url && navigator.clipboard?.writeText(item.url)}>
-              <Icon name="copy" size={16} /><span className="exp-tip">Copy link</span>
+            <button
+              className="btn btn--icon btn--ghost"
+              aria-label="Copy link"
+              onClick={() => item.url && navigator.clipboard?.writeText(item.url)}
+            >
+              <Icon name="copy" size={16} />
+              <span className="exp-tip">Copy link</span>
             </button>
             <button className="btn btn--icon btn--ghost" aria-label="Open original" onClick={() => openUrl(item.url)}>
-              <Icon name="external" size={16} /><span className="exp-tip">Open original</span>
+              <Icon name="external" size={16} />
+              <span className="exp-tip">Open original</span>
             </button>
-            <button className="btn btn--icon btn--ghost" aria-label={item.pending ? 'Retagging…' : 'Re-tag'} disabled={item.pending} onClick={() => onRetag(item.id)}>
-              <Icon name="retag" size={16} /><span className="exp-tip">{item.pending ? 'Retagging…' : 'Re-tag'}</span>
+            <button
+              className="btn btn--icon btn--ghost"
+              aria-label={item.pending ? 'Retagging…' : 'Re-tag'}
+              disabled={item.pending}
+              onClick={() => onRetag(item.id)}
+            >
+              <Icon name="retag" size={16} />
+              <span className="exp-tip">{item.pending ? 'Retagging…' : 'Re-tag'}</span>
             </button>
-            <button className="btn btn--icon btn--ghost del" aria-label="Delete" onClick={() => { onDelete(item.id); onClose() }}>
-              <Icon name="trash" size={16} /><span className="exp-tip">Delete</span>
+            <button
+              className="btn btn--icon btn--ghost del"
+              aria-label="Delete"
+              onClick={() => {
+                onDelete(item.id)
+                onClose()
+              }}
+            >
+              <Icon name="trash" size={16} />
+              <span className="exp-tip">Delete</span>
             </button>
           </div>
         </aside>

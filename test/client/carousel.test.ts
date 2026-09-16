@@ -18,7 +18,7 @@ test('neighbours peek out behind, smaller and dimmer the further out they are', 
   assert.ok(one.x > 0 && two.x > one.x)
   assert.ok(one.scale < 1 && two.scale < one.scale)
   assert.ok(one.opacity < 1 && two.opacity < one.opacity)
-  assert.ok(one.z > two.z)  // nearer slides stack on top
+  assert.ok(one.z > two.z) // nearer slides stack on top
 })
 
 test('a slide is mirrored to the other side of the deck', () => {
@@ -37,8 +37,8 @@ test('placement is continuous, so a half-finished drag renders half-way', () => 
 })
 
 test('a drag past the threshold advances one slide, in the drag direction', () => {
-  assert.equal(nextIndex(0, -100, 3), 1)   // dragged left → next
-  assert.equal(nextIndex(1, 100, 3), 0)    // dragged right → previous
+  assert.equal(nextIndex(0, -100, 3), 1) // dragged left → next
+  assert.equal(nextIndex(1, 100, 3), 0) // dragged right → previous
 })
 
 test('a short drag springs back to the slide it started on', () => {
@@ -47,6 +47,6 @@ test('a short drag springs back to the slide it started on', () => {
 })
 
 test('a drag never runs off either end of the deck', () => {
-  assert.equal(nextIndex(0, 100, 3), 0)    // already first
-  assert.equal(nextIndex(2, -100, 3), 2)   // already last
+  assert.equal(nextIndex(0, 100, 3), 0) // already first
+  assert.equal(nextIndex(2, -100, 3), 2) // already last
 })

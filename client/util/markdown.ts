@@ -84,11 +84,17 @@ export function parseMarkdown(src: string): Block[] {
       i++
       while (i < lines.length && !FENCE.test(lines[i])) body.push(lines[i++])
       blocks.push({ kind: 'pre', text: body.join('\n'), lang: fence[1].trim() })
-      continue   // i sits on the closing fence (or past the end); the loop steps over it
+      continue // i sits on the closing fence (or past the end); the loop steps over it
     }
 
-    if (!line.trim()) { flush(); continue }
-    if (RULE.test(line)) { flush(); continue }
+    if (!line.trim()) {
+      flush()
+      continue
+    }
+    if (RULE.test(line)) {
+      flush()
+      continue
+    }
 
     const heading = HEADING.exec(line)
     if (heading) {
@@ -100,10 +106,18 @@ export function parseMarkdown(src: string): Block[] {
     // The trailing space in the marker is what separates "- item" from a line
     // that merely opens with **bold**.
     const bullet = BULLET.exec(line)
-    if (bullet) { flush(); addItem(blocks, 'ul', parseInline(bullet[1]), 1); continue }
+    if (bullet) {
+      flush()
+      addItem(blocks, 'ul', parseInline(bullet[1]), 1)
+      continue
+    }
 
     const numbered = NUMBER.exec(line)
-    if (numbered) { flush(); addItem(blocks, 'ol', parseInline(numbered[2]), parseInt(numbered[1], 10)); continue }
+    if (numbered) {
+      flush()
+      addItem(blocks, 'ol', parseInline(numbered[2]), parseInt(numbered[1], 10))
+      continue
+    }
 
     para.push(line)
   }
@@ -116,7 +130,10 @@ export function parseMarkdown(src: string): Block[] {
 // which loses the hierarchy but never loses the text.
 function addItem(blocks: Block[], kind: 'ul' | 'ol', spans: Inline[], start: number) {
   const open = blocks[blocks.length - 1]
-  if (open && open.kind === kind) { open.items.push(spans); return }
+  if (open && open.kind === kind) {
+    open.items.push(spans)
+    return
+  }
   if (kind === 'ul') blocks.push({ kind: 'ul', items: [spans] })
   else blocks.push({ kind: 'ol', items: [spans], start })
 }

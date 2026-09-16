@@ -8,14 +8,9 @@ import assert from 'node:assert/strict'
 import { suggestTags } from '../../client/domain/tagSuggest.ts'
 import type { UIItem } from '../../client/types.ts'
 
-const item = (id: string, tags: string[]): UIItem =>
-  ({ id, tags, type: 'note', title: id, ts: 0 } as unknown as UIItem)
+const item = (id: string, tags: string[]): UIItem => ({ id, tags, type: 'note', title: id, ts: 0 }) as unknown as UIItem
 
-const ITEMS = [
-  item('a', ['pasta', 'dinner', 'quick']),
-  item('b', ['pasta', 'dinner']),
-  item('c', ['pasta', 'baking']),
-]
+const ITEMS = [item('a', ['pasta', 'dinner', 'quick']), item('b', ['pasta', 'dinner']), item('c', ['pasta', 'baking'])]
 
 test('counts how many items carry each tag', () => {
   const { suggestions } = suggestTags(ITEMS, [], '')
@@ -25,20 +20,23 @@ test('counts how many items carry each tag', () => {
 
 test('tags already used as a rule are never offered', () => {
   const { suggestions } = suggestTags(ITEMS, ['pasta'], '')
-  assert.ok(!suggestions.some((s) => s.tag === 'pasta'), 'the existing rule is gone')
+  assert.ok(!suggestions.some(s => s.tag === 'pasta'), 'the existing rule is gone')
   assert.equal(suggestions[0].tag, 'dinner', 'and the next one takes the top slot')
 })
 
 test('equal counts are ordered alphabetically, not by insertion', () => {
   // baking and quick both appear once; 'quick' is seen first walking the items.
   const { suggestions } = suggestTags(ITEMS, [], '')
-  const ones = suggestions.filter((s) => s.count === 1).map((s) => s.tag)
+  const ones = suggestions.filter(s => s.count === 1).map(s => s.tag)
   assert.deepEqual(ones, ['baking', 'quick'], 'alphabetical breaks the tie')
 })
 
 test('the query filters by substring, not prefix', () => {
   const { suggestions } = suggestTags(ITEMS, [], 'ast')
-  assert.deepEqual(suggestions.map((s) => s.tag), ['pasta'])
+  assert.deepEqual(
+    suggestions.map(s => s.tag),
+    ['pasta'],
+  )
 })
 
 test('canAddNew is offered for a genuinely new tag', () => {
@@ -54,7 +52,12 @@ test('canAddNew is withheld when the tag is already suggested or already a rule'
 })
 
 test('the list is capped', () => {
-  const many = [item('x', Array.from({ length: 30 }, (_, i) => `t${String(i).padStart(2, '0')}`))]
+  const many = [
+    item(
+      'x',
+      Array.from({ length: 30 }, (_, i) => `t${String(i).padStart(2, '0')}`),
+    ),
+  ]
   assert.equal(suggestTags(many, [], '').suggestions.length, 8)
   assert.equal(suggestTags(many, [], '', 3).suggestions.length, 3)
 })

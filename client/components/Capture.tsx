@@ -27,61 +27,112 @@ export function CaptureModal({ onClose, onSave }: CaptureModalProps) {
   const chip: Detection | null = detected || (pendingImg ? { type: 'image' } : null)
 
   // Play the exit animation, then unmount. Matches the .16s cap-out CSS duration.
-  const close = () => { setClosing(true); window.setTimeout(onClose, 160) }
+  const close = () => {
+    setClosing(true)
+    window.setTimeout(onClose, 160)
+  }
 
   // autofocus the textarea when the modal opens
-  useEffect(() => { taRef.current?.focus() }, [])
+  useEffect(() => {
+    taRef.current?.focus()
+  }, [])
   // Esc closes the overlay
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close() }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close()
+    }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
   const onImageFile = (file: File | null | undefined) => {
     if (!file) return
-    const r = new FileReader(); r.onload = () => setPendingImg(r.result as string); r.readAsDataURL(file)
+    const r = new FileReader()
+    r.onload = () => setPendingImg(r.result as string)
+    r.readAsDataURL(file)
   }
 
   const save = async () => {
     const raw = text.trim()
     if ((!raw && !pendingImg) || saving) return
-    setSaving(true); setError(null)
+    setSaving(true)
+    setError(null)
     const err = await onSave(raw, pendingImg)
     setSaving(false)
-    if (err) setError(err)   // on failure, keep the modal + input so nothing is lost
+    if (err)
+      setError(err) // on failure, keep the modal + input so nothing is lost
     else close()
   }
 
   const onKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save() }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      save()
+    }
   }
 
   return (
     <div className={'cap-overlay' + (closing ? ' closing' : '')} onClick={close}>
-      <div className="cap-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="cap-modal" onClick={e => e.stopPropagation()}>
         <div className={'input-shell' + (text || pendingImg ? ' focus' : '')}>
           {pendingImg && (
             <span className="attach-preview">
               <img src={pendingImg} alt="attachment" />
-              <button className="attach-x" title="remove" onClick={() => setPendingImg(null)}>✕</button>
+              <button className="attach-x" title="remove" onClick={() => setPendingImg(null)}>
+                ✕
+              </button>
             </span>
           )}
-          <textarea ref={taRef} rows={1} value={text} placeholder="Drop a link, note, or code…"
-            onChange={(e) => { setText(e.target.value); if (error) setError(null) }} onKeyDown={onKey}
-            onPaste={(e) => { const it = Array.from(e.clipboardData?.items || []).find((x) => x.type.startsWith('image/')); if (it) { e.preventDefault(); onImageFile(it.getAsFile()) } }} />
+          <textarea
+            ref={taRef}
+            rows={1}
+            value={text}
+            placeholder="Drop a link, note, or code…"
+            onChange={e => {
+              setText(e.target.value)
+              if (error) setError(null)
+            }}
+            onKeyDown={onKey}
+            onPaste={e => {
+              const it = Array.from(e.clipboardData?.items || []).find(x => x.type.startsWith('image/'))
+              if (it) {
+                e.preventDefault()
+                onImageFile(it.getAsFile())
+              }
+            }}
+          />
           {chip && (
-            <span className="detect-chip"><Icon name={CAT[chip.type].glyph} size={12} /> {CAT[chip.type].label.replace(/s$/, '').toUpperCase()}{chip.lang ? ' · ' + chip.lang.toUpperCase() : ''}</span>
+            <span className="detect-chip">
+              <Icon name={CAT[chip.type].glyph} size={12} /> {CAT[chip.type].label.replace(/s$/, '').toUpperCase()}
+              {chip.lang ? ' · ' + chip.lang.toUpperCase() : ''}
+            </span>
           )}
-          <input type="file" accept="image/*" ref={fileRef} style={{ display: 'none' }} onChange={(e) => { onImageFile(e.target.files?.[0]); e.target.value = '' }} />
-          <button className="attach-btn" title="attach image" onClick={() => fileRef.current && fileRef.current.click()}>
+          <input
+            type="file"
+            accept="image/*"
+            ref={fileRef}
+            style={{ display: 'none' }}
+            onChange={e => {
+              onImageFile(e.target.files?.[0])
+              e.target.value = ''
+            }}
+          />
+          <button
+            className="attach-btn"
+            title="attach image"
+            onClick={() => fileRef.current && fileRef.current.click()}
+          >
             <Icon name="image" size={17} />
           </button>
           <button className="send-btn" disabled={(!text.trim() && !pendingImg) || saving} onClick={save}>
             <Icon name="send" size={18} />
           </button>
         </div>
-        {error && <div className="cap-error mono" role="alert">{error}</div>}
+        {error && (
+          <div className="cap-error mono" role="alert">
+            {error}
+          </div>
+        )}
       </div>
     </div>
   )

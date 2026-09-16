@@ -21,8 +21,8 @@ let loaded = false
 // starts a new bootId and clients resync their loaded pages.
 let rev = 0
 const bootId = randomUUID()
-let tombstones = []      // [{ id, rev }] for deletions, newest last
-let tombstoneFloor = 0   // highest rev discarded from the tombstone window
+let tombstones = [] // [{ id, rev }] for deletions, newest last
+let tombstoneFloor = 0 // highest rev discarded from the tombstone window
 let TOMBSTONE_CAP = 1000
 
 function bump(record) {
@@ -30,17 +30,23 @@ function bump(record) {
   if (record) record._rev = rev
 }
 
-export function revState() { return { rev, bootId } }
+export function revState() {
+  return { rev, bootId }
+}
 export function changedSince(since) {
-  return notes.filter((n) => (n._rev || 0) > since).map(stripEmbedding)
+  return notes.filter(n => (n._rev || 0) > since).map(stripEmbedding)
 }
 export function deletedSince(since) {
-  return tombstones.filter((t) => t.rev > since).map((t) => t.id)
+  return tombstones.filter(t => t.rev > since).map(t => t.id)
 }
 // False when `since` predates trimmed tombstones — deletions may be missing,
 // so the client must refetch instead of applying a delta.
-export function deltaOk(since) { return since >= tombstoneFloor }
-export function _setTombstoneCap(n) { TOMBSTONE_CAP = n }  // test-only
+export function deltaOk(since) {
+  return since >= tombstoneFloor
+}
+export function _setTombstoneCap(n) {
+  TOMBSTONE_CAP = n
+} // test-only
 
 // Writes queued by a { persist: false } call, run as one transaction on the
 // next flush() — see addNote's doc comment for why batching matters. Each
@@ -87,7 +93,7 @@ export async function load() {
   // Rows written before the embedding column existed still carry the vector
   // inside `data`; they are collected here and rewritten once, below.
   const legacy = []
-  notes = rows.map((r) => {
+  notes = rows.map(r => {
     const note = JSON.parse(r.data)
     const embedding = decodeEmbedding(r.embedding)
     if (embedding) note.embedding = embedding
@@ -117,8 +123,11 @@ function rowJson(record) {
 }
 
 function insertRow(db, record) {
-  db.prepare('INSERT INTO notes (id, data, embedding) VALUES (?, ?, ?)')
-    .run(record.id, rowJson(record), encodeEmbedding(record.embedding))
+  db.prepare('INSERT INTO notes (id, data, embedding) VALUES (?, ?, ?)').run(
+    record.id,
+    rowJson(record),
+    encodeEmbedding(record.embedding),
+  )
 }
 
 // `writeEmbedding` false leaves the BLOB column out of the statement entirely.
@@ -130,8 +139,11 @@ function updateRow(db, record, writeEmbedding = true) {
     db.prepare('UPDATE notes SET data = ? WHERE id = ?').run(rowJson(record), record.id)
     return
   }
-  db.prepare('UPDATE notes SET data = ?, embedding = ? WHERE id = ?')
-    .run(rowJson(record), encodeEmbedding(record.embedding), record.id)
+  db.prepare('UPDATE notes SET data = ?, embedding = ? WHERE id = ?').run(
+    rowJson(record),
+    encodeEmbedding(record.embedding),
+    record.id,
+  )
 }
 
 // Pass { persist: false } to batch a run of adds and call flush() once at the
@@ -156,7 +168,7 @@ export async function addNote(note, { persist: doPersist = true } = {}) {
   notes.unshift(record)
   bump(record)
   if (doPersist) insertRow(await getDb(), record)
-  else pendingWrites.push((db) => insertRow(db, record))
+  else pendingWrites.push(db => insertRow(db, record))
   return stripEmbedding(record)
 }
 
@@ -165,7 +177,7 @@ export async function addNote(note, { persist: doPersist = true } = {}) {
 // the end — the settings re-embed does this so it writes once instead of
 // once per note.
 export async function updateNote(id, patch, { persist: doPersist = true } = {}) {
-  const note = notes.find((n) => n.id === id)
+  const note = notes.find(n => n.id === id)
   if (!note) return null
   Object.assign(note, patch)
   bump(note)
@@ -174,7 +186,7 @@ export async function updateNote(id, patch, { persist: doPersist = true } = {}) 
   // updates keeps each one's answer.
   const writeEmbedding = 'embedding' in patch
   if (doPersist) updateRow(await getDb(), note, writeEmbedding)
-  else pendingWrites.push((db) => updateRow(db, note, writeEmbedding))
+  else pendingWrites.push(db => updateRow(db, note, writeEmbedding))
   return stripEmbedding(note)
 }
 
@@ -204,15 +216,15 @@ export async function flush() {
 export async function removeMany(ids) {
   const idSet = new Set(ids)
   if (!idSet.size) return
-  notes = notes.filter((n) => !idSet.has(n.id))
+  notes = notes.filter(n => !idSet.has(n.id))
 }
 
 export async function deleteNote(id) {
   const before = notes.length
-  notes = notes.filter((n) => n.id !== id)
+  notes = notes.filter(n => n.id !== id)
   const changed = notes.length !== before
   if (changed) {
-    (await getDb()).prepare('DELETE FROM notes WHERE id = ?').run(id)
+    ;(await getDb()).prepare('DELETE FROM notes WHERE id = ?').run(id)
     rev++
     tombstones.push({ id, rev })
     while (tombstones.length > TOMBSTONE_CAP) tombstoneFloor = tombstones.shift().rev
@@ -256,7 +268,9 @@ export async function clearUploads() {
     try {
       await rm(path.join(UPLOAD_DIR, name), { force: true, recursive: true })
       removed++
-    } catch { /* leftover file is cosmetic; never fail the wipe over it */ }
+    } catch {
+      /* leftover file is cosmetic; never fail the wipe over it */
+    }
   }
   return removed
 }
@@ -264,7 +278,7 @@ export async function clearUploads() {
 // One note by id, embedding stripped like every other read path. Used by the
 // single-note API route that hydrates a deep-linked expanded item.
 export function getNote(id) {
-  const note = notes.find((n) => n.id === id)
+  const note = notes.find(n => n.id === id)
   return note ? stripEmbedding(note) : null
 }
 
@@ -320,12 +334,12 @@ const SIM_FLOOR = 0.44
 // `floor: 0` disables it, for callers that want raw ranking.
 export function search(queryEmbedding, k = TOP_K, { floor = SIM_FLOOR } = {}) {
   const scored = notes
-    .filter((n) => n.embedding?.length) // Float32Array off disk, plain Array fresh from the model
-    .map((n) => ({ note: n, score: cosine(queryEmbedding, n.embedding) }))
-    .filter((s) => s.score >= floor)
+    .filter(n => n.embedding?.length) // Float32Array off disk, plain Array fresh from the model
+    .map(n => ({ note: n, score: cosine(queryEmbedding, n.embedding) }))
+    .filter(s => s.score >= floor)
     .sort((a, b) => b.score - a.score)
     .slice(0, k)
-  return scored.map((s) => ({ ...stripEmbedding(s.note), score: s.score }))
+  return scored.map(s => ({ ...stripEmbedding(s.note), score: s.score }))
 }
 
 // ---- hybrid retrieval ----------------------------------------------------
@@ -376,9 +390,7 @@ export function reciprocalRankFusion(lists, { k = RRF_K } = {}) {
       scores.set(item.id, (scores.get(item.id) || 0) + 1 / (k + i + 1))
     })
   }
-  return [...scores]
-    .sort((a, b) => b[1] - a[1])
-    .map(([id, score]) => ({ ...byId.get(id), score }))
+  return [...scores].sort((a, b) => b[1] - a[1]).map(([id, score]) => ({ ...byId.get(id), score }))
 }
 
 // What Ask actually calls when an embedding model is available. Falls back to
@@ -404,12 +416,78 @@ export function hybridSearch(queryEmbedding, query, k = TOP_K) {
 // catches whatever the list misses — including in languages this list says
 // nothing about, and the library is not all English.
 const STOPWORDS = new Set([
-  'about', 'after', 'all', 'also', 'and', 'any', 'are', 'as', 'at', 'be', 'been', 'but', 'by', 'can',
-  'did', 'do', 'does', 'find', 'for', 'from', 'get', 'had', 'has', 'have', 'how', 'if', 'in', 'into',
-  'is', 'it', 'its', 'just', 'me', 'my', 'not', 'of', 'on', 'or', 'our', 'out', 'over', 'save', 'saved',
-  'show', 'so', 'some', 'that', 'the', 'their', 'them', 'then', 'there', 'these', 'they', 'this',
-  'to', 'up', 'us', 'was', 'we', 'were', 'what', 'when', 'where', 'which', 'who', 'why', 'will',
-  'with', 'would', 'you', 'your',
+  'about',
+  'after',
+  'all',
+  'also',
+  'and',
+  'any',
+  'are',
+  'as',
+  'at',
+  'be',
+  'been',
+  'but',
+  'by',
+  'can',
+  'did',
+  'do',
+  'does',
+  'find',
+  'for',
+  'from',
+  'get',
+  'had',
+  'has',
+  'have',
+  'how',
+  'if',
+  'in',
+  'into',
+  'is',
+  'it',
+  'its',
+  'just',
+  'me',
+  'my',
+  'not',
+  'of',
+  'on',
+  'or',
+  'our',
+  'out',
+  'over',
+  'save',
+  'saved',
+  'show',
+  'so',
+  'some',
+  'that',
+  'the',
+  'their',
+  'them',
+  'then',
+  'there',
+  'these',
+  'they',
+  'this',
+  'to',
+  'up',
+  'us',
+  'was',
+  'we',
+  'were',
+  'what',
+  'when',
+  'where',
+  'which',
+  'who',
+  'why',
+  'will',
+  'with',
+  'would',
+  'you',
+  'your',
 ])
 
 // A term present in more than this share of the library carries no
@@ -443,15 +521,22 @@ function termMatcher(term) {
 // filtering removes everything, so a query made entirely of common words
 // still returns its best-effort matches rather than nothing at all.
 export function queryTerms(query, haystacks = []) {
-  const raw = [...new Set((query || '').toLowerCase().split(/\W+/).filter((t) => t.length > 1))]
+  const raw = [
+    ...new Set(
+      (query || '')
+        .toLowerCase()
+        .split(/\W+/)
+        .filter(t => t.length > 1),
+    ),
+  ]
   // Stopwords are dropped unconditionally, with no fallback: a query made
   // entirely of them ("what did I save about the...") is asking about
   // nothing, and best-effort noise is a worse answer than no answer.
-  const content = raw.filter((t) => !STOPWORDS.has(t))
+  const content = raw.filter(t => !STOPWORDS.has(t))
   if (!content.length || haystacks.length < MIN_LIBRARY_FOR_SHARE) return content
 
   const cap = haystacks.length * MAX_TERM_SHARE
-  const kept = content.filter((t) => {
+  const kept = content.filter(t => {
     const re = termMatcher(t)
     let seen = 0
     for (const hay of haystacks) if (re.test(hay) && ++seen > cap) return false
@@ -473,28 +558,30 @@ export function textSearch(query, k = TOP_K, list = notes) {
   const terms = queryTerms(query, haystacks)
   if (!terms.length) return []
   const matchers = terms.map(termMatcher)
-  return list
-    .map((n, i) => {
-      const hay = haystacks[i]
-      let hits = 0
-      for (const re of matchers) if (re.test(hay)) hits++
-      return { note: n, score: hits / terms.length }
-    })
-    // One term out of five matching is not evidence — it is the coincidence
-    // any sufficiently long query is guaranteed to produce somewhere in a
-    // library this size, and with the cosine side floored to nothing on an
-    // out-of-library question it would be the ENTIRE context the answer model
-    // sees. So a long query has to hit at least two of its terms.
-    //
-    // Short queries keep the single-hit bar, because for them a conjunction is
-    // a completely different (and far stricter) question: "skincare routine"
-    // asked for two hits means a note must contain BOTH words, which is a
-    // phrase search nobody asked for. The ratio below lands on 1 up to three
-    // terms and 2 beyond, which is where the two failure modes trade off.
-    .filter((s) => s.score * terms.length >= Math.min(2, Math.ceil(terms.length / 3)))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, k)
-    .map((s) => ({ ...stripEmbedding(s.note), score: s.score }))
+  return (
+    list
+      .map((n, i) => {
+        const hay = haystacks[i]
+        let hits = 0
+        for (const re of matchers) if (re.test(hay)) hits++
+        return { note: n, score: hits / terms.length }
+      })
+      // One term out of five matching is not evidence — it is the coincidence
+      // any sufficiently long query is guaranteed to produce somewhere in a
+      // library this size, and with the cosine side floored to nothing on an
+      // out-of-library question it would be the ENTIRE context the answer model
+      // sees. So a long query has to hit at least two of its terms.
+      //
+      // Short queries keep the single-hit bar, because for them a conjunction is
+      // a completely different (and far stricter) question: "skincare routine"
+      // asked for two hits means a note must contain BOTH words, which is a
+      // phrase search nobody asked for. The ratio below lands on 1 up to three
+      // terms and 2 beyond, which is where the two failure modes trade off.
+      .filter(s => s.score * terms.length >= Math.min(2, Math.ceil(terms.length / 3)))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, k)
+      .map(s => ({ ...stripEmbedding(s.note), score: s.score }))
+  )
 }
 
 // test-only: clean in-memory slate against a fresh in-memory database,
@@ -512,8 +599,19 @@ export function _reset({ loaded: isLoaded = true, keepDb = false } = {}) {
 // The searchable text of one note, lowercased — the same field list the
 // embedding is built from, so both retrievers see the same note.
 function haystackFor(n) {
-  return [n.title, n.summary, n.content, n.siteTitle, n.siteDesc, n.article, n.thumbDescription, (n.tags || []).join(' ')]
-    .filter(Boolean).join(' ').toLowerCase()
+  return [
+    n.title,
+    n.summary,
+    n.content,
+    n.siteTitle,
+    n.siteDesc,
+    n.article,
+    n.thumbDescription,
+    (n.tags || []).join(' '),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
 }
 
 function stripEmbedding(n) {

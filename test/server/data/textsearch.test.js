@@ -5,8 +5,22 @@ import assert from 'node:assert/strict'
 import { textSearch, queryTerms } from '../../../server/data/notes.js'
 
 const NOTES = [
-  { id: 'a', title: 'Sourdough starter guide', summary: 'baking bread at home', content: '', tags: ['baking', 'bread'], embedding: [1] },
-  { id: 'b', title: 'React hooks', summary: '', content: 'useEffect cleanup patterns', tags: ['react'], embedding: null },
+  {
+    id: 'a',
+    title: 'Sourdough starter guide',
+    summary: 'baking bread at home',
+    content: '',
+    tags: ['baking', 'bread'],
+    embedding: [1],
+  },
+  {
+    id: 'b',
+    title: 'React hooks',
+    summary: '',
+    content: 'useEffect cleanup patterns',
+    tags: ['react'],
+    embedding: null,
+  },
   { id: 'c', title: 'Trip to Kyoto', summary: 'travel notes', content: 'temples and food', tags: ['travel', 'japan'] },
 ]
 
@@ -32,13 +46,20 @@ test('respects k and strips embeddings', () => {
   // this long has to meet (see the term-selection tests below).
   const out = textSearch('bread baking kyoto travel', 1, NOTES)
   assert.equal(out.length, 1)
-  assert.ok(out.every((n) => !('embedding' in n)))
+  assert.ok(out.every(n => !('embedding' in n)))
   assert.equal(textSearch('bread baking kyoto travel', 6, NOTES).length, 2)
 })
 
 test('link/video notes are findable via siteTitle/siteDesc when title/content are just heuristic placeholders', () => {
   const linkNotes = [
-    { id: 'd', title: 'https://example.com/foo', content: 'https://example.com/foo', tags: [], siteTitle: 'Understanding Quantum Entanglement', siteDesc: 'A beginner-friendly explainer on entangled particles' },
+    {
+      id: 'd',
+      title: 'https://example.com/foo',
+      content: 'https://example.com/foo',
+      tags: [],
+      siteTitle: 'Understanding Quantum Entanglement',
+      siteDesc: 'A beginner-friendly explainer on entangled particles',
+    },
   ]
   assert.equal(textSearch('entanglement', 6, linkNotes)[0].id, 'd')
   assert.equal(textSearch('quantum', 6, linkNotes)[0].id, 'd')
@@ -89,7 +110,7 @@ test('video notes are findable by their thumbnail vision description alone', () 
 // "the" appeared in 71% of notes and "and" in 79%, while every genuinely
 // discriminating term sat below 1%.
 
-test('stopwords are dropped, so a question\'s scaffolding cannot match the whole library', () => {
+test("stopwords are dropped, so a question's scaffolding cannot match the whole library", () => {
   const notes = [{ id: 'a', title: 'The quick brown fox and the dog', content: '', tags: [] }]
   // Every term here is scaffolding: nothing is actually being asked about.
   assert.deepEqual(textSearch('what did I save about the and', 6, notes), [])
@@ -118,7 +139,10 @@ test('terms match at a word start, so a rare query word cannot hide inside a lon
 })
 
 test('a long query must hit at least two terms; a short one still needs only one', () => {
-  const notes = [{ id: 'a', title: 'lattice screen in a living room', content: '', tags: [] }, { id: 'b', title: 'unrelated', content: '', tags: [] }]
+  const notes = [
+    { id: 'a', title: 'lattice screen in a living room', content: '', tags: [] },
+    { id: 'b', title: 'unrelated', content: '', tags: [] },
+  ]
   // Five content terms, one incidental match — a coincidence, not an answer.
   assert.deepEqual(textSearch('quantum chromodynamics lattice gauge theory', 6, notes), [])
   // Two terms asked as a conjunction would be a phrase search nobody wanted.

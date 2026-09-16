@@ -68,8 +68,12 @@ function decodeEntities(s) {
   return (s || '')
     .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n))
     .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
-    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, ' ')
 }
 
 // <meta property="og:title" content="..."> (handles either attribute order)
@@ -281,7 +285,7 @@ export function nextIgFetchDelay(now, lastFetch, jitter = 0) {
 let lastIgFetch = 0
 async function igThrottle() {
   const wait = nextIgFetchDelay(Date.now(), lastIgFetch, Math.floor(Math.random() * 500))
-  if (wait > 0) await new Promise((r) => setTimeout(r, wait))
+  if (wait > 0) await new Promise(r => setTimeout(r, wait))
   lastIgFetch = Date.now()
 }
 
@@ -450,10 +454,10 @@ export function parseRedditPost(payload) {
   // plant" post's whole value is the reply naming it. Stickied bot posts and
   // deleted bodies carry none of that and are dropped.
   const comments = (payload?.[1]?.data?.children || [])
-    .map((c) => c?.data)
-    .filter((c) => c && c.body && !c.stickied && !['[deleted]', '[removed]'].includes(c.body.trim()))
+    .map(c => c?.data)
+    .filter(c => c && c.body && !c.stickied && !['[deleted]', '[removed]'].includes(c.body.trim()))
     .slice(0, MAX_COMMENTS)
-    .map((c) => `u/${c.author || 'someone'}: ${clean(c.body).slice(0, MAX_COMMENT_CHARS)}`)
+    .map(c => `u/${c.author || 'someone'}: ${clean(c.body).slice(0, MAX_COMMENT_CHARS)}`)
   if (comments.length) parts.push('Top comments:\n' + comments.join('\n'))
 
   return {
@@ -537,7 +541,7 @@ export function youtubeVideoId(url) {
     return null
   }
   if (!isSafeFetchUrl(url)) return null
-  const id = (v) => (/^[\w-]{6,20}$/.test(v || '') ? v : null)
+  const id = v => (/^[\w-]{6,20}$/.test(v || '') ? v : null)
   const host = u.hostname.replace(/^(www|m)\./, '')
   if (host === 'youtu.be') return id(u.pathname.slice(1).split('/')[0])
   if (host === 'youtube.com' || host === 'music.youtube.com') {
@@ -565,7 +569,7 @@ export function isYouTubeVideo(url) {
 // of scope — and the full 8000 still serves textSearch and the answer prompt.
 export function joinCaptions(segments) {
   const text = (segments || [])
-    .map((s) => (s?.text || '').trim())
+    .map(s => (s?.text || '').trim())
     .filter(Boolean)
     .join(' ')
     .replace(/\s+/g, ' ')
@@ -614,7 +618,7 @@ export async function fetchYouTubeCaptions(url) {
     }
     return { text: joinCaptions(segments), done: true }
   } catch (e) {
-    const permanent = PERMANENT_CAPTION_ERRORS.some((E) => e instanceof E)
+    const permanent = PERMANENT_CAPTION_ERRORS.some(E => e instanceof E)
     if (!permanent) console.warn('[meta] youtube captions unavailable for', url, '-', e.message)
     return { text: null, done: permanent }
   }

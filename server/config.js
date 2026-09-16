@@ -74,7 +74,7 @@ export const PASSWORD = config.PASSWORD
 // a stored key into an operator-supplied URL would send a credential somewhere
 // its owner never pointed it.
 export function resolveAiConfig(env = process.env, creds = null) {
-  const strip = (u) => u.replace(/\/+$/, '')
+  const strip = u => u.replace(/\/+$/, '')
   // providerId only ever comes from the file: an operator setting an endpoint
   // by environment variable is naming a URL, not picking a catalogue entry.
   const source = env.STASH_AI_BASE_URL

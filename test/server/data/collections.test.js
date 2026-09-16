@@ -97,20 +97,22 @@ test('smart matching agrees on spaces vs hyphens (shared normalizer)', async () 
 })
 
 test('all() resolves cover notes for the first members', async () => {
-  store._reset(); collections._reset()
+  store._reset()
+  collections._reset()
   const n1 = await store.addNote({ type: 'video', url: 'https://x/1', thumb: '/uploads/a.jpg' })
   const n2 = await store.addNote({ type: 'text', content: 'b' })
   const c = await collections.create({ name: 'Trip' })
   await collections.addItem(c.id, n1.id)
   await collections.addItem(c.id, n2.id)
-  const listed = collections.all().find((x) => x.id === c.id)
+  const listed = collections.all().find(x => x.id === c.id)
   assert.equal(listed.covers.length, 2)
   assert.equal(listed.covers[0].id, n2.id, 'newest membership first, same as itemIds')
   assert.ok(!('embedding' in listed.covers[0]))
 })
 
 test('addItem/removeItem/update return covers directly, not just count', async () => {
-  store._reset(); collections._reset()
+  store._reset()
+  collections._reset()
   const n1 = await store.addNote({ type: 'video', url: 'https://x/1', thumb: '/uploads/a.jpg' })
   const n2 = await store.addNote({ type: 'text', content: 'b' })
   const c = await collections.create({ name: 'Trip' })
@@ -135,14 +137,15 @@ test('addItem/removeItem/update return covers directly, not just count', async (
 })
 
 test('create() with a backfilled smart rule returns covers directly, not just count', async () => {
-  store._reset(); collections._reset()
+  store._reset()
+  collections._reset()
   const n1 = await store.addNote({ type: 'video', url: 'https://x/1', thumb: '/uploads/a.jpg', tags: ['vacation'] })
   const n2 = await store.addNote({ type: 'text', content: 'b', tags: ['vacation'] })
   const c = await collections.create({ name: 'Vacation', tags: ['vacation'] }, store.allNotes())
   assert.equal(c.itemIds.length, 2, 'backfill populated membership at creation time')
   assert.ok(Array.isArray(c.covers), 'create response carries a covers array')
   assert.equal(c.covers.length, 2)
-  assert.deepEqual(new Set(c.covers.map((n) => n.id)), new Set([n1.id, n2.id]))
+  assert.deepEqual(new Set(c.covers.map(n => n.id)), new Set([n1.id, n2.id]))
 })
 
 // --- addItems: the batched form used by bulk import ------------------------
@@ -184,7 +187,7 @@ test('addItems: an empty batch is a no-op', async () => {
   assert.deepEqual(collections.get(c.id).itemIds, [])
 })
 
-const canvasFor = (itemId) => ({
+const canvasFor = itemId => ({
   nodes: [
     { id: 'item:' + itemId, type: 'item', itemId, x: 0, y: 0, width: 220, height: 100 },
     { id: 'n1', type: 'text', text: 'keep me', x: 300, y: 0, width: 220, height: 60 },
@@ -197,7 +200,7 @@ test('update stores a canvas doc and null clears it', async () => {
   const c = await collections.create({ name: 'Board' })
   await collections.update(c.id, { canvas: canvasFor('n1') })
   assert.deepEqual(collections.get(c.id).canvas, canvasFor('n1'))
-  await collections.update(c.id, { name: 'Renamed' })          // untouched by other patches
+  await collections.update(c.id, { name: 'Renamed' }) // untouched by other patches
   assert.deepEqual(collections.get(c.id).canvas, canvasFor('n1'))
   await collections.update(c.id, { canvas: null })
   assert.equal('canvas' in collections.get(c.id), false)

@@ -130,7 +130,8 @@ export async function handleUpdateNote(req, res, id) {
     enrich.queueJob(async () => {
       try {
         const toEmbed = [note.title, note.summary, note.content, (note.tags || []).join(' '), note.mindNote]
-          .filter(Boolean).join('\n')
+          .filter(Boolean)
+          .join('\n')
         if (toEmbed) await store.updateNote(id, { embedding: await ai.embedText(toEmbed) })
       } catch (e) {
         console.error('[update] re-embed failed for', id, '-', e.message)

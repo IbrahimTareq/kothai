@@ -7,19 +7,42 @@ import { SOURCE_BY_KEY } from '../domain/source.ts'
 
 export const PAGE = 120
 
-export interface Placeholder { id: string; ph: true }
+export interface Placeholder {
+  id: string
+  ph: true
+}
 export type Slot = UIItem | Placeholder
 export function isPlaceholder(s: Slot): s is Placeholder {
   return (s as Placeholder).ph === true
 }
 
-export interface Facets { types: Record<string, number>; sources: Record<string, number>; unavailable?: number }
-export interface NotesPage {
-  notes: UIItem[]; total: number; offset: number; facets: Facets; pendingTotal: number
-  rev?: number; bootId?: string
+export interface Facets {
+  types: Record<string, number>
+  sources: Record<string, number>
+  unavailable?: number
 }
-export interface NotesDelta { notes: UIItem[]; deleted: string[]; pendingTotal: number }
-export interface PagerQuery { type?: string; source?: string; q?: string; collection?: string; unavailable?: boolean; sort?: string }
+export interface NotesPage {
+  notes: UIItem[]
+  total: number
+  offset: number
+  facets: Facets
+  pendingTotal: number
+  rev?: number
+  bootId?: string
+}
+export interface NotesDelta {
+  notes: UIItem[]
+  deleted: string[]
+  pendingTotal: number
+}
+export interface PagerQuery {
+  type?: string
+  source?: string
+  q?: string
+  collection?: string
+  unavailable?: boolean
+  sort?: string
+}
 
 // Client mirror of the server-side filter, for deciding whether an
 // optimistically saved note belongs in the current view. `type` here is the
@@ -43,10 +66,12 @@ export function matchesLocal(item: UIItem, query: PagerQuery): boolean {
   // and only appears when explicitly asked for.
   if (query.unavailable ? !item.unavailable : item.unavailable) return false
   const sources = (query.source || '').split(',').filter(Boolean)
-  if (sources.length && !sources.some((k) => SOURCE_BY_KEY[k]?.test(item))) return false
+  if (sources.length && !sources.some(k => SOURCE_BY_KEY[k]?.test(item))) return false
   if (query.q && query.q.trim()) {
     const hay = [item.text, item.title, item.note, item.name, item.host, (item.tags || []).join(' ')]
-      .filter(Boolean).join(' ').toLowerCase()
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
     if (!hay.includes(query.q.trim().toLowerCase())) return false
   }
   return true
@@ -79,7 +104,7 @@ export class NotePager {
   // user is staring at keeps its heuristic title until the next slow tick.
   // Same shape as awaitingThumb: id -> expiry, bounded so a note stuck
   // behind a long queue can't pin the fast cadence on forever.
-  private watching = new Map<string, number>()     // id -> expiry (epoch ms)
+  private watching = new Map<string, number>() // id -> expiry (epoch ms)
 
   reset(): void {
     this.total = 0
@@ -99,8 +124,12 @@ export class NotePager {
     this.bootId = ''
   }
 
-  markInflight(offset: number): void { this.inflight.add(offset) }
-  clearInflight(offset: number): void { this.inflight.delete(offset) }
+  markInflight(offset: number): void {
+    this.inflight.add(offset)
+  }
+  clearInflight(offset: number): void {
+    this.inflight.delete(offset)
+  }
 
   applyPage(p: NotesPage): void {
     this.total = p.total
@@ -150,7 +179,10 @@ export class NotePager {
       if (this.inflight.has(off)) continue
       let loaded = true
       for (let i = off; i < Math.min(off + PAGE, this.total); i++) {
-        if (!this.arr[i]) { loaded = false; break }
+        if (!this.arr[i]) {
+          loaded = false
+          break
+        }
       }
       if (!loaded) out.push(off)
     }
@@ -222,7 +254,8 @@ export class NotePager {
     const out: string[] = []
     for (let i = Math.max(0, first); i <= Math.min(last, this.total - 1); i++) {
       const it = this.arr[i]
-      if (it && !it.thumb && it.url && (SOURCE_BY_KEY.reels?.test(it) || SOURCE_BY_KEY.igposts?.test(it))) out.push(it.id)
+      if (it && !it.thumb && it.url && (SOURCE_BY_KEY.reels?.test(it) || SOURCE_BY_KEY.igposts?.test(it)))
+        out.push(it.id)
     }
     return out
   }
@@ -238,10 +271,16 @@ export class NotePager {
   awaitingThumbCount(now: number): number {
     let count = 0
     for (const [id, until] of this.awaitingThumb) {
-      if (now > until) { this.awaitingThumb.delete(id); continue }
+      if (now > until) {
+        this.awaitingThumb.delete(id)
+        continue
+      }
       const idx = this.idToIndex.get(id)
       const it = idx !== undefined ? this.arr[idx] : undefined
-      if (it?.thumb) { this.awaitingThumb.delete(id); continue }
+      if (it?.thumb) {
+        this.awaitingThumb.delete(id)
+        continue
+      }
       count++
     }
     return count
@@ -259,12 +298,18 @@ export class NotePager {
   watchingCount(now: number): number {
     let count = 0
     for (const [id, until] of this.watching) {
-      if (now > until) { this.watching.delete(id); continue }
+      if (now > until) {
+        this.watching.delete(id)
+        continue
+      }
       const idx = this.idToIndex.get(id)
       const it = idx !== undefined ? this.arr[idx] : undefined
       // Gone from this view (deleted, or filtered out by a query change)
       // or already enriched — either way there is nothing left to wait for.
-      if (!it || !it.pending) { this.watching.delete(id); continue }
+      if (!it || !it.pending) {
+        this.watching.delete(id)
+        continue
+      }
       count++
     }
     return count
@@ -272,7 +317,9 @@ export class NotePager {
 
   private reindex(): void {
     this.idToIndex.clear()
-    this.arr.forEach((it, i) => { if (it) this.idToIndex.set(it.id, i) })
+    this.arr.forEach((it, i) => {
+      if (it) this.idToIndex.set(it.id, i)
+    })
     this.slotCache = null
   }
 }

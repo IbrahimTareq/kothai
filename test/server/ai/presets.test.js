@@ -16,7 +16,7 @@ test('every role has at least one preset', () => {
 test('every DEFAULTS key names a preset that actually exists', () => {
   for (const role of ['llm', 'embed', 'vision']) {
     assert.ok(
-      PRESETS[role].some((p) => p.key === DEFAULTS[role]),
+      PRESETS[role].some(p => p.key === DEFAULTS[role]),
       `DEFAULTS.${role} = ${DEFAULTS[role]} is not in PRESETS.${role}`,
     )
   }

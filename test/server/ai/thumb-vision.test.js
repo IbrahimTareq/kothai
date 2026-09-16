@@ -17,7 +17,13 @@ let classifyCalls = []
 let embedCalls = []
 let describeCalls = []
 let describeImpl = async () => 'Overlay text reads 3 INGREDIENT PASTA. A skillet on a wooden board.'
-let linkMetaImpl = async () => ({ siteTitle: 'a caption', siteDesc: null, siteName: 'TikTok', thumb: '/uploads/meta-t1.jpg', article: null })
+let linkMetaImpl = async () => ({
+  siteTitle: 'a caption',
+  siteDesc: null,
+  siteName: 'TikTok',
+  thumb: '/uploads/meta-t1.jpg',
+  article: null,
+})
 let residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
 
 const realMeta = await import('../../../server/ai/meta.js')
@@ -35,26 +41,37 @@ mock.module('../../../server/data/notes.js', {
   namedExports: {
     ...realStore,
     allNotes: () => notes,
-    getNote: (id) => notes.find((n) => n.id === id) ?? null,
+    getNote: id => notes.find(n => n.id === id) ?? null,
     updateNote: async (id, patch) => {
-      const n = notes.find((x) => x.id === id)
+      const n = notes.find(x => x.id === id)
       if (n) Object.assign(n, patch)
       return n
     },
   },
 })
 mock.module('../../../server/lib/tags.js', { namedExports: { ...realTags, buildVocabulary: () => [] } })
-mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async (t) => t } })
+mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async t => t } })
 mock.module('../../../server/ai/index.js', {
   namedExports: {
     ...realNormalise,
-    classify: async (args) => { classifyCalls.push(args.text); return { type: 'video', category: 'Food', title: 'T', summary: 'S', tags: [] } },
-    embedText: async (text) => { embedCalls.push(text); return [0, 0, 0] },
-    describeImage: async (args) => { describeCalls.push(args); return describeImpl(args) },
+    classify: async args => {
+      classifyCalls.push(args.text)
+      return { type: 'video', category: 'Food', title: 'T', summary: 'S', tags: [] }
+    },
+    embedText: async text => {
+      embedCalls.push(text)
+      return [0, 0, 0]
+    },
+    describeImage: async args => {
+      describeCalls.push(args)
+      return describeImpl(args)
+    },
   },
 })
 mock.module('../../../server/data/collections.js', { namedExports: { ...realCollections, autoAdd: async () => {} } })
-mock.module('../../../server/data/settings.js', { namedExports: { ...realSettings, getResidency: () => residencyImpl() } })
+mock.module('../../../server/data/settings.js', {
+  namedExports: { ...realSettings, getResidency: () => residencyImpl() },
+})
 
 const enrich = await import('../../../server/ai/enrich.js')
 const { DESCRIBE_THUMB_PROMPT } = await import('../../../server/ai/prompts.js')
@@ -67,7 +84,7 @@ function seed(note = {}) {
 }
 
 async function run(id = 't1') {
-  const n = notes.find((x) => x.id === id)
+  const n = notes.find(x => x.id === id)
   await enrich.queueEnrich(id, { absPath: null, text: n.content, isUrl: true, hasImage: false })
 }
 
@@ -108,9 +125,21 @@ test('vision residency off skips the describe call entirely, and the rest of enr
 
 test('a note with no thumbnail never reaches the vision model', async () => {
   seed()
-  linkMetaImpl = async () => ({ siteTitle: 'a caption', siteDesc: null, siteName: 'TikTok', thumb: null, article: null })
+  linkMetaImpl = async () => ({
+    siteTitle: 'a caption',
+    siteDesc: null,
+    siteName: 'TikTok',
+    thumb: null,
+    article: null,
+  })
   await run()
-  linkMetaImpl = async () => ({ siteTitle: 'a caption', siteDesc: null, siteName: 'TikTok', thumb: '/uploads/meta-t1.jpg', article: null })
+  linkMetaImpl = async () => ({
+    siteTitle: 'a caption',
+    siteDesc: null,
+    siteName: 'TikTok',
+    thumb: '/uploads/meta-t1.jpg',
+    article: null,
+  })
 
   assert.equal(describeCalls.length, 0)
 })
@@ -125,7 +154,9 @@ test('the ai.thumbVision marker makes the pass idempotent across repeat enrichme
 
 test('a describe failure leaves the marker unset so a later pass retries, and does not block classify/embed', async () => {
   seed()
-  describeImpl = async () => { throw new Error('simulated vision failure') }
+  describeImpl = async () => {
+    throw new Error('simulated vision failure')
+  }
   await run()
   describeImpl = async () => 'Overlay text reads 3 INGREDIENT PASTA. A skillet on a wooden board.'
 
@@ -150,9 +181,17 @@ test('a description landing on an ALREADY-embedded note forces a re-embed', asyn
 
 test('a thumbnail already on the note is described even when this pass fetches no link metadata', async () => {
   seed({ thumb: '/uploads/meta-old.jpg' })
-  linkMetaImpl = async () => { throw new Error('offline') }
+  linkMetaImpl = async () => {
+    throw new Error('offline')
+  }
   await run()
-  linkMetaImpl = async () => ({ siteTitle: 'a caption', siteDesc: null, siteName: 'TikTok', thumb: '/uploads/meta-t1.jpg', article: null })
+  linkMetaImpl = async () => ({
+    siteTitle: 'a caption',
+    siteDesc: null,
+    siteName: 'TikTok',
+    thumb: '/uploads/meta-t1.jpg',
+    article: null,
+  })
 
   assert.equal(describeCalls.length, 1)
   assert.match(describeCalls[0].absPath, /meta-old\.jpg$/)
@@ -199,7 +238,17 @@ test('running the backlog on a stranded note recovers the description and re-emb
 })
 
 test('the boot backfill does NOT queue this work — it is thousands of vision calls and would starve every new save', async () => {
-  notes = [{ ...STRANDED, content: TIKTOK, url: TIKTOK, type: 'video', siteTitle: 'x', siteDesc: 'a caption', metaFetched: true }]
+  notes = [
+    {
+      ...STRANDED,
+      content: TIKTOK,
+      url: TIKTOK,
+      type: 'video',
+      siteTitle: 'x',
+      siteDesc: 'a caption',
+      metaFetched: true,
+    },
+  ]
   describeCalls = []
 
   enrich.queueMetaBackfill()

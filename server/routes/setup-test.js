@@ -32,7 +32,7 @@ export async function handleSetupTest(req, res) {
     // No retries: someone is watching this button. A rate-limited endpoint is
     // a real answer here, not something to sit on for half a minute.
     const out = await getJson(baseUrl, '/models', { apiKey: apiKey || null, timeoutMs: TIMEOUTS.probe, retries: 0 })
-    const models = (out?.data || []).map((m) => m.id).filter(Boolean)
+    const models = (out?.data || []).map(m => m.id).filter(Boolean)
     return json(res, 200, { ok: true, models })
   } catch (e) {
     // e.message is already written for a person — remote-http.js turns a 404

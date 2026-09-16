@@ -14,7 +14,10 @@
 //     would be offered two ways to do the same thing
 import type { UIItem } from '../types'
 
-export interface TagSuggestion { tag: string; count: number }
+export interface TagSuggestion {
+  tag: string
+  count: number
+}
 
 // `poolSize` is the number of distinct candidate tags BEFORE the query filter.
 // It is what lets the empty state tell "your search matched nothing" apart from
@@ -38,6 +41,6 @@ export function suggestTags(
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, limit)
     .map(([tag, count]) => ({ tag, count }))
-  const canAddNew = Boolean(q) && !rules.has(q) && !suggestions.some((s) => s.tag === q)
+  const canAddNew = Boolean(q) && !rules.has(q) && !suggestions.some(s => s.tag === q)
   return { suggestions, canAddNew, poolSize: counts.size }
 }

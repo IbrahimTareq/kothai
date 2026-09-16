@@ -14,11 +14,27 @@ import { getAiConfig } from '../../config.js'
 import { findEndpoint } from '../endpoints.js'
 import { FeatureDisabledError, ROLES } from '../roles.js'
 import { Circuit } from '../circuit.js'
-import { CLASSIFY_SCHEMA, DESCRIBE_IMAGE_PROMPT, classifySystemPrompt, classifyUserPrompt, answerSystemPrompt, answerUserPrompt, embedInput, clipToTokens } from '../prompts.js'
+import {
+  CLASSIFY_SCHEMA,
+  DESCRIBE_IMAGE_PROMPT,
+  classifySystemPrompt,
+  classifyUserPrompt,
+  answerSystemPrompt,
+  answerUserPrompt,
+  embedInput,
+  clipToTokens,
+} from '../prompts.js'
 import { normaliseClassification, stripThinking } from '../normalise.js'
 import { postJson, getJson, TIMEOUTS, RemoteError } from './remote-http.js'
 
-const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp', '.avif': 'image/avif' }
+const MIME = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.avif': 'image/avif',
+}
 
 // Factory rather than module-level state so tests can drive several
 // independent instances against a throwaway server. The module's default
@@ -34,13 +50,24 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
   let embedCatalogue = []
   let probeError = ''
 
-  const modelFor = (role) => (models?.[role] || '').trim()
+  const modelFor = role => (models?.[role] || '').trim()
 
   function guard(role) {
-    if (!baseUrl) throw new FeatureDisabledError(role, { code: `${role}_off`, message: 'No inference endpoint configured — set STASH_AI_BASE_URL.' })
-    if (!modelFor(role)) throw new FeatureDisabledError(role, { code: `${role}_off`, message: `No ${role} model name configured — set one in Settings.` })
+    if (!baseUrl)
+      throw new FeatureDisabledError(role, {
+        code: `${role}_off`,
+        message: 'No inference endpoint configured — set STASH_AI_BASE_URL.',
+      })
+    if (!modelFor(role))
+      throw new FeatureDisabledError(role, {
+        code: `${role}_off`,
+        message: `No ${role} model name configured — set one in Settings.`,
+      })
     if (!circuit.allow()) {
-      throw new FeatureDisabledError(role, { code: 'circuit_open', message: `Inference endpoint is unavailable: ${circuit.reason}` })
+      throw new FeatureDisabledError(role, {
+        code: 'circuit_open',
+        message: `Inference endpoint is unavailable: ${circuit.reason}`,
+      })
     }
   }
 
@@ -53,18 +80,20 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
       if (probeError) probeError = ''
       return out
     } catch (e) {
-      if (e instanceof RemoteError) circuit.recordFailure({ transient: e.transient, message: e.message, retryAfterMs: e.retryAfterMs })
+      if (e instanceof RemoteError)
+        circuit.recordFailure({ transient: e.transient, message: e.message, retryAfterMs: e.retryAfterMs })
       throw e
     }
   }
 
-  const chat = (body, timeoutMs, retries) => postJson(baseUrl, '/chat/completions', body, { apiKey, timeoutMs, ...(retries === undefined ? {} : { retries }) })
-  const textOf = (r) => (r?.choices?.[0]?.message?.content || '').trim()
+  const chat = (body, timeoutMs, retries) =>
+    postJson(baseUrl, '/chat/completions', body, { apiKey, timeoutMs, ...(retries === undefined ? {} : { retries }) })
+  const textOf = r => (r?.choices?.[0]?.message?.content || '').trim()
 
   return {
     capabilities: () => ({ kind: 'remote', managesResidency: false, downloadsWeights: false }),
 
-    roleEnabled: (role) => Boolean(baseUrl) && Boolean(modelFor(role)),
+    roleEnabled: role => Boolean(baseUrl) && Boolean(modelFor(role)),
 
     available: () => Boolean(baseUrl) && circuit.allow(),
 
@@ -79,12 +108,13 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
       // correct embedding id would be warned about for missing a chat list it
       // was never going to be in.
       const list = role === 'embed' && embedCatalogue.length ? embedCatalogue : catalogue
-      if (list.length && !list.includes(k)) return { ok: true, warning: `"${k}" is not listed by the endpoint — saving anyway.` }
+      if (list.length && !list.includes(k))
+        return { ok: true, warning: `"${k}" is not listed by the endpoint — saving anyway.` }
       return { ok: true }
     },
 
     async listModels() {
-      const asOpts = (ids) => ids.map((id) => ({ key: id, label: id, desc: '', best: [], sizeBytes: 0 }))
+      const asOpts = ids => ids.map(id => ({ key: id, label: id, desc: '', best: [], sizeBytes: 0 }))
       const opts = asOpts(catalogue)
       return { llm: opts, embed: embedCatalogue.length ? asOpts(embedCatalogue) : opts, vision: opts }
     },
@@ -98,7 +128,7 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
         // retries:0 — a probe is a question about right now, and something is
         // waiting on the answer (boot, or the wizard's Test connection button).
         const res = await getJson(baseUrl, '/models', { apiKey, timeoutMs: TIMEOUTS.probe, retries: 0 })
-        catalogue = (res?.data || []).map((m) => m.id).filter(Boolean)
+        catalogue = (res?.data || []).map(m => m.id).filter(Boolean)
         probeError = ''
         circuit.recordSuccess()
         // Best-effort and deliberately after the success bookkeeping above: a
@@ -107,14 +137,18 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
         if (embeddingsPath) {
           try {
             const em = await getJson(baseUrl, embeddingsPath, { apiKey, timeoutMs: TIMEOUTS.probe, retries: 0 })
-            embedCatalogue = (em?.data || []).map((m) => m.id).filter(Boolean)
+            embedCatalogue = (em?.data || []).map(m => m.id).filter(Boolean)
           } catch {
             embedCatalogue = []
           }
         }
       } catch (e) {
         probeError = e.message
-        circuit.recordFailure({ transient: e.transient !== false, message: e.message, retryAfterMs: e.retryAfterMs || 0 })
+        circuit.recordFailure({
+          transient: e.transient !== false,
+          message: e.message,
+          retryAfterMs: e.retryAfterMs || 0,
+        })
       }
     },
 
@@ -128,14 +162,15 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
       const roles = {}
       for (const role of ROLES) {
         if (!baseUrl || !modelFor(role)) roles[role] = { state: 'off', progress: 0, message: '', model: modelFor(role) }
-        else if (!circuit.allow()) roles[role] = { state: 'error', progress: 0, message: circuit.reason, model: modelFor(role) }
+        else if (!circuit.allow())
+          roles[role] = { state: 'error', progress: 0, message: circuit.reason, model: modelFor(role) }
         else if (probeError) roles[role] = { state: 'error', progress: 0, message: probeError, model: modelFor(role) }
         else roles[role] = { state: 'ready', progress: 100, message: 'Ready', model: modelFor(role) }
       }
       // No endpoint configured at all is AI-free mode, not a fault — the same
       // state local reports when every role's residency is 'off'.
-      const anyOn = ROLES.some((r) => roles[r].state !== 'off')
-      const broken = anyOn && ROLES.some((r) => roles[r].state === 'error')
+      const anyOn = ROLES.some(r => roles[r].state !== 'off')
+      const broken = anyOn && ROLES.some(r => roles[r].state === 'error')
       const aggregate = broken
         ? { state: 'error', progress: 0, message: probeError || circuit.reason || 'Inference endpoint unavailable' }
         : { state: 'ready', progress: 100, message: 'Ready' }
@@ -151,7 +186,14 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
     async embedText(text, { mode = 'document' } = {}) {
       guard('embed')
       const clean = embedInput(clipToTokens(text), { mode, model: modelFor('embed') }) || ' '
-      const res = await call(() => postJson(baseUrl, '/embeddings', { model: modelFor('embed'), input: clean }, { apiKey, timeoutMs: TIMEOUTS.embed }))
+      const res = await call(() =>
+        postJson(
+          baseUrl,
+          '/embeddings',
+          { model: modelFor('embed'), input: clean },
+          { apiKey, timeoutMs: TIMEOUTS.embed },
+        ),
+      )
       return res?.data?.[0]?.embedding || []
     },
 
@@ -167,7 +209,17 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
         // Probe json_schema outside call() so a 400 "unsupported" response
         // does not open the circuit before the plain-prompt retry runs.
         raw = textOf(
-          await chat({ model, messages, response_format: { type: 'json_schema', json_schema: { name: 'classification', schema: CLASSIFY_SCHEMA } } }, TIMEOUTS.classify),
+          await chat(
+            {
+              model,
+              messages,
+              response_format: {
+                type: 'json_schema',
+                json_schema: { name: 'classification', schema: CLASSIFY_SCHEMA },
+              },
+            },
+            TIMEOUTS.classify,
+          ),
         )
         circuit.recordSuccess()
         if (probeError) probeError = ''
@@ -181,7 +233,8 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
         // circuit — classify() is the backlog's dominant call, so if its
         // failures never reach the circuit, the enrich queue never halts.
         if (!(e instanceof RemoteError) || e.code !== 'bad_request') {
-          if (e instanceof RemoteError) circuit.recordFailure({ transient: e.transient, message: e.message, retryAfterMs: e.retryAfterMs })
+          if (e instanceof RemoteError)
+            circuit.recordFailure({ transient: e.transient, message: e.message, retryAfterMs: e.retryAfterMs })
           throw e
         }
         raw = textOf(await call(() => chat({ model, messages }, TIMEOUTS.classify)))
@@ -253,18 +306,30 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
 // ---- module singleton, what the facade resolves --------------------------
 let singleton = null
 
-export function capabilities() { return (singleton || boot({})).capabilities() }
-export function roleEnabled(role) { return (singleton || boot({})).roleEnabled(role) }
-export function available() { return (singleton || boot({})).available() }
-export function validateModel(role, key) { return (singleton || boot({})).validateModel(role, key) }
-export function statusSnapshot() { return (singleton || boot({})).statusSnapshot() }
+export function capabilities() {
+  return (singleton || boot({})).capabilities()
+}
+export function roleEnabled(role) {
+  return (singleton || boot({})).roleEnabled(role)
+}
+export function available() {
+  return (singleton || boot({})).available()
+}
+export function validateModel(role, key) {
+  return (singleton || boot({})).validateModel(role, key)
+}
+export function statusSnapshot() {
+  return (singleton || boot({})).statusSnapshot()
+}
 export const listModels = (...a) => (singleton || boot({})).listModels(...a)
 export const applySettings = (...a) => (singleton || boot({})).applySettings(...a)
 export const classify = (...a) => (singleton || boot({})).classify(...a)
 export const embedText = (...a) => (singleton || boot({})).embedText(...a)
 export const describeImage = (...a) => (singleton || boot({})).describeImage(...a)
 export const answer = (...a) => (singleton || boot({})).answer(...a)
-export const shutdown = async () => { if (singleton) await singleton.shutdown() }
+export const shutdown = async () => {
+  if (singleton) await singleton.shutdown()
+}
 
 function boot(models) {
   // Read at boot, not at import: this is what makes re-pointing the endpoint a

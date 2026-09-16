@@ -17,14 +17,14 @@ const GEMMA = 'EMBEDDINGGEMMA_300M_Q8_0'
 test('isPromptedEmbedModel recognises EmbeddingGemma by preset key and by remote model name', () => {
   assert.equal(isPromptedEmbedModel(GEMMA), true)
   assert.equal(isPromptedEmbedModel('EMBEDDINGGEMMA_300M_Q4_0'), true)
-  assert.equal(isPromptedEmbedModel('embeddinggemma:300m'), true)     // ollama
+  assert.equal(isPromptedEmbedModel('embeddinggemma:300m'), true) // ollama
   assert.equal(isPromptedEmbedModel('google/embedding-gemma-300m'), true)
 })
 
 test('isPromptedEmbedModel fails closed for every model that is not prompt-instructed', () => {
   // Prefixing a model that was not trained with these templates corrupts
   // every vector it produces, so anything unrecognised gets raw text.
-  assert.equal(isPromptedEmbedModel('GTE_LARGE_FP16'), false)          // the other local preset
+  assert.equal(isPromptedEmbedModel('GTE_LARGE_FP16'), false) // the other local preset
   assert.equal(isPromptedEmbedModel('nomic-embed-text'), false)
   assert.equal(isPromptedEmbedModel('bge-large-en-v1.5'), false)
   assert.equal(isPromptedEmbedModel('text-embedding-3-small'), false)

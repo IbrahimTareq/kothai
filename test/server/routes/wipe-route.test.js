@@ -19,22 +19,52 @@ const realSettings = await import('../../../server/data/settings.js')
 mock.module('../../../server/data/notes.js', {
   namedExports: {
     ...realStore,
-    clearAll: async () => { calls.push('notes'); return 12 },
+    clearAll: async () => {
+      calls.push('notes')
+      return 12
+    },
     // Mocked so the test never deletes anything in the real data/uploads dir.
-    clearUploads: async () => { calls.push('uploads'); return 5 },
+    clearUploads: async () => {
+      calls.push('uploads')
+      return 5
+    },
   },
 })
 mock.module('../../../server/data/collections.js', {
-  namedExports: { ...realCollections, clearAll: async () => { calls.push('collections'); return 3 } },
+  namedExports: {
+    ...realCollections,
+    clearAll: async () => {
+      calls.push('collections')
+      return 3
+    },
+  },
 })
 mock.module('../../../server/data/chats.js', {
-  namedExports: { ...realChats, clearAll: async () => { calls.push('chats'); return 2 } },
+  namedExports: {
+    ...realChats,
+    clearAll: async () => {
+      calls.push('chats')
+      return 2
+    },
+  },
 })
 mock.module('../../../server/data/tagvocab.js', {
-  namedExports: { ...realTagVocab, clearAll: async () => { calls.push('tagvocab'); return 40 } },
+  namedExports: {
+    ...realTagVocab,
+    clearAll: async () => {
+      calls.push('tagvocab')
+      return 40
+    },
+  },
 })
 mock.module('../../../server/data/settings.js', {
-  namedExports: { ...realSettings, clearAll: async () => { calls.push('settings'); return 1 } },
+  namedExports: {
+    ...realSettings,
+    clearAll: async () => {
+      calls.push('settings')
+      return 1
+    },
+  },
 })
 
 const { handleWipe, CONFIRM_TOKEN } = await import('../../../server/routes/wipe.js')
@@ -45,9 +75,16 @@ function fakeReq(body) {
 }
 function fakeRes() {
   return {
-    statusCode: null, headers: null, body: null,
-    writeHead(code, headers) { this.statusCode = code; this.headers = headers },
-    end(str) { this.body = str },
+    statusCode: null,
+    headers: null,
+    body: null,
+    writeHead(code, headers) {
+      this.statusCode = code
+      this.headers = headers
+    },
+    end(str) {
+      this.body = str
+    },
   }
 }
 async function wipe(body) {
@@ -61,8 +98,13 @@ test('handleWipe clears notes, spaces, chats, and tag vocab, and reports the cou
   const { res, json } = await wipe({ confirm: CONFIRM_TOKEN })
   assert.equal(res.statusCode, 200)
   assert.deepEqual(json.cleared, { notes: 12, collections: 3, chats: 2, tags: 40 })
-  assert.ok(calls.includes('notes') && calls.includes('collections') && calls.includes('chats') && calls.includes('tagvocab'))
-  assert.ok(calls.includes('uploads'), 'uploaded images must go too — they are only reachable from the notes just deleted')
+  assert.ok(
+    calls.includes('notes') && calls.includes('collections') && calls.includes('chats') && calls.includes('tagvocab'),
+  )
+  assert.ok(
+    calls.includes('uploads'),
+    'uploaded images must go too — they are only reachable from the notes just deleted',
+  )
 })
 
 test('handleWipe never touches model settings — the app stays configured after a wipe', async () => {

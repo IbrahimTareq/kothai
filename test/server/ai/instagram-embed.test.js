@@ -19,7 +19,7 @@ test('isInstagramPost: matches post/reel/tv URLs on instagram.com only', () => {
   assert.equal(isInstagramPost('https://www.instagram.com/reel/DEF456/'), true)
   assert.equal(isInstagramPost('https://instagram.com/p/ABC123/'), true)
   assert.equal(isInstagramPost('https://www.instagram.com/tv/XYZ/'), true)
-  assert.equal(isInstagramPost('https://www.instagram.com/chefsteps/'), false)   // profile
+  assert.equal(isInstagramPost('https://www.instagram.com/chefsteps/'), false) // profile
   assert.equal(isInstagramPost('https://evil.com/instagram.com/p/ABC/'), false)
   assert.equal(isInstagramPost('not a url'), false)
 })
@@ -55,7 +55,8 @@ test('parseInstagramEmbed: a caption ending in hashtags does not bleed "View all
   // nested INSIDE Caption, right after the last hashtag, with no separating
   // whitespace — exactly the case the old "stop at first </div>" logic got
   // wrong, verified against a real fetched reel.
-  const html = `<div class="Caption"><a class="CaptionUsername">someuser</a><br /><br />A calm scene<br />` +
+  const html =
+    `<div class="Caption"><a class="CaptionUsername">someuser</a><br /><br />A calm scene<br />` +
     `<a href="/explore/tags/peace/">#peace</a> <a href="/explore/tags/view/">#view</a>` +
     `<div class="CaptionComments"><a class="CaptionCommentsExpand">View all 99 comments</a></div></div>`
   const { caption } = parseInstagramEmbed(html)
@@ -64,7 +65,8 @@ test('parseInstagramEmbed: a caption ending in hashtags does not bleed "View all
 })
 
 test('parseInstagramEmbed: pulls the tagged location, exact structured text, when present', () => {
-  const html = `<span class="LocationAndSponsor">` +
+  const html =
+    `<span class="LocationAndSponsor">` +
     `<a class="Location" href="https://www.instagram.com/explore/locations/123/masjid-al-haram-makkah/">Masjid Al Haram Makkah</a>` +
     `</span><div class="Caption">the caption</div>`
   const { location, caption } = parseInstagramEmbed(html)
@@ -78,15 +80,19 @@ test('parseInstagramEmbed: no Location tag (the common case — most posts carry
 })
 
 test('withLocation: prepends the location to siteDesc, re-capped at 2000 chars', () => {
-  assert.deepEqual(
-    withLocation({ siteTitle: 't', siteDesc: 'the caption', thumb: null }, 'Masjid Al Haram Makkah'),
-    { siteTitle: 't', siteDesc: 'Masjid Al Haram Makkah\n\nthe caption', thumb: null },
-  )
+  assert.deepEqual(withLocation({ siteTitle: 't', siteDesc: 'the caption', thumb: null }, 'Masjid Al Haram Makkah'), {
+    siteTitle: 't',
+    siteDesc: 'Masjid Al Haram Makkah\n\nthe caption',
+    thumb: null,
+  })
   // no location: meta passed through unchanged
   const meta = { siteTitle: 't', siteDesc: 'the caption', thumb: null }
   assert.equal(withLocation(meta, null), meta)
   // no caption either — the location alone is still worth keeping
-  assert.deepEqual(withLocation({ siteTitle: null, siteDesc: null }, 'Somewhere'), { siteTitle: null, siteDesc: 'Somewhere' })
+  assert.deepEqual(withLocation({ siteTitle: null, siteDesc: null }, 'Somewhere'), {
+    siteTitle: null,
+    siteDesc: 'Somewhere',
+  })
   const capped = withLocation({ siteDesc: 'y'.repeat(3000) }, 'Loc')
   assert.equal(capped.siteDesc.length, 2000)
 })
@@ -135,7 +141,10 @@ test('parseInstagramEmbed: a "CaptionUsername" or "CaptionComments" class is not
 })
 
 test('instagramEmbedUrl: builds the /embed/captioned/ url (the variant that emits the Caption block) regardless of trailing slash or query string', () => {
-  assert.equal(instagramEmbedUrl('https://www.instagram.com/p/ABC/'), 'https://www.instagram.com/p/ABC/embed/captioned/')
+  assert.equal(
+    instagramEmbedUrl('https://www.instagram.com/p/ABC/'),
+    'https://www.instagram.com/p/ABC/embed/captioned/',
+  )
   assert.equal(instagramEmbedUrl('https://www.instagram.com/p/ABC'), 'https://www.instagram.com/p/ABC/embed/captioned/')
   assert.equal(
     instagramEmbedUrl('https://www.instagram.com/p/ABC/?igsh=xyz'),
@@ -235,13 +244,12 @@ test('get: rejects a non-web port, so a stashed link cannot probe internal servi
   await assert.rejects(() => get('http://example.com:6379/', '*/*'), /blocked port/)
 })
 
-
 // ---- carousel (sidecar) slides -------------------------------------------
 // The embed page carries the sidecar JSON double-escaped: it is a JSON string
 // nested inside another JSON string inside the HTML, so a slide URL appears as
 // display_url\":\"https:\\\/\\\/host\/path. These fixtures reproduce that exact
 // escaping rather than a cleaned-up version of it.
-const slide = (n) => `display_url\\":\\"https:\\\\\\/\\\\\\/cdn.example.com\\\\\\/s${n}.jpg?a=1\\u00253D\\"`
+const slide = n => `display_url\\":\\"https:\\\\\\/\\\\\\/cdn.example.com\\\\\\/s${n}.jpg?a=1\\u00253D\\"`
 
 test('unescapeEmbedUrl: undoes the double escaping, \\u0025 before the slashes', () => {
   assert.equal(

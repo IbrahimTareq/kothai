@@ -36,13 +36,12 @@ export function boardQuery(
 ): { query: PagerQuery; active: boolean } {
   const unavailable = chips.includes('unavailable') || undefined
   const source = chips.filter(isSourceKey).join(',') || undefined
-  const chipType = chips
-    .filter((k) => k !== 'unavailable' && !isSourceKey(k))
-    .map(serverType)
-    .join(',') || undefined
-  const navType = nav !== 'all' && !nav.startsWith('space:') && knownTypes.has(nav)
-    ? serverType(nav)
-    : undefined
+  const chipType =
+    chips
+      .filter(k => k !== 'unavailable' && !isSourceKey(k))
+      .map(serverType)
+      .join(',') || undefined
+  const navType = nav !== 'all' && !nav.startsWith('space:') && knownTypes.has(nav) ? serverType(nav) : undefined
   return {
     query: { type: navType ?? chipType, source, q: search, unavailable, sort },
     active: isBoardNav(nav),

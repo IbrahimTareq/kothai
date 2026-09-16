@@ -14,7 +14,7 @@ import { cosine } from '../../../server/data/embedding.js'
 import { getDb } from '../../../server/data/db.js'
 import { deriveAiMarkers } from '../../../server/ai/backlog.js'
 
-const vec = (n) => Array.from({ length: n }, (_, i) => Math.sin(i) )
+const vec = n => Array.from({ length: n }, (_, i) => Math.sin(i))
 // float32 keeps ~7 significant digits; cosine similarity does not care, but
 // the tests should not pretend the round trip is exact.
 const closeTo = (a, b, eps = 1e-6) => Math.abs(a - b) < eps
@@ -83,8 +83,11 @@ test('a reload rehydrates embeddings from the blob and search can use them', asy
   store._reset({ loaded: false })
   const db = await getDb()
   const target = vec(16)
-  db.prepare('INSERT INTO notes (id, data, embedding) VALUES (?, ?, ?)')
-    .run('n1', JSON.stringify({ id: 'n1', type: 'text', content: 'a' }), encodeEmbedding(target))
+  db.prepare('INSERT INTO notes (id, data, embedding) VALUES (?, ?, ?)').run(
+    'n1',
+    JSON.stringify({ id: 'n1', type: 'text', content: 'a' }),
+    encodeEmbedding(target),
+  )
   await store.load()
   const hits = store.search(target, 1)
   assert.equal(hits.length, 1, 'the rehydrated vector is searchable')
@@ -98,8 +101,10 @@ test('a legacy row with the vector inside its JSON is migrated into the blob col
   store._reset({ loaded: false })
   const db = await getDb()
   const legacy = vec(16)
-  db.prepare('INSERT INTO notes (id, data) VALUES (?, ?)')
-    .run('old', JSON.stringify({ id: 'old', type: 'text', content: 'a', embedding: legacy }))
+  db.prepare('INSERT INTO notes (id, data) VALUES (?, ?)').run(
+    'old',
+    JSON.stringify({ id: 'old', type: 'text', content: 'a', embedding: legacy }),
+  )
   await store.load()
 
   const row = db.prepare('SELECT data, embedding FROM notes WHERE id = ?').get('old')
@@ -112,8 +117,10 @@ test('a legacy row with the vector inside its JSON is migrated into the blob col
 test('migration is idempotent — a second load rewrites nothing', async () => {
   store._reset({ loaded: false })
   const db = await getDb()
-  db.prepare('INSERT INTO notes (id, data) VALUES (?, ?)')
-    .run('old', JSON.stringify({ id: 'old', type: 'text', content: 'a', embedding: vec(16) }))
+  db.prepare('INSERT INTO notes (id, data) VALUES (?, ?)').run(
+    'old',
+    JSON.stringify({ id: 'old', type: 'text', content: 'a', embedding: vec(16) }),
+  )
   await store.load()
   const first = db.prepare('SELECT data, embedding FROM notes WHERE id = ?').get('old')
 
@@ -127,7 +134,10 @@ test('migration is idempotent — a second load rewrites nothing', async () => {
 test('a legacy row with no embedding at all is left alone', async () => {
   store._reset({ loaded: false })
   const db = await getDb()
-  db.prepare('INSERT INTO notes (id, data) VALUES (?, ?)').run('bare', JSON.stringify({ id: 'bare', type: 'text', content: 'a' }))
+  db.prepare('INSERT INTO notes (id, data) VALUES (?, ?)').run(
+    'bare',
+    JSON.stringify({ id: 'bare', type: 'text', content: 'a' }),
+  )
   await store.load()
   const row = db.prepare('SELECT embedding FROM notes WHERE id = ?').get('bare')
   assert.equal(row.embedding, null)
@@ -192,7 +202,10 @@ test('the same rule holds for batched { persist: false } writes', async () => {
   db.prepare('UPDATE notes SET embedding = ? WHERE id = ?').run(encodeEmbedding([9, 9, 9, 9]), id)
   await store.updateNote(id, { summary: 'batched' }, { persist: false })
   await store.flush()
-  assert.deepEqual([...decodeEmbedding(db.prepare('SELECT embedding FROM notes WHERE id = ?').get(id).embedding)], [9, 9, 9, 9])
+  assert.deepEqual(
+    [...decodeEmbedding(db.prepare('SELECT embedding FROM notes WHERE id = ?').get(id).embedding)],
+    [9, 9, 9, 9],
+  )
 })
 
 // cosine lives beside the codec in embedding.js. notes.js and tagvocab.js each

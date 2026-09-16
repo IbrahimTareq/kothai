@@ -28,10 +28,10 @@ mock.module('../../../server/data/notes.js', {
   namedExports: {
     ...realStore,
     allNotes: () => notes,
-    getNote: (id) => notes.find((n) => n.id === id) ?? null,
+    getNote: id => notes.find(n => n.id === id) ?? null,
     count: () => notes.length,
     updateNote: async (id, patch) => {
-      const n = notes.find((x) => x.id === id)
+      const n = notes.find(x => x.id === id)
       if (n) Object.assign(n, patch)
       return n
     },
@@ -39,14 +39,17 @@ mock.module('../../../server/data/notes.js', {
   },
 })
 mock.module('../../../server/lib/tags.js', { namedExports: { ...realTags, buildVocabulary: () => [] } })
-mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async (t) => t } })
+mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async t => t } })
 mock.module('../../../server/ai/index.js', {
   namedExports: {
     ...realNormalise,
     classify: async () => ({ type: 'link', category: 'General', title: 'T', summary: 'S', tags: [] }),
     // Each call records the marker as it stands mid-sweep, so the test can see
     // whether the new value was written before the vectors it describes exist.
-    embedText: async (text) => { embedCalls.push({ text, markerNow: storedProvider }); return [text.length] },
+    embedText: async text => {
+      embedCalls.push({ text, markerNow: storedProvider })
+      return [text.length]
+    },
   },
 })
 mock.module('../../../server/data/collections.js', { namedExports: { ...realCollections, autoAdd: async () => {} } })
@@ -56,7 +59,7 @@ mock.module('../../../server/data/settings.js', {
     getResidency: () => residencyImpl(),
     getEmbedRecipe: () => 'recipe-current',
     getEmbedProvider: () => storedProvider,
-    save: async (patch) => {
+    save: async patch => {
       savedPatches.push(patch)
       if (patch.embedProvider !== undefined) storedProvider = patch.embedProvider
       return {}
@@ -66,10 +69,16 @@ mock.module('../../../server/data/settings.js', {
 
 const enrich = await import('../../../server/ai/enrich.js')
 
-const NOTE = { id: 'n1', title: 'Brown butter pasta', summary: 'A ten minute recipe.', content: 'text', tags: ['pasta'] }
+const NOTE = {
+  id: 'n1',
+  title: 'Brown butter pasta',
+  summary: 'A ten minute recipe.',
+  content: 'text',
+  tags: ['pasta'],
+}
 
 function reset(list = [], marker = null) {
-  notes = list.map((n) => ({ ...n }))
+  notes = list.map(n => ({ ...n }))
   embedCalls = []
   savedPatches = []
   storedProvider = marker
@@ -145,7 +154,7 @@ test('a changed provider with notes sweeps the library and records the marker on
 
   assert.equal(embedCalls.length, 2)
   assert.ok(
-    embedCalls.every((c) => c.markerNow === 'remote'),
+    embedCalls.every(c => c.markerNow === 'remote'),
     'a marker written mid-sweep would claim vectors that do not exist yet if the process died',
   )
   assert.equal(storedProvider, 'local')

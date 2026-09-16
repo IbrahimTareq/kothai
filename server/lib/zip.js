@@ -10,8 +10,8 @@
 import { inflateRawSync } from 'node:zlib'
 
 const EOCD_SIG = 0x06054b50 // end of central directory
-const CEN_SIG = 0x02014b50  // central directory file header
-const LOC_SIG = 0x04034b50  // local file header
+const CEN_SIG = 0x02014b50 // central directory file header
+const LOC_SIG = 0x04034b50 // local file header
 
 // Per-entry and whole-archive decompression caps. Deflate can amplify ~1000x,
 // so an innocuous-looking few-MB upload can otherwise inflate to tens of GB
@@ -160,7 +160,7 @@ export function readZip(buf, { maxTotalBytes = MAX_TOTAL_BYTES } = {}) {
           throw new Error(
             budget < MAX_ENTRY_BYTES
               ? `zip exceeds maximum total extracted size (at entry: ${name})`
-              : `corrupt zip: entry too large when decompressed: ${name}`
+              : `corrupt zip: entry too large when decompressed: ${name}`,
           )
         }
         // Any other inflate failure means the deflate stream itself is

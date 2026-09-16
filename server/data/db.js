@@ -92,7 +92,12 @@ function createSchema(target) {
 // Additive only — new columns must be nullable or carry a DEFAULT, since
 // existing rows cannot supply a value. Exported for tests.
 export function ensureColumns(target, table, columns) {
-  const have = new Set(target.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name))
+  const have = new Set(
+    target
+      .prepare(`PRAGMA table_info(${table})`)
+      .all()
+      .map(c => c.name),
+  )
   for (const [name, decl] of Object.entries(columns)) {
     if (!have.has(name)) target.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${decl}`)
   }

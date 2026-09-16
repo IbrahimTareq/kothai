@@ -13,12 +13,16 @@ function openStream(res) {
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache, no-transform',
     Connection: 'keep-alive',
-    'X-Accel-Buffering': 'no',   // tell a reverse proxy not to buffer the stream
+    'X-Accel-Buffering': 'no', // tell a reverse proxy not to buffer the stream
   })
   return {
     // JSON.stringify escapes newlines, so a payload can never break the frame.
-    send(event, data) { res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`) },
-    end() { res.end() },
+    send(event, data) {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+    },
+    end() {
+      res.end()
+    },
   }
 }
 
@@ -33,7 +37,10 @@ export async function handleAsk(req, res) {
   const residency = settings.getResidency()
   // Feature gates: structured codes so the client can render a disabled state.
   if (imageData && residency.vision === 'off') {
-    return json(res, 409, { error: 'Image questions need the vision model — enable it in Settings.', code: 'vision_off' })
+    return json(res, 409, {
+      error: 'Image questions need the vision model — enable it in Settings.',
+      code: 'vision_off',
+    })
   }
   if (!imageData && residency.llm === 'off') {
     return json(res, 409, { error: 'Ask needs the language model — enable it in Settings.', code: 'llm_off' })
@@ -64,11 +71,13 @@ export async function handleAsk(req, res) {
   // 'close' is the one that means "the client is gone"; writableEnded keeps a
   // normal finish from being read as a disconnect. req is kept as a belt-and-
   // braces second signal, harmless under the same guard.
-  const onGone = () => { if (!res.writableEnded) ctl.abort() }
+  const onGone = () => {
+    if (!res.writableEnded) ctl.abort()
+  }
   res.on('close', onGone)
   req.on('close', onGone)
 
-  let out = null   // set once the stream is open; until then errors are JSON
+  let out = null // set once the stream is open; until then errors are JSON
 
   // Persist the exchange so chats survive reloads and can be browsed/resumed.
   const record = async (answer, sources, image = null) => {
@@ -76,17 +85,21 @@ export async function handleAsk(req, res) {
     const chat = await chats.appendExchange(
       chatId,
       { role: 'user', text: question, image },
-      { role: 'ai', text: answer, sources }
+      { role: 'ai', text: answer, sources },
     )
-    if (out) { out.send('done', { chatId: chat.id }); out.end() }
-    else json(res, 200, { answer, sources, chatId: chat.id })
+    if (out) {
+      out.send('done', { chatId: chat.id })
+      out.end()
+    } else json(res, 200, { answer, sources, chatId: chat.id })
   }
 
   // Once the stream is open a failure has to travel down it — the status line
   // has already gone out as 200.
   const fail = (code, payload) => {
-    if (out) { out.send('error', payload); out.end() }
-    else json(res, code, payload)
+    if (out) {
+      out.send('error', payload)
+      out.end()
+    } else json(res, code, payload)
   }
 
   // Image attached to the question → answer about it directly with the vision model.
@@ -124,18 +137,24 @@ export async function handleAsk(req, res) {
     // literal tokens, keyword loses every paraphrase — so one strong signal
     // is enough for a note to surface. With the embed role off there is no
     // query embedding and the fusion degrades to keyword-only.
-    const sources = residency.embed !== 'off'
-      // A question is embedded as a query, not as a document — see
-      // prompts.js's embedInput. The two are different kinds of text and a
-      // prompt-instructed model encodes them differently.
-      ? store.hybridSearch(await ai.embedText(queryText, { mode: 'query' }), queryText)
-      : store.textSearch(queryText)
+    const sources =
+      residency.embed !== 'off'
+        ? // A question is embedded as a query, not as a document — see
+          // prompts.js's embedInput. The two are different kinds of text and a
+          // prompt-instructed model encodes them differently.
+          store.hybridSearch(await ai.embedText(queryText, { mode: 'query' }), queryText)
+        : store.textSearch(queryText)
     // The cards can render while the prose is still arriving, so the sources
     // go out as soon as retrieval has them rather than with the answer.
-    if (wantsStream) { out = openStream(res); out.send('sources', { sources }) }
+    if (wantsStream) {
+      out = openStream(res)
+      out.send('sources', { sources })
+    }
     const answer = await ai.answerStream({
-      question, contextNotes: sources, history,
-      onToken: out ? (text) => out.send('delta', { text }) : undefined,
+      question,
+      contextNotes: sources,
+      history,
+      onToken: out ? text => out.send('delta', { text }) : undefined,
       signal: ctl.signal,
     })
     await record(answer, sources)

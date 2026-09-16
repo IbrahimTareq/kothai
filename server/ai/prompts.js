@@ -58,7 +58,9 @@ export function classifySystemPrompt({ now, knownTags = [], candidateTags = [] }
       ? [`Prefer reusing these existing tags when they fit; invent a new tag only if none apply: ${vocab.join(', ')}.`]
       : []),
     ...(candidates.length
-      ? [`This item's own hashtags: ${candidates.join(', ')}. Use the ones that are genuinely topical; skip any that are just platform or engagement noise.`]
+      ? [
+          `This item's own hashtags: ${candidates.join(', ')}. Use the ones that are genuinely topical; skip any that are just platform or engagement noise.`,
+        ]
       : []),
     `Current date/time is ${now}.`,
   ].join('\n')
@@ -243,7 +245,10 @@ export function noteContextBody(note) {
 export function formatHistory(history, { turns = HISTORY_TURNS } = {}) {
   return history
     .slice(-turns * 2)
-    .map((m) => `${m.role === 'ai' ? 'Assistant' : 'You'}: ${clip((m.text || '').replace(/\s+/g, ' ').trim(), HISTORY_CHARS)}`)
+    .map(
+      m =>
+        `${m.role === 'ai' ? 'Assistant' : 'You'}: ${clip((m.text || '').replace(/\s+/g, ' ').trim(), HISTORY_CHARS)}`,
+    )
     .join('\n')
 }
 
@@ -289,7 +294,7 @@ const HISTORY_CHARS = 500
 // that can be several hundred words about the wrong thing, and folding it into
 // the query vector drags retrieval toward whatever it happened to say.
 export function retrievalQuery(question, history = []) {
-  const lastUser = [...history].reverse().find((m) => m.role === 'user' && (m.text || '').trim())
+  const lastUser = [...history].reverse().find(m => m.role === 'user' && (m.text || '').trim())
   if (!lastUser) return question
   return `${clip(lastUser.text.trim(), HISTORY_CHARS)}\n${question}`
 }

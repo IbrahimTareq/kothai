@@ -45,7 +45,7 @@ export function readBody(req, limit = 25 * 1024 * 1024) {
   return new Promise((resolve, reject) => {
     let size = 0
     const chunks = []
-    req.on('data', (c) => {
+    req.on('data', c => {
       size += c.length
       if (size > limit) {
         reject(new Error('payload too large'))
@@ -110,7 +110,7 @@ export function etagFor(stat) {
 // If-Modified-Since is not consulted at all.
 function isFresh(req, etag, mtimeMs) {
   const inm = req.headers['if-none-match']
-  if (inm) return inm.split(',').some((t) => t.trim() === etag)
+  if (inm) return inm.split(',').some(t => t.trim() === etag)
   const ims = req.headers['if-modified-since']
   if (!ims) return false
   const since = Date.parse(ims)

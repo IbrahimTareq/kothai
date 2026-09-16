@@ -40,7 +40,7 @@ const { setAiCredentials } = await import('../../../server/config.js')
 const { createServer } = await import('../../../server/router.js')
 
 const server = createServer()
-await new Promise((r) => server.listen(0, '127.0.0.1', r))
+await new Promise(r => server.listen(0, '127.0.0.1', r))
 const BASE = `http://127.0.0.1:${server.address().port}`
 after(() => {
   server.close()
@@ -54,7 +54,7 @@ async function downloadAndOpen(res) {
   return new DatabaseSync(file, { readOnly: true })
 }
 
-const leftoverTemps = () => readdirSync(DATA_DIR).filter((f) => f.startsWith('backup-'))
+const leftoverTemps = () => readdirSync(DATA_DIR).filter(f => f.startsWith('backup-'))
 
 // Cleanup runs in the handler's finally, which lands a tick or two after the
 // client has received its last byte — so "no temp file survives" is a promise
@@ -62,7 +62,7 @@ const leftoverTemps = () => readdirSync(DATA_DIR).filter((f) => f.startsWith('ba
 async function waitForCleanup(timeoutMs = 2000) {
   const deadline = performance.now() + timeoutMs
   while (leftoverTemps().length && performance.now() < deadline) {
-    await new Promise((r) => setTimeout(r, 10))
+    await new Promise(r => setTimeout(r, 10))
   }
   return leftoverTemps()
 }

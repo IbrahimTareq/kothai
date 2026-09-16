@@ -25,7 +25,13 @@ export function fmtSize(bytes: number): string {
   return Math.round(bytes / 1e6) + ' MB'
 }
 
-export function storageSummary({ totalBytes, reclaimableBytes }: { totalBytes: number; reclaimableBytes: number }): string {
+export function storageSummary({
+  totalBytes,
+  reclaimableBytes,
+}: {
+  totalBytes: number
+  reclaimableBytes: number
+}): string {
   const head = `${fmtSize(totalBytes)} downloaded`
   return reclaimableBytes > 0
     ? `${head} · ${fmtSize(reclaimableBytes)} can be freed`

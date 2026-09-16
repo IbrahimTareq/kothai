@@ -16,7 +16,7 @@ import assert from 'node:assert/strict'
 let notes = []
 let classifyCalls = []
 let embedCalls = []
-let persisted = []   // ids written with { persist: false }
+let persisted = [] // ids written with { persist: false }
 let flushes = 0
 let availableImpl = () => true
 
@@ -29,35 +29,55 @@ const realSettings = await import('../../../server/data/settings.js')
 const realMeta = await import('../../../server/ai/meta.js')
 
 mock.module('../../../server/ai/meta.js', {
-  namedExports: { ...realMeta, fetchLinkMeta: async () => ({ siteTitle: 'A Title', siteDesc: 'a caption', siteName: 'S', thumb: null, article: null }) },
+  namedExports: {
+    ...realMeta,
+    fetchLinkMeta: async () => ({
+      siteTitle: 'A Title',
+      siteDesc: 'a caption',
+      siteName: 'S',
+      thumb: null,
+      article: null,
+    }),
+  },
 })
 mock.module('../../../server/data/notes.js', {
   namedExports: {
     ...realStore,
     allNotes: () => notes,
-    getNote: (id) => notes.find((n) => n.id === id) ?? null,
+    getNote: id => notes.find(n => n.id === id) ?? null,
     count: () => notes.length,
     updateNote: async (id, patch, opts) => {
-      const n = notes.find((x) => x.id === id)
+      const n = notes.find(x => x.id === id)
       if (!n) return null
       if (opts && opts.persist === false) persisted.push(id)
       Object.assign(n, patch)
       return n
     },
-    flush: async () => { flushes++ },
+    flush: async () => {
+      flushes++
+    },
   },
 })
 mock.module('../../../server/lib/tags.js', { namedExports: { ...realTags, buildVocabulary: () => [] } })
-mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async (t) => t } })
+mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async t => t } })
 mock.module('../../../server/ai/index.js', {
   namedExports: {
     ...realNormalise,
     available: () => availableImpl(),
-    classify: async (args) => {
+    classify: async args => {
       classifyCalls.push(args.text)
-      return { type: 'link', category: 'Real', title: 'A Real Title', summary: 'A real summary.', tags: ['fresh', 'tags'] }
+      return {
+        type: 'link',
+        category: 'Real',
+        title: 'A Real Title',
+        summary: 'A real summary.',
+        tags: ['fresh', 'tags'],
+      }
     },
-    embedText: async (text) => { embedCalls.push(text); return [1, 2, 3] },
+    embedText: async text => {
+      embedCalls.push(text)
+      return [1, 2, 3]
+    },
   },
 })
 mock.module('../../../server/data/collections.js', { namedExports: { ...realCollections, autoAdd: async () => {} } })
@@ -72,7 +92,7 @@ const enrich = await import('../../../server/ai/enrich.js')
 // starts counting the previous one's work.
 async function reset(list) {
   await enrich.queueJob(() => {})
-  notes = list.map((n) => ({ ...n }))
+  notes = list.map(n => ({ ...n }))
   classifyCalls = []
   embedCalls = []
   persisted = []
@@ -97,7 +117,11 @@ const STALE = {
 test('a note the backlog would skip is re-classified and re-embedded', async () => {
   await reset([STALE])
   const { backlogCount } = await import('../../../server/ai/backlog.js')
-  assert.equal(backlogCount(notes, { llm: 'ondemand', embed: 'always', vision: 'off' }), 0, 'precondition: the backlog offers nothing')
+  assert.equal(
+    backlogCount(notes, { llm: 'ondemand', embed: 'always', vision: 'off' }),
+    0,
+    'precondition: the backlog offers nothing',
+  )
 
   const queued = await enrich.retagAll()
   await enrich.queueJob(() => {})
@@ -124,7 +148,9 @@ test('hand-edited tags survive — the whole difference from the single-note ret
 })
 
 test('the marker is cleared for classify and embed, but vision work is left alone', async () => {
-  await reset([{ ...STALE, image: '/uploads/x.png', ai: { classify: true, embed: true, vision: true, thumbVision: true } }])
+  await reset([
+    { ...STALE, image: '/uploads/x.png', ai: { classify: true, embed: true, vision: true, thumbVision: true } },
+  ])
   await enrich.retagAll()
 
   // Re-describing every thumbnail is a far longer job with its own backlog
@@ -140,7 +166,7 @@ test('every note is marked pending in ONE batched write, not one write each', as
   assert.equal(queued, 3)
   assert.deepEqual(persisted, ['a', 'b', 'c'], 'all three deferred')
   assert.equal(flushes, 1, 'one transaction for the whole library')
-  assert.ok(notes.every((n) => n.pending === true))
+  assert.ok(notes.every(n => n.pending === true))
 })
 
 test('an unavailable provider queues nothing rather than burning the library against a dead endpoint', async () => {

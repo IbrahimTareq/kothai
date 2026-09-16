@@ -5,7 +5,13 @@
 // run in code before anything is read into memory.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { validateImportFile, validateImportFiles, IMPORT_SOURCES, MAX_IMPORT_BYTES, MAX_IMPORT_FILES } from '../../client/domain/importFile.ts'
+import {
+  validateImportFile,
+  validateImportFiles,
+  IMPORT_SOURCES,
+  MAX_IMPORT_BYTES,
+  MAX_IMPORT_FILES,
+} from '../../client/domain/importFile.ts'
 
 test('accepts .zip and .json regardless of case', () => {
   assert.equal(validateImportFile('saved_posts.json', 100), null)
@@ -42,10 +48,13 @@ test('rejects an empty file rather than posting a zero-byte body', () => {
 // one request body, so the size limit applies to their combined size.
 
 test('accepts the two files of an Instagram export together', () => {
-  assert.equal(validateImportFiles([
-    { name: 'saved_posts.json', size: 2_000_000 },
-    { name: 'saved_collections.json', size: 40_000 },
-  ]), null)
+  assert.equal(
+    validateImportFiles([
+      { name: 'saved_posts.json', size: 2_000_000 },
+      { name: 'saved_collections.json', size: 40_000 },
+    ]),
+    null,
+  )
 })
 
 test('names the offending file when only one of several is wrong', () => {
@@ -59,7 +68,10 @@ test('names the offending file when only one of several is wrong', () => {
 test('rejects on COMBINED size — each file can fit while the request body cannot', () => {
   const half = Math.ceil(MAX_IMPORT_BYTES / 2) + 1
   assert.equal(validateImportFile('a.json', half), null, 'each file alone is under the cap')
-  const err = validateImportFiles([{ name: 'a.json', size: half }, { name: 'b.json', size: half }])
+  const err = validateImportFiles([
+    { name: 'a.json', size: half },
+    { name: 'b.json', size: half },
+  ])
   assert.ok(err)
   assert.match(err as string, /too big/i)
 })

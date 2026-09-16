@@ -8,11 +8,11 @@
 import { test, mock, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 
-process.env.STASH_TEARDOWN_GRACE_MS = '300'   // read at import, below
+process.env.STASH_TEARDOWN_GRACE_MS = '300' // read at import, below
 
 const order = []
-let releaseTeardown       // resolves the simulated SDK teardown
-let endEvents             // ends the simulated event stream, as a real cancel does
+let releaseTeardown // resolves the simulated SDK teardown
+let endEvents // ends the simulated event stream, as a real cancel does
 let cancelCalledWith = null
 
 mock.module('@qvac/sdk', {
@@ -32,10 +32,15 @@ mock.module('@qvac/sdk', {
       requestId: 'run-1',
       events: (async function* () {
         yield { type: 'contentDelta', seq: 0, text: 'partial ' }
-        await new Promise((r) => { endEvents = r })
+        await new Promise(r => {
+          endEvents = r
+        })
       })(),
-      final: new Promise((resolve) => {
-        releaseTeardown = () => { order.push('teardown-done'); resolve({ contentText: 'partial ' }) }
+      final: new Promise(resolve => {
+        releaseTeardown = () => {
+          order.push('teardown-done')
+          resolve({ contentText: 'partial ' })
+        }
       }),
     }),
     QWEN3_1_7B_INST_Q4: { name: 'llm', expectedSize: 1 },
@@ -47,10 +52,14 @@ mock.module('@qvac/sdk', {
 
 let local
 // The provider keeps role managers alive; without this the process never exits.
-after(async () => { await local?.shutdown() })
+after(async () => {
+  await local?.shutdown()
+})
 before(async () => {
   local = await import('../../../../server/ai/providers/local.js')
-  await local.init({ local: { llm: 'QWEN3_1_7B_INST_Q4', embed: 'EMBEDDINGGEMMA_300M_Q8_0', vision: 'QWEN3_5_2B_MULTIMODAL_Q4_K_M' } })
+  await local.init({
+    local: { llm: 'QWEN3_1_7B_INST_Q4', embed: 'EMBEDDINGGEMMA_300M_Q8_0', vision: 'QWEN3_5_2B_MULTIMODAL_Q4_K_M' },
+  })
   await local.applyResidency({ llm: 'ondemand', embed: 'ondemand', vision: 'ondemand' })
 })
 
@@ -58,21 +67,26 @@ test('a cancelled answer waits for the run to be torn down before it resolves', 
   const ctl = new AbortController()
   const seen = []
   const run = local.answerStream({
-    question: 'q', contextNotes: [], onToken: (t) => seen.push(t), signal: ctl.signal,
+    question: 'q',
+    contextNotes: [],
+    onToken: t => seen.push(t),
+    signal: ctl.signal,
   })
 
   // Let the first delta land, then stop.
-  await new Promise((r) => setTimeout(r, 20))
+  await new Promise(r => setTimeout(r, 20))
   assert.deepEqual(seen, ['partial '], 'the delta before the stop is delivered')
   ctl.abort()
-  await new Promise((r) => setTimeout(r, 20))
+  await new Promise(r => setTimeout(r, 20))
 
   assert.equal(cancelCalledWith, 'run-1', 'the specific run is cancelled, not the whole model')
 
   // The call must still be outstanding: the run has not finished tearing down.
   let settled = false
-  run.then(() => { settled = true })
-  await new Promise((r) => setTimeout(r, 60))
+  run.then(() => {
+    settled = true
+  })
+  await new Promise(r => setTimeout(r, 60))
   assert.equal(settled, false, 'answerStream must not resolve while the run is still being torn down')
 
   releaseTeardown()
@@ -85,7 +99,7 @@ test('a wedged teardown frees the model anyway rather than holding it forever', 
   const ctl = new AbortController()
   const started = Date.now()
   const run = local.answerStream({ question: 'q', contextNotes: [], signal: ctl.signal })
-  await new Promise((r) => setTimeout(r, 20))
+  await new Promise(r => setTimeout(r, 20))
   ctl.abort()
   // releaseTeardown is deliberately never called: the SDK never settles.
   const text = await run
@@ -103,17 +117,20 @@ test('a wedged teardown frees the model anyway rather than holding it forever', 
 test('completions on a role are serialised, not run concurrently', async () => {
   const ctl = new AbortController()
   const first = local.answerStream({ question: 'q1', contextNotes: [], signal: ctl.signal })
-  await new Promise((r) => setTimeout(r, 20))
+  await new Promise(r => setTimeout(r, 20))
 
   // Second question arrives while the first is still live.
   let secondStarted = false
-  const second = local.answer({ question: 'q2', contextNotes: [] }).then((t) => { secondStarted = true; return t })
-  await new Promise((r) => setTimeout(r, 40))
+  const second = local.answer({ question: 'q2', contextNotes: [] }).then(t => {
+    secondStarted = true
+    return t
+  })
+  await new Promise(r => setTimeout(r, 40))
   assert.equal(secondStarted, false, 'the second completion must not run while the first holds the model')
 
-  ctl.abort()                       // stop the first, as the composer's stop button does
+  ctl.abort() // stop the first, as the composer's stop button does
   await first
-  releaseTeardown?.()               // let the second run settle
-  await new Promise((r) => setTimeout(r, 50))
+  releaseTeardown?.() // let the second run settle
+  await new Promise(r => setTimeout(r, 50))
   assert.equal(await second, 'partial', 'the queued question runs once the model is free')
 })

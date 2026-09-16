@@ -12,12 +12,54 @@ import { NOTE_TYPES } from './prompts.js'
 // user-entered ones). Kept narrow on purpose — real topic words (shop, gift,
 // travel, quran) are NOT here.
 const JUNK_TAGS = new Set([
-  'instagram', 'insta', 'ig', 'ins', 'tiktok', 'youtube', 'reel', 'reels', 'video', 'post', 'repost',
-  'link', 'url', 'website', 'social', 'socialmedia',
-  'fyp', 'foryou', 'foryoupage', 'viral', 'trending', 'trend', 'explore', 'explorepage',
-  'follow', 'followers', 'like', 'likes', 'share', 'comment', 'subscribe', 'giveaway',
-  'ad', 'ads', 'sponsored', 'promo', 'promotion', 'packingorders', 'packing',
-  'content', 'info', 'information', 'article', 'misc', 'general', 'stuff', 'random', 'update',
+  'instagram',
+  'insta',
+  'ig',
+  'ins',
+  'tiktok',
+  'youtube',
+  'reel',
+  'reels',
+  'video',
+  'post',
+  'repost',
+  'link',
+  'url',
+  'website',
+  'social',
+  'socialmedia',
+  'fyp',
+  'foryou',
+  'foryoupage',
+  'viral',
+  'trending',
+  'trend',
+  'explore',
+  'explorepage',
+  'follow',
+  'followers',
+  'like',
+  'likes',
+  'share',
+  'comment',
+  'subscribe',
+  'giveaway',
+  'ad',
+  'ads',
+  'sponsored',
+  'promo',
+  'promotion',
+  'packingorders',
+  'packing',
+  'content',
+  'info',
+  'information',
+  'article',
+  'misc',
+  'general',
+  'stuff',
+  'random',
+  'update',
 ])
 
 // normalizeTag always hyphenates whitespace ("social media" -> "social-media"),
@@ -76,7 +118,9 @@ export function normaliseClassification(p, { hasImage, isUrl, text }) {
     // floor (e.g. the model gives 10, 2 are junk platform words, and a
     // max:10 pre-filter cap would leave only 8 — silently missing the
     // "never fewer than 6-10" target for no good reason).
-    tags: normalizeTags(p.tags, { max: 15 }).filter((t) => !isJunkTag(t)).slice(0, 10),
+    tags: normalizeTags(p.tags, { max: 15 })
+      .filter(t => !isJunkTag(t))
+      .slice(0, 10),
   }
 }
 
@@ -88,7 +132,8 @@ export function heuristicType({ hasImage, isUrl, text }) {
     if (/youtube\.com|youtu\.be|vimeo\.com|tiktok\.com|\.mp4(\?|$)/i.test(t)) return 'video'
     return 'link'
   }
-  if (/```/.test(t) || /^(function|const|let|var|import|class|def |public |#include|<\?php|SELECT )/m.test(t)) return 'code'
+  if (/```/.test(t) || /^(function|const|let|var|import|class|def |public |#include|<\?php|SELECT )/m.test(t))
+    return 'code'
   return 'text'
 }
 
@@ -111,7 +156,8 @@ export function extractUrl(text) {
   const w = /\bwww\.[^\s<>"')\]]+/i.exec(t)
   if (w) return 'https://' + w[0].replace(/[.,;:!?]+$/, '')
   // bare domain with a well-known TLD, e.g. "google.com" or "foo.dev/bar"
-  const d = /\b[a-z0-9][a-z0-9-]*(\.[a-z0-9-]+)*\.(com|org|net|io|dev|app|ai|co|me|tv|gg|sh|xyz)(\/[^\s<>"')\]]*)?/i.exec(t)
+  const d =
+    /\b[a-z0-9][a-z0-9-]*(\.[a-z0-9-]+)*\.(com|org|net|io|dev|app|ai|co|me|tv|gg|sh|xyz)(\/[^\s<>"')\]]*)?/i.exec(t)
   if (d) return 'https://' + d[0].replace(/[.,;:!?]+$/, '')
   return null
 }

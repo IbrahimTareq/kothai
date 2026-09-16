@@ -9,21 +9,26 @@ let retagNoteImpl
 
 const realEnrich = await import('../../../server/ai/enrich.js')
 mock.module('../../../server/ai/enrich.js', {
-  namedExports: { ...realEnrich, retagNote: (id) => retagNoteImpl(id) },
+  namedExports: { ...realEnrich, retagNote: id => retagNoteImpl(id) },
 })
 
 const { handleRetagNote } = await import('../../../server/routes/notes.js')
 
 function mockRes() {
   const r = { code: 0, body: null }
-  r.writeHead = (c) => { r.code = c; return r }
-  r.end = (s) => { r.body = JSON.parse(s) }
+  r.writeHead = c => {
+    r.code = c
+    return r
+  }
+  r.end = s => {
+    r.body = JSON.parse(s)
+  }
   r.setHeader = () => {}
   return r
 }
 
 test('handleRetagNote: 200 with the updated note when retagNote succeeds', async () => {
-  retagNoteImpl = async (id) => ({ id, pending: true, tags: ['@natgeo'] })
+  retagNoteImpl = async id => ({ id, pending: true, tags: ['@natgeo'] })
   const res = mockRes()
   await handleRetagNote(res, 'n1')
   assert.equal(res.code, 200)

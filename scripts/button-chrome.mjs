@@ -13,7 +13,7 @@
 const COMMENT = /\/\*[\s\S]*?\*\//g
 
 /** Rules that declare a complete button box. [{ selector, line }] */
-export function findButtonChrome (css) {
+export function findButtonChrome(css) {
   const found = []
   for (const m of css.matchAll(/([^{}]*)\{([^{}]*)\}/g)) {
     // The annotation may sit on the selector, inside the block, or trail the

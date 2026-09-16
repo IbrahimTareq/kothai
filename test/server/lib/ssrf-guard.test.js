@@ -15,29 +15,29 @@ import assert from 'node:assert/strict'
 import { isBlockedAddress, isAllowedPort, assertPublicUrl, safeFetch } from '../../../server/lib/ssrf.js'
 
 // A resolver stub. Takes a hostname → address map; anything unmapped is NXDOMAIN.
-const resolver = (map) => async (host) => {
+const resolver = map => async host => {
   const addrs = map[host]
   if (!addrs) throw Object.assign(new Error('getaddrinfo ENOTFOUND'), { code: 'ENOTFOUND' })
-  return addrs.map((address) => ({ address, family: address.includes(':') ? 6 : 4 }))
+  return addrs.map(address => ({ address, family: address.includes(':') ? 6 : 4 }))
 }
 
 // ---- the address predicate ---------------------------------------------
 
 test('isBlockedAddress: the IPv4 ranges an SSRF actually targets', () => {
   for (const ip of [
-    '127.0.0.1',        // loopback
-    '127.1.2.3',        // …the whole /8, not just .0.1
-    '0.0.0.0',          // "this host" — routes to loopback on Linux
-    '10.0.0.5',         // RFC1918
-    '172.16.0.1',       // RFC1918, bottom of the /12
-    '172.31.255.255',   // RFC1918, top of the /12
-    '192.168.1.1',      // RFC1918
-    '169.254.169.254',  // AWS/GCP/Azure instance metadata — the crown jewel
-    '100.64.0.1',       // CGNAT + Tailscale: a link preview must not reach the tailnet
-    '198.18.0.1',       // benchmarking
-    '192.0.0.1',        // IETF protocol assignments
-    '224.0.0.1',        // multicast
-    '255.255.255.255',  // broadcast (240/4)
+    '127.0.0.1', // loopback
+    '127.1.2.3', // …the whole /8, not just .0.1
+    '0.0.0.0', // "this host" — routes to loopback on Linux
+    '10.0.0.5', // RFC1918
+    '172.16.0.1', // RFC1918, bottom of the /12
+    '172.31.255.255', // RFC1918, top of the /12
+    '192.168.1.1', // RFC1918
+    '169.254.169.254', // AWS/GCP/Azure instance metadata — the crown jewel
+    '100.64.0.1', // CGNAT + Tailscale: a link preview must not reach the tailnet
+    '198.18.0.1', // benchmarking
+    '192.0.0.1', // IETF protocol assignments
+    '224.0.0.1', // multicast
+    '255.255.255.255', // broadcast (240/4)
   ]) {
     assert.equal(isBlockedAddress(ip), true, `${ip} should be blocked`)
   }
@@ -47,10 +47,10 @@ test('isBlockedAddress: ordinary public IPv4 is allowed, including the addresses
   for (const ip of [
     '8.8.8.8',
     '93.184.216.34',
-    '172.15.255.255',  // one below 172.16/12
-    '172.32.0.0',      // one above 172.16/12
-    '100.63.255.255',  // one below 100.64/10
-    '100.128.0.0',     // one above 100.64/10
+    '172.15.255.255', // one below 172.16/12
+    '172.32.0.0', // one above 172.16/12
+    '100.63.255.255', // one below 100.64/10
+    '100.128.0.0', // one above 100.64/10
     '223.255.255.255', // one below multicast
   ]) {
     assert.equal(isBlockedAddress(ip), false, `${ip} should be allowed`)
@@ -76,9 +76,9 @@ test('isBlockedAddress: IPv4-mapped IPv6 is unwrapped, so ::ffff:127.0.0.1 canno
 })
 
 test('isBlockedAddress: NAT64 (64:ff9b::/96) is unwrapped too — it embeds a v4 address the same way', () => {
-  assert.equal(isBlockedAddress('64:ff9b::7f00:1'), true)       // → 127.0.0.1
-  assert.equal(isBlockedAddress('64:ff9b::a9fe:a9fe'), true)    // → 169.254.169.254
-  assert.equal(isBlockedAddress('64:ff9b::808:808'), false)     // → 8.8.8.8
+  assert.equal(isBlockedAddress('64:ff9b::7f00:1'), true) // → 127.0.0.1
+  assert.equal(isBlockedAddress('64:ff9b::a9fe:a9fe'), true) // → 169.254.169.254
+  assert.equal(isBlockedAddress('64:ff9b::808:808'), false) // → 8.8.8.8
 })
 
 test('isBlockedAddress: unparseable input is blocked, never waved through', () => {
@@ -104,14 +104,20 @@ test('isAllowedPort: only the two web ports, whether implicit or written out', (
 
 test('assertPublicUrl: rejects a non-http(s) scheme before any lookup happens', async () => {
   let looked = false
-  const lookup = async () => { looked = true; return [] }
+  const lookup = async () => {
+    looked = true
+    return []
+  }
   await assert.rejects(() => assertPublicUrl('data:text/plain,hi', { lookup }), /unsupported URL scheme/)
   assert.equal(looked, false)
 })
 
 test('assertPublicUrl: an IP literal is checked directly, without consulting DNS', async () => {
   let looked = false
-  const lookup = async () => { looked = true; return [] }
+  const lookup = async () => {
+    looked = true
+    return []
+  }
   await assert.rejects(() => assertPublicUrl('http://169.254.169.254/latest/meta-data/', { lookup }), /blocked address/)
   assert.equal(looked, false)
 })
@@ -154,7 +160,10 @@ test('assertPublicUrl: allowPrivate re-opens everything except the scheme check 
   await assert.doesNotReject(() => assertPublicUrl('http://127.0.0.1:5173/', { lookup, allowPrivate: true }))
   // Scheme is not part of the escape hatch: data: URLs smuggle a payload onto
   // disk via saveThumb regardless of what the network policy is.
-  await assert.rejects(() => assertPublicUrl('data:text/plain,hi', { lookup, allowPrivate: true }), /unsupported URL scheme/)
+  await assert.rejects(
+    () => assertPublicUrl('data:text/plain,hi', { lookup, allowPrivate: true }),
+    /unsupported URL scheme/,
+  )
 })
 
 // ---- redirects ----------------------------------------------------------
@@ -165,7 +174,7 @@ const redirectTo = (location, status = 302) => ({
   headers: new Headers({ location }),
   body: { cancel: async () => {} },
 })
-const ok = (marker) => ({ status: 200, headers: new Headers(), body: null, marker })
+const ok = marker => ({ status: 200, headers: new Headers(), body: null, marker })
 
 test('safeFetch: follows a redirect to another public host', async () => {
   const lookup = resolver({ 'a.example.com': ['93.184.216.34'], 'b.example.com': ['8.8.8.8'] })
@@ -176,25 +185,28 @@ test('safeFetch: follows a redirect to another public host', async () => {
   }
   const res = await safeFetch('http://a.example.com/', {}, { fetchImpl, lookup })
   assert.equal(res.marker, 'landed')
-  assert.deepEqual(seen.map(([u]) => u), ['http://a.example.com/', 'http://b.example.com/final'])
+  assert.deepEqual(
+    seen.map(([u]) => u),
+    ['http://a.example.com/', 'http://b.example.com/final'],
+  )
   // Every hop must be manual, or the runtime follows the chain itself and the
   // guard never sees the intermediate hops at all.
-  assert.deepEqual(seen.map(([, r]) => r), ['manual', 'manual'])
+  assert.deepEqual(
+    seen.map(([, r]) => r),
+    ['manual', 'manual'],
+  )
 })
 
 test('safeFetch: refuses a redirect that lands on a private address (the gap redirect:follow left open)', async () => {
   const lookup = resolver({ 'harmless.example.com': ['93.184.216.34'] })
   const fetchImpl = async () => redirectTo('http://169.254.169.254/latest/meta-data/')
-  await assert.rejects(
-    () => safeFetch('http://harmless.example.com/', {}, { fetchImpl, lookup }),
-    /blocked address/,
-  )
+  await assert.rejects(() => safeFetch('http://harmless.example.com/', {}, { fetchImpl, lookup }), /blocked address/)
 })
 
 test('safeFetch: a relative Location is resolved against the hop it came from, then re-checked', async () => {
   const lookup = resolver({ 'a.example.com': ['93.184.216.34'] })
   const seen = []
-  const fetchImpl = async (url) => {
+  const fetchImpl = async url => {
     seen.push(url)
     return url === 'http://a.example.com/one' ? redirectTo('/two') : ok('landed')
   }
@@ -212,9 +224,17 @@ test('safeFetch: gives up on a redirect loop rather than spinning forever', asyn
 test('safeFetch: drains each redirect response body so the connection is not left hanging', async () => {
   const lookup = resolver({ 'a.example.com': ['93.184.216.34'] })
   let cancelled = 0
-  const fetchImpl = async (url) =>
+  const fetchImpl = async url =>
     url === 'http://a.example.com/'
-      ? { status: 302, headers: new Headers({ location: 'http://a.example.com/final' }), body: { cancel: async () => { cancelled++ } } }
+      ? {
+          status: 302,
+          headers: new Headers({ location: 'http://a.example.com/final' }),
+          body: {
+            cancel: async () => {
+              cancelled++
+            },
+          },
+        }
       : ok('landed')
   await safeFetch('http://a.example.com/', {}, { fetchImpl, lookup })
   assert.equal(cancelled, 1)

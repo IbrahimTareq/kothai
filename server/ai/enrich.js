@@ -19,16 +19,27 @@ import { stepsFor } from './backlog.js'
 import { DESCRIBE_THUMB_PROMPT, EMBED_RECIPE } from './prompts.js'
 import { UPLOAD_DIR } from '../config.js'
 import {
-  queueIgMeta, queueIgSlides, promoteIgMeta, metaRetryDelay, metaRetryEligible,
-  isStuckInstagramNote, setCaptionHandler, _igQueueState,
+  queueIgMeta,
+  queueIgSlides,
+  promoteIgMeta,
+  metaRetryDelay,
+  metaRetryEligible,
+  isStuckInstagramNote,
+  setCaptionHandler,
+  _igQueueState,
 } from './ig-queue.js'
 
 // The Instagram lane moved to ./ig-queue.js. Re-exported here because the
 // routes and its tests address it through this module, and where the queue
 // lives is not their business.
 export {
-  queueIgMeta, queueIgSlides, promoteIgMeta, metaRetryDelay, metaRetryEligible,
-  isStuckInstagramNote, _igQueueState,
+  queueIgMeta,
+  queueIgSlides,
+  promoteIgMeta,
+  metaRetryDelay,
+  metaRetryEligible,
+  isStuckInstagramNote,
+  _igQueueState,
 }
 
 let enrichChain = Promise.resolve()
@@ -38,7 +49,7 @@ let enrichChain = Promise.resolve()
 // so callers that care when it lands (tests; queueIgMeta below) can await
 // it — fire-and-forget callers just ignore the return value.
 export function queueJob(fn) {
-  enrichChain = enrichChain.then(fn).catch((e) => console.error('[enrich] failed:', e.message))
+  enrichChain = enrichChain.then(fn).catch(e => console.error('[enrich] failed:', e.message))
   return enrichChain
 }
 
@@ -48,7 +59,7 @@ export function queueEnrich(noteId, job) {
 
 // A caption that has just landed is worth re-classifying on, but the queue
 // that fetched it has no reason to know that — it announces, this decides.
-setCaptionHandler((noteId) => queueJob(() => reclassifyWithCaption(noteId)))
+setCaptionHandler(noteId => queueJob(() => reclassifyWithCaption(noteId)))
 
 // ---- fast metadata lane ---------------------------------------------------
 // Cheap, network-bound work — oEmbed/OpenGraph: a caption, an author, a
@@ -81,7 +92,12 @@ function pumpMeta() {
   while (metaActive < META_CONCURRENCY && metaQueue.length) {
     const job = metaQueue.shift()
     metaActive++
-    runMetaJob(job).catch(() => {}).finally(() => { metaActive--; pumpMeta() })
+    runMetaJob(job)
+      .catch(() => {})
+      .finally(() => {
+        metaActive--
+        pumpMeta()
+      })
   }
 }
 
@@ -193,7 +209,8 @@ async function reclassifyWithCaption(id) {
   // reclassify that skips the vision call still embeds the same text.
   const thumbText = thumbDescription || existing.thumbDescription || ''
   const richText = [existing.content, existing.siteTitle, existing.siteDesc, existing.article, thumbText]
-    .filter(Boolean).join('\n\n')
+    .filter(Boolean)
+    .join('\n\n')
   if (!richText) return
 
   const patch = {}
@@ -251,7 +268,9 @@ async function reclassifyWithCaption(id) {
         patch.summary ?? existing.summary,
         richText,
         (patch.tags ?? existing.tags ?? []).join(' '),
-      ].filter(Boolean).join('\n')
+      ]
+        .filter(Boolean)
+        .join('\n')
       patch.embedding = await inference.embedText(toEmbed || richText)
       ai.embed = true
       madeProgress = true
@@ -422,9 +441,7 @@ async function enrichNote(id, { absPath, text, isUrl, hasImage }) {
   // step above, which is about an image the USER attached: these are two
   // different pictures with two different prompts, and a note can have both.
   const thumb = linkMeta?.thumb || existing?.thumb
-  const thumbDescription = thumb
-    ? await describeThumb({ ...existing, thumb }, residency, ai)
-    : ''
+  const thumbDescription = thumb ? await describeThumb({ ...existing, thumb }, residency, ai) : ''
 
   // YouTube captions — the actual content of a saved video, and the one
   // platform that publishes a transcript for the asking (no download, no
@@ -442,7 +459,15 @@ async function enrichNote(id, { absPath, text, isUrl, hasImage }) {
     if (result.text) captions = result.text
   }
 
-  const richText = [text, visionDescription, linkMeta?.siteTitle, linkMeta?.siteDesc, linkMeta?.article, captions, thumbDescription]
+  const richText = [
+    text,
+    visionDescription,
+    linkMeta?.siteTitle,
+    linkMeta?.siteDesc,
+    linkMeta?.article,
+    captions,
+    thumbDescription,
+  ]
     .filter(Boolean)
     .join('\n\n')
 
@@ -549,7 +574,9 @@ async function enrichNote(id, { absPath, text, isUrl, hasImage }) {
         patch.summary ?? existing?.summary,
         richText,
         (patch.tags ?? existing?.tags ?? []).join(' '),
-      ].filter(Boolean).join('\n')
+      ]
+        .filter(Boolean)
+        .join('\n')
       patch.embedding = await inference.embedText(toEmbed || richText)
       ai.embed = true
       ai.embedRecipe = EMBED_RECIPE
@@ -613,7 +640,9 @@ export function embedBodyFor(note) {
     note.article,
     note.thumbDescription,
     (note.tags || []).join(' '),
-  ].filter(Boolean).join('\n')
+  ]
+    .filter(Boolean)
+    .join('\n')
 }
 
 export async function reembedAll(reason = 'settings') {
@@ -715,7 +744,7 @@ export function queueBacklog() {
   // endpoint. Returning 0 lets the route tell the user why nothing happened.
   if (!inference.available()) return 0
   const residency = settings.getResidency()
-  const todo = store.allNotes().filter((n) => stepsFor(n, residency).length > 0)
+  const todo = store.allNotes().filter(n => stepsFor(n, residency).length > 0)
   for (const n of todo) queueEnrich(n.id, enrichArgsFor(n))
   return todo.length
 }

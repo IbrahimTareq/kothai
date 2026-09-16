@@ -29,7 +29,7 @@ export function stepsFor(note, residency) {
 }
 
 export function backlogCount(notes, residency) {
-  return notes.filter((n) => stepsFor(n, residency).length > 0).length
+  return notes.filter(n => stepsFor(n, residency).length > 0).length
 }
 
 // One-time migration for notes saved before `ai` markers existed: infer each

@@ -86,7 +86,11 @@ test('a downloading local model makes the mixed aggregate loading, and carries i
   const snapshots = {
     ...SNAPSHOTS,
     local: {
-      roles: { llm: snap('off'), embed: snap('loading', { progress: 42, message: 'Downloading' }), vision: snap('off') },
+      roles: {
+        llm: snap('off'),
+        embed: snap('loading', { progress: 42, message: 'Downloading' }),
+        vision: snap('off'),
+      },
       aggregate: { state: 'loading', progress: 42, message: 'Downloading' },
     },
   }
@@ -97,16 +101,28 @@ test('a downloading local model makes the mixed aggregate loading, and carries i
 
 test('every role off in mixed mode is ready (AI-free), not an error', () => {
   const snapshots = {
-    local: { roles: { llm: snap('off'), embed: snap('off'), vision: snap('off') }, aggregate: { state: 'ready', progress: 100, message: '' } },
-    remote: { roles: { llm: snap('off'), embed: snap('off'), vision: snap('off') }, aggregate: { state: 'ready', progress: 100, message: '' } },
+    local: {
+      roles: { llm: snap('off'), embed: snap('off'), vision: snap('off') },
+      aggregate: { state: 'ready', progress: 100, message: '' },
+    },
+    remote: {
+      roles: { llm: snap('off'), embed: snap('off'), vision: snap('off') },
+      aggregate: { state: 'ready', progress: 100, message: '' },
+    },
   }
   assert.equal(mergeStatus(MIXED, snapshots).aggregate.state, 'ready')
 })
 
 test('a fault outranks a download still in progress', () => {
   const snapshots = {
-    local: { roles: { llm: snap('off'), embed: snap('loading', { progress: 10 }), vision: snap('off') }, aggregate: { state: 'loading', progress: 10, message: 'Downloading' } },
-    remote: { roles: { llm: snap('error', { message: 'endpoint down' }), embed: snap('error'), vision: snap('ready') }, aggregate: { state: 'error', progress: 0, message: 'endpoint down' } },
+    local: {
+      roles: { llm: snap('off'), embed: snap('loading', { progress: 10 }), vision: snap('off') },
+      aggregate: { state: 'loading', progress: 10, message: 'Downloading' },
+    },
+    remote: {
+      roles: { llm: snap('error', { message: 'endpoint down' }), embed: snap('error'), vision: snap('ready') },
+      aggregate: { state: 'error', progress: 0, message: 'endpoint down' },
+    },
   }
   assert.equal(mergeStatus(MIXED, snapshots).aggregate.state, 'error')
 })
@@ -147,7 +163,11 @@ test('mergeCapabilities reports mixed, and always names the owner of each role',
 // for a 300 MB local download, because the rule assumed no hosted endpoint
 // could serve the role at all.
 test('naming an endpoint embedding model sends the role there', () => {
-  const r = resolveRoleProviders({ provider: 'remote', localAvailable: true, remoteEmbedModel: 'text-embedding-3-small' })
+  const r = resolveRoleProviders({
+    provider: 'remote',
+    localAvailable: true,
+    remoteEmbedModel: 'text-embedding-3-small',
+  })
   assert.equal(r.embed, 'remote')
 })
 
@@ -160,8 +180,10 @@ test('no endpoint embedding model keeps the role on-device, exactly as before', 
 // both directions — someone who pinned it did so for a reason.
 test('STASH_AI_EMBED_PROVIDER=local beats a named endpoint model', () => {
   const r = resolveRoleProviders({
-    provider: 'remote', localAvailable: true,
-    remoteEmbedModel: 'text-embedding-3-small', embedProvider: 'local',
+    provider: 'remote',
+    localAvailable: true,
+    remoteEmbedModel: 'text-embedding-3-small',
+    embedProvider: 'local',
   })
   assert.equal(r.embed, 'local')
 })

@@ -12,7 +12,7 @@ import assert from 'node:assert/strict'
 
 let notes = []
 let embedCalls = []
-let embedImpl = async (text) => [text.length]
+let embedImpl = async text => [text.length]
 let residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
 let storedRecipe = null
 let savedPatches = []
@@ -29,23 +29,28 @@ mock.module('../../../server/data/notes.js', {
   namedExports: {
     ...realStore,
     allNotes: () => notes,
-    getNote: (id) => notes.find((n) => n.id === id) ?? null,
+    getNote: id => notes.find(n => n.id === id) ?? null,
     count: () => notes.length,
     updateNote: async (id, patch) => {
-      const n = notes.find((x) => x.id === id)
+      const n = notes.find(x => x.id === id)
       if (n) Object.assign(n, patch)
       return n
     },
-    flush: async () => { flushes++ },
+    flush: async () => {
+      flushes++
+    },
   },
 })
 mock.module('../../../server/lib/tags.js', { namedExports: { ...realTags, buildVocabulary: () => [] } })
-mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async (t) => t } })
+mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async t => t } })
 mock.module('../../../server/ai/index.js', {
   namedExports: {
     ...realNormalise,
     classify: async () => ({ type: 'link', category: 'General', title: 'T', summary: 'S', tags: [] }),
-    embedText: async (text, opts) => { embedCalls.push({ text, opts }); return embedImpl(text) },
+    embedText: async (text, opts) => {
+      embedCalls.push({ text, opts })
+      return embedImpl(text)
+    },
   },
 })
 mock.module('../../../server/data/collections.js', { namedExports: { ...realCollections, autoAdd: async () => {} } })
@@ -54,7 +59,11 @@ mock.module('../../../server/data/settings.js', {
     ...realSettings,
     getResidency: () => residencyImpl(),
     getEmbedRecipe: () => storedRecipe,
-    save: async (patch) => { savedPatches.push(patch); if (patch.embedRecipe !== undefined) storedRecipe = patch.embedRecipe; return {} },
+    save: async patch => {
+      savedPatches.push(patch)
+      if (patch.embedRecipe !== undefined) storedRecipe = patch.embedRecipe
+      return {}
+    },
   },
 })
 
@@ -62,12 +71,12 @@ const enrich = await import('../../../server/ai/enrich.js')
 const { EMBED_RECIPE } = await import('../../../server/ai/prompts.js')
 
 function reset(list = []) {
-  notes = list.map((n) => ({ ...n }))
+  notes = list.map(n => ({ ...n }))
   embedCalls = []
   savedPatches = []
   flushes = 0
   storedRecipe = null
-  embedImpl = async (text) => [text.length]
+  embedImpl = async text => [text.length]
   residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
 }
 
@@ -88,8 +97,19 @@ const REEL = {
 
 test('embedBodyFor reads every field enrichment embeds, not the short legacy list', () => {
   const body = enrich.embedBodyFor(REEL)
-  for (const field of ['Brown butter pasta', 'ten minute recipe', 'chefsteps', 'Three ingredients', 'longer transcript', '3 INGREDIENT PASTA', 'pasta brownbutter']) {
-    assert.ok(body.includes(field), `missing "${field}" — a re-embed must not produce a weaker vector than the original enrichment did`)
+  for (const field of [
+    'Brown butter pasta',
+    'ten minute recipe',
+    'chefsteps',
+    'Three ingredients',
+    'longer transcript',
+    '3 INGREDIENT PASTA',
+    'pasta brownbutter',
+  ]) {
+    assert.ok(
+      body.includes(field),
+      `missing "${field}" — a re-embed must not produce a weaker vector than the original enrichment did`,
+    )
   }
 })
 
@@ -102,16 +122,19 @@ test('reembedAll embeds every note once, writes once, and records the new recipe
   assert.match(embedCalls[0].text, /3 INGREDIENT PASTA/)
   assert.equal(flushes, 1, 'one batched transaction for the whole library, not one write per note')
   assert.equal(storedRecipe, EMBED_RECIPE)
-  assert.ok(notes.every((x) => Array.isArray(x.embedding)))
+  assert.ok(notes.every(x => Array.isArray(x.embedding)))
 })
 
 test('reembedAll survives one unembeddable note rather than abandoning the rest of the library', async () => {
   reset([REEL, { ...REEL, id: 'r2' }, { ...REEL, id: 'r3' }])
-  embedImpl = async (text) => { if (embedCalls.length === 2) throw new Error('model blew up'); return [text.length] }
+  embedImpl = async text => {
+    if (embedCalls.length === 2) throw new Error('model blew up')
+    return [text.length]
+  }
 
   await enrich.reembedAll('test')
   assert.equal(embedCalls.length, 3, 'the sweep kept going')
-  assert.equal(notes.filter((x) => Array.isArray(x.embedding)).length, 2)
+  assert.equal(notes.filter(x => Array.isArray(x.embedding)).length, 2)
   assert.equal(storedRecipe, EMBED_RECIPE)
 })
 

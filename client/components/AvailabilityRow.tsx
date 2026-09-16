@@ -29,9 +29,11 @@ export function AvailabilityRow() {
     try {
       setScan(await API.scanAvailability())
     } catch (e) {
-      setError(apiError(e, 'Could not check your links — is the server reachable?', {
-        scan_in_progress: 'A scan is already running — wait for it to finish.',
-      }))
+      setError(
+        apiError(e, 'Could not check your links — is the server reachable?', {
+          scan_in_progress: 'A scan is already running — wait for it to finish.',
+        }),
+      )
       setScan(null)
     }
     setScanning(false)
@@ -58,7 +60,8 @@ export function AvailabilityRow() {
   // checked everything and then deliberately wrote nothing.
   const summary = (r: Scan) => {
     if (r.aborted) return r.error || 'Too many links reported gone to believe — nothing was marked.'
-    if (r.checked === 0) return 'No links here can be checked yet. Only TikTok links can be verified — Instagram has no way to ask without risking a block.'
+    if (r.checked === 0)
+      return 'No links here can be checked yet. Only TikTok links can be verified — Instagram has no way to ask without risking a block.'
     const parts = [`Checked ${r.checked}`, `${r.alive} fine`]
     if (r.dead > 0) parts.push(`${r.dead} gone`)
     if (r.unknown > 0) parts.push(`${r.unknown} couldn't be reached`)
@@ -68,15 +71,34 @@ export function AvailabilityRow() {
   }
 
   return (
-    <SettingsRow title="Unavailable content"
-      desc={<>Check saved links and mark the ones whose content has been deleted, so you can clear them out. Only <b>TikTok</b> links can be verified — Instagram gives no reliable way to ask, and guessing there would mean deleting posts that are merely private or rate-limited. Nothing is removed until you say so.</>}
-      action={<button className="btn" onClick={run} disabled={scanning || removing}>{scanning ? 'Checking…' : 'Check links'}</button>}>
+    <SettingsRow
+      title="Unavailable content"
+      desc={
+        <>
+          Check saved links and mark the ones whose content has been deleted, so you can clear them out. Only{' '}
+          <b>TikTok</b> links can be verified — Instagram gives no reliable way to ask, and guessing there would mean
+          deleting posts that are merely private or rate-limited. Nothing is removed until you say so.
+        </>
+      }
+      action={
+        <button className="btn" onClick={run} disabled={scanning || removing}>
+          {scanning ? 'Checking…' : 'Check links'}
+        </button>
+      }
+    >
       {scan && (
         <RowStatus tone={scan.aborted ? 'error' : 'ok'}>
           <div>{summary(scan)}</div>
           {!scan.aborted && scan.unavailable > 0 && !armed && (
             <div className="avail-actions">
-              <button className="btn btn--danger" onClick={() => { setArmed(true); setError(null) }} disabled={removing}>
+              <button
+                className="btn btn--danger"
+                onClick={() => {
+                  setArmed(true)
+                  setError(null)
+                }}
+                disabled={removing}
+              >
                 Remove {scan.unavailable} unavailable item{scan.unavailable === 1 ? '' : 's'}…
               </button>
             </div>
@@ -86,22 +108,27 @@ export function AvailabilityRow() {
       {armed && scan && (
         <div className="settings-row-extra">
           <div className="danger-confirm">
-            <label>Permanently delete <b>{scan.unavailable}</b> saved item{scan.unavailable === 1 ? '' : 's'} whose content is gone? This can't be undone.</label>
+            <label>
+              Permanently delete <b>{scan.unavailable}</b> saved item{scan.unavailable === 1 ? '' : 's'} whose content
+              is gone? This can't be undone.
+            </label>
             <div className="danger-confirm-row">
               <button className="btn btn--danger btn--solid" onClick={remove} disabled={removing}>
                 {removing ? 'Removing…' : 'Yes, remove them'}
               </button>
-              <button className="btn" onClick={() => setArmed(false)} disabled={removing}>Cancel</button>
+              <button className="btn" onClick={() => setArmed(false)} disabled={removing}>
+                Cancel
+              </button>
             </div>
           </div>
         </div>
       )}
       {removed !== null && (
-        <RowStatus>Removed {removed} item{removed === 1 ? '' : 's'}.</RowStatus>
+        <RowStatus>
+          Removed {removed} item{removed === 1 ? '' : 's'}.
+        </RowStatus>
       )}
-      {error && (
-        <RowStatus tone="error">{error}</RowStatus>
-      )}
+      {error && <RowStatus tone="error">{error}</RowStatus>}
     </SettingsRow>
   )
 }

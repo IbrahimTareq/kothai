@@ -17,22 +17,33 @@ import { readCredentials, writeCredentials } from '../../../server/data/credenti
 
 function fakeRes() {
   return {
-    statusCode: 0, body: null,
-    writeHead(code) { this.statusCode = code },
-    end(body) { this.body = JSON.parse(body) },
+    statusCode: 0,
+    body: null,
+    writeHead(code) {
+      this.statusCode = code
+    },
+    end(body) {
+      this.body = JSON.parse(body)
+    },
   }
 }
-const fakeReq = (body) => Readable.from([Buffer.from(JSON.stringify(body))])
+const fakeReq = body => Readable.from([Buffer.from(JSON.stringify(body))])
 const dir = () => mkdtempSync(path.join(tmpdir(), 'kothai-chg-'))
 
 // Records what the facade asks of the local provider, which is where the
 // switch back actually lands.
 const localCalls = { residency: [], models: [], boots: 0 }
-const fakeProvider = (kind) => ({
+const fakeProvider = kind => ({
   init: async () => {},
-  applyResidency: async (r) => { if (kind === 'local') localCalls.residency.push(r) },
-  configureModels: async (m) => { if (kind === 'local') localCalls.models.push(m) },
-  boot: async () => { if (kind === 'local') localCalls.boots++ },
+  applyResidency: async r => {
+    if (kind === 'local') localCalls.residency.push(r)
+  },
+  configureModels: async m => {
+    if (kind === 'local') localCalls.models.push(m)
+  },
+  boot: async () => {
+    if (kind === 'local') localCalls.boots++
+  },
   capabilities: () => ({ kind, managesResidency: kind === 'local', downloadsWeights: kind === 'local' }),
   statusSnapshot: () => ({ roles: {}, aggregate: { state: 'ready', progress: 100, message: 'Ready' } }),
   listModels: async () => ({ llm: [], embed: [], vision: [] }),
@@ -40,7 +51,7 @@ const fakeProvider = (kind) => ({
   applySettings: async () => {},
   shutdown: async () => {},
 })
-const load = (kind) => Promise.resolve(fakeProvider(kind))
+const load = kind => Promise.resolve(fakeProvider(kind))
 const A = 'http://127.0.0.1:1/v1'
 const B = 'http://127.0.0.1:2/v1'
 
@@ -63,7 +74,10 @@ test('the endpoint can be changed once first run is over', async () => {
   await initProvider('remote', {}, { load, localAvailable: false })
 
   const res = fakeRes()
-  await handleSaveEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: B, apiKey: 'new-key' } }), res, { dir: d, load })
+  await handleSaveEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: B, apiKey: 'new-key' } }), res, {
+    dir: d,
+    load,
+  })
   assert.equal(res.statusCode, 200)
   assert.deepEqual(readCredentials(d), { baseUrl: B, apiKey: 'new-key', providerId: 'openai' })
   assert.equal(getAiConfig().baseUrl, B, 'and the running process follows')
@@ -76,7 +90,10 @@ test('rotating just the key keeps the endpoint', async () => {
   await settings.save({ configured: true })
   await initProvider('remote', {}, { load, localAvailable: false })
 
-  await handleSaveEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: A, apiKey: 'rotated' } }), fakeRes(), { dir: d, load })
+  await handleSaveEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: A, apiKey: 'rotated' } }), fakeRes(), {
+    dir: d,
+    load,
+  })
   assert.deepEqual(readCredentials(d), { baseUrl: A, apiKey: 'rotated', providerId: 'openai' })
 })
 
@@ -170,7 +187,10 @@ test('switching to a service releases the roles it takes over', async () => {
   await initProvider('local', {}, { load, localAvailable: true })
 
   await handleSaveEndpoint(
-    fakeReq({ endpoint: { providerId: 'openai', baseUrl: A, apiKey: 'k' }, models: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small' } }),
+    fakeReq({
+      endpoint: { providerId: 'openai', baseUrl: A, apiKey: 'k' },
+      models: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small' },
+    }),
     fakeRes(),
     { dir: d },
   )
@@ -189,11 +209,7 @@ test('disconnecting can choose the on-device models in the same request', async 
   await initProvider('remote', {}, { load, localAvailable: true })
 
   const res = fakeRes()
-  await handleClearEndpoint(
-    fakeReq({ models: { llm: 'QWEN3_4B_INST_Q4_K_M' } }),
-    res,
-    { dir: d, load },
-  )
+  await handleClearEndpoint(fakeReq({ models: { llm: 'QWEN3_4B_INST_Q4_K_M' } }), res, { dir: d, load })
   assert.equal(res.statusCode, 200)
   assert.equal(settings.get().llm, 'QWEN3_4B_INST_Q4_K_M', 'the choice made during the switch sticks')
 })

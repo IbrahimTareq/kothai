@@ -36,9 +36,7 @@ function fakeRes() {
     ended: false,
     writeHead(code, headers) {
       this.code = code
-      this.headers = Object.fromEntries(
-        Object.entries(headers || {}).map(([k, v]) => [k.toLowerCase(), v]),
-      )
+      this.headers = Object.fromEntries(Object.entries(headers || {}).map(([k, v]) => [k.toLowerCase(), v]))
     },
     end(body) {
       this.body = body
@@ -136,11 +134,7 @@ test('If-Modified-Since alone also gets a 304', async () => {
   await serveStatic(fakeReq(), first, '/uploads/meta-five.jpg')
 
   const res = fakeRes()
-  await serveStatic(
-    fakeReq({ 'if-modified-since': first.headers['last-modified'] }),
-    res,
-    '/uploads/meta-five.jpg',
-  )
+  await serveStatic(fakeReq({ 'if-modified-since': first.headers['last-modified'] }), res, '/uploads/meta-five.jpg')
   assert.equal(res.code, 304)
 })
 

@@ -5,9 +5,9 @@
 // consistent with how the carousel deck inside this same view already
 // decides a commit.
 
-export const SLOP_PX = 6      // movement below this is still a tap, not a drag
+export const SLOP_PX = 6 // movement below this is still a tap, not a drag
 export const DISMISS_PX = 120 // downward drag that commits to closing
-export const NAV_PX = 80      // sideways drag that commits to the neighbouring item
+export const NAV_PX = 80 // sideways drag that commits to the neighbouring item
 
 export type Axis = 'none' | 'horizontal' | 'vertical'
 

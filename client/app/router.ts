@@ -2,7 +2,11 @@
 // No dependency: the whole app is one <App> switching on `nav`, so routing is
 // just a bijection between that state and the pathname.
 
-export interface Route { nav: string; item?: string; chat?: string }
+export interface Route {
+  nav: string
+  item?: string
+  chat?: string
+}
 
 // Storable types get their own filtered gallery at /type/<type>.
 const TYPES = ['link', 'image', 'video', 'code', 'note']
@@ -29,14 +33,22 @@ export function pathToRoute(pathname: string): Route {
 
 function navOf(seg: string[]): string {
   switch (seg[0]) {
-    case '': return 'all'
-    case 'everything': return 'all'
-    case 'ask': return 'core'
-    case 'spaces': return 'spaces'
-    case 'settings': return 'settings'
-    case 'type': return TYPES.includes(seg[1]) ? seg[1] : 'all'
-    case 'space': return seg[1] ? 'space:' + seg[1] : 'all'
-    default: return 'all'
+    case '':
+      return 'all'
+    case 'everything':
+      return 'all'
+    case 'ask':
+      return 'core'
+    case 'spaces':
+      return 'spaces'
+    case 'settings':
+      return 'settings'
+    case 'type':
+      return TYPES.includes(seg[1]) ? seg[1] : 'all'
+    case 'space':
+      return seg[1] ? 'space:' + seg[1] : 'all'
+    default:
+      return 'all'
   }
 }
 
@@ -55,10 +67,15 @@ export function chatPath(chatId: string | null): string {
 
 function baseOf(nav: string): string {
   switch (nav) {
-    case 'core': return '/ask'
-    case 'all': return '/'
-    case 'spaces': return '/spaces'
-    case 'settings': return '/settings'
-    default: return nav.startsWith('space:') ? '/space/' + nav.slice(6) : '/type/' + nav
+    case 'core':
+      return '/ask'
+    case 'all':
+      return '/'
+    case 'spaces':
+      return '/spaces'
+    case 'settings':
+      return '/settings'
+    default:
+      return nav.startsWith('space:') ? '/space/' + nav.slice(6) : '/type/' + nav
   }
 }

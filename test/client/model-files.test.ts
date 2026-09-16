@@ -12,8 +12,14 @@ import assert from 'node:assert/strict'
 import { fileLabel, fmtSize, storageSummary } from '../../client/domain/modelFiles.ts'
 import type { ModelFile } from '../../client/types.ts'
 
-const entry = (over: Partial<ModelFile>): ModelFile =>
-  ({ name: 'x.gguf', kind: 'file', sizeBytes: 0, inUse: false, usedBy: null, ...over })
+const entry = (over: Partial<ModelFile>): ModelFile => ({
+  name: 'x.gguf',
+  kind: 'file',
+  sizeBytes: 0,
+  inUse: false,
+  usedBy: null,
+  ...over,
+})
 
 test('fileLabel drops the SDK cache hash and the extension', () => {
   assert.equal(fileLabel(entry({ name: '6dea07e2f9342ff3_Qwen3-4B-Q4_K_M.gguf' })), 'Qwen3-4B-Q4_K_M')

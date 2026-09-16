@@ -9,24 +9,27 @@ import { readFileSync } from 'node:fs'
 
 const DECL = /(--[a-z0-9-]+)\s*:\s*([^;]+);/g
 
-export function loadThemes (cssPath) {
+export function loadThemes(cssPath) {
   const src = readFileSync(cssPath, 'utf8')
-  const block = re => Object.fromEntries(
-    [...(src.match(re)?.[1] ?? '').matchAll(DECL)].map(m => [m[1], m[2].trim()]))
+  const block = re => Object.fromEntries([...(src.match(re)?.[1] ?? '').matchAll(DECL)].map(m => [m[1], m[2].trim()]))
   const dark = block(/:root\{([\s\S]*?)\n\}/)
   // light only overrides; anything it does not restate is inherited from :root
   return { dark, light: { ...dark, ...block(/:root\[data-theme="light"\]\{([\s\S]*?)\n\}/) } }
 }
 
 /** [r, g, b, a] or null if the value is not a literal colour. */
-export function parseColor (value) {
+export function parseColor(value) {
   const v = value.trim()
   const hex = v.match(/^#([0-9a-f]{3,8})$/i)
   if (hex) {
     let h = hex[1]
     if (h.length === 3) h = [...h].map(c => c + c).join('')
-    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16),
-      h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1]
+    return [
+      parseInt(h.slice(0, 2), 16),
+      parseInt(h.slice(2, 4), 16),
+      parseInt(h.slice(4, 6), 16),
+      h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1,
+    ]
   }
   const fn = v.match(/^rgba?\(([^)]+)\)$/i)
   if (fn) {
@@ -37,7 +40,7 @@ export function parseColor (value) {
 }
 
 /** Follow var() chains and color-mix() to a literal colour. */
-export function resolve (name, theme, depth = 0) {
+export function resolve(name, theme, depth = 0) {
   if (depth > 8) return null
   const v = theme[name]
   if (!v) return null
@@ -66,13 +69,14 @@ const luminance = rgb => {
 }
 
 /** WCAG 2.1 contrast ratio. Both arguments must already be opaque. */
-export function contrast (a, b) {
-  const l1 = luminance(a); const l2 = luminance(b)
+export function contrast(a, b) {
+  const l1 = luminance(a)
+  const l2 = luminance(b)
   return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)
 }
 
 /** Contrast of token `fg` over token `bg`, itself composited over --bg. */
-export function pairContrast (fg, bg, theme) {
+export function pairContrast(fg, bg, theme) {
   const base = resolve('--bg', theme)
   const surface = resolve(bg, theme)
   const ink = resolve(fg, theme)

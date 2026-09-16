@@ -1,20 +1,31 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { sniff, parse, parseSavedPosts, parseCollections, deriveNote, deriveAccountFromTitle } from '../../../server/import/instagram.js'
+import {
+  sniff,
+  parse,
+  parseSavedPosts,
+  parseCollections,
+  deriveNote,
+  deriveAccountFromTitle,
+} from '../../../server/import/instagram.js'
 import { findImporter } from '../../../server/import/index.js'
 
 const SAVED = JSON.stringify({
   saved_saved_media: [
-    { title: 'chefsteps', string_map_data: { 'Saved on': { href: 'https://www.instagram.com/reel/DEF456/', timestamp: 1721001600 } } },
-    { title: 'natgeo', string_map_data: { 'Saved on': { href: 'https://www.instagram.com/p/ABC123/', timestamp: 1718000000 } } },
+    {
+      title: 'chefsteps',
+      string_map_data: { 'Saved on': { href: 'https://www.instagram.com/reel/DEF456/', timestamp: 1721001600 } },
+    },
+    {
+      title: 'natgeo',
+      string_map_data: { 'Saved on': { href: 'https://www.instagram.com/p/ABC123/', timestamp: 1718000000 } },
+    },
     { title: 'broken-no-href', string_map_data: { 'Saved on': { timestamp: 1718000001 } } },
   ],
 })
 
 const COLLECTIONS = JSON.stringify({
-  saved_saved_collections: [
-    { title: 'Recipes', list: [{ href: 'https://www.instagram.com/reel/DEF456/' }] },
-  ],
+  saved_saved_collections: [{ title: 'Recipes', list: [{ href: 'https://www.instagram.com/reel/DEF456/' }] }],
 })
 
 function files(entries) {
@@ -24,7 +35,10 @@ function files(entries) {
 function savedPostsJson(count, prefix) {
   const rows = []
   for (let i = 0; i < count; i++) {
-    rows.push({ title: `${prefix}${i}`, string_map_data: { 'Saved on': { href: `https://www.instagram.com/p/${prefix}${i}/`, timestamp: 1 } } })
+    rows.push({
+      title: `${prefix}${i}`,
+      string_map_data: { 'Saved on': { href: `https://www.instagram.com/p/${prefix}${i}/`, timestamp: 1 } },
+    })
   }
   return JSON.stringify({ saved_saved_media: rows })
 }
@@ -47,7 +61,10 @@ test('parseSavedPosts: extracts url/poster/savedAt, skips entries without href',
 // resolves those URLs against its canonical-url index, which is what makes a
 // collections file importable on its own, after its posts are already saved.
 function collectionsOf(result, url) {
-  return result.collections.filter((c) => c.urls.includes(url)).map((c) => c.name).sort()
+  return result.collections
+    .filter(c => c.urls.includes(url))
+    .map(c => c.name)
+    .sort()
 }
 
 test('parseCollections: deep-walks name + href groupings; unknown shapes yield empty map', () => {
@@ -58,10 +75,12 @@ test('parseCollections: deep-walks name + href groupings; unknown shapes yield e
 })
 
 test('parse: reports each collection with its member urls; missing collections file is fine', () => {
-  const withC = parse(files({
-    'your_instagram_activity/saved/saved_posts.json': SAVED,
-    'your_instagram_activity/saved/saved_collections.json': COLLECTIONS,
-  }))
+  const withC = parse(
+    files({
+      'your_instagram_activity/saved/saved_posts.json': SAVED,
+      'your_instagram_activity/saved/saved_collections.json': COLLECTIONS,
+    }),
+  )
   assert.deepEqual(collectionsOf(withC, 'https://www.instagram.com/reel/DEF456/'), ['Recipes'])
   assert.deepEqual(collectionsOf(withC, 'https://www.instagram.com/p/ABC123/'), [])
   const noC = parse(files({ 'your_instagram_activity/saved/saved_posts.json': SAVED }))
@@ -72,12 +91,20 @@ test('parse: reports each collection with its member urls; missing collections f
 test('parse: a collections file on its own still yields its memberships, with no items', () => {
   const only = parse(files({ 'your_instagram_activity/saved/saved_collections.json': COLLECTIONS }))
   assert.equal(only.items.length, 0)
-  assert.deepEqual(only.collections.map((c) => c.name), ['Recipes'])
+  assert.deepEqual(
+    only.collections.map(c => c.name),
+    ['Recipes'],
+  )
   assert.deepEqual(collectionsOf(only, 'https://www.instagram.com/reel/DEF456/'), ['Recipes'])
 })
 
 test('deriveNote: reel → video, post → link, preserved timestamp, instagram tag', () => {
-  const reel = deriveNote({ url: 'https://www.instagram.com/reel/DEF456/', poster: 'chefsteps', savedAt: 1721001600, collections: [] })
+  const reel = deriveNote({
+    url: 'https://www.instagram.com/reel/DEF456/',
+    poster: 'chefsteps',
+    savedAt: 1721001600,
+    collections: [],
+  })
   assert.equal(reel.type, 'video')
   assert.equal(reel.title, '@chefsteps · Reel')
   assert.equal(reel.createdAt, new Date(1721001600 * 1000).toISOString())
@@ -90,7 +117,12 @@ test('deriveNote: reel → video, post → link, preserved timestamp, instagram 
 })
 
 test('deriveNote: types by URL pathname only, ignoring query strings', () => {
-  const note = deriveNote({ url: 'https://www.instagram.com/p/ABC/?ref=/tv/', poster: 'x', savedAt: 1, collections: [] })
+  const note = deriveNote({
+    url: 'https://www.instagram.com/p/ABC/?ref=/tv/',
+    poster: 'x',
+    savedAt: 1,
+    collections: [],
+  })
   assert.equal(note.type, 'link')
 })
 
@@ -114,7 +146,10 @@ test('parseSavedPosts: rejects non-http(s) href schemes (javascript:/data:/ftp:/
 test('parseSavedPosts: caps item count so a pathologically large export cannot exhaust memory', () => {
   const rows = []
   for (let i = 0; i < 100_001; i++) {
-    rows.push({ title: `p${i}`, string_map_data: { 'Saved on': { href: `https://www.instagram.com/p/${i}/`, timestamp: 1 } } })
+    rows.push({
+      title: `p${i}`,
+      string_map_data: { 'Saved on': { href: `https://www.instagram.com/p/${i}/`, timestamp: 1 } },
+    })
   }
   const items = parseSavedPosts({ saved_saved_media: rows })
   assert.equal(items.length, 100_000)
@@ -135,7 +170,10 @@ test('parseSavedPosts: clips absurdly long title/poster fields', () => {
 test('parseSavedPosts: normalizes whitespace in poster names before clipping (these feed an LLM prompt)', () => {
   const items = parseSavedPosts({
     saved_saved_media: [
-      { title: '  chef\n\tsteps  ', string_map_data: { 'Saved on': { href: 'https://www.instagram.com/p/W/', timestamp: 1 } } },
+      {
+        title: '  chef\n\tsteps  ',
+        string_map_data: { 'Saved on': { href: 'https://www.instagram.com/p/W/', timestamp: 1 } },
+      },
     ],
   })
   assert.equal(items[0].poster, 'chef steps')
@@ -171,30 +209,41 @@ test('parseSavedPosts: normalizes millisecond timestamps and rejects out-of-rang
   const json = {
     saved_saved_media: [
       // Milliseconds instead of seconds — a plausible export-version drift.
-      { title: 'ms', string_map_data: { 'Saved on': { href: 'https://www.instagram.com/p/MS/', timestamp: 1721001600000 } } },
+      {
+        title: 'ms',
+        string_map_data: { 'Saved on': { href: 'https://www.instagram.com/p/MS/', timestamp: 1721001600000 } },
+      },
       // JSON.parse('1e400') yields Infinity — a "number > 0" check alone would let this through.
-      { title: 'huge', string_map_data: { 'Saved on': { href: 'https://www.instagram.com/p/HUGE/', timestamp: 1e400 } } },
+      {
+        title: 'huge',
+        string_map_data: { 'Saved on': { href: 'https://www.instagram.com/p/HUGE/', timestamp: 1e400 } },
+      },
       // Finite but absurdly far in the future.
-      { title: 'future', string_map_data: { 'Saved on': { href: 'https://www.instagram.com/p/FUTURE/', timestamp: 9_999_999_999_999 } } },
+      {
+        title: 'future',
+        string_map_data: { 'Saved on': { href: 'https://www.instagram.com/p/FUTURE/', timestamp: 9_999_999_999_999 } },
+      },
     ],
   }
   const items = parseSavedPosts(json)
-  assert.equal(items.find((i) => i.poster === 'ms').savedAt, 1721001600) // normalized down to seconds, not left as 1721001600000
-  assert.equal(items.find((i) => i.poster === 'huge').savedAt, 0) // Infinity degrades to "no timestamp"
-  assert.equal(items.find((i) => i.poster === 'future').savedAt, 0)
+  assert.equal(items.find(i => i.poster === 'ms').savedAt, 1721001600) // normalized down to seconds, not left as 1721001600000
+  assert.equal(items.find(i => i.poster === 'huge').savedAt, 0) // Infinity degrades to "no timestamp"
+  assert.equal(items.find(i => i.poster === 'future').savedAt, 0)
   // deriveNote must never throw regardless of what savedAt ends up being.
   for (const item of items) assert.doesNotThrow(() => deriveNote(item).createdAt)
 })
 
 test('parseSavedPosts: resolves href and timestamp from the SAME string_map_data entry, not independently', () => {
   const json = {
-    saved_saved_media: [{
-      title: 'natgeo',
-      string_map_data: {
-        Owner: { value: 'natgeo', timestamp: 1000000000 },
-        'Saved on': { href: 'https://www.instagram.com/p/RIGHT/', timestamp: 1721001600 },
+    saved_saved_media: [
+      {
+        title: 'natgeo',
+        string_map_data: {
+          Owner: { value: 'natgeo', timestamp: 1000000000 },
+          'Saved on': { href: 'https://www.instagram.com/p/RIGHT/', timestamp: 1721001600 },
+        },
       },
-    }],
+    ],
   }
   const items = parseSavedPosts(json)
   assert.equal(items.length, 1)
@@ -204,13 +253,15 @@ test('parseSavedPosts: resolves href and timestamp from the SAME string_map_data
 
 test('parseSavedPosts: prefers a permalink-shaped href over an earlier Profile href', () => {
   const json = {
-    saved_saved_media: [{
-      title: 'natgeo',
-      string_map_data: {
-        Profile: { href: 'https://www.instagram.com/natgeo/', timestamp: 1721001600 },
-        'Saved on': { href: 'https://www.instagram.com/p/RIGHT/', timestamp: 1721001600 },
+    saved_saved_media: [
+      {
+        title: 'natgeo',
+        string_map_data: {
+          Profile: { href: 'https://www.instagram.com/natgeo/', timestamp: 1721001600 },
+          'Saved on': { href: 'https://www.instagram.com/p/RIGHT/', timestamp: 1721001600 },
+        },
       },
-    }],
+    ],
   }
   const items = parseSavedPosts(json)
   assert.equal(items.length, 1)
@@ -232,13 +283,15 @@ test('parseSavedPosts: rejects an oversized href rather than truncating it into 
 
 test('parseCollections: nested collections are not lumped into their wrapper', () => {
   const json = {
-    saved_saved_collections: [{
-      title: 'Saved',
-      groups: [
-        { title: 'Recipes', list: [{ href: 'https://www.instagram.com/reel/R/' }] },
-        { title: 'Travel', list: [{ href: 'https://www.instagram.com/p/T/' }] },
-      ],
-    }],
+    saved_saved_collections: [
+      {
+        title: 'Saved',
+        groups: [
+          { title: 'Recipes', list: [{ href: 'https://www.instagram.com/reel/R/' }] },
+          { title: 'Travel', list: [{ href: 'https://www.instagram.com/p/T/' }] },
+        ],
+      },
+    ],
   }
   const map = parseCollections(json)
   assert.deepEqual([...map.keys()].sort(), ['Recipes', 'Travel'])
@@ -249,21 +302,25 @@ test('parseCollections: nested collections are not lumped into their wrapper', (
 })
 
 test('parse: the item cap is a shared budget across multiple saved_posts.json files, not reset per file', () => {
-  const result = parse(files({
-    'part1/saved_posts.json': savedPostsJson(70_000, 'a'),
-    'part2/saved_posts.json': savedPostsJson(70_000, 'b'),
-  }))
+  const result = parse(
+    files({
+      'part1/saved_posts.json': savedPostsJson(70_000, 'a'),
+      'part2/saved_posts.json': savedPostsJson(70_000, 'b'),
+    }),
+  )
   assert.equal(result.items.length, 100_000)
-  assert.ok(result.warnings.some((w) => w.includes('item cap reached')))
+  assert.ok(result.warnings.some(w => w.includes('item cap reached')))
 })
 
 test('parse: corrupt JSON in one file does not fail the whole import; it is reported as a warning', () => {
-  const result = parse(files({
-    'your_instagram_activity/saved/saved_posts.json': '{not valid json',
-    'your_instagram_activity/saved/saved_collections.json': COLLECTIONS,
-  }))
+  const result = parse(
+    files({
+      'your_instagram_activity/saved/saved_posts.json': '{not valid json',
+      'your_instagram_activity/saved/saved_collections.json': COLLECTIONS,
+    }),
+  )
   assert.equal(result.items.length, 0)
-  assert.ok(result.warnings.some((w) => w.includes('saved_posts.json could not be parsed')))
+  assert.ok(result.warnings.some(w => w.includes('saved_posts.json could not be parsed')))
 })
 
 test('parse: a post can belong to more than one collection', () => {
@@ -273,10 +330,12 @@ test('parse: a post can belong to more than one collection', () => {
       { title: 'Favorites', list: [{ href: 'https://www.instagram.com/reel/DEF456/' }] },
     ],
   })
-  const result = parse(files({
-    'your_instagram_activity/saved/saved_posts.json': SAVED,
-    'your_instagram_activity/saved/saved_collections.json': twoCollections,
-  }))
+  const result = parse(
+    files({
+      'your_instagram_activity/saved/saved_posts.json': SAVED,
+      'your_instagram_activity/saved/saved_collections.json': twoCollections,
+    }),
+  )
   assert.deepEqual(collectionsOf(result, 'https://www.instagram.com/reel/DEF456/'), ['Favorites', 'Recipes'])
 })
 
@@ -288,13 +347,15 @@ test('parseCollections: titled href-bearing leaves are not stolen as their own c
   // invents a "natgeo"/"chefsteps" collection out of these leaf link entries
   // instead of leaving both hrefs under their real wrapper, "Recipes".
   const json = {
-    saved_saved_collections: [{
-      title: 'Recipes',
-      list: [
-        { title: 'natgeo', href: 'https://www.instagram.com/p/A/' },
-        { title: 'chefsteps', href: 'https://www.instagram.com/p/B/' },
-      ],
-    }],
+    saved_saved_collections: [
+      {
+        title: 'Recipes',
+        list: [
+          { title: 'natgeo', href: 'https://www.instagram.com/p/A/' },
+          { title: 'chefsteps', href: 'https://www.instagram.com/p/B/' },
+        ],
+      },
+    ],
   }
   const map = parseCollections(json)
   assert.deepEqual([...map.keys()], ['Recipes'])
@@ -306,13 +367,15 @@ test('parseCollections: titled href-bearing leaves are not stolen as their own c
 
 test('parseCollections: nested wrapper collections still work alongside the titled-leaf fix', () => {
   const json = {
-    saved_saved_collections: [{
-      title: 'Saved',
-      groups: [
-        { title: 'Recipes', list: [{ href: 'https://www.instagram.com/reel/R/' }] },
-        { title: 'Travel', list: [{ href: 'https://www.instagram.com/p/T/' }] },
-      ],
-    }],
+    saved_saved_collections: [
+      {
+        title: 'Saved',
+        groups: [
+          { title: 'Recipes', list: [{ href: 'https://www.instagram.com/reel/R/' }] },
+          { title: 'Travel', list: [{ href: 'https://www.instagram.com/p/T/' }] },
+        ],
+      },
+    ],
   }
   const map = parseCollections(json)
   assert.deepEqual([...map.keys()].sort(), ['Recipes', 'Travel'])
@@ -323,7 +386,9 @@ test('deriveNote: is total even for an absurdly large finite savedAt (1e300) tha
   // new Date(1e300 * 1000).toISOString() throws RangeError — anything past
   // ~8.64e12 seconds is outside Date's representable range, and 1e300 is
   // finite so a bare Number.isFinite guard would let it through.
-  assert.doesNotThrow(() => deriveNote({ url: 'https://www.instagram.com/p/X/', poster: 'x', savedAt: 1e300, collections: [] }))
+  assert.doesNotThrow(() =>
+    deriveNote({ url: 'https://www.instagram.com/p/X/', poster: 'x', savedAt: 1e300, collections: [] }),
+  )
   const note = deriveNote({ url: 'https://www.instagram.com/p/X/', poster: 'x', savedAt: 1e300, collections: [] })
   assert.ok(note.createdAt) // falls back to "now" rather than an Invalid Date
 })
@@ -334,13 +399,15 @@ test('parseSavedPosts: an oversized permalink href falls back to a shorter usabl
   // the whole row even though a perfectly usable fallback href exists.
   const hugePermalink = 'https://www.instagram.com/p/' + 'A'.repeat(3000) + '/'
   const json = {
-    saved_saved_media: [{
-      title: 'natgeo',
-      string_map_data: {
-        'Saved on': { href: hugePermalink, timestamp: 1721001600 },
-        Fallback: { href: 'https://www.instagram.com/other/short/', timestamp: 1721001600 },
+    saved_saved_media: [
+      {
+        title: 'natgeo',
+        string_map_data: {
+          'Saved on': { href: hugePermalink, timestamp: 1721001600 },
+          Fallback: { href: 'https://www.instagram.com/other/short/', timestamp: 1721001600 },
+        },
       },
-    }],
+    ],
   }
   const items = parseSavedPosts(json)
   assert.equal(items.length, 1)
@@ -350,20 +417,21 @@ test('parseSavedPosts: an oversized permalink href falls back to a shorter usabl
 test('parse: an oversized href is counted and warned about rather than silently dropped', () => {
   const hugeUrl = 'https://www.instagram.com/p/' + 'A'.repeat(3000) + '/'
   const json = JSON.stringify({
-    saved_saved_media: [
-      { title: 'huge', string_map_data: { 'Saved on': { href: hugeUrl, timestamp: 1 } } },
-    ],
+    saved_saved_media: [{ title: 'huge', string_map_data: { 'Saved on': { href: hugeUrl, timestamp: 1 } } }],
   })
   const result = parse(files({ 'your_instagram_activity/saved/saved_posts.json': json }))
   assert.equal(result.items.length, 0)
-  assert.ok(result.warnings.some((w) => w.includes('unusable URL')))
+  assert.ok(result.warnings.some(w => w.includes('unusable URL')))
 })
 
 test('parse: an unrecognized saved_posts.json shape warns instead of silently reporting "imported 0"', () => {
   for (const shape of [{ something_else: 1 }, [], 'a string']) {
     const result = parse(files({ 'your_instagram_activity/saved/saved_posts.json': JSON.stringify(shape) }))
     assert.equal(result.items.length, 0)
-    assert.ok(result.warnings.some((w) => w.includes('no recognizable saved posts')), `expected a warning for shape ${JSON.stringify(shape)}`)
+    assert.ok(
+      result.warnings.some(w => w.includes('no recognizable saved posts')),
+      `expected a warning for shape ${JSON.stringify(shape)}`,
+    )
   }
 })
 
@@ -371,16 +439,21 @@ test('parse: collection membership stays linear at scale (was O(items × collect
   const rows = []
   const collectionEntries = []
   for (let i = 0; i < 5000; i++) {
-    rows.push({ title: `p${i}`, string_map_data: { 'Saved on': { href: `https://www.instagram.com/p/${i}/`, timestamp: 1 } } })
+    rows.push({
+      title: `p${i}`,
+      string_map_data: { 'Saved on': { href: `https://www.instagram.com/p/${i}/`, timestamp: 1 } },
+    })
     collectionEntries.push({ title: `c${i}`, list: [{ href: `https://www.instagram.com/p/${i}/` }] })
   }
   const savedJson = JSON.stringify({ saved_saved_media: rows })
   const collectionsJson = JSON.stringify({ saved_saved_collections: collectionEntries })
   const start = Date.now()
-  const result = parse(files({
-    'your_instagram_activity/saved/saved_posts.json': savedJson,
-    'your_instagram_activity/saved/saved_collections.json': collectionsJson,
-  }))
+  const result = parse(
+    files({
+      'your_instagram_activity/saved/saved_posts.json': savedJson,
+      'your_instagram_activity/saved/saved_collections.json': collectionsJson,
+    }),
+  )
   const elapsed = Date.now() - start
   assert.equal(result.items.length, 5000)
   assert.deepEqual(collectionsOf(result, 'https://www.instagram.com/p/2500/'), ['c2500'])
@@ -409,7 +482,19 @@ const SAVED_LABEL_VALUES = JSON.stringify([
       { label: 'Caption', value: 'a caption' },
       { label: 'Title', value: '' },
       { dict: [], title: 'Hashtags' },
-      { dict: [{ dict: [{ label: 'URL', value: '' }, { label: 'Name', value: 'ChefSteps' }, { label: 'Username', value: 'chefsteps' }], title: '' }], title: 'Owner' },
+      {
+        dict: [
+          {
+            dict: [
+              { label: 'URL', value: '' },
+              { label: 'Name', value: 'ChefSteps' },
+              { label: 'Username', value: 'chefsteps' },
+            ],
+            title: '',
+          },
+        ],
+        title: 'Owner',
+      },
     ],
     fbid: '1',
   },
@@ -485,13 +570,36 @@ const COLLECTIONS_LABEL_VALUES = JSON.stringify([
       {
         title: 'Media',
         dict: [
-          { title: '', dict: [
-            { label: 'URL', value: 'https://www.instagram.com/reel/AAA/', href: 'https://www.instagram.com/reel/AAA/' },
-            { label: 'Caption', value: 'movements #cinematic' },
-            { title: 'Hashtags', dict: [{ title: '', dict: [{ label: 'Name', value: 'cinematic' }] }] },
-            { title: 'Owner', dict: [{ title: '', dict: [{ label: 'URL', value: '' }, { label: 'Username', value: 'someone' }] }] },
-          ] },
-          { title: '', dict: [{ label: 'URL', value: 'https://www.instagram.com/p/BBB/', href: 'https://www.instagram.com/p/BBB/' }] },
+          {
+            title: '',
+            dict: [
+              {
+                label: 'URL',
+                value: 'https://www.instagram.com/reel/AAA/',
+                href: 'https://www.instagram.com/reel/AAA/',
+              },
+              { label: 'Caption', value: 'movements #cinematic' },
+              { title: 'Hashtags', dict: [{ title: '', dict: [{ label: 'Name', value: 'cinematic' }] }] },
+              {
+                title: 'Owner',
+                dict: [
+                  {
+                    title: '',
+                    dict: [
+                      { label: 'URL', value: '' },
+                      { label: 'Username', value: 'someone' },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            title: '',
+            dict: [
+              { label: 'URL', value: 'https://www.instagram.com/p/BBB/', href: 'https://www.instagram.com/p/BBB/' },
+            ],
+          },
         ],
       },
     ],
@@ -501,7 +609,21 @@ const COLLECTIONS_LABEL_VALUES = JSON.stringify([
     media: [],
     label_values: [
       { label: 'Name', value: 'Recipes' },
-      { title: 'Media', dict: [{ title: '', dict: [{ label: 'URL', value: 'https://www.instagram.com/reel/CCC/', href: 'https://www.instagram.com/reel/CCC/' }] }] },
+      {
+        title: 'Media',
+        dict: [
+          {
+            title: '',
+            dict: [
+              {
+                label: 'URL',
+                value: 'https://www.instagram.com/reel/CCC/',
+                href: 'https://www.instagram.com/reel/CCC/',
+              },
+            ],
+          },
+        ],
+      },
     ],
   },
 ])
@@ -522,8 +644,18 @@ test('parseCollections: newer array shape keeps each collection separate instead
 
 test('parse: newer-shape posts and collections join up end to end', () => {
   const posts = JSON.stringify([
-    { timestamp: 1721001600, label_values: [{ label: 'URL', value: 'https://www.instagram.com/reel/AAA/', href: 'https://www.instagram.com/reel/AAA/' }] },
-    { timestamp: 1721001601, label_values: [{ label: 'URL', value: 'https://www.instagram.com/reel/CCC/', href: 'https://www.instagram.com/reel/CCC/' }] },
+    {
+      timestamp: 1721001600,
+      label_values: [
+        { label: 'URL', value: 'https://www.instagram.com/reel/AAA/', href: 'https://www.instagram.com/reel/AAA/' },
+      ],
+    },
+    {
+      timestamp: 1721001601,
+      label_values: [
+        { label: 'URL', value: 'https://www.instagram.com/reel/CCC/', href: 'https://www.instagram.com/reel/CCC/' },
+      ],
+    },
   ])
   const result = parse(files({ 'saved_posts.json': posts, 'saved_collections.json': COLLECTIONS_LABEL_VALUES }))
   assert.deepEqual(collectionsOf(result, 'https://www.instagram.com/reel/AAA/'), ['Filming Style'])
@@ -549,7 +681,7 @@ test('parse: a caption that merely starts with a URL is not reported as an unusa
   ])
   const result = parse(files({ 'saved_posts.json': rows }))
   assert.equal(result.items.length, 0)
-  assert.ok(!result.warnings.some((w) => /unusable URL/.test(w)))
+  assert.ok(!result.warnings.some(w => /unusable URL/.test(w)))
 })
 
 test('deriveNote: persists the poster username as a first-class `account` field', () => {

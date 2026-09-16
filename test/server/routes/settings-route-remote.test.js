@@ -12,9 +12,14 @@ import * as settings from '../../../server/data/settings.js'
 
 function fakeRes() {
   return {
-    statusCode: 0, body: null,
-    writeHead(code) { this.statusCode = code },
-    end(body) { this.body = JSON.parse(body) },
+    statusCode: 0,
+    body: null,
+    writeHead(code) {
+      this.statusCode = code
+    },
+    end(body) {
+      this.body = JSON.parse(body)
+    },
   }
 }
 
@@ -121,15 +126,21 @@ test('a mixed install is gated on the stored flag, not on endpoint ids', async (
 // provider reads back.
 test('POST /api/setup stores endpoint ids on a pure-remote install', async () => {
   await initProvider('remote', {}, { localAvailable: false })
-  const req = Readable.from([Buffer.from(JSON.stringify({
-    remote: { llm: 'gpt-oss:120b', embed: 'nomic-embed-text', vision: 'llava' },
-  }))])
+  const req = Readable.from([
+    Buffer.from(
+      JSON.stringify({
+        remote: { llm: 'gpt-oss:120b', embed: 'nomic-embed-text', vision: 'llava' },
+      }),
+    ),
+  ])
   const res = fakeRes()
   const localBefore = settings.get()
   await handleSetup(req, res)
   assert.equal(res.statusCode, 200)
   assert.deepEqual(settings.getRemote(), {
-    llm: 'gpt-oss:120b', embed: 'nomic-embed-text', vision: 'llava',
+    llm: 'gpt-oss:120b',
+    embed: 'nomic-embed-text',
+    vision: 'llava',
   })
   // The local columns keep their preset defaults: an endpoint id written there
   // would be read back as a QVAC registry key and resolve to nothing.

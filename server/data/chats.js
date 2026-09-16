@@ -10,7 +10,10 @@ let loaded = false
 export async function load() {
   if (loaded) return
   const db = await getDb()
-  chats = db.prepare('SELECT data FROM chats ORDER BY seq DESC').all().map((r) => JSON.parse(r.data))
+  chats = db
+    .prepare('SELECT data FROM chats ORDER BY seq DESC')
+    .all()
+    .map(r => JSON.parse(r.data))
   loaded = true
 }
 
@@ -48,7 +51,7 @@ export async function clearAll() {
 // Full chats (messages included) — used by export, unlike the history
 // view's list() which deliberately omits them.
 export function all() {
-  return chats.map((c) => ({ ...c, messages: c.messages.map((m) => ({ ...m })) }))
+  return chats.map(c => ({ ...c, messages: c.messages.map(m => ({ ...m })) }))
 }
 
 // Lightweight list for the history view (no messages). Paged, because the Ask
@@ -59,18 +62,18 @@ export function list({ offset = 0, limit = null } = {}) {
   const page = limit === null ? chats.slice(offset) : chats.slice(offset, offset + limit)
   return {
     total: chats.length,
-    chats: page.map((c) => ({
+    chats: page.map(c => ({
       id: c.id,
       title: c.title,
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
-      questions: c.messages.filter((m) => m.role === 'user').length,
+      questions: c.messages.filter(m => m.role === 'user').length,
     })),
   }
 }
 
 export function get(id) {
-  return chats.find((c) => c.id === id) || null
+  return chats.find(c => c.id === id) || null
 }
 
 // The tail of a chat's messages, for the answer prompt and the retrieval
@@ -83,14 +86,14 @@ export function get(id) {
 export function recentMessages(id, turns = 3) {
   const chat = id ? get(id) : null
   if (!chat) return []
-  return chat.messages.slice(-turns * 2).map((m) => ({ role: m.role, text: m.text || '' }))
+  return chat.messages.slice(-turns * 2).map(m => ({ role: m.role, text: m.text || '' }))
 }
 
 // Append a question/answer pair, creating the chat when chatId is null.
 // Returns the chat (most recently used chats float to the top).
 export async function appendExchange(chatId, userMsg, aiMsg) {
   const now = new Date().toISOString()
-  let chat = chatId ? chats.find((c) => c.id === chatId) : null
+  let chat = chatId ? chats.find(c => c.id === chatId) : null
   if (!chat) {
     chat = {
       id: randomUUID(),
@@ -103,7 +106,7 @@ export async function appendExchange(chatId, userMsg, aiMsg) {
   }
   chat.messages.push({ ts: now, ...userMsg }, { ts: now, ...aiMsg })
   chat.updatedAt = now
-  chats = [chat, ...chats.filter((c) => c.id !== chat.id)]
+  chats = [chat, ...chats.filter(c => c.id !== chat.id)]
   upsertRow(await getDb(), chat)
   return chat
 }
@@ -111,9 +114,11 @@ export async function appendExchange(chatId, userMsg, aiMsg) {
 // Rename a conversation. The title is otherwise derived from the first
 // question, which is a poor label for a thread that wandered.
 export async function rename(id, title) {
-  const chat = chats.find((c) => c.id === id)
+  const chat = chats.find(c => c.id === id)
   if (!chat) return null
-  const next = String(title || '').trim().slice(0, 80)
+  const next = String(title || '')
+    .trim()
+    .slice(0, 80)
   if (!next) return null
   chat.title = next
   chat.updatedAt = new Date().toISOString()
@@ -123,7 +128,7 @@ export async function rename(id, title) {
 
 export async function remove(id) {
   const before = chats.length
-  chats = chats.filter((c) => c.id !== id)
+  chats = chats.filter(c => c.id !== id)
   const changed = chats.length !== before
   if (changed) (await getDb()).prepare('DELETE FROM chats WHERE id = ?').run(id)
   return changed

@@ -9,8 +9,8 @@ import { PEEK, SLOP_PX, slideAt, nextIndex } from '../layout/carousel'
 interface CarouselProps {
   slides: string[]
   alt?: string
-  onOpen?: () => void   // a tap that wasn't a drag — opens the source post
-  badge?: ReactNode     // brand chip pinned to the active slide
+  onOpen?: () => void // a tap that wasn't a drag — opens the source post
+  badge?: ReactNode // brand chip pinned to the active slide
 }
 
 export function Carousel({ slides, alt, onOpen, badge }: CarouselProps) {
@@ -29,12 +29,16 @@ export function Carousel({ slides, alt, onOpen, badge }: CarouselProps) {
   const startX = useRef<number | null>(null)
   const dragged = useRef(false)
 
-  useEffect(() => { setI(0); setDrag(0); setLoaded({}) }, [slides.join('|')])
+  useEffect(() => {
+    setI(0)
+    setDrag(0)
+    setLoaded({})
+  }, [slides.join('|')])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') setI((v) => Math.min(slides.length - 1, v + 1))
-      if (e.key === 'ArrowLeft') setI((v) => Math.max(0, v - 1))
+      if (e.key === 'ArrowRight') setI(v => Math.min(slides.length - 1, v + 1))
+      if (e.key === 'ArrowLeft') setI(v => Math.max(0, v - 1))
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -58,7 +62,7 @@ export function Carousel({ slides, alt, onOpen, badge }: CarouselProps) {
     startX.current = null
     setDrag(0)
     if (!dragged.current) return onOpen?.()
-    setI((v) => nextIndex(v, dx, slides.length))
+    setI(v => nextIndex(v, dx, slides.length))
     e.currentTarget.releasePointerCapture(e.pointerId)
   }
 
@@ -90,8 +94,8 @@ export function Carousel({ slides, alt, onOpen, badge }: CarouselProps) {
                 alt={alt || ''}
                 draggable={false}
                 loading={Math.abs(idx - i) <= 1 ? 'eager' : 'lazy'}
-                onLoad={(e) => {
-                  setLoaded((m) => (m[src] ? m : { ...m, [src]: true }))
+                onLoad={e => {
+                  setLoaded(m => (m[src] ? m : { ...m, [src]: true }))
                   if (idx !== 0) return
                   const el = e.currentTarget
                   if (el.naturalWidth && el.naturalHeight) {

@@ -31,7 +31,7 @@ let backupInProgress = false
 // literal. The filename itself is server-generated, so the only caller-shaped
 // part of this path is DATA_DIR, from the operator's own environment; doubling
 // quotes keeps a directory name containing one from breaking the statement.
-const sqlLiteral = (value) => `'${value.replace(/'/g, "''")}'`
+const sqlLiteral = value => `'${value.replace(/'/g, "''")}'`
 
 export async function handleBackup(req, res) {
   // An import holds a batch of notes in memory and writes them at the end (see

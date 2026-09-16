@@ -28,20 +28,20 @@ mock.module('../../../server/data/notes.js', {
   namedExports: {
     ...realStore,
     allNotes: () => notes,
-    getNote: (id) => notes.find((n) => n.id === id) ?? null,
+    getNote: id => notes.find(n => n.id === id) ?? null,
     updateNote: async (id, patch) => {
-      const n = notes.find((x) => x.id === id)
+      const n = notes.find(x => x.id === id)
       if (n) Object.assign(n, patch) // mirrors real updateNote's shallow merge
       return n
     },
   },
 })
 mock.module('../../../server/lib/tags.js', { namedExports: { ...realTags, buildVocabulary: () => [] } })
-mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async (t) => t } })
+mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async t => t } })
 mock.module('../../../server/ai/index.js', {
   namedExports: {
     ...realNormalise,
-    classify: async (args) => {
+    classify: async args => {
       classifyCalls.push(args)
       return { type: 'video', category: 'General', title: 'T', summary: 'S', tags: [] }
     },
@@ -57,7 +57,15 @@ const enrich = await import('../../../server/ai/enrich.js')
 const tags = await import('../../../server/lib/tags.js')
 
 function meta(over = {}) {
-  return { siteTitle: 'A video', siteDesc: `by ${AUTHOR}`, siteName: 'TikTok', thumb: null, article: null, author: AUTHOR, ...over }
+  return {
+    siteTitle: 'A video',
+    siteDesc: `by ${AUTHOR}`,
+    siteName: 'TikTok',
+    thumb: null,
+    article: null,
+    author: AUTHOR,
+    ...over,
+  }
 }
 
 test('an oEmbed author becomes the note account when it has none', async () => {
@@ -67,7 +75,7 @@ test('an oEmbed author becomes the note account when it has none', async () => {
 
   await enrich.queueEnrich('n1', { absPath: null, text: URL_, isUrl: true, hasImage: false })
 
-  assert.equal(notes.find((n) => n.id === 'n1').account, AUTHOR)
+  assert.equal(notes.find(n => n.id === 'n1').account, AUTHOR)
 })
 
 test('the account tag lands in the SAME run, not a later sweep', async () => {
@@ -79,7 +87,7 @@ test('the account tag lands in the SAME run, not a later sweep', async () => {
   // Whatever shape withAccountTag gives an account tag, the note must carry it
   // — reading `existing.account` alone would leave tags empty here, and a
   // second pass never comes because classify is already marked done.
-  const stored = notes.find((n) => n.id === 'n1')
+  const stored = notes.find(n => n.id === 'n1')
   assert.deepEqual(stored.tags, tags.withAccountTag([], AUTHOR))
   assert.ok(stored.tags.length > 0, 'an account tag was actually produced')
 })
@@ -92,7 +100,7 @@ test('an account the note already has is never overwritten by a provider display
 
   await enrich.queueEnrich('n1', { absPath: null, text: URL_, isUrl: true, hasImage: false })
 
-  assert.equal(notes.find((n) => n.id === 'n1').account, 'natgeo')
+  assert.equal(notes.find(n => n.id === 'n1').account, 'natgeo')
 })
 
 test('no author from the provider leaves account alone rather than writing null over it', async () => {
@@ -101,5 +109,5 @@ test('no author from the provider leaves account alone rather than writing null 
 
   await enrich.queueEnrich('n1', { absPath: null, text: URL_, isUrl: true, hasImage: false })
 
-  assert.equal(notes.find((n) => n.id === 'n1').account, null)
+  assert.equal(notes.find(n => n.id === 'n1').account, null)
 })

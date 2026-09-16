@@ -35,7 +35,7 @@ await store.load()
 const HOOK = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../docker/hooks/pre-backup')
 
 const server = createServer()
-await new Promise((r) => server.listen(0, '127.0.0.1', r))
+await new Promise(r => server.listen(0, '127.0.0.1', r))
 const PORT = String(server.address().port)
 after(() => {
   server.close()
@@ -45,9 +45,10 @@ after(() => {
 // Resolves to { code, stdout, stderr } rather than rejecting, so a non-zero
 // exit is an assertable value instead of a thrown error.
 function runHook(env = {}) {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     execFile('node', [HOOK], { env: { ...process.env, PORT, ...env } }, (err, stdout, stderr) =>
-      resolve({ code: err ? err.code ?? 1 : 0, stdout, stderr }))
+      resolve({ code: err ? (err.code ?? 1) : 0, stdout, stderr }),
+    )
   })
 }
 

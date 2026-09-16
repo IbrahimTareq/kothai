@@ -15,14 +15,25 @@ function db() {
 test('adds a column that is missing', () => {
   const d = db()
   ensureColumns(d, 't', { b: 'TEXT' })
-  assert.ok(d.prepare('PRAGMA table_info(t)').all().some((c) => c.name === 'b'))
+  assert.ok(
+    d
+      .prepare('PRAGMA table_info(t)')
+      .all()
+      .some(c => c.name === 'b'),
+  )
 })
 
 test('is idempotent — running twice does not throw', () => {
   const d = db()
   ensureColumns(d, 't', { b: 'TEXT' })
   ensureColumns(d, 't', { b: 'TEXT' })
-  assert.equal(d.prepare('PRAGMA table_info(t)').all().filter((c) => c.name === 'b').length, 1)
+  assert.equal(
+    d
+      .prepare('PRAGMA table_info(t)')
+      .all()
+      .filter(c => c.name === 'b').length,
+    1,
+  )
 })
 
 test('leaves existing rows intact, with NULL in the new column', () => {
@@ -38,6 +49,9 @@ test('adds several columns in one call and skips the ones already present', () =
   const d = db()
   ensureColumns(d, 't', { b: 'TEXT' })
   ensureColumns(d, 't', { b: 'TEXT', c: 'TEXT', d: 'INTEGER' })
-  const names = d.prepare('PRAGMA table_info(t)').all().map((c) => c.name)
+  const names = d
+    .prepare('PRAGMA table_info(t)')
+    .all()
+    .map(c => c.name)
   assert.deepEqual(names, ['id', 'a', 'b', 'c', 'd'])
 })

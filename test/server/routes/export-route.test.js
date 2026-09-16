@@ -14,7 +14,7 @@ mock.module('../../../server/data/notes.js', {
   namedExports: {
     ...realStore,
     allNotes: () => [{ id: 'n1', title: 'Note one', embedding: null }],
-    getNote: (id) => (id === 'n1' ? { id: 'n1', title: 'Note one', embedding: null } : null),
+    getNote: id => (id === 'n1' ? { id: 'n1', title: 'Note one', embedding: null } : null),
   },
 })
 mock.module('../../../server/data/collections.js', {
@@ -44,8 +44,13 @@ function fakeRes() {
     statusCode: null,
     headers: null,
     body: null,
-    writeHead(code, headers) { this.statusCode = code; this.headers = headers },
-    end(str) { this.body = str },
+    writeHead(code, headers) {
+      this.statusCode = code
+      this.headers = headers
+    },
+    end(str) {
+      this.body = str
+    },
   }
 }
 

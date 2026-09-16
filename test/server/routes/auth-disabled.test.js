@@ -12,7 +12,7 @@ import test, { after } from 'node:test'
 import assert from 'node:assert/strict'
 
 const server = createServer()
-await new Promise((r) => server.listen(0, '127.0.0.1', r))
+await new Promise(r => server.listen(0, '127.0.0.1', r))
 const BASE = `http://127.0.0.1:${server.address().port}`
 after(() => server.close())
 

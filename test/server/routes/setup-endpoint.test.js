@@ -16,13 +16,18 @@ import { readCredentials } from '../../../server/data/credentials.js'
 
 function fakeRes() {
   return {
-    statusCode: 0, body: null,
-    writeHead(code) { this.statusCode = code },
-    end(body) { this.body = JSON.parse(body) },
+    statusCode: 0,
+    body: null,
+    writeHead(code) {
+      this.statusCode = code
+    },
+    end(body) {
+      this.body = JSON.parse(body)
+    },
   }
 }
 
-const fakeReq = (body) => Readable.from([Buffer.from(JSON.stringify(body))])
+const fakeReq = body => Readable.from([Buffer.from(JSON.stringify(body))])
 const dir = () => mkdtempSync(path.join(tmpdir(), 'kothai-setup-'))
 
 // A stand-in provider. Without this, initProvider('local') resolves the REAL
@@ -30,7 +35,7 @@ const dir = () => mkdtempSync(path.join(tmpdir(), 'kothai-setup-'))
 // of weights — which is what hung an earlier version of this file. The facade
 // reaches local-only calls through L()?.boot?.() and friends, so a fake that
 // omits them is fine: those resolve to Promise.resolve().
-const fakeProvider = (kind) => ({
+const fakeProvider = kind => ({
   init: async () => {},
   capabilities: () => ({ kind, managesResidency: kind === 'local', downloadsWeights: kind === 'local' }),
   statusSnapshot: () => ({ roles: {}, aggregate: { state: 'ready', progress: 100, message: 'Ready' } }),
@@ -39,7 +44,7 @@ const fakeProvider = (kind) => ({
   applySettings: async () => {},
   shutdown: async () => {},
 })
-const load = (kind) => Promise.resolve(fakeProvider(kind))
+const load = kind => Promise.resolve(fakeProvider(kind))
 
 // Unreachable on purpose: remote.init() probes /models best-effort and
 // swallows the failure, so a refused connection settles instantly instead of
@@ -74,11 +79,9 @@ test('an endpoint posted at first run is stored and takes effect immediately', a
 test('the credential file is 0600', async () => {
   const d = dir()
   await initProvider('local', {}, { load, localAvailable: true })
-  await handleSetup(
-    fakeReq({ endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-x' } }),
-    fakeRes(),
-    { dir: d },
-  )
+  await handleSetup(fakeReq({ endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-x' } }), fakeRes(), {
+    dir: d,
+  })
   assert.equal(statSync(path.join(d, 'credentials.json')).mode & 0o777, 0o600)
 })
 
@@ -103,7 +106,7 @@ test('GET /api/settings offers the catalogue so the wizard can render tiles', as
   const res = fakeRes()
   await handleGetSettings(res)
   assert.ok(Array.isArray(res.body.endpoints))
-  assert.ok(res.body.endpoints.some((e) => e.id === 'openai'))
+  assert.ok(res.body.endpoints.some(e => e.id === 'openai'))
 })
 
 test('GET /api/settings still never echoes a credential', async () => {
@@ -122,11 +125,9 @@ test('applying an endpoint mid-first-run does not mark the install configured', 
   const d = dir()
   await initProvider('local', {}, { load, localAvailable: true })
   const res = fakeRes()
-  await handleSetupEndpoint(
-    fakeReq({ endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-mid' } }),
-    res,
-    { dir: d },
-  )
+  await handleSetupEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-mid' } }), res, {
+    dir: d,
+  })
   assert.equal(res.statusCode, 200)
   assert.deepEqual(readCredentials(d), { baseUrl: ENDPOINT, apiKey: 'sk-mid', providerId: 'openai' })
   assert.equal(settings.isConfigured(), false, 'first run must still be open')
@@ -136,11 +137,9 @@ test('applying an endpoint reports the capabilities the picker should draw again
   const d = dir()
   await initProvider('local', {}, { load, localAvailable: true })
   const res = fakeRes()
-  await handleSetupEndpoint(
-    fakeReq({ endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-mid' } }),
-    res,
-    { dir: d },
-  )
+  await handleSetupEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-mid' } }), res, {
+    dir: d,
+  })
   assert.ok(res.body.capabilities, 'the client re-reads roles from this')
   assert.equal(res.body.capabilities.roles.llm, 'remote')
 })
@@ -220,7 +219,11 @@ test('connecting a provider then finishing first run is not "already configured"
   assert.equal(applied.statusCode, 200)
 
   const done = fakeRes()
-  await handleSetup(fakeReq({ remote: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small', vision: 'gpt-4o-mini' } }), done, { dir: d })
+  await handleSetup(
+    fakeReq({ remote: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small', vision: 'gpt-4o-mini' } }),
+    done,
+    { dir: d },
+  )
   assert.equal(done.statusCode, 200, `Save & start was refused: ${JSON.stringify(done.body)}`)
   assert.equal(settings.isConfigured(), true, 'and first run is genuinely over afterwards')
 })

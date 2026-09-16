@@ -33,7 +33,12 @@ export function isMediaFirst(item: UIItem): boolean {
 }
 
 const LABELS: Record<Brand, string> = {
-  github: 'GitHub', x: 'X', youtube: 'YouTube', reddit: 'Reddit', instagram: 'Instagram', tiktok: 'TikTok',
+  github: 'GitHub',
+  x: 'X',
+  youtube: 'YouTube',
+  reddit: 'Reddit',
+  instagram: 'Instagram',
+  tiktok: 'TikTok',
 }
 
 // Human label for the item's source (brand name, else the bare host, else 'Web').
@@ -62,23 +67,64 @@ export const ACCENTS = [
   '#9d7dff', // ion violet
 ]
 
-
 // Popular saved sources for the Everything-page filter pills. Each is a host/url
 // predicate over a saved item — sources are just types narrowed by platform.
-export interface SourceDef { key: string; label: string; dot: string; glyph?: string; test: (i: UIItem) => boolean }
+export interface SourceDef {
+  key: string
+  label: string
+  dot: string
+  glyph?: string
+  test: (i: UIItem) => boolean
+}
 export const PLATFORMS: SourceDef[] = [
-  { key: 'github', label: 'GitHub', dot: '#a371f7', glyph: 'github', test: (i) => /(^|\.)github\.com$/.test(i.host || '') },
-  { key: 'reels', label: 'Instagram Reels', dot: '#e1306c', glyph: 'instagram', test: (i) => /instagram\.com\/reel/i.test(i.url || '') },
-  { key: 'igposts', label: 'Instagram Posts', dot: '#c13584', glyph: 'instagram', test: (i) => /instagram\.com\/p\//i.test(i.url || '') },
-  { key: 'x', label: 'X', dot: '#5aa9e6', glyph: 'x', test: (i) => /(^|\.)(twitter\.com|x\.com)$/.test(i.host || '') },
-  { key: 'tiktok', label: 'TikTok', dot: '#26c9c3', glyph: 'tiktok', test: (i) => /(^|\.)tiktok\.com$/.test(i.host || '') },
-  { key: 'reddit', label: 'Reddit', dot: '#ff4500', glyph: 'reddit', test: (i) => /(^|\.)reddit\.com$/.test(i.host || '') },
+  {
+    key: 'github',
+    label: 'GitHub',
+    dot: '#a371f7',
+    glyph: 'github',
+    test: i => /(^|\.)github\.com$/.test(i.host || ''),
+  },
+  {
+    key: 'reels',
+    label: 'Instagram Reels',
+    dot: '#e1306c',
+    glyph: 'instagram',
+    test: i => /instagram\.com\/reel/i.test(i.url || ''),
+  },
+  {
+    key: 'igposts',
+    label: 'Instagram Posts',
+    dot: '#c13584',
+    glyph: 'instagram',
+    test: i => /instagram\.com\/p\//i.test(i.url || ''),
+  },
+  { key: 'x', label: 'X', dot: '#5aa9e6', glyph: 'x', test: i => /(^|\.)(twitter\.com|x\.com)$/.test(i.host || '') },
+  {
+    key: 'tiktok',
+    label: 'TikTok',
+    dot: '#26c9c3',
+    glyph: 'tiktok',
+    test: i => /(^|\.)tiktok\.com$/.test(i.host || ''),
+  },
+  {
+    key: 'reddit',
+    label: 'Reddit',
+    dot: '#ff4500',
+    glyph: 'reddit',
+    test: i => /(^|\.)reddit\.com$/.test(i.host || ''),
+  },
 ]
 export const SOURCES: SourceDef[] = [
   ...PLATFORMS,
-  { key: 'web', label: 'Web', dot: '#8a94a6', glyph: 'web', test: (i) => (i.type === 'link' || i.type === 'video') && !!i.host && !PLATFORMS.some((s) => s.test(i)) },
+  {
+    key: 'web',
+    label: 'Web',
+    dot: '#8a94a6',
+    glyph: 'web',
+    test: i => (i.type === 'link' || i.type === 'video') && !!i.host && !PLATFORMS.some(s => s.test(i)),
+  },
 ]
-export const SOURCE_BY_KEY: Record<string, SourceDef> = Object.fromEntries(SOURCES.map((s) => [s.key, s]))
+export const SOURCE_BY_KEY: Record<string, SourceDef> = Object.fromEntries(SOURCES.map(s => [s.key, s]))
 
 // Whether a tile has content still on its way, and so should render as loading
 // rather than as a finished tile whose picture happens to be a gradient.

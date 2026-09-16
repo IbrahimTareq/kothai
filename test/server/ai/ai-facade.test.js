@@ -40,17 +40,11 @@ test('_selectProvider loads the remote provider when configured remote', async (
 
 test('a missing @qvac/sdk under provider=local produces a lite-image message, not a raw module error', async () => {
   const boom = Object.assign(new Error('Cannot find package @qvac/sdk'), { code: 'ERR_MODULE_NOT_FOUND' })
-  await assert.rejects(
-    () => _selectProvider('local', () => Promise.reject(boom)),
-    /lite image/,
-  )
+  await assert.rejects(() => _selectProvider('local', () => Promise.reject(boom)), /lite image/)
 })
 
 test('a genuine error inside the local provider is not disguised as a missing SDK', async () => {
-  await assert.rejects(
-    () => _selectProvider('local', () => Promise.reject(new Error('syntax error'))),
-    /syntax error/,
-  )
+  await assert.rejects(() => _selectProvider('local', () => Promise.reject(new Error('syntax error'))), /syntax error/)
 })
 
 test('initProvider is idempotent — a second call returns the same instance', async () => {
@@ -68,9 +62,15 @@ function fake(kind) {
   return {
     calls,
     capabilities: () => ({ kind, managesResidency: kind === 'local', downloadsWeights: kind === 'local' }),
-    roleEnabled: (role) => { calls.push(['roleEnabled', role]); return true },
+    roleEnabled: role => {
+      calls.push(['roleEnabled', role])
+      return true
+    },
     available: () => true,
-    validateModel: (role, key) => { calls.push(['validateModel', role, key]); return { ok: true } },
+    validateModel: (role, key) => {
+      calls.push(['validateModel', role, key])
+      return { ok: true }
+    },
     statusSnapshot: () => ({
       roles: {
         llm: { state: 'ready', progress: 100, message: '', model: kind },
@@ -80,13 +80,31 @@ function fake(kind) {
       aggregate: { state: 'ready', progress: 100, message: kind },
     }),
     listModels: async () => ({ llm: [{ key: kind }], embed: [{ key: kind }], vision: [{ key: kind }] }),
-    applySettings: async (patch) => { calls.push(['applySettings', patch]) },
-    init: async (cfg) => { calls.push(['init', cfg]) },
-    classify: async () => { calls.push(['classify']); return kind },
-    embedText: async () => { calls.push(['embedText']); return [kind] },
-    describeImage: async () => { calls.push(['describeImage']); return kind },
-    answer: async () => { calls.push(['answer']); return kind },
-    shutdown: async () => { calls.push(['shutdown']) },
+    applySettings: async patch => {
+      calls.push(['applySettings', patch])
+    },
+    init: async cfg => {
+      calls.push(['init', cfg])
+    },
+    classify: async () => {
+      calls.push(['classify'])
+      return kind
+    },
+    embedText: async () => {
+      calls.push(['embedText'])
+      return [kind]
+    },
+    describeImage: async () => {
+      calls.push(['describeImage'])
+      return kind
+    },
+    answer: async () => {
+      calls.push(['answer'])
+      return kind
+    },
+    shutdown: async () => {
+      calls.push(['shutdown'])
+    },
   }
 }
 
@@ -94,11 +112,15 @@ test('mixed routing sends embedding to local and classification to remote', asyn
   _reset()
   const local = fake('local')
   const remote = fake('remote')
-  await initProvider('remote', { local: { embed: 'a' }, remote: { llm: 'b' } }, {
-    load: (kind) => (kind === 'local' ? local : remote),
-    embedProvider: null,
-    localAvailable: true,
-  })
+  await initProvider(
+    'remote',
+    { local: { embed: 'a' }, remote: { llm: 'b' } },
+    {
+      load: kind => (kind === 'local' ? local : remote),
+      embedProvider: null,
+      localAvailable: true,
+    },
+  )
 
   assert.deepEqual(await embedText('hi'), ['local'])
   assert.equal(await classify({ text: 'hi' }), 'remote')
@@ -111,7 +133,7 @@ test('both providers are initialised with the same { local, remote } settings ob
   const local = fake('local')
   const remote = fake('remote')
   const cfg = { local: { embed: 'a' }, remote: { llm: 'b' } }
-  await initProvider('remote', cfg, { load: (k) => (k === 'local' ? local : remote), localAvailable: true })
+  await initProvider('remote', cfg, { load: k => (k === 'local' ? local : remote), localAvailable: true })
   // Identity, not deep equality: a structural clone would satisfy deepEqual
   // while breaking the property that matters — both providers destructure
   // their own half of the one object the caller resolved.
@@ -133,18 +155,24 @@ test('roleEnabled asks the provider that owns the role', async () => {
   _reset()
   const local = fake('local')
   const remote = fake('remote')
-  await initProvider('remote', {}, { load: (k) => (k === 'local' ? local : remote), localAvailable: true })
+  await initProvider('remote', {}, { load: k => (k === 'local' ? local : remote), localAvailable: true })
   roleEnabled('embed')
   roleEnabled('llm')
-  assert.deepEqual(local.calls.filter((c) => c[0] === 'roleEnabled'), [['roleEnabled', 'embed']])
-  assert.deepEqual(remote.calls.filter((c) => c[0] === 'roleEnabled'), [['roleEnabled', 'llm']])
+  assert.deepEqual(
+    local.calls.filter(c => c[0] === 'roleEnabled'),
+    [['roleEnabled', 'embed']],
+  )
+  assert.deepEqual(
+    remote.calls.filter(c => c[0] === 'roleEnabled'),
+    [['roleEnabled', 'llm']],
+  )
 })
 
 test('statusSnapshot in mixed mode reports each role against its own provider', async () => {
   _reset()
   const local = fake('local')
   const remote = fake('remote')
-  await initProvider('remote', {}, { load: (k) => (k === 'local' ? local : remote), localAvailable: true })
+  await initProvider('remote', {}, { load: k => (k === 'local' ? local : remote), localAvailable: true })
   const s = statusSnapshot()
   assert.equal(s.roles.embed.model, 'local')
   assert.equal(s.roles.llm.model, 'remote')
@@ -154,72 +182,89 @@ test('a mixed install never asks the local provider to hold a remotely-served ro
   _reset()
   const local = fake('local')
   const remote = fake('remote')
-  local.applyResidency = async (r) => { local.calls.push(['applyResidency', r]) }
-  local.warmCache = async (r) => { local.calls.push(['warmCache', r]) }
-  await initProvider('remote', {}, { load: (k) => (k === 'local' ? local : remote), localAvailable: true })
+  local.applyResidency = async r => {
+    local.calls.push(['applyResidency', r])
+  }
+  local.warmCache = async r => {
+    local.calls.push(['warmCache', r])
+  }
+  await initProvider('remote', {}, { load: k => (k === 'local' ? local : remote), localAvailable: true })
 
   await applyResidency({ llm: 'always', embed: 'always', vision: 'ondemand' })
   await warmCache({ llm: 'always', embed: 'always', vision: 'ondemand' })
 
-  assert.deepEqual(local.calls.find((c) => c[0] === 'applyResidency')[1], { llm: 'off', embed: 'always', vision: 'off' })
-  assert.deepEqual(local.calls.find((c) => c[0] === 'warmCache')[1], { llm: 'off', embed: 'always', vision: 'off' })
+  assert.deepEqual(local.calls.find(c => c[0] === 'applyResidency')[1], { llm: 'off', embed: 'always', vision: 'off' })
+  assert.deepEqual(local.calls.find(c => c[0] === 'warmCache')[1], { llm: 'off', embed: 'always', vision: 'off' })
 })
 
 test('a pure-local install passes the residency map through untouched', async () => {
   _reset()
   const local = fake('local')
-  local.applyResidency = async (r) => { local.calls.push(['applyResidency', r]) }
+  local.applyResidency = async r => {
+    local.calls.push(['applyResidency', r])
+  }
   await initProvider('local', {}, { load: () => local, localAvailable: true })
 
   const residency = { llm: 'always', embed: 'always', vision: 'ondemand' }
   await applyResidency(residency)
-  assert.deepEqual(local.calls.find((c) => c[0] === 'applyResidency')[1], residency)
+  assert.deepEqual(local.calls.find(c => c[0] === 'applyResidency')[1], residency)
 })
 
 test('a mixed install does not claim the weights of a remotely-served role', async () => {
   _reset()
   const local = fake('local')
   const remote = fake('remote')
-  local.weightsInUse = (sel) => { local.calls.push(['weightsInUse', sel]); return {} }
-  await initProvider('remote', {}, { load: (k) => (k === 'local' ? local : remote), localAvailable: true })
+  local.weightsInUse = sel => {
+    local.calls.push(['weightsInUse', sel])
+    return {}
+  }
+  await initProvider('remote', {}, { load: k => (k === 'local' ? local : remote), localAvailable: true })
 
   weightsInUse({ llm: 'big-llm', embed: 'embeddinggemma-300m', vision: 'big-vision' })
-  assert.deepEqual(local.calls.find((c) => c[0] === 'weightsInUse')[1], { embed: 'embeddinggemma-300m' })
+  assert.deepEqual(local.calls.find(c => c[0] === 'weightsInUse')[1], { embed: 'embeddinggemma-300m' })
 })
 
 test('a model patch splits by owner, and a provider with nothing to do is not called', async () => {
   _reset()
   const local = fake('local')
   const remote = fake('remote')
-  const mixed = { load: (k) => (k === 'local' ? local : remote), localAvailable: true }
+  const mixed = { load: k => (k === 'local' ? local : remote), localAvailable: true }
   await initProvider('remote', {}, mixed)
 
   await applySettings({ llm: 'x', embed: 'y' })
-  assert.deepEqual(local.calls.filter((c) => c[0] === 'applySettings'), [['applySettings', { embed: 'y' }]])
-  assert.deepEqual(remote.calls.filter((c) => c[0] === 'applySettings'), [['applySettings', { llm: 'x' }]])
+  assert.deepEqual(
+    local.calls.filter(c => c[0] === 'applySettings'),
+    [['applySettings', { embed: 'y' }]],
+  )
+  assert.deepEqual(
+    remote.calls.filter(c => c[0] === 'applySettings'),
+    [['applySettings', { llm: 'x' }]],
+  )
 
   // A patch touching only the locally-served role must not reach the endpoint
   // at all — an applySettings({}) there is a wasted round trip at best.
   await applySettings({ embed: 'z' })
-  assert.equal(remote.calls.filter((c) => c[0] === 'applySettings').length, 1)
+  assert.equal(remote.calls.filter(c => c[0] === 'applySettings').length, 1)
 })
 
 test('a mixed install configures the local provider with only the roles it serves', async () => {
   _reset()
   const local = fake('local')
   const remote = fake('remote')
-  local.configureModels = async (p) => { local.calls.push(['configureModels', p]) }
-  await initProvider('remote', {}, { load: (k) => (k === 'local' ? local : remote), localAvailable: true })
+  local.configureModels = async p => {
+    local.calls.push(['configureModels', p])
+  }
+  await initProvider('remote', {}, { load: k => (k === 'local' ? local : remote), localAvailable: true })
 
   await configureModels({ llm: 'big-llm', embed: 'embeddinggemma-300m', vision: 'big-vision' })
-  assert.deepEqual(local.calls.find((c) => c[0] === 'configureModels')[1], { embed: 'embeddinggemma-300m' })
+  assert.deepEqual(local.calls.find(c => c[0] === 'configureModels')[1], { embed: 'embeddinggemma-300m' })
 })
 
 test('every inference call reaches the provider that owns its role', async () => {
   _reset()
   const local = fake('local')
   const remote = fake('remote')
-  await initProvider('remote', {}, { load: (k) => (k === 'local' ? local : remote), localAvailable: true })
+  await initProvider('remote', {}, { load: k => (k === 'local' ? local : remote), localAvailable: true })
 
   assert.equal(await answer({ question: 'hi' }), 'remote')
   assert.equal(await describeImage({}), 'remote')
@@ -227,27 +272,39 @@ test('every inference call reaches the provider that owns its role', async () =>
   assert.equal(await classify({ text: 'hi' }), 'remote')
 
   // The local provider must have seen the embedding work and nothing else.
-  assert.deepEqual(local.calls.map((c) => c[0]).filter((n) => n !== 'init'), ['embedText'])
-  assert.deepEqual(remote.calls.map((c) => c[0]).filter((n) => n !== 'init'), ['answer', 'describeImage', 'classify'])
+  assert.deepEqual(
+    local.calls.map(c => c[0]).filter(n => n !== 'init'),
+    ['embedText'],
+  )
+  assert.deepEqual(
+    remote.calls.map(c => c[0]).filter(n => n !== 'init'),
+    ['answer', 'describeImage', 'classify'],
+  )
 })
 
 test('validateModel checks a key against the provider that will run it', async () => {
   _reset()
   const local = fake('local')
   const remote = fake('remote')
-  await initProvider('remote', {}, { load: (k) => (k === 'local' ? local : remote), localAvailable: true })
+  await initProvider('remote', {}, { load: k => (k === 'local' ? local : remote), localAvailable: true })
 
   validateModel('embed', 'embeddinggemma-300m')
   validateModel('vision', 'gpt-4o-mini')
-  assert.deepEqual(local.calls.filter((c) => c[0] === 'validateModel'), [['validateModel', 'embed', 'embeddinggemma-300m']])
-  assert.deepEqual(remote.calls.filter((c) => c[0] === 'validateModel'), [['validateModel', 'vision', 'gpt-4o-mini']])
+  assert.deepEqual(
+    local.calls.filter(c => c[0] === 'validateModel'),
+    [['validateModel', 'embed', 'embeddinggemma-300m']],
+  )
+  assert.deepEqual(
+    remote.calls.filter(c => c[0] === 'validateModel'),
+    [['validateModel', 'vision', 'gpt-4o-mini']],
+  )
 })
 
 test('listModels in mixed mode offers each role the catalogue of its own provider', async () => {
   _reset()
   const local = fake('local')
   const remote = fake('remote')
-  await initProvider('remote', {}, { load: (k) => (k === 'local' ? local : remote), localAvailable: true })
+  await initProvider('remote', {}, { load: k => (k === 'local' ? local : remote), localAvailable: true })
 
   const lists = await listModels()
   assert.deepEqual(lists.embed, [{ key: 'local' }])
@@ -272,10 +329,17 @@ test('the on-device probe is skipped entirely when the embedding role is pinned 
   _reset()
   const remote = fake('remote')
   const loaded = []
-  await initProvider('remote', {}, {
-    load: (k) => { loaded.push(k); return remote },
-    embedProvider: 'remote',
-  })
+  await initProvider(
+    'remote',
+    {},
+    {
+      load: k => {
+        loaded.push(k)
+        return remote
+      },
+      embedProvider: 'remote',
+    },
+  )
   // No localAvailable was pinned, so a probe would have shown up as a 'local'
   // load — and on a host with a broken binding it would have thrown.
   assert.deepEqual(loaded, ['remote'])
@@ -286,15 +350,19 @@ test('a provider that throws mid-init leaves nothing half-built for the retry to
   _reset()
   const local = fake('local')
   const remote = fake('remote')
-  remote.init = async () => { throw new Error('endpoint unreachable') }
-  const opts = { load: (k) => (k === 'local' ? local : remote), localAvailable: true }
+  remote.init = async () => {
+    throw new Error('endpoint unreachable')
+  }
+  const opts = { load: k => (k === 'local' ? local : remote), localAvailable: true }
   await assert.rejects(() => initProvider('remote', {}, opts), /endpoint unreachable/)
 
   // Not initialised, so the guard still fires rather than handing out the one
   // provider that happened to come up first.
   assert.throws(() => capabilities(), /not initialised/)
 
-  remote.init = async (cfg) => { remote.calls.push(['init', cfg]) }
+  remote.init = async cfg => {
+    remote.calls.push(['init', cfg])
+  }
   await initProvider('remote', {}, opts)
   assert.equal(capabilities().kind, 'mixed')
 })
@@ -316,16 +384,19 @@ test('applySettings forwards an empty name, so callers must pass only the roles 
   _reset()
   const local = fake('local')
   const remote = fake('remote')
-  await initProvider('remote', {}, { load: (k) => (k === 'local' ? local : remote), localAvailable: true })
+  await initProvider('remote', {}, { load: k => (k === 'local' ? local : remote), localAvailable: true })
 
   // The shape of settings.getRemote() on a mixed install: llm named, and the
   // locally-served embed role blank.
   await applySettings({ llm: 'gpt-oss:120b', embed: '', vision: '' })
-  const localCall = local.calls.find((c) => c[0] === 'applySettings')
+  const localCall = local.calls.find(c => c[0] === 'applySettings')
   assert.deepEqual(localCall[1], { embed: '' }, 'the blank reaches the local provider')
 
   // Passing only the remote-owned roles leaves the local provider alone.
   local.calls.length = 0
   await applySettings({ llm: 'gpt-oss:120b' })
-  assert.equal(local.calls.find((c) => c[0] === 'applySettings'), undefined)
+  assert.equal(
+    local.calls.find(c => c[0] === 'applySettings'),
+    undefined,
+  )
 })

@@ -7,8 +7,15 @@
 import path from 'node:path'
 import { json, readBody } from '../lib/http.js'
 import {
-  COOKIE_NAME, clearedCookie, createThrottle, isSecureRequest, issueSession,
-  parseCookies, passwordMatches, sessionCookie, verifySession,
+  COOKIE_NAME,
+  clearedCookie,
+  createThrottle,
+  isSecureRequest,
+  issueSession,
+  parseCookies,
+  passwordMatches,
+  sessionCookie,
+  verifySession,
 } from '../lib/auth.js'
 
 const MUTATIONS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
@@ -25,7 +32,7 @@ const loginThrottle = createThrottle()
 // rotate the header and skip the throttle entirely. The cost is that behind a
 // reverse proxy every client shares one bucket — for a single-user app that is
 // nearly free, and a 15-minute self-healing lockout is the worst case.
-const clientKey = (req) => req.socket?.remoteAddress || 'unknown'
+const clientKey = req => req.socket?.remoteAddress || 'unknown'
 
 export function hasSession(req, password) {
   return verifySession(parseCookies(req.headers.cookie)[COOKIE_NAME], password)
@@ -34,9 +41,9 @@ export function hasSession(req, password) {
 // A path the SPA would route client-side (no file extension), as opposed to an
 // asset request. Serving login HTML in answer to a request for a .js bundle
 // surfaces as a syntax error in the console instead of a login form.
-const isNavigation = (p) => !p.startsWith('/api/') && !path.extname(p)
+const isNavigation = p => !p.startsWith('/api/') && !path.extname(p)
 
-const isJson = (req) => (req.headers['content-type'] || '').toLowerCase().startsWith('application/json')
+const isJson = req => (req.headers['content-type'] || '').toLowerCase().startsWith('application/json')
 
 function send(res, code, headers, body) {
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', ...headers })
@@ -47,8 +54,12 @@ async function handleLogin(req, res, { password, secure }) {
   const key = clientKey(req)
   const gate = loginThrottle.check(key)
   if (!gate.allowed) {
-    return send(res, 429, { 'Retry-After': String(gate.retryAfterSec) },
-      { error: 'Too many attempts. Try again shortly.', code: 'rate_limited' })
+    return send(
+      res,
+      429,
+      { 'Retry-After': String(gate.retryAfterSec) },
+      { error: 'Too many attempts. Try again shortly.', code: 'rate_limited' },
+    )
   }
   let body = {}
   try {
@@ -78,7 +89,10 @@ export async function authGate(req, res, pathname, { password }) {
     // Kothai on :5173 and its cookie would ride along. application/json is not
     // a CORS-safelisted content type, so requiring it forces a preflight that
     // the router answers with 405, and an HTML form cannot produce it at all.
-    json(res, 415, { error: 'Requests that change data must be sent as application/json.', code: 'content_type_required' })
+    json(res, 415, {
+      error: 'Requests that change data must be sent as application/json.',
+      code: 'content_type_required',
+    })
     return true
   }
   if (req.method === 'POST' && pathname === '/api/login') {

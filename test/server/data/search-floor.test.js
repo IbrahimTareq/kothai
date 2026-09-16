@@ -12,9 +12,9 @@ import * as store from '../../../server/data/notes.js'
 
 // Two orthogonal axes plus a blend, so similarity to [1,0] is exactly the
 // first component of a unit vector — cosine scores that are readable by eye.
-const unit = (angle) => [Math.cos(angle), Math.sin(angle)]
+const unit = angle => [Math.cos(angle), Math.sin(angle)]
 const QUERY = [1, 0]
-const at = (sim) => unit(Math.acos(sim))
+const at = sim => unit(Math.acos(sim))
 
 beforeEach(() => store._reset())
 
@@ -31,11 +31,11 @@ test('candidates below the floor are dropped, so an out-of-library question retr
 })
 
 test('candidates above the floor are kept and ranked', async () => {
-  await seed([0.30, 0.55, 0.47, 0.38])
+  await seed([0.3, 0.55, 0.47, 0.38])
   const out = store.search(QUERY)
   assert.equal(out.length, 2, 'only the two above the floor')
   assert.ok(out[0].score > out[1].score)
-  assert.ok(out.every((n) => n.score >= 0.44))
+  assert.ok(out.every(n => n.score >= 0.44))
 })
 
 test('top-k defaults to 10 — enough context now that a note contributes more than a title and a URL', async () => {
@@ -62,7 +62,10 @@ test('hybridSearch: a keyword hit still surfaces a note the floor dropped', asyn
   await store.addNote({ title: 'irrelevant', content: 'nothing here', embedding: at(0.9) })
   await store.addNote({ title: 'Ottolenghi', content: 'a recipe by Ottolenghi', embedding: at(0.2) })
   const out = store.hybridSearch(QUERY, 'Ottolenghi')
-  assert.ok(out.some((n) => n.title === 'Ottolenghi'), 'the keyword-only match must survive the floor')
+  assert.ok(
+    out.some(n => n.title === 'Ottolenghi'),
+    'the keyword-only match must survive the floor',
+  )
 })
 
 test('hybridSearch with no query embedding degrades to keyword-only rather than throwing', async () => {
@@ -76,7 +79,11 @@ test('hybridSearch pulls deeper than k from each retriever so fusion has somethi
   // consensus candidate ranked 11th by both could never be recovered. The
   // deeper pull is observable as the keyword list reordering the result.
   for (let i = 0; i < 25; i++) {
-    await store.addNote({ title: `note ${i}`, content: i === 24 ? 'ottolenghi special' : `note ${i}`, embedding: at(0.7) })
+    await store.addNote({
+      title: `note ${i}`,
+      content: i === 24 ? 'ottolenghi special' : `note ${i}`,
+      embedding: at(0.7),
+    })
   }
   const out = store.hybridSearch(QUERY, 'ottolenghi')
   assert.equal(out.length, 10)

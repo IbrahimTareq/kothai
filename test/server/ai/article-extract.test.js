@@ -14,7 +14,10 @@ function articlePage(body) {
   </body></html>`
 }
 
-const PARA = '<p>' + 'Sourdough fermentation depends on wild yeast and lactic acid bacteria working together over many hours. '.repeat(6) + '</p>'
+const PARA =
+  '<p>' +
+  'Sourdough fermentation depends on wild yeast and lactic acid bacteria working together over many hours. '.repeat(6) +
+  '</p>'
 
 test('extractArticle: pulls article prose out of surrounding page chrome', () => {
   const out = extractArticle(articlePage(PARA))
@@ -62,10 +65,12 @@ function stubFetch(body, contentType) {
   globalThis.fetch = async () => ({
     ok: true,
     status: 200,
-    headers: { get: (h) => (h.toLowerCase() === 'content-type' ? contentType : null) },
+    headers: { get: h => (h.toLowerCase() === 'content-type' ? contentType : null) },
     text: async () => body,
   })
-  return () => { globalThis.fetch = original }
+  return () => {
+    globalThis.fetch = original
+  }
 }
 
 const OG_PAGE = `<!DOCTYPE html><html><head>
@@ -77,7 +82,7 @@ const OG_PAGE = `<!DOCTYPE html><html><head>
   <article><h1>A Baking Post</h1>${PARA}</article>
 </body></html>`
 
-test('fetchLinkMeta: populates article alongside og tags for an html response', async (t) => {
+test('fetchLinkMeta: populates article alongside og tags for an html response', async t => {
   const restore = stubFetch(OG_PAGE, 'text/html; charset=utf-8')
   t.after(restore)
   const meta = await fetchLinkMeta('https://example.com/bread', 'note-1')
@@ -86,7 +91,7 @@ test('fetchLinkMeta: populates article alongside og tags for an html response', 
   assert.match(meta.article, /Sourdough fermentation depends on wild yeast/)
 })
 
-test('fetchLinkMeta: skips extraction when the response is not html', async (t) => {
+test('fetchLinkMeta: skips extraction when the response is not html', async t => {
   // Same bytes, non-html content-type: the guard must stop Readability from
   // ever seeing it, so article stays null even though the body would parse.
   const restore = stubFetch(OG_PAGE, 'application/json')

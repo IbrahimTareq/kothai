@@ -16,9 +16,16 @@ test('server sourceKey agrees with client SOURCES on every predicate', () => {
     { url: null, type: 'text' },
   ]
   for (const f of fixtures) {
-    const item = { id: 'x', ts: 0, type: f.type === 'text' ? 'note' : f.type, tags: [], pending: false,
-      url: f.url, host: f.url ? new URL(f.url).hostname.replace(/^www\./, '') : undefined } as UIItem
-    const clientKey = SOURCES.find((s) => s.test(item))?.key ?? null
+    const item = {
+      id: 'x',
+      ts: 0,
+      type: f.type === 'text' ? 'note' : f.type,
+      tags: [],
+      pending: false,
+      url: f.url,
+      host: f.url ? new URL(f.url).hostname.replace(/^www\./, '') : undefined,
+    } as UIItem
+    const clientKey = SOURCES.find(s => s.test(item))?.key ?? null
     assert.equal(sourceKey({ type: f.type, url: f.url }), clientKey, String(f.url))
   }
 })

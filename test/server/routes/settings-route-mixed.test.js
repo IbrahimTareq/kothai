@@ -23,7 +23,9 @@ mock.module('../../../server/ai/index.js', {
   namedExports: {
     capabilities: () => provider.caps,
     validateModel: () => ({ ok: true }),
-    applySettings: async (patch) => { provider.applied.push(patch) },
+    applySettings: async patch => {
+      provider.applied.push(patch)
+    },
     applyResidency: async () => {},
     boot: async () => {},
     warmRole: async () => {},
@@ -76,16 +78,28 @@ test('a mixed save survives a restart: endpoint ids land in the remote store, no
   await settings.load()
 
   const body = {
-    embed: DEFAULTS.embed,                                  // on-device registry key
-    remote: { llm: 'gpt-oss:120b', vision: 'qwen2.5-vl' },  // endpoint-defined ids
+    embed: DEFAULTS.embed, // on-device registry key
+    remote: { llm: 'gpt-oss:120b', vision: 'qwen2.5-vl' }, // endpoint-defined ids
   }
   const req = Readable.from([Buffer.from(JSON.stringify(body))])
-  const res = { statusCode: 0, body: null, writeHead(c) { this.statusCode = c }, end(b) { this.body = JSON.parse(b) } }
+  const res = {
+    statusCode: 0,
+    body: null,
+    writeHead(c) {
+      this.statusCode = c
+    },
+    end(b) {
+      this.body = JSON.parse(b)
+    },
+  }
   await handleSaveSettings(req, res)
   assert.equal(res.statusCode, 200)
 
   // The endpoint ids were handed to the facade to apply right away...
-  assert.ok(provider.applied.some((p) => p.llm === 'gpt-oss:120b' && p.vision === 'qwen2.5-vl'), 'remote ids applied')
+  assert.ok(
+    provider.applied.some(p => p.llm === 'gpt-oss:120b' && p.vision === 'qwen2.5-vl'),
+    'remote ids applied',
+  )
 
   // ...and they were persisted where the remote provider will look for them
   // on the next boot. Re-read from SQLite to simulate that restart.

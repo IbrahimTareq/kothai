@@ -29,21 +29,27 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
 
   useEffect(() => {
     API.settings()
-      .then((c) => { setCfg(c); setSel({ ...c.current }); setRemoteSel({ ...c.remote }) })
+      .then(c => {
+        setCfg(c)
+        setSel({ ...c.current })
+        setRemoteSel({ ...c.remote })
+      })
       .catch(() => setErr('Could not reach the server.'))
   }, [])
 
   // The models start loading once we submit; when they're ready, enter the app.
-  useEffect(() => { if (submitted && vault.state === 'ready') onComplete() }, [submitted, vault.state, onComplete])
+  useEffect(() => {
+    if (submitted && vault.state === 'ready') onComplete()
+  }, [submitted, vault.state, onComplete])
 
-  const pick = (role: Role, key: string) => setSel((s) => (s ? { ...s, [role]: key } : s))
-  const pickRemote = (role: Role, id: string) => setRemoteSel((s) => (s ? { ...s, [role]: id } : s))
+  const pick = (role: Role, key: string) => setSel(s => (s ? { ...s, [role]: key } : s))
+  const pickRemote = (role: Role, id: string) => setRemoteSel(s => (s ? { ...s, [role]: id } : s))
 
   // Each role is asked about in the shape its own provider needs: a preset
   // picker for the ones this machine serves, a model id for the ones the
   // endpoint does. A mixed install shows both.
-  const localRoles = cfg ? UPFRONT.filter((role) => cfg.capabilities.roles[role] === 'local') : []
-  const remoteRoles = cfg ? UPFRONT.filter((role) => cfg.capabilities.roles[role] === 'remote') : []
+  const localRoles = cfg ? UPFRONT.filter(role => cfg.capabilities.roles[role] === 'local') : []
+  const remoteRoles = cfg ? UPFRONT.filter(role => cfg.capabilities.roles[role] === 'remote') : []
   const allLocal = localRoles.length === UPFRONT.length
   // Nothing served on-device: the endpoint's model ids are the only thing
   // first-run has to collect, and there is no download to wait on.
@@ -54,11 +60,12 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
   // user was never going to fill would block first run on a field that is
   // legitimately optional — the role simply stays off until Settings.
   const remotePatch = () =>
-    Object.fromEntries(remoteRoles.map((role) => [role, (remoteSel?.[role] || '').trim()]).filter(([, id]) => id))
+    Object.fromEntries(remoteRoles.map(role => [role, (remoteSel?.[role] || '').trim()]).filter(([, id]) => id))
 
-  const upfrontBytes = cfg && sel
-    ? localRoles.reduce((sum, role) => sum + (cfg.presets[role].find((p) => p.key === sel[role])?.sizeBytes || 0), 0)
-    : 0
+  const upfrontBytes =
+    cfg && sel
+      ? localRoles.reduce((sum, role) => sum + (cfg.presets[role].find(p => p.key === sel[role])?.sizeBytes || 0), 0)
+      : 0
 
   const start = async () => {
     if (!sel || submitted) return
@@ -99,8 +106,7 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
   // 'local' means the operator chose on-device models at install time: there is
   // no endpoint to connect and the picker is the whole of first run.
   const preAnswered = cfg?.setup?.providerId || null
-  const needsWizard =
-    Boolean(cfg) && !cfg!.endpoint.configured && !wizardDone && preAnswered !== 'local'
+  const needsWizard = Boolean(cfg) && !cfg!.endpoint.configured && !wizardDone && preAnswered !== 'local'
   if (needsWizard) {
     return (
       <SetupWizard
@@ -108,7 +114,7 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
         preselect={preAnswered}
         onLocal={() => setWizardDone(true)}
         onSkip={skip}
-        onConnected={async (r) => {
+        onConnected={async r => {
           // Apply it NOW rather than at submit. The picker below asks about
           // each role in the shape its provider needs, and connecting an
           // endpoint is what decides which provider that is — so the server
@@ -134,86 +140,99 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
     <div className="onboarding">
       <div className="onboarding-card">
         <header className="onboarding-head">
-          <span className="onboarding-mark"><Icon name="settings" size={22} /></span>
+          <span className="onboarding-mark">
+            <Icon name="settings" size={22} />
+          </span>
           <h1>{noneLocal ? 'Name your models' : 'Choose your models'}</h1>
           {/* Until settings arrive, assume the all-local case — it's the common
               one, and the other two would be wrong for it. */}
           <p className="onboarding-lede">
-            {!cfg || allLocal
-              ? <>Kothai runs entirely on your machine. Pick the local models that fit your hardware —
-                  you can change any of these later in Settings.</>
-              : noneLocal
-                ? <>Every role runs on {cfg.endpoint.host || 'your endpoint'}. Name a model it serves for
-                    each one — nothing downloads, and you can change these later in Settings.</>
-                : <>Some of this runs on {cfg.endpoint.host || 'your endpoint'} and some stays on your
-                    machine. Pick what fits your hardware, and name a model the endpoint serves for the
-                    rest — leave one blank to set it later in Settings.</>}
+            {!cfg || allLocal ? (
+              <>
+                Kothai runs entirely on your machine. Pick the local models that fit your hardware — you can change any
+                of these later in Settings.
+              </>
+            ) : noneLocal ? (
+              <>
+                Every role runs on {cfg.endpoint.host || 'your endpoint'}. Name a model it serves for each one — nothing
+                downloads, and you can change these later in Settings.
+              </>
+            ) : (
+              <>
+                Some of this runs on {cfg.endpoint.host || 'your endpoint'} and some stays on your machine. Pick what
+                fits your hardware, and name a model the endpoint serves for the rest — leave one blank to set it later
+                in Settings.
+              </>
+            )}
           </p>
         </header>
 
         {err && <div className="onboarding-err mono">{err}</div>}
 
-        {!cfg || !sel
-          ? <div className="settings-loading mono">LOADING…</div>
-          : submitted
-            ? (
-              <div className="onboarding-progress">
-                <div className="settings-progress-track">
-                  <div className="settings-progress-bar" style={{ width: (vault.pct || 0) + '%' }}></div>
-                </div>
-                <span className="settings-progress-msg mono">
-                  {vault.state === 'error' ? (vault.msg || 'Model load failed') : (vault.msg || 'Downloading models…')}
-                </span>
-              </div>
-            )
-            : (
-              <>
-                <div className="onboarding-picker">
-                  {localRoles.map((role) => (
-                    <RoleAccordion key={role} role={role}
-                      presets={cfg.presets[role]}
-                      currentKey={sel[role]}
+        {!cfg || !sel ? (
+          <div className="settings-loading mono">LOADING…</div>
+        ) : submitted ? (
+          <div className="onboarding-progress">
+            <div className="settings-progress-track">
+              <div className="settings-progress-bar" style={{ width: (vault.pct || 0) + '%' }}></div>
+            </div>
+            <span className="settings-progress-msg mono">
+              {vault.state === 'error' ? vault.msg || 'Model load failed' : vault.msg || 'Downloading models…'}
+            </span>
+          </div>
+        ) : (
+          <>
+            <div className="onboarding-picker">
+              {localRoles.map(role => (
+                <RoleAccordion
+                  key={role}
+                  role={role}
+                  presets={cfg.presets[role]}
+                  currentKey={sel[role]}
+                  busy={false}
+                  switching={false}
+                  pct={0}
+                  defaultOpen={role === localRoles[0]}
+                  onPick={key => pick(role, key)}
+                />
+              ))}
+              {remoteRoles.map(role => (
+                // Same markup Settings uses for an endpoint-served role, so
+                // the two screens don't drift apart visually.
+                <div key={role} className="role-acc open">
+                  <div className="role-acc-head">
+                    <span className="role-acc-info">
+                      <span className="role-acc-title mono">{ROLE_META[role].title}</span>
+                      <span className="role-acc-sub">{ROLE_META[role].sub}</span>
+                    </span>
+                  </div>
+                  <div className="model-list">
+                    <RemoteModelField
+                      role={role}
+                      value={remoteSel?.[role] || ''}
+                      options={cfg.presets[role]}
                       busy={false}
-                      switching={false}
-                      pct={0}
-                      defaultOpen={role === localRoles[0]}
-                      onPick={(key) => pick(role, key)} />
-                  ))}
-                  {remoteRoles.map((role) => (
-                    // Same markup Settings uses for an endpoint-served role, so
-                    // the two screens don't drift apart visually.
-                    <div key={role} className="role-acc open">
-                      <div className="role-acc-head">
-                        <span className="role-acc-info">
-                          <span className="role-acc-title mono">{ROLE_META[role].title}</span>
-                          <span className="role-acc-sub">{ROLE_META[role].sub}</span>
-                        </span>
-                      </div>
-                      <div className="model-list">
-                        <RemoteModelField role={role}
-                          value={remoteSel?.[role] || ''}
-                          options={cfg.presets[role]}
-                          busy={false}
-                          onCommit={(id) => pickRemote(role, id)} />
-                      </div>
-                    </div>
-                  ))}
+                      onCommit={id => pickRemote(role, id)}
+                    />
+                  </div>
                 </div>
-                <footer className="onboarding-foot">
-                  <span className="onboarding-size mono">
-                    {!noneLocal && upfrontBytes ? `Initial download ≈ ${fmtGB(upfrontBytes)}` : ''}
-                  </span>
-                  <button className="btn btn--solid btn--lg" onClick={start}>
-                    {noneLocal ? 'Save & start' : <>Download &amp; start</>}
-                  </button>
-                </footer>
-                <button className="onboarding-skip" onClick={skip}>
-                  {allLocal || noneLocal
-                    ? 'Skip for now — run without AI. You can enable models any time in Settings.'
-                    : 'Skip for now — run on your endpoint alone. You can enable these models any time in Settings.'}
-                </button>
-              </>
-            )}
+              ))}
+            </div>
+            <footer className="onboarding-foot">
+              <span className="onboarding-size mono">
+                {!noneLocal && upfrontBytes ? `Initial download ≈ ${fmtGB(upfrontBytes)}` : ''}
+              </span>
+              <button className="btn btn--solid btn--lg" onClick={start}>
+                {noneLocal ? 'Save & start' : <>Download &amp; start</>}
+              </button>
+            </footer>
+            <button className="onboarding-skip" onClick={skip}>
+              {allLocal || noneLocal
+                ? 'Skip for now — run without AI. You can enable models any time in Settings.'
+                : 'Skip for now — run on your endpoint alone. You can enable these models any time in Settings.'}
+            </button>
+          </>
+        )}
       </div>
     </div>
   )

@@ -7,13 +7,16 @@ const TYPES = new Set(['item', 'text', 'group'])
 const SIDES = new Set(['top', 'right', 'bottom', 'left'])
 
 const str = (v, max) => (typeof v === 'string' && v.length > 0 && v.length <= max ? v : null)
-const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.round(v) : null)
+const num = v => (typeof v === 'number' && Number.isFinite(v) ? Math.round(v) : null)
 
 function cleanNode(raw) {
   if (!raw || typeof raw !== 'object') return null
   const id = str(raw.id, MAX_ID)
   if (!id || !TYPES.has(raw.type)) return null
-  const x = num(raw.x), y = num(raw.y), width = num(raw.width), height = num(raw.height)
+  const x = num(raw.x),
+    y = num(raw.y),
+    width = num(raw.width),
+    height = num(raw.height)
   if (x === null || y === null || width === null || height === null || width <= 0 || height <= 0) return null
   const base = { id, type: raw.type, x, y, width, height }
   if (raw.type === 'item') {

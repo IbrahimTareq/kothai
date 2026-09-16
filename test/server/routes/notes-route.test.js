@@ -6,12 +6,17 @@ import { handleNotes } from '../../../server/routes/notes.js'
 
 function mockRes() {
   const r = { code: 0, body: null }
-  r.writeHead = (c) => { r.code = c; return r }
-  r.end = (s) => { r.body = JSON.parse(s) }
+  r.writeHead = c => {
+    r.code = c
+    return r
+  }
+  r.end = s => {
+    r.body = JSON.parse(s)
+  }
   r.setHeader = () => {}
   return r
 }
-const urlOf = (qs) => new URL('http://x/api/notes' + qs)
+const urlOf = qs => new URL('http://x/api/notes' + qs)
 
 test('paged /api/notes returns page, total, facets, pendingTotal', async () => {
   store._reset()
@@ -65,7 +70,7 @@ test('?collection=<id> narrows to only the notes added to that collection', asyn
   handleNotes(res, urlOf(`?collection=${c.id}&limit=10`))
   assert.equal(res.body.total, 2, 'only the two notes added to the collection are counted')
   assert.equal(res.body.notes.length, 2)
-  const ids = res.body.notes.map((n) => n.id)
+  const ids = res.body.notes.map(n => n.id)
   assert.ok(ids.includes(a.id) && ids.includes(b.id))
 
   const missing = mockRes()

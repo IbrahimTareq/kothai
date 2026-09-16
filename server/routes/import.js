@@ -27,7 +27,10 @@ export async function handleImport(req, res) {
   // store, and three other bulk routes have to read it.
   const ran = await runExclusiveImport(() => runImport(req, res))
   if (!ran) {
-    return json(res, 409, { error: 'Another import is already in progress. Try again once it finishes.', code: 'import_in_progress' })
+    return json(res, 409, {
+      error: 'Another import is already in progress. Try again once it finishes.',
+      code: 'import_in_progress',
+    })
   }
 }
 
@@ -184,7 +187,9 @@ async function runImport(req, res) {
     let matches = false
     try {
       matches = importer.sniff(files)
-    } catch { matches = false }
+    } catch {
+      matches = false
+    }
     if (!matches) {
       return json(res, 400, {
         error: `That doesn't look like ${importer.label || importer.name} data — expected ${importer.expects || 'the export files'}.`,
@@ -194,7 +199,9 @@ async function runImport(req, res) {
   } else {
     importer = findImporter(files)
     if (!importer) {
-      return json(res, 400, { error: 'Not a recognized export. Expected an Instagram data export (ZIP or saved_posts.json).' })
+      return json(res, 400, {
+        error: 'Not a recognized export. Expected an Instagram data export (ZIP or saved_posts.json).',
+      })
     }
   }
 
@@ -236,7 +243,10 @@ async function runImport(req, res) {
   let failed = 0
   for (const item of items) {
     const c = canonicalUrl(item.url)
-    if (!c || urlIndex.has(c)) { skipped++; continue }
+    if (!c || urlIndex.has(c)) {
+      skipped++
+      continue
+    }
     let note
     try {
       // persist:false — see the batched flush() below. Nothing here does
@@ -272,8 +282,11 @@ async function runImport(req, res) {
       await store.flush()
     } catch (e) {
       console.error('[import] failed to persist imported notes, rolling back:', e.message)
-      await store.removeMany(imported.map((n) => n.id))
-      return json(res, 500, { error: `Could not save imported notes (${e.message}). Nothing was imported — try again.`, code: 'import_rolled_back' })
+      await store.removeMany(imported.map(n => n.id))
+      return json(res, 500, {
+        error: `Could not save imported notes (${e.message}). Nothing was imported — try again.`,
+        code: 'import_rolled_back',
+      })
     }
   }
 
@@ -345,7 +358,7 @@ async function runImport(req, res) {
     // Creating a Space and indexing it under its own name are one step, never
     // one without the other — both branches below used to write the pair out
     // by hand, which is one place for the index to silently go stale.
-    const ensureSpace = async (n) => {
+    const ensureSpace = async n => {
       const created = await collections.create({ name: n })
       spaceByLowerName.set(created.name.toLowerCase(), created)
       return created
@@ -367,7 +380,10 @@ async function runImport(req, res) {
       if (!name) continue
       const urls = Array.isArray(entry?.urls) ? entry.urls : []
       let set = membersByName.get(name)
-      if (!set) { set = new Set(); membersByName.set(name, set) }
+      if (!set) {
+        set = new Set()
+        membersByName.set(name, set)
+      }
       for (const url of urls) {
         const c = canonicalUrl(url)
         if (!c) continue

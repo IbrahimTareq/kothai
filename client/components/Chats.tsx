@@ -25,7 +25,12 @@ export function ChatRow({ chat, active, open, rename, remove }: RowProps) {
   // want to commit. This makes the second one a no-op.
   const settled = useRef(false)
 
-  useEffect(() => { if (mode === 'rename') { settled.current = false; inputRef.current?.select() } }, [mode])
+  useEffect(() => {
+    if (mode === 'rename') {
+      settled.current = false
+      inputRef.current?.select()
+    }
+  }, [mode])
 
   const commit = () => {
     if (settled.current) return
@@ -34,23 +39,35 @@ export function ChatRow({ chat, active, open, rename, remove }: RowProps) {
     if (next && next !== chat.title) rename(chat.id, next)
     setMode('idle')
   }
-  const cancel = () => { settled.current = true; setDraft(chat.title); setMode('idle') }
+  const cancel = () => {
+    settled.current = true
+    setDraft(chat.title)
+    setMode('idle')
+  }
 
   if (mode === 'rename') {
     return (
       <div className="chat-row renaming">
-        <input ref={inputRef} className="chat-rename" value={draft} autoFocus
+        <input
+          ref={inputRef}
+          className="chat-rename"
+          value={draft}
+          autoFocus
           aria-label={'Rename chat: ' + chat.title}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={e => setDraft(e.target.value)}
           onBlur={commit}
-          onKeyDown={(e) => {
+          onKeyDown={e => {
             // Escape belongs to the rename here, not to the drawer listening
             // above for the same key — without this, cancelling a rename
             // closed the whole panel with it.
-            if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); e.stopPropagation() }
+            if (e.key === 'Enter' || e.key === 'Escape') {
+              e.preventDefault()
+              e.stopPropagation()
+            }
             if (e.key === 'Enter') commit()
             if (e.key === 'Escape') cancel()
-          }} />
+          }}
+        />
       </div>
     )
   }
@@ -60,16 +77,29 @@ export function ChatRow({ chat, active, open, rename, remove }: RowProps) {
       <div className="chat-row confirming">
         <Icon name="trash" size={14} />
         <span className="chat-title">Delete “{chat.title}”?</span>
-        <button className="btn btn--xs btn--danger" onClick={() => remove(chat.id)}>Delete</button>
-        <button className="btn btn--xs" onClick={() => setMode('idle')}>Cancel</button>
+        <button className="btn btn--xs btn--danger" onClick={() => remove(chat.id)}>
+          Delete
+        </button>
+        <button className="btn btn--xs" onClick={() => setMode('idle')}>
+          Cancel
+        </button>
       </div>
     )
   }
 
   return (
-    <div className={'chat-row' + (active ? ' active' : '')} role="button" tabIndex={0}
+    <div
+      className={'chat-row' + (active ? ' active' : '')}
+      role="button"
+      tabIndex={0}
       onClick={() => open(chat)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(chat) } }}>
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          open(chat)
+        }
+      }}
+    >
       {/* Title over meta rather than beside it. On a phone the single-line
           version gave the title 83px of a 334px row — the rest went to an
           icon, the meta and two buttons — and these titles are model-written,
@@ -84,12 +114,27 @@ export function ChatRow({ chat, active, open, rename, remove }: RowProps) {
           {relTime(Date.parse(chat.updatedAt))} · {chat.questions} question{chat.questions === 1 ? '' : 's'}
         </span>
       </div>
-      <button className="card-del" aria-label={'Rename chat: ' + chat.title} title="Rename"
-        onClick={(e) => { e.stopPropagation(); setDraft(chat.title); setMode('rename') }}>
+      <button
+        className="card-del"
+        aria-label={'Rename chat: ' + chat.title}
+        title="Rename"
+        onClick={e => {
+          e.stopPropagation()
+          setDraft(chat.title)
+          setMode('rename')
+        }}
+      >
         <Icon name="retag" size={13} />
       </button>
-      <button className="card-del" aria-label={'Delete chat: ' + chat.title} title="Delete"
-        onClick={(e) => { e.stopPropagation(); setMode('confirm') }}>
+      <button
+        className="card-del"
+        aria-label={'Delete chat: ' + chat.title}
+        title="Delete"
+        onClick={e => {
+          e.stopPropagation()
+          setMode('confirm')
+        }}
+      >
         <Icon name="trash" size={13} />
       </button>
     </div>

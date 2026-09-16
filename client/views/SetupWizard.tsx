@@ -36,7 +36,9 @@ export function SetupWizard({
       <div className="onboarding">
         <div className="onboarding-card">
           <header className="onboarding-head">
-            <span className="onboarding-mark"><Icon name="settings" size={22} /></span>
+            <span className="onboarding-mark">
+              <Icon name="settings" size={22} />
+            </span>
             <h1>Where should the AI run?</h1>
             <p className="onboarding-lede">
               Kothai reads everything you save and files it. That reading has to happen somewhere.
@@ -71,11 +73,13 @@ export function SetupWizard({
     <div className="onboarding">
       <div className="onboarding-card">
         <header className="onboarding-head">
-          <span className="onboarding-mark"><Icon name="settings" size={22} /></span>
+          <span className="onboarding-mark">
+            <Icon name="settings" size={22} />
+          </span>
           <h1>Connect a service</h1>
           <p className="onboarding-lede">
-            Pick where your models run. Your key is stored on this machine only, and never appears in a
-            backup or an export.
+            Pick where your models run. Your key is stored on this machine only, and never appears in a backup or an
+            export.
           </p>
         </header>
 

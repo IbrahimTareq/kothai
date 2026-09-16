@@ -22,8 +22,7 @@ test('no view hand-rolls a board element — they all go through components/Boar
     const src = read('client/views/' + f)
     assert.ok(
       !/className=\{?['"`]board[ '"`]/.test(src),
-      `client/views/${f} builds its own .board; use the shared Board component ` +
-      `or its cards get no layout at all`,
+      `client/views/${f} builds its own .board; use the shared Board component ` + `or its cards get no layout at all`,
     )
   }
 })

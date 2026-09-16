@@ -17,7 +17,13 @@ import type { Slot } from '../data/pager'
 // intersecting the viewport are mounted. The mounted count tracks the
 // viewport, not the library, so a 20,000-item board costs the same as a
 // 200-item one.
-export function WindowedBoard({ items, view, scroller, renderItem, onWindow }: {
+export function WindowedBoard({
+  items,
+  view,
+  scroller,
+  renderItem,
+  onWindow,
+}: {
   items: Slot[]
   view: ViewMode
   scroller: React.RefObject<HTMLDivElement | null>
@@ -41,7 +47,10 @@ export function WindowedBoard({ items, view, scroller, renderItem, onWindow }: {
     const board = boardRef.current
     const sc = scroller.current
     if (!board || !sc) return
-    const read = () => { setWidth(board.clientWidth); setViewportH(sc.clientHeight) }
+    const read = () => {
+      setWidth(board.clientWidth)
+      setViewportH(sc.clientHeight)
+    }
     read()
     const ro = new ResizeObserver(read)
     ro.observe(board)
@@ -67,25 +76,29 @@ export function WindowedBoard({ items, view, scroller, renderItem, onWindow }: {
     return () => sc.removeEventListener('scroll', onScroll)
   }, [scroller])
 
-  const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items])
+  const byId = useMemo(() => new Map(items.map(i => [i.id, i])), [items])
   const cols = columnCount(width, view)
   const colW = columnWidth(width, cols, GAP)
 
-  const { boxes, total } = useMemo(() => packColumns(
-    items.map((i) => i.id),
-    cols,
-    (id) => {
-      const slot = byId.get(id)
-      if (!slot) return 200
-      // placeholder height is unknown until its page loads — the measured
-      // global average is a far better guess than any single-type estimate.
-      return isPlaceholder(slot) ? heights.current.avg() : heights.current.get(slot)
-    },
-    GAP,
-  // heightVersion is a deliberate dependency: it is how a newly measured card
-  // (or a thumbnail finishing its load) re-triggers the pack.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  ), [items, cols, byId, heightVersion])
+  const { boxes, total } = useMemo(
+    () =>
+      packColumns(
+        items.map(i => i.id),
+        cols,
+        id => {
+          const slot = byId.get(id)
+          if (!slot) return 200
+          // placeholder height is unknown until its page loads — the measured
+          // global average is a far better guess than any single-type estimate.
+          return isPlaceholder(slot) ? heights.current.avg() : heights.current.get(slot)
+        },
+        GAP,
+        // heightVersion is a deliberate dependency: it is how a newly measured card
+        // (or a thumbnail finishing its load) re-triggers the pack.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      ),
+    [items, cols, byId, heightVersion],
+  )
 
   // Before the board has a real width there is no correct layout to show;
   // rendering a guess would only flash mispositioned cards for a frame.
@@ -139,13 +152,13 @@ export function WindowedBoard({ items, view, scroller, renderItem, onWindow }: {
       const slot = byId.get(id)
       if (heights.current.set(id, h, slot && !isPlaceholder(slot) ? slot.type : undefined)) dirty = true
     }
-    if (dirty) setHeightVersion((v) => v + 1)
+    if (dirty) setHeightVersion(v => v + 1)
   })
 
   // Cards grow after mount when their thumbnail loads. Observing only the
   // mounted window keeps this to a few dozen observers instead of 1,675.
   useEffect(() => {
-    const ro = new ResizeObserver((entries) => {
+    const ro = new ResizeObserver(entries => {
       let dirty = false
       for (const e of entries) {
         const id = (e.target as HTMLElement).dataset.noteId
@@ -154,7 +167,7 @@ export function WindowedBoard({ items, view, scroller, renderItem, onWindow }: {
         const slot = byId.get(id)
         if (h && heights.current.set(id, h, slot && !isPlaceholder(slot) ? slot.type : undefined)) dirty = true
       }
-      if (dirty) setHeightVersion((v) => v + 1)
+      if (dirty) setHeightVersion(v => v + 1)
     })
     for (const el of cellRefs.current.values()) ro.observe(el)
     return () => ro.disconnect()
@@ -162,7 +175,7 @@ export function WindowedBoard({ items, view, scroller, renderItem, onWindow }: {
 
   return (
     <div ref={boardRef} className={'board ' + view} style={{ height: total }}>
-      {visible.map((b) => {
+      {visible.map(b => {
         const slot = byId.get(b.id)
         if (!slot) return null
         if (isPlaceholder(slot)) {
@@ -183,7 +196,7 @@ export function WindowedBoard({ items, view, scroller, renderItem, onWindow }: {
             key={b.id}
             className="masonry-cell"
             data-note-id={b.id}
-            ref={(el) => {
+            ref={el => {
               if (el) cellRefs.current.set(b.id, el)
               else cellRefs.current.delete(b.id)
             }}

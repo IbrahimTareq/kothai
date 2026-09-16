@@ -21,11 +21,11 @@ import { GalleryView } from '../views/Gallery'
 import { SpacesView, CollectionView } from '../views/Spaces'
 import type { UIItem, ViewMode } from '../types'
 
-const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
-  'accent': '#ffffff',
-  'defaultView': 'grid4',
-  'texture': true,
-}/*EDITMODE-END*/
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/ {
+  accent: '#ffffff',
+  defaultView: 'grid4',
+  texture: true,
+} /*EDITMODE-END*/
 
 // The type ids the board understands, taken from the icon catalogue so the two
 // cannot drift. boardQuery takes it as an argument rather than importing
@@ -36,8 +36,14 @@ export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS)
   const { vault, llmOff, llmWarming, needsSetup, setNeedsSetup } = useVaultStatus()
   const {
-    collections, createCollection, renameCollection, saveCanvas,
-    editCollectionTags, deleteCollection, addToCollection, removeFromCollection,
+    collections,
+    createCollection,
+    renameCollection,
+    saveCanvas,
+    editCollectionTags,
+    deleteCollection,
+    addToCollection,
+    removeFromCollection,
   } = useCollections()
   const [expanded, setExpanded] = useState<UIItem | null>(null)
   // id of the item whose Instagram carousel slides are in flight, if any
@@ -60,11 +66,12 @@ export default function App() {
   // Drives the capture button's "Added" state after a successful save.
   const [captured, setCaptured] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>(() =>
-    (typeof localStorage !== 'undefined' && localStorage.getItem('kothai-theme') === 'light') ? 'light' : 'dark')
+    typeof localStorage !== 'undefined' && localStorage.getItem('kothai-theme') === 'light' ? 'light' : 'dark',
+  )
   const coreRef = useRef<HTMLDivElement>(null)
-  const beforeSettings = useRef<string>('all')  // view to restore when settings toggles off
-  const pushedItem = useRef(false)  // true while the open item owns a history entry we can pop
-  const askedSlides = useRef(new Set<string>())  // ids already checked for carousel slides this session
+  const beforeSettings = useRef<string>('all') // view to restore when settings toggles off
+  const pushedItem = useRef(false) // true while the open item owns a history entry we can pop
+  const askedSlides = useRef(new Set<string>()) // ids already checked for carousel slides this session
   const capturedTimer = useRef<number | undefined>(undefined)
   // CollectionView's own useNotes pager, when a Space is open — deleteItem/
   // updateItem below reach into it too, since ExpandedView (an App-level
@@ -79,17 +86,31 @@ export default function App() {
     if (t.accent && t.accent.toLowerCase() !== '#ffffff') el.style.setProperty('--accent', t.accent)
     else el.style.removeProperty('--accent')
   }, [t.accent])
-  useEffect(() => { document.documentElement.dataset.theme = theme; try { localStorage.setItem('kothai-theme', theme) } catch { /* ignore */ } }, [theme])
-  useEffect(() => { setView(t.defaultView as ViewMode) }, [t.defaultView])
-  useEffect(() => { setGalFilter([]) }, [nav])   // clear filters when switching pages
-  useEffect(() => { const fx = document.getElementById('bg-fx'); if (fx) fx.style.display = t.texture ? '' : 'none' }, [t.texture])
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    try {
+      localStorage.setItem('kothai-theme', theme)
+    } catch {
+      /* ignore */
+    }
+  }, [theme])
+  useEffect(() => {
+    setView(t.defaultView as ViewMode)
+  }, [t.defaultView])
+  useEffect(() => {
+    setGalFilter([])
+  }, [nav]) // clear filters when switching pages
+  useEffect(() => {
+    const fx = document.getElementById('bg-fx')
+    if (fx) fx.style.display = t.texture ? '' : 'none'
+  }, [t.texture])
 
   // nav + chips → the server query for the Everything board. The rules (OR
   // within a facet, AND across them; "unavailable" as a state rather than a
   // facet; the note→text rename) live in domain/boardQuery.ts, where they are
   // covered by test/client/board-query.test.ts.
-  const { query: boardQ, active: galleryActive } = boardQuery(
-    nav, galFilter, search, galSort, KNOWN_TYPES, (k) => Boolean(SOURCE_BY_KEY[k]),
+  const { query: boardQ, active: galleryActive } = boardQuery(nav, galFilter, search, galSort, KNOWN_TYPES, k =>
+    Boolean(SOURCE_BY_KEY[k]),
   )
   const notes = useNotes(boardQ, galleryActive)
   // Keep the open detail modal in sync with background completions (e.g.
@@ -106,8 +127,8 @@ export default function App() {
     if (!expanded?.pending) return
     const sync = () => {
       const fresh =
-        (notes.slots.find((s) => !isPlaceholder(s) && s.id === expanded.id) as UIItem | undefined) ??
-        (spaceNotesRef.current?.slots.find((s) => !isPlaceholder(s) && s.id === expanded.id) as UIItem | undefined)
+        (notes.slots.find(s => !isPlaceholder(s) && s.id === expanded.id) as UIItem | undefined) ??
+        (spaceNotesRef.current?.slots.find(s => !isPlaceholder(s) && s.id === expanded.id) as UIItem | undefined)
       if (fresh && !fresh.pending) setExpanded(fresh)
     }
     sync()
@@ -129,20 +150,27 @@ export default function App() {
     // waited on is state, not a ref: ExpandedView shows a "Loading slides"
     // affordance over the still-single thumbnail while it is set.
     setSlidesLoading(it.id)
-    API.slides(it.id).then((fresh) => {
-      if (stop || !fresh.slides?.length) return
-      notes.patchLocal(fresh.id, { slides: fresh.slides })
-      spaceNotesRef.current?.patchLocal(fresh.id, { slides: fresh.slides })
-      setExpanded((cur) => (cur && cur.id === fresh.id ? { ...cur, slides: fresh.slides } : cur))
-    }).catch(() => { askedSlides.current.delete(it.id) })
-      .finally(() => setSlidesLoading((cur) => (cur === it.id ? null : cur)))
-    return () => { stop = true }
+    API.slides(it.id)
+      .then(fresh => {
+        if (stop || !fresh.slides?.length) return
+        notes.patchLocal(fresh.id, { slides: fresh.slides })
+        spaceNotesRef.current?.patchLocal(fresh.id, { slides: fresh.slides })
+        setExpanded(cur => (cur && cur.id === fresh.id ? { ...cur, slides: fresh.slides } : cur))
+      })
+      .catch(() => {
+        askedSlides.current.delete(it.id)
+      })
+      .finally(() => setSlidesLoading(cur => (cur === it.id ? null : cur)))
+    return () => {
+      stop = true
+    }
   }, [expanded?.id])
 
   // Long enough to read the swap and see it settle, short enough that the
   // button is back to "Capture" before anyone reaches for it again.
   const flashCaptured = () => {
-    clearTimeout(capturedTimer.current); setCaptured(true)
+    clearTimeout(capturedTimer.current)
+    setCaptured(true)
     capturedTimer.current = window.setTimeout(() => setCaptured(false), 1900)
   }
   useEffect(() => () => clearTimeout(capturedTimer.current), [])
@@ -172,18 +200,20 @@ export default function App() {
   const updateItem = (id: string, patch: { tags?: string[]; mindNote?: string }) => {
     notes.patchLocal(id, patch)
     spaceNotesRef.current?.patchLocal(id, patch)
-    setExpanded((cur) => (cur && cur.id === id ? { ...cur, ...patch } : cur))
+    setExpanded(cur => (cur && cur.id === id ? { ...cur, ...patch } : cur))
     API.update(id, patch).catch(() => {})
   }
   // force a fresh classify/embed pass for one item, discarding its current
   // tags; the server flips `pending` immediately so the existing pending-item
   // UI (already used for fresh saves) shows progress with no new loading state
   const retagItem = (id: string) => {
-    API.retag(id).then((note) => {
-      notes.patchLocal(id, note)
-      spaceNotesRef.current?.patchLocal(id, note)
-      setExpanded((cur) => (cur && cur.id === id ? note : cur))
-    }).catch(() => {})
+    API.retag(id)
+      .then(note => {
+        notes.patchLocal(id, note)
+        spaceNotesRef.current?.patchLocal(id, note)
+        setExpanded(cur => (cur && cur.id === id ? note : cur))
+      })
+      .catch(() => {})
   }
 
   // ---- collections (Spaces) ----------------------------------------------
@@ -207,7 +237,10 @@ export default function App() {
     // Replace rather than stack when one overlay opens another (canvas → item),
     // so a single Back always returns to the board.
     if (pathToRoute(location.pathname).item) history.replaceState(null, '', path)
-    else { history.pushState(null, '', path); pushedItem.current = true }
+    else {
+      history.pushState(null, '', path)
+      pushedItem.current = true
+    }
   }
   // Undo our own pushState when we made one — that fires popstate, which clears
   // `expanded`. A cold deep link has no entry to pop, so rewrite in place
@@ -222,10 +255,12 @@ export default function App() {
   // cold deep link both arrive with no card in hand. A deleted id just drops
   // back to the board underneath.
   const showItemById = (id: string, nextNav: string) => {
-    API.note(id).then(setExpanded).catch(() => {
-      setExpanded(null)
-      history.replaceState(null, '', routeToPath(nextNav))
-    })
+    API.note(id)
+      .then(setExpanded)
+      .catch(() => {
+        setExpanded(null)
+        history.replaceState(null, '', routeToPath(nextNav))
+      })
   }
   // Swipe-navigate between items inside the expanded overlay, on whatever
   // board it was opened from. Only ever steps into an already-loaded
@@ -239,7 +274,7 @@ export default function App() {
   const navExpanded = (dir: -1 | 1) => {
     if (!expanded) return
     const slots = nav.startsWith('space:') ? (spaceNotesRef.current?.slots ?? []) : notes.slots
-    const idx = slots.findIndex((s) => !isPlaceholder(s) && s.id === expanded.id)
+    const idx = slots.findIndex(s => !isPlaceholder(s) && s.id === expanded.id)
     if (idx < 0) return
     const neighbor = slots[idx + dir]
     if (!neighbor || isPlaceholder(neighbor)) return
@@ -254,9 +289,7 @@ export default function App() {
   }
   // Mirror browser back/forward into state, and normalize any odd landing URL.
   useEffect(() => {
-    const canonical = initialRoute.chat
-      ? chatPath(initialRoute.chat)
-      : routeToPath(initialRoute.nav, initialRoute.item)
+    const canonical = initialRoute.chat ? chatPath(initialRoute.chat) : routeToPath(initialRoute.nav, initialRoute.item)
     if (canonical !== location.pathname) history.replaceState(null, '', canonical)
     if (initialRoute.item) showItemById(initialRoute.item, initialRoute.nav)
     // A cold deep link to /ask/<id> arrives with no chat in hand, same as an
@@ -271,8 +304,9 @@ export default function App() {
       // Back and forward move through conversations too: into one loads it,
       // out of one empties the thread.
       if (r.nav === 'core') {
-        if (r.chat) { if (r.chat !== chat.chatIdRef.current) chat.showChat(r.chat) }
-        else chat.clearChat()
+        if (r.chat) {
+          if (r.chat !== chat.chatIdRef.current) chat.showChat(r.chat)
+        } else chat.clearChat()
       }
     }
     window.addEventListener('popstate', onPop)
@@ -298,7 +332,10 @@ export default function App() {
   // it: clicking it from inside a conversation returns to the blank composer
   // and the history list. The conversation is saved, so nothing is lost.
   const goAsk = () => {
-    if (nav === 'core') { chat.newChat(); return }
+    if (nav === 'core') {
+      chat.newChat()
+      return
+    }
     navigate('core')
     chat.focusComposer()
   }
@@ -321,19 +358,31 @@ export default function App() {
 
   // filter chips for the Everything nav — only types/sources actually present
   // in the (search-filtered) set, with live counts straight from the server.
-  const typeChips = CATEGORIES
-    .map((c) => ({ key: c.id as string, label: c.label, glyph: c.glyph, count: notes.facets.types[c.id === 'note' ? 'text' : c.id] || 0 }))
-    .filter((c) => c.count > 0)
-  const sourceChips = SOURCES
-    .map((s) => ({ key: s.key, label: s.label, dot: s.dot, glyph: s.glyph, count: notes.facets.sources[s.key] || 0 }))
-    .filter((c) => c.count > 0)
+  const typeChips = CATEGORIES.map(c => ({
+    key: c.id as string,
+    label: c.label,
+    glyph: c.glyph,
+    count: notes.facets.types[c.id === 'note' ? 'text' : c.id] || 0,
+  })).filter(c => c.count > 0)
+  const sourceChips = SOURCES.map(s => ({
+    key: s.key,
+    label: s.label,
+    dot: s.dot,
+    glyph: s.glyph,
+    count: notes.facets.sources[s.key] || 0,
+  })).filter(c => c.count > 0)
   // Only offered once a check has actually found something — a permanent
   // "Unavailable 0" chip is a filter for an empty set.
   const unavailableCount = notes.facets.unavailable || 0
 
   // Hold the app behind the first-run gate: a brief splash until we know the
   // configured state, then the model picker on a fresh install.
-  if (needsSetup === null) return <div className="app app-splash"><span className="mono">BOOTING…</span></div>
+  if (needsSetup === null)
+    return (
+      <div className="app app-splash">
+        <span className="mono">BOOTING…</span>
+      </div>
+    )
   if (needsSetup) return <Onboarding vault={vault} onComplete={() => setNeedsSetup(false)} />
 
   return (
@@ -346,43 +395,118 @@ export default function App() {
           {/* destinations sit above the utility pair, split off by the group rule.
               On phones the active marker is a single pill that slides between
               them (see foundation/responsive.css), driven by --tab. */}
-          <div className={'rail-group rail-tabs' + (tabIndex >= 0 ? ' has-active' : '')}
-            style={{ '--tab': lastTab.current } as React.CSSProperties}>
-            <button className={'rail-btn' + (nav === 'all' ? ' active' : '')} onClick={() => { navigate('all'); setSearch('') }}>
-              <Icon name="all" size={20} /><span className="rail-tip">Everything</span>
+          <div
+            className={'rail-group rail-tabs' + (tabIndex >= 0 ? ' has-active' : '')}
+            style={{ '--tab': lastTab.current } as React.CSSProperties}
+          >
+            <button
+              className={'rail-btn' + (nav === 'all' ? ' active' : '')}
+              onClick={() => {
+                navigate('all')
+                setSearch('')
+              }}
+            >
+              <Icon name="all" size={20} />
+              <span className="rail-tip">Everything</span>
             </button>
             <button className={'rail-btn' + (nav === 'core' ? ' active' : '')} onClick={goAsk}>
-              <Icon name="ask" size={20} /><span className="rail-tip">Ask</span>
+              <Icon name="ask" size={20} />
+              <span className="rail-tip">Ask</span>
             </button>
-            <button className={'rail-btn' + (navTab === 'spaces' ? ' active' : '')} onClick={() => { navigate('spaces'); setSearch('') }}>
-              <Icon name="spaces" size={20} /><span className="rail-tip">Spaces</span>
+            <button
+              className={'rail-btn' + (navTab === 'spaces' ? ' active' : '')}
+              onClick={() => {
+                navigate('spaces')
+                setSearch('')
+              }}
+            >
+              <Icon name="spaces" size={20} />
+              <span className="rail-tip">Spaces</span>
             </button>
             {/* Settings is a page like the three above it, so it rides the same
                 marker. On phones it is the bar's fourth tab; on the desktop
                 rail it is the last of the destinations, above the divider. */}
             <button className={'rail-btn' + (nav === 'settings' ? ' active' : '')} onClick={toggleSettings}>
-              <Icon name="settings" size={21} /><span className="rail-tip">Settings</span>
+              <Icon name="settings" size={21} />
+              <span className="rail-tip">Settings</span>
             </button>
           </div>
           {/* Appearance, not a destination. Hidden on phones, where the theme
               switch lives at the bottom of Settings instead. */}
           <div className="rail-group">
-            <button className="rail-btn" onClick={() => setTheme((v) => v === 'dark' ? 'light' : 'dark')}>
-              <Icon name="theme" size={20} /><span className="rail-tip">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+            <button className="rail-btn" onClick={() => setTheme(v => (v === 'dark' ? 'light' : 'dark'))}>
+              <Icon name="theme" size={20} />
+              <span className="rail-tip">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
             </button>
           </div>
         </nav>
 
         <main className="main" key={nav}>
-          {nav === 'core'
-            ? <CoreView {...chat} {...{ coreRef, jumpTo, llmOff, warming: llmWarming, submit: chat.sendQuestion, busy: chat.asking, stop: chat.stopAsk }} />
-            : nav === 'settings'
-            ? <SettingsView vault={vault} theme={theme} setTheme={setTheme} />
-            : nav === 'spaces'
-            ? <SpacesView {...{ collections, createCollection, navigate }} />
-            : nav.startsWith('space:')
-            ? <CollectionView {...{ collection: collections.find((c) => c.id === nav.slice(6)) || null, view, setView, deleteItem, onExpand: openExpanded, collections, addToCollection, removeFromCollection, renameCollection, editCollectionTags, saveCanvas, deleteCollection, navigate, notesRef: spaceNotesRef }} />
-            : <GalleryView {...{ nav, view, setView, search, setSearch, searchFocus, setSearchFocus, deleteItem, slots: notes.slots, total: notes.total, ready: notes.ready, onWindow: notes.ensure, galFilter, setGalFilter, galSort, setGalSort, typeChips, sourceChips, unavailableCount, onExpand: openExpanded, collections, addToCollection, removeFromCollection }} />}
+          {nav === 'core' ? (
+            <CoreView
+              {...chat}
+              {...{
+                coreRef,
+                jumpTo,
+                llmOff,
+                warming: llmWarming,
+                submit: chat.sendQuestion,
+                busy: chat.asking,
+                stop: chat.stopAsk,
+              }}
+            />
+          ) : nav === 'settings' ? (
+            <SettingsView vault={vault} theme={theme} setTheme={setTheme} />
+          ) : nav === 'spaces' ? (
+            <SpacesView {...{ collections, createCollection, navigate }} />
+          ) : nav.startsWith('space:') ? (
+            <CollectionView
+              {...{
+                collection: collections.find(c => c.id === nav.slice(6)) || null,
+                view,
+                setView,
+                deleteItem,
+                onExpand: openExpanded,
+                collections,
+                addToCollection,
+                removeFromCollection,
+                renameCollection,
+                editCollectionTags,
+                saveCanvas,
+                deleteCollection,
+                navigate,
+                notesRef: spaceNotesRef,
+              }}
+            />
+          ) : (
+            <GalleryView
+              {...{
+                nav,
+                view,
+                setView,
+                search,
+                setSearch,
+                searchFocus,
+                setSearchFocus,
+                deleteItem,
+                slots: notes.slots,
+                total: notes.total,
+                ready: notes.ready,
+                onWindow: notes.ensure,
+                galFilter,
+                setGalFilter,
+                galSort,
+                setGalSort,
+                typeChips,
+                sourceChips,
+                unavailableCount,
+                onExpand: openExpanded,
+                collections,
+                addToCollection,
+                removeFromCollection,
+              }}
+            />
+          )}
         </main>
       </div>
 
@@ -405,16 +529,38 @@ export default function App() {
         </span>
       </button>
 
-      {expanded && <ExpandedView item={expanded} onClose={closeExpanded} onDelete={deleteItem} onUpdate={updateItem} onRetag={retagItem} collections={collections} onAddTo={addToCollection} onRemoveFrom={removeFromCollection} onNav={navExpanded} slidesLoading={slidesLoading === expanded.id} />}
+      {expanded && (
+        <ExpandedView
+          item={expanded}
+          onClose={closeExpanded}
+          onDelete={deleteItem}
+          onUpdate={updateItem}
+          onRetag={retagItem}
+          collections={collections}
+          onAddTo={addToCollection}
+          onRemoveFrom={removeFromCollection}
+          onNav={navExpanded}
+          slidesLoading={slidesLoading === expanded.id}
+        />
+      )}
 
       {captureOpen && <CaptureModal onClose={() => setCaptureOpen(false)} onSave={saveCapture} />}
 
       <TweaksPanel>
         <TweakSection label="Core" />
-        <TweakColor label="Accent signal" value={t.accent} options={ACCENTS} onChange={(v) => setTweak('accent', v)} />
-        <TweakToggle label="Ambient texture" value={t.texture} onChange={(v) => setTweak('texture', v)} />
+        <TweakColor label="Accent signal" value={t.accent} options={ACCENTS} onChange={v => setTweak('accent', v)} />
+        <TweakToggle label="Ambient texture" value={t.texture} onChange={v => setTweak('texture', v)} />
         <TweakSection label="Gallery" />
-        <TweakRadio label="Default grid" value={t.defaultView} options={[{ value: 'grid4', label: '4' }, { value: 'grid6', label: '6' }, { value: 'grid8', label: '8' }]} onChange={(v) => setTweak('defaultView', v)} />
+        <TweakRadio
+          label="Default grid"
+          value={t.defaultView}
+          options={[
+            { value: 'grid4', label: '4' },
+            { value: 'grid6', label: '6' },
+            { value: 'grid8', label: '8' },
+          ]}
+          onChange={v => setTweak('defaultView', v)}
+        />
       </TweaksPanel>
     </div>
   )

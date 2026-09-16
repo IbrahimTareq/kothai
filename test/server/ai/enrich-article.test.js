@@ -24,8 +24,11 @@ mock.module('../../../server/ai/meta.js', {
   namedExports: {
     ...realMeta,
     fetchLinkMeta: async () => ({
-      siteTitle: 'A Baking Post', siteDesc: 'Some thoughts on baking',
-      siteName: 'Example', thumb: null, article: ARTICLE,
+      siteTitle: 'A Baking Post',
+      siteDesc: 'Some thoughts on baking',
+      siteName: 'Example',
+      thumb: null,
+      article: ARTICLE,
     }),
   },
 })
@@ -33,24 +36,27 @@ mock.module('../../../server/data/notes.js', {
   namedExports: {
     ...realStore,
     allNotes: () => notes,
-    getNote: (id) => notes.find((n) => n.id === id) ?? null,
+    getNote: id => notes.find(n => n.id === id) ?? null,
     updateNote: async (id, patch) => {
-      const n = notes.find((x) => x.id === id)
+      const n = notes.find(x => x.id === id)
       if (n) Object.assign(n, patch) // mirrors real updateNote's shallow merge
       return n
     },
   },
 })
 mock.module('../../../server/lib/tags.js', { namedExports: { ...realTags, buildVocabulary: () => [] } })
-mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async (t) => t } })
+mock.module('../../../server/data/tagvocab.js', { namedExports: { ...realTagvocab, canonicalize: async t => t } })
 mock.module('../../../server/ai/index.js', {
   namedExports: {
     ...realNormalise,
-    classify: async (args) => {
+    classify: async args => {
       classifyCalls.push(args.text)
       return { type: 'link', category: 'General', title: 'T', summary: 'S', tags: [] }
     },
-    embedText: async (text) => { embedCalls.push(text); return [0, 0, 0] },
+    embedText: async text => {
+      embedCalls.push(text)
+      return [0, 0, 0]
+    },
   },
 })
 mock.module('../../../server/data/collections.js', { namedExports: { ...realCollections, autoAdd: async () => {} } })
@@ -69,5 +75,5 @@ test('extracted article reaches classify, embed and the stored note', async () =
 
   assert.match(classifyCalls[0], /Autolyse is the resting period/, 'article missing from classify input')
   assert.match(embedCalls[0], /Autolyse is the resting period/, 'article missing from embed input')
-  assert.equal(notes.find((n) => n.id === 'n1').article, ARTICLE, 'article was not persisted onto the note')
+  assert.equal(notes.find(n => n.id === 'n1').article, ARTICLE, 'article was not persisted onto the note')
 })

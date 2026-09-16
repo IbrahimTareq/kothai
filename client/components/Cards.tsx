@@ -8,7 +8,9 @@ import { isMediaFirst, isAwaitingContent, sourceGlyph, sourceLabel } from '../do
 import type { Collection, UIItem } from '../types'
 
 // Deterministic placeholder height so gradient tiles stagger like real media.
-function phHeight(seed: number) { return 150 + (Math.abs(seed) % 4) * 40 }
+function phHeight(seed: number) {
+  return 150 + (Math.abs(seed) % 4) * 40
+}
 
 // UIItem.seed is declared in types.ts but NOTHING populates it — not the API,
 // not the client mapper — so every `seed ?? 1` fell back to the same 1, giving
@@ -36,7 +38,9 @@ function LoadingCard({ item, overlay }: { item: UIItem; overlay?: ReactElement }
     <Fragment>
       {/* Height comes from the same phHeight the gradient placeholders use, so
           a tile does not resize when its picture arrives. */}
-      <div className="card-skeleton tile-load-media" style={{ height: phHeight(tileSeed(item)) }}>{overlay}</div>
+      <div className="card-skeleton tile-load-media" style={{ height: phHeight(tileSeed(item)) }}>
+        {overlay}
+      </div>
       <div className="card-cap">
         <div className="card-skeleton tile-load-bar" aria-hidden="true"></div>
         <div className="card-skeleton tile-load-bar short" aria-hidden="true"></div>
@@ -70,12 +74,25 @@ function MediaLinkCard({ item, overlay }: { item: UIItem; overlay?: ReactElement
   if (isAwaitingContent(item)) return <LoadingCard item={item} overlay={overlay} />
   return (
     <Fragment>
-      {item.thumb
-        ? <div className="link-thumb"><img src={item.thumb} alt="" loading="lazy" /><div className="img-scan"></div>{overlay}</div>
-        : <><div className="card-favi"><span>{(item.host || '?')[0].toUpperCase()}</span></div>{overlay}</>}
+      {item.thumb ? (
+        <div className="link-thumb">
+          <img src={item.thumb} alt="" loading="lazy" />
+          <div className="img-scan"></div>
+          {overlay}
+        </div>
+      ) : (
+        <>
+          <div className="card-favi">
+            <span>{(item.host || '?')[0].toUpperCase()}</span>
+          </div>
+          {overlay}
+        </>
+      )}
       <div className="card-cap">
         <div className="card-title">{item.title}</div>
-        <div className="card-host"><Icon name="external" size={11} /> {item.siteName || item.host}</div>
+        <div className="card-host">
+          <Icon name="external" size={11} /> {item.siteName || item.host}
+        </div>
       </div>
     </Fragment>
   )
@@ -101,13 +118,19 @@ function LinkTile({ item, overlay }: { item: UIItem; overlay?: ReactElement }): 
     <Fragment>
       {overlay}
       <div className="lt-body">
-        <span className="lt-mark"><Icon name={brand || 'article'} size={20} /></span>
+        <span className="lt-mark">
+          <Icon name={brand || 'article'} size={20} />
+        </span>
         <div className="lt-cap">
           <div className="lt-title">{item.title || item.host}</div>
           <div className="lt-label mono">{label}</div>
         </div>
       </div>
-      {item.thumb && <div className="lt-shot"><img src={item.thumb} alt="" loading="lazy" /></div>}
+      {item.thumb && (
+        <div className="lt-shot">
+          <img src={item.thumb} alt="" loading="lazy" />
+        </div>
+      )}
     </Fragment>
   )
 }
@@ -127,7 +150,11 @@ export function CardInner({ item, overlay }: { item: UIItem; overlay?: ReactElem
       return (
         <Fragment>
           <ImageThumb item={it} overlay={overlay} />
-          {it.name && <div className="card-cap"><div className="card-sub mono">{it.name}</div></div>}
+          {it.name && (
+            <div className="card-cap">
+              <div className="card-sub mono">{it.name}</div>
+            </div>
+          )}
         </Fragment>
       )
     case 'video':
@@ -140,51 +167,85 @@ export function CardInner({ item, overlay }: { item: UIItem; overlay?: ReactElem
               hue at the same height — the clone wall this loading state
               exists to prevent, which would otherwise return the moment a
               note finishes enriching without a thumbnail. See tileSeed. */}
-          <div className={'img-thumb vid' + (it.thumb ? ' real' : '')} style={it.thumb ? undefined : { background: imgGradient(tileSeed(it)), height: phHeight(tileSeed(it)) }}>
+          <div
+            className={'img-thumb vid' + (it.thumb ? ' real' : '')}
+            style={it.thumb ? undefined : { background: imgGradient(tileSeed(it)), height: phHeight(tileSeed(it)) }}
+          >
             {it.thumb && <img className="vid-thumb-img" src={it.thumb} alt="" loading="lazy" />}
             <div className="img-scan"></div>
-            <div className="play-btn"><Icon name="play" size={20} /></div>
+            <div className="play-btn">
+              <Icon name="play" size={20} />
+            </div>
             {overlay}
           </div>
           <div className="card-cap">
             <div className="card-title sm">{it.title}</div>
-            <div className="card-host"><Icon name="video" size={11} /> {it.siteName || it.host}</div>
+            <div className="card-host">
+              <Icon name="video" size={11} /> {it.siteName || it.host}
+            </div>
           </div>
         </Fragment>
       )
     case 'note':
-      return <Fragment>{overlay}<div className="card-body">{it.text}</div></Fragment>
+      return (
+        <Fragment>
+          {overlay}
+          <div className="card-body">{it.text}</div>
+        </Fragment>
+      )
     case 'code':
       return (
         <Fragment>
           {overlay}
-          <div className="code-head mono"><span className="code-dot"></span><span className="code-dot"></span><span className="code-dot"></span><span className="code-lang">{it.lang}</span></div>
+          <div className="code-head mono">
+            <span className="code-dot"></span>
+            <span className="code-dot"></span>
+            <span className="code-dot"></span>
+            <span className="code-lang">{it.lang}</span>
+          </div>
           <pre className="code-block mono">{it.text}</pre>
         </Fragment>
       )
     default:
-      return <Fragment>{overlay}<div className="card-body">{it.text}</div></Fragment>
+      return (
+        <Fragment>
+          {overlay}
+          <div className="card-body">{it.text}</div>
+        </Fragment>
+      )
   }
 }
 
-function CollectionPopover({ item, collections, onAddTo, onRemoveFrom }: {
+function CollectionPopover({
+  item,
+  collections,
+  onAddTo,
+  onRemoveFrom,
+}: {
   item: UIItem
   collections: Collection[]
   onAddTo: (cid: string, itemId: string) => void
   onRemoveFrom: (cid: string, itemId: string) => void
 }) {
   return (
-    <div className="coll-pop" onClick={(e) => e.stopPropagation()}>
+    <div className="coll-pop" onClick={e => e.stopPropagation()}>
       <div className="coll-pop-h">Add to space</div>
       {collections.length === 0 && <div className="coll-pop-empty">No spaces yet</div>}
-      {collections.map((c) => {
+      {collections.map(c => {
         const on = c.itemIds.includes(item.id)
         return (
-          <button key={c.id} className={'coll-pop-row' + (on ? ' on' : '')}
-            onClick={() => (on ? onRemoveFrom(c.id, item.id) : onAddTo(c.id, item.id))}>
+          <button
+            key={c.id}
+            className={'coll-pop-row' + (on ? ' on' : '')}
+            onClick={() => (on ? onRemoveFrom(c.id, item.id) : onAddTo(c.id, item.id))}
+          >
             <span className="coll-pop-check">{on ? '✓' : ''}</span>
             <span className="coll-pop-name">{c.name}</span>
-            {c.tags.length > 0 && <span className="coll-pop-smart" title="Smart space"><Icon name="spark" size={11} /></span>}
+            {c.tags.length > 0 && (
+              <span className="coll-pop-smart" title="Smart space">
+                <Icon name="spark" size={11} />
+              </span>
+            )}
           </button>
         )
       })}
@@ -192,7 +253,14 @@ function CollectionPopover({ item, collections, onAddTo, onRemoveFrom }: {
   )
 }
 
-export function ItemCard({ item, onDelete, onExpand, collections, onAddTo, onRemoveFrom }: {
+export function ItemCard({
+  item,
+  onDelete,
+  onExpand,
+  collections,
+  onAddTo,
+  onRemoveFrom,
+}: {
   item: UIItem
   onDelete: (id: string) => void
   onExpand?: (item: UIItem) => void
@@ -211,28 +279,70 @@ export function ItemCard({ item, onDelete, onExpand, collections, onAddTo, onRem
   const canCollect = !!(collections && onAddTo && onRemoveFrom)
   const overlay = (
     <Fragment>
-      {brand && !headline && <span className="card-src" title={brand}><Icon name={brand} size={13} /></span>}
+      {brand && !headline && (
+        <span className="card-src" title={brand}>
+          <Icon name={brand} size={13} />
+        </span>
+      )}
       <div className="card-actions">
         {canCollect && (
-          <button className="card-act add" title="Add to space" onClick={(e) => { e.stopPropagation(); setPopOpen((v) => !v) }}><span className="card-act-plus">＋</span></button>
+          <button
+            className="card-act add"
+            title="Add to space"
+            onClick={e => {
+              e.stopPropagation()
+              setPopOpen(v => !v)
+            }}
+          >
+            <span className="card-act-plus">＋</span>
+          </button>
         )}
-        <button className="card-act del" title="Release" onClick={(e) => { e.stopPropagation(); onDelete(item.id) }}><Icon name="trash" size={13} /></button>
+        <button
+          className="card-act del"
+          title="Release"
+          onClick={e => {
+            e.stopPropagation()
+            onDelete(item.id)
+          }}
+        >
+          <Icon name="trash" size={13} />
+        </button>
       </div>
       {canCollect && popOpen && (
         <Fragment>
-          <div className="coll-pop-backdrop" onClick={(e) => { e.stopPropagation(); setPopOpen(false) }} />
+          <div
+            className="coll-pop-backdrop"
+            onClick={e => {
+              e.stopPropagation()
+              setPopOpen(false)
+            }}
+          />
           <CollectionPopover item={item} collections={collections!} onAddTo={onAddTo!} onRemoveFrom={onRemoveFrom!} />
         </Fragment>
       )}
     </Fragment>
   )
   return (
-    <article className={'item-card type-' + item.type + (headline ? ' linktile' : '') + (openable ? ' openable' : '')} tabIndex={0}
+    <article
+      className={'item-card type-' + item.type + (headline ? ' linktile' : '') + (openable ? ' openable' : '')}
+      tabIndex={0}
       role={openable ? 'button' : undefined}
       title={item.url ?? undefined}
       onClick={openable ? () => onExpand!(item) : undefined}
-      onKeyDown={openable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onExpand!(item) } } : undefined}>
-      <div className="card-content"><CardInner item={item} overlay={overlay} /></div>
+      onKeyDown={
+        openable
+          ? e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onExpand!(item)
+              }
+            }
+          : undefined
+      }
+    >
+      <div className="card-content">
+        <CardInner item={item} overlay={overlay} />
+      </div>
     </article>
   )
 }
@@ -278,21 +388,45 @@ export function PreviewCard({ item, n, onJump }: { item: UIItem; n: number; onJu
   const titled = !(excerpt && norm(excerpt).startsWith(norm(title)))
   const jump = () => onJump(it)
   return (
-    <article className={'tile ask-tile type-' + it.type} tabIndex={0} role="button"
-      title="Open in vault" onClick={jump}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); jump() } }}>
+    <article
+      className={'tile ask-tile type-' + it.type}
+      tabIndex={0}
+      role="button"
+      title="Open in vault"
+      onClick={jump}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          jump()
+        }
+      }}
+    >
       <div className={'tile-media' + (media || !excerpt ? '' : ' quote')}>
-        {media
+        {media ? (
           // The glyph sits under the picture, which covers it — so a thumbnail
           // whose file has gone missing falls back to the same flat field a
           // tile without one gets, instead of a broken-image box.
-          ? <><Icon name={CAT[it.type].glyph} size={20} />
-              <img src={media} alt="" loading="lazy"
-                onError={(e) => { e.currentTarget.style.display = 'none' }} />
-              {it.type === 'video' && <span className="tile-play"><Icon name="play" size={12} /></span>}</>
-          : excerpt
-          ? <p className="tile-excerpt">{excerpt}</p>
-          : <Icon name={CAT[it.type].glyph} size={20} />}
+          <>
+            <Icon name={CAT[it.type].glyph} size={20} />
+            <img
+              src={media}
+              alt=""
+              loading="lazy"
+              onError={e => {
+                e.currentTarget.style.display = 'none'
+              }}
+            />
+            {it.type === 'video' && (
+              <span className="tile-play">
+                <Icon name="play" size={12} />
+              </span>
+            )}
+          </>
+        ) : excerpt ? (
+          <p className="tile-excerpt">{excerpt}</p>
+        ) : (
+          <Icon name={CAT[it.type].glyph} size={20} />
+        )}
         {/* Pinned to the picture's top-left, the way a plate number sits on a
             figure. In the caption it competed with the title for the first
             line; up here it is the first thing read on the tile and the
@@ -313,18 +447,25 @@ export function PreviewCard({ item, n, onJump }: { item: UIItem; n: number; onJu
 export function CitedCard({ item, onJump }: { item: UIItem; onJump: (item: UIItem) => void }) {
   const it = item
   const summary =
-    it.type === 'link' ? it.title :
-    it.type === 'image' ? it.name :
-    it.type === 'video' ? it.title :
-    (it.text || '').slice(0, 90) + ((it.text || '').length > 90 ? '…' : '')
+    it.type === 'link'
+      ? it.title
+      : it.type === 'image'
+        ? it.name
+        : it.type === 'video'
+          ? it.title
+          : (it.text || '').slice(0, 90) + ((it.text || '').length > 90 ? '…' : '')
   return (
     <button className="cited" onClick={() => onJump(it)}>
-      <span className="cited-icon" data-type={it.type}><Icon name={CAT[it.type].glyph} size={14} /></span>
+      <span className="cited-icon" data-type={it.type}>
+        <Icon name={CAT[it.type].glyph} size={14} />
+      </span>
       <span className="cited-main">
         <span className="cited-summary">{summary}</span>
         <span className="cited-meta mono">{tileMeta(it)}</span>
       </span>
-      <span className="cited-go"><Icon name="external" size={13} /></span>
+      <span className="cited-go">
+        <Icon name="external" size={13} />
+      </span>
     </button>
   )
 }

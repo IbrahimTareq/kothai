@@ -5,8 +5,14 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  parseCookies, issueSession, verifySession, passwordMatches,
-  sessionCookie, clearedCookie, isSecureRequest, createThrottle,
+  parseCookies,
+  issueSession,
+  verifySession,
+  passwordMatches,
+  sessionCookie,
+  clearedCookie,
+  isSecureRequest,
+  createThrottle,
 } from '../../../server/lib/auth.js'
 
 const PW = 'correct horse battery staple'

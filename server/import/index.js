@@ -15,13 +15,13 @@ const IMPORTERS = [instagram, tiktok]
 // difference between a useful error and a dead end once several platforms'
 // exports are all just "some JSON files".
 export function getImporter(name) {
-  return IMPORTERS.find((i) => i.name === name) || null
+  return IMPORTERS.find(i => i.name === name) || null
 }
 
 // The source names the UI may send, so the route can reject an unknown one
 // without leaking module internals.
 export function importerNames() {
-  return IMPORTERS.map((i) => i.name)
+  return IMPORTERS.map(i => i.name)
 }
 
 export function findImporter(files) {

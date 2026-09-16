@@ -13,7 +13,10 @@ export async function handleCreateCollection(req, res) {
   const body = await readBody(req)
   const name = String(body.name || '').trim()
   if (!name) return json(res, 400, { error: 'name required' })
-  const c = await collections.create({ name: name.slice(0, 120), tags: normalizeTags(body.tags, { max: 40 }) }, store.allNotes())
+  const c = await collections.create(
+    { name: name.slice(0, 120), tags: normalizeTags(body.tags, { max: 40 }) },
+    store.allNotes(),
+  )
   json(res, 200, { collection: c })
 }
 
@@ -42,7 +45,7 @@ export async function handleAddItem(req, res, id) {
   const body = await readBody(req)
   const itemId = String(body.itemId || '')
   if (!itemId) return json(res, 400, { error: 'itemId required' })
-  if (!store.allNotes().some((n) => n.id === itemId)) return json(res, 404, { error: 'item not found' })
+  if (!store.allNotes().some(n => n.id === itemId)) return json(res, 404, { error: 'item not found' })
   const c = await collections.addItem(id, itemId)
   if (!c) return json(res, 404, { error: 'collection not found' })
   json(res, 200, { collection: c })

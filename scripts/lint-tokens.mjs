@@ -24,8 +24,10 @@ const SKIP = new Set(['tokens.css', 'tweaks.css'])
 // Stylesheets are grouped into foundation/, components/ and views/, so walk
 // the tree rather than reading one flat directory. Paths stay relative to
 // STYLES, which keeps report lines readable as e.g. views/gallery.css:12.
-const walkStyles = (rel = '') => readdirSync(join(STYLES, rel), { withFileTypes: true })
-  .flatMap(e => (e.isDirectory() ? walkStyles(join(rel, e.name)) : [join(rel, e.name)]))
+const walkStyles = (rel = '') =>
+  readdirSync(join(STYLES, rel), { withFileTypes: true }).flatMap(e =>
+    e.isDirectory() ? walkStyles(join(rel, e.name)) : [join(rel, e.name)],
+  )
 
 const files = walkStyles().filter(f => f.endsWith('.css') && !SKIP.has(basename(f)))
 const tokensSrc = readFileSync(join(STYLES, 'foundation', 'tokens.css'), 'utf8')
@@ -38,38 +40,46 @@ const tokensCode = tokensSrc.replace(/\/\*[\s\S]*?\*\//g, '')
 const defined = new Set([...tokensCode.matchAll(/(--[a-z0-9-]+)\s*:/g)].map(m => m[1]))
 
 const RULES = [
-  { id: 'font-size',
-    re: /font-size:\s*[0-9.]+(px|rem)/g,
-    msg: 'raw font-size — use a --text-* token' },
+  { id: 'font-size', re: /font-size:\s*[0-9.]+(px|rem)/g, msg: 'raw font-size — use a --text-* token' },
   // font-size was guarded from the start; weight and tracking were not, which
   // is exactly where the drift landed — two hand-written 600s and five one-off
   // letter-spacings, three of them re-declared on elements that already had
   // .mono. Guarding all three axes closes the gap. @font-face is exempt: its
   // `font-weight: 300 700` states what the variable file contains, which is a
   // fact about the resource rather than a design choice.
-  { id: 'font-weight',
+  {
+    id: 'font-weight',
     re: /font-weight:\s*(?!\s*[0-9]+\s+[0-9]+)[0-9]+/g,
-    msg: 'raw font-weight — use a --fw-* token' },
-  { id: 'letter-spacing',
+    msg: 'raw font-weight — use a --fw-* token',
+  },
+  {
+    id: 'letter-spacing',
     re: /letter-spacing:\s*-?[0-9.]+(em|px|rem)/g,
-    msg: 'raw letter-spacing — use a --tracking-* token (mono text gets it from .mono)' },
-  { id: 'colour',
+    msg: 'raw letter-spacing — use a --tracking-* token (mono text gets it from .mono)',
+  },
+  {
+    id: 'colour',
     re: /(?:color|background|background-color|border-color|fill|stroke)\s*:\s*(?:#[0-9a-fA-F]{3,8}|rgba?\([0-9])/g,
-    msg: 'raw colour — use an --ink-*/--panel-*/--line-*/--accent-* token' },
-  { id: 'radius',
+    msg: 'raw colour — use an --ink-*/--panel-*/--line-*/--accent-* token',
+  },
+  {
+    id: 'radius',
     re: /border(?:-[a-z]+)?-radius:\s*[^;}]*(?<![\w.#-])[0-9]+(px|%)/g,
-    msg: 'raw border-radius — use a --radius-* token' },
-  { id: 'spacing',
+    msg: 'raw border-radius — use a --radius-* token',
+  },
+  {
+    id: 'spacing',
     // only the rhythm range; >48px is layout and stays literal by design
     re: /(?:padding|margin|gap)(?:-(?:top|right|bottom|left))?:\s*[^;}]*(?<![\w.#-])(?:[0-9]|[1-4][0-9])px/g,
-    msg: 'raw spacing <=48px — use a --space-* token' },
-  { id: 'z-index',
-    re: /z-index:\s*[0-9]/g,
-    msg: 'raw z-index — use a --z-* token' },
-  { id: 'duration',
+    msg: 'raw spacing <=48px — use a --space-* token',
+  },
+  { id: 'z-index', re: /z-index:\s*[0-9]/g, msg: 'raw z-index — use a --z-* token' },
+  {
+    id: 'duration',
     // durations under .5s are interaction feedback and must be on the scale
     re: /(?:transition|animation):[^;}]*(?<![\w.])0?\.[0-4][0-9]?s/g,
-    msg: 'raw duration <.5s — use a --dur-* token' },
+    msg: 'raw duration <.5s — use a --dur-* token',
+  },
 ]
 
 let failures = 0
@@ -106,8 +116,10 @@ for (const file of files) {
 for (const file of files) {
   if (basename(file) === 'primitives.css') continue
   for (const hit of findButtonChrome(readFileSync(join(STYLES, file), 'utf8'))) {
-    report.push(`  ${file}:${hit.line}  [button-chrome] ${hit.selector} builds a button box`
-      + `\n      use .btn plus a size (--xs/--sm/--lg) and a tone (--solid/--ghost/--icon/--danger)`)
+    report.push(
+      `  ${file}:${hit.line}  [button-chrome] ${hit.selector} builds a button box` +
+        `\n      use .btn plus a size (--xs/--sm/--lg) and a tone (--solid/--ghost/--icon/--danger)`,
+    )
     failures++
   }
 }
@@ -122,9 +134,10 @@ for (const file of files) {
  * Tweaks.tsx is skipped: it injects a third-party panel's own stylesheet.
  */
 const SKIP_TSX = new Set(['Tweaks.tsx'])
-const LAYOUT_PROP = /^(padding|margin|gap|inset|top|right|bottom|left|width|height|minWidth|minHeight|maxWidth|maxHeight|fontSize|borderRadius|zIndex|letterSpacing|lineHeight)/
+const LAYOUT_PROP =
+  /^(padding|margin|gap|inset|top|right|bottom|left|width|height|minWidth|minHeight|maxWidth|maxHeight|fontSize|borderRadius|zIndex|letterSpacing|lineHeight)/
 
-function walk (dir) {
+function walk(dir) {
   return readdirSync(dir).flatMap(name => {
     const full = join(dir, name)
     if (statSync(full).isDirectory()) return walk(full)
@@ -139,10 +152,18 @@ for (const full of walk(CLIENT)) {
   let m
   while ((m = marker.exec(src))) {
     // balance braces from the opening of the object literal
-    let i = m.index + 'style={'.length, depth = 0, end = -1
+    let i = m.index + 'style={'.length,
+      depth = 0,
+      end = -1
     for (; i < src.length; i++) {
       if (src[i] === '{') depth++
-      else if (src[i] === '}') { depth--; if (depth === 0) { end = i; break } }
+      else if (src[i] === '}') {
+        depth--
+        if (depth === 0) {
+          end = i
+          break
+        }
+      }
     }
     if (end < 0) continue
     const raw = src.slice(m.index, end + 1)
@@ -162,7 +183,10 @@ for (const full of walk(CLIENT)) {
       say('literal px in an inline style — move it to CSS and use a token')
     } else {
       for (const d of body.matchAll(/([a-zA-Z]+)\s*:\s*(-?[0-9.]+)\s*[,}]/g)) {
-        if (LAYOUT_PROP.test(d[1])) { say(`literal ${d[1]}: ${d[2]} — move it to CSS and use a token`); break }
+        if (LAYOUT_PROP.test(d[1])) {
+          say(`literal ${d[1]}: ${d[2]} — move it to CSS and use a token`)
+          break
+        }
       }
     }
   }
@@ -209,8 +233,10 @@ const usedSrc = [...new Set(consumers)].map(f => readFileSync(f, 'utf8')).join('
 const used = new Set([...usedSrc.matchAll(/var\(\s*(--[a-z0-9-]+)/g)].map(m => m[1]))
 for (const token of defined) {
   if (used.has(token) || EXEMPT.has(token)) continue
-  report.push(`  foundation/tokens.css  [unused-token] ${token} has no consumer`
-    + `\n      delete it, or add it to EXEMPT in lint-tokens.mjs with the reason it is held open`)
+  report.push(
+    `  foundation/tokens.css  [unused-token] ${token} has no consumer` +
+      `\n      delete it, or add it to EXEMPT in lint-tokens.mjs with the reason it is held open`,
+  )
   failures++
 }
 

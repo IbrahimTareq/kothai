@@ -22,13 +22,18 @@ import type { ModelFilesResponse } from '../types'
 export function ModelFilesRow() {
   const [data, setData] = useState<ModelFilesResponse | null>(null)
   const [open, setOpen] = useState(false)
-  const [pending, setPending] = useState<string | null>(null)   // armed for delete
+  const [pending, setPending] = useState<string | null>(null) // armed for delete
   const [deleting, setDeleting] = useState<string | null>(null)
   const [freed, setFreed] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const load = () => API.modelFiles().then(setData).catch(() => setData(null))
-  useEffect(() => { load() }, [])
+  const load = () =>
+    API.modelFiles()
+      .then(setData)
+      .catch(() => setData(null))
+  useEffect(() => {
+    load()
+  }, [])
 
   const remove = async (name: string) => {
     if (deleting) return
@@ -49,57 +54,81 @@ export function ModelFilesRow() {
   }
 
   return (
-    <SettingsRow title="Downloaded models"
-      desc={<>Model weights are downloaded once and kept. Switching a model leaves the old files behind, and erasing your data doesn't touch them — this is where that space goes. Anything you delete downloads again the next time you pick it.</>}
-      action={data && (
-        <button className="btn" onClick={() => { setOpen(!open); setError(null) }} aria-expanded={open}>
-          {open ? 'Hide files' : 'Manage files'}
-        </button>
-      )}>
-      {data && (
-        <RowStatus>{storageSummary(data)}</RowStatus>
-      )}
+    <SettingsRow
+      title="Downloaded models"
+      desc={
+        <>
+          Model weights are downloaded once and kept. Switching a model leaves the old files behind, and erasing your
+          data doesn't touch them — this is where that space goes. Anything you delete downloads again the next time you
+          pick it.
+        </>
+      }
+      action={
+        data && (
+          <button
+            className="btn"
+            onClick={() => {
+              setOpen(!open)
+              setError(null)
+            }}
+            aria-expanded={open}
+          >
+            {open ? 'Hide files' : 'Manage files'}
+          </button>
+        )
+      }
+    >
+      {data && <RowStatus>{storageSummary(data)}</RowStatus>}
       {open && data && (
         <div className="settings-row-extra">
           <ul className="model-files">
-            {data.entries.map((f) => (
+            {data.entries.map(f => (
               <li key={f.name} className="model-file">
                 <div className="mf-main">
-                  <span className="mf-name mono" title={f.name}>{fileLabel(f)}</span>
+                  <span className="mf-name mono" title={f.name}>
+                    {fileLabel(f)}
+                  </span>
                   <span className="mf-size mono">{fmtSize(f.sizeBytes)}</span>
                 </div>
-                {f.inUse
+                {f.inUse ? (
                   // Named by role rather than "in use": the next question after
                   // "why can't I delete this" is "then what is using it", and
                   // the answer is a model picker three rows up.
-                  ? <span className="mf-badge">In use · {f.usedBy ? ROLE_META[f.usedBy].title.toLowerCase() : 'selected'}</span>
-                  : pending === f.name
-                    ? (
-                      <span className="mf-confirm">
-                        <button className="btn btn--danger btn--solid" onClick={() => remove(f.name)} disabled={deleting === f.name}>
-                          {deleting === f.name ? 'Deleting…' : `Delete ${fmtSize(f.sizeBytes)}`}
-                        </button>
-                        <button className="btn" onClick={() => setPending(null)} disabled={deleting === f.name}>
-                          Cancel
-                        </button>
-                      </span>
-                    )
-                    : (
-                      <button className="btn btn--danger mf-delete" onClick={() => { setPending(f.name); setError(null); setFreed(null) }}>
-                        Delete
-                      </button>
-                    )}
+                  <span className="mf-badge">
+                    In use · {f.usedBy ? ROLE_META[f.usedBy].title.toLowerCase() : 'selected'}
+                  </span>
+                ) : pending === f.name ? (
+                  <span className="mf-confirm">
+                    <button
+                      className="btn btn--danger btn--solid"
+                      onClick={() => remove(f.name)}
+                      disabled={deleting === f.name}
+                    >
+                      {deleting === f.name ? 'Deleting…' : `Delete ${fmtSize(f.sizeBytes)}`}
+                    </button>
+                    <button className="btn" onClick={() => setPending(null)} disabled={deleting === f.name}>
+                      Cancel
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    className="btn btn--danger mf-delete"
+                    onClick={() => {
+                      setPending(f.name)
+                      setError(null)
+                      setFreed(null)
+                    }}
+                  >
+                    Delete
+                  </button>
+                )}
               </li>
             ))}
           </ul>
         </div>
       )}
-      {freed !== null && (
-        <RowStatus>Freed {fmtSize(freed)}.</RowStatus>
-      )}
-      {error && (
-        <RowStatus tone="error">{error}</RowStatus>
-      )}
+      {freed !== null && <RowStatus>Freed {fmtSize(freed)}.</RowStatus>}
+      {error && <RowStatus tone="error">{error}</RowStatus>}
     </SettingsRow>
   )
 }

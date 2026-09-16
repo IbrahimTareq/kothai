@@ -41,22 +41,32 @@ export function useVaultStatus(): VaultSource {
         const s = await API.status()
         // Decided once, from the first successful poll — afterwards Onboarding
         // owns the gate, so it stays up through the download.
-        setNeedsSetup((v) => (v === null ? !s.configured : v))
+        setNeedsSetup(v => (v === null ? !s.configured : v))
         setLlmOff(s.roles.llm.state === 'off')
         // Tied to the llm role specifically, not the aggregate — the aggregate
         // can be "loading" because an unrelated role (e.g. vision) is warming
         // up in the background, which would otherwise show a misleading
         // message under a text answer that isn't waiting on that role at all.
-        setLlmWarming(s.roles.llm.state === 'loading' ? (s.roles.llm.message || 'Warming up the language model…') : '')
+        setLlmWarming(s.roles.llm.state === 'loading' ? s.roles.llm.message || 'Warming up the language model…' : '')
         const a = s.aggregate
         if (a.state === 'error') setVault({ state: 'error', txt: 'FAULT', pct: a.progress || 0, msg: a.message })
-        else if (a.state === 'loading') setVault({ state: 'loading', txt: 'LOADING ' + (a.progress || 0) + '%', pct: a.progress || 0, msg: a.message })
+        else if (a.state === 'loading')
+          setVault({
+            state: 'loading',
+            txt: 'LOADING ' + (a.progress || 0) + '%',
+            pct: a.progress || 0,
+            msg: a.message,
+          })
         else setVault({ state: 'ready', txt: 'ONLINE', pct: 100, msg: '' })
         if (!stop) window.setTimeout(tick, a.state === 'loading' ? TICK_LOADING_MS : TICK_READY_MS)
-      } catch { if (!stop) window.setTimeout(tick, TICK_ERROR_MS) }
+      } catch {
+        if (!stop) window.setTimeout(tick, TICK_ERROR_MS)
+      }
     }
     tick()
-    return () => { stop = true }
+    return () => {
+      stop = true
+    }
   }, [])
 
   return { vault, llmOff, llmWarming, needsSetup, setNeedsSetup }

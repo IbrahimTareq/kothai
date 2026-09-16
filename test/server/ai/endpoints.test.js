@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { ENDPOINTS, findEndpoint } from '../../../server/ai/endpoints.js'
 
 test('every entry has a unique id', () => {
-  const ids = ENDPOINTS.map((e) => e.id)
+  const ids = ENDPOINTS.map(e => e.id)
   assert.equal(new Set(ids).size, ids.length)
 })
 
@@ -24,7 +24,7 @@ test('every base URL parses and carries no credential', () => {
 })
 
 test('a provider that serves embeddings offers a default for all three roles', () => {
-  for (const e of ENDPOINTS.filter((x) => x.servesEmbeddings)) {
+  for (const e of ENDPOINTS.filter(x => x.servesEmbeddings)) {
     for (const role of ['llm', 'embed', 'vision']) {
       assert.ok(e.defaults[role], `${e.id} is missing a ${role} default`)
     }
@@ -44,7 +44,7 @@ test('every offered provider can do the whole job', () => {
 // Kept as a guard on whatever gets added next: the moment a chat-only provider
 // is offered again, it must not claim an embedding model it cannot serve.
 test('a chat-only provider would leave the embedding default empty', () => {
-  for (const e of ENDPOINTS.filter((x) => !x.servesEmbeddings)) {
+  for (const e of ENDPOINTS.filter(x => !x.servesEmbeddings)) {
     assert.equal(e.defaults.embed, '', `${e.id} must not claim an embedding model`)
   }
 })

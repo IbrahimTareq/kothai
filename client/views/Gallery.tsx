@@ -42,7 +42,31 @@ const VIEW_CAT: Record<string, { label: string; glyph: string }> = {
   spaces: { label: 'Spaces', glyph: 'spark' },
 }
 
-export function GalleryView({ nav, view, setView, search, setSearch, searchFocus, setSearchFocus, deleteItem, slots, total, ready, onWindow, galFilter, setGalFilter, galSort, setGalSort, typeChips, sourceChips, unavailableCount, onExpand, collections, addToCollection, removeFromCollection }: GalleryViewProps) {
+export function GalleryView({
+  nav,
+  view,
+  setView,
+  search,
+  setSearch,
+  searchFocus,
+  setSearchFocus,
+  deleteItem,
+  slots,
+  total,
+  ready,
+  onWindow,
+  galFilter,
+  setGalFilter,
+  galSort,
+  setGalSort,
+  typeChips,
+  sourceChips,
+  unavailableCount,
+  onExpand,
+  collections,
+  addToCollection,
+  removeFromCollection,
+}: GalleryViewProps) {
   const cat = CAT[nav as UIType] || VIEW_CAT[nav] || { label: nav, glyph: 'all' }
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -50,8 +74,7 @@ export function GalleryView({ nav, view, setView, search, setSearch, searchFocus
   // Chips are multi-select: each one toggles, and "All" is simply the empty
   // selection rather than a chip of its own that has to be deselected.
   const on = (key: string) => galFilter.includes(key)
-  const toggle = (key: string) =>
-    setGalFilter(on(key) ? galFilter.filter((k) => k !== key) : [...galFilter, key])
+  const toggle = (key: string) => setGalFilter(on(key) ? galFilter.filter(k => k !== key) : [...galFilter, key])
 
   // The filter strip scrolls sideways (11 chips against ~350px on a phone),
   // and did so with no sign that it could: the only hint was a chip clipped
@@ -67,44 +90,81 @@ export function GalleryView({ nav, view, setView, search, setSearch, searchFocus
       <header className="gal-head">
         <div className={'search-box' + (searchFocus ? ' focus' : '')}>
           <Icon name="search" size={16} />
-          <input value={search} placeholder="search anything…" onChange={(e) => setSearch(e.target.value)}
-            onFocus={() => setSearchFocus(true)} onBlur={() => setSearchFocus(false)} />
+          <input
+            value={search}
+            placeholder="search anything…"
+            onChange={e => setSearch(e.target.value)}
+            onFocus={() => setSearchFocus(true)}
+            onBlur={() => setSearchFocus(false)}
+          />
         </div>
       </header>
 
       <div className="gal-controls">
-        {nav === 'all' && (typeChips.length > 0 || sourceChips.length > 0 || unavailableCount > 0)
-          ? <div className={'gal-filters' + filtersFade} ref={filtersRef}>
-              <button className={'chip filter-chip' + (galFilter.length === 0 ? ' on' : '')}
-                onClick={() => setGalFilter([])}>All</button>
-              {typeChips.map((c) => (
-                <button key={c.key} className={'chip filter-chip' + (on(c.key) ? ' on' : '')}
-                  aria-pressed={on(c.key)} onClick={() => toggle(c.key)}>
-                  <span className="fc-ico"><Icon name={c.glyph} size={13} /></span>{c.label}<span className="fc-count">{c.count}</span>
-                </button>
-              ))}
-              {sourceChips.length > 0 && <span className="filter-sep" />}
-              {sourceChips.map((c) => (
-                <button key={c.key} className={'chip filter-chip' + (on(c.key) ? ' on' : '')}
-                  aria-pressed={on(c.key)} onClick={() => toggle(c.key)}>
-                  {c.glyph ? <span className="fc-ico"><Icon name={c.glyph} size={13} /></span> : <span className="fc-dot" style={{ background: c.dot }} />}
-                  {c.label}<span className="fc-count">{c.count}</span>
-                </button>
-              ))}
-              {/* Last, and only once a check has found something: this is a
+        {nav === 'all' && (typeChips.length > 0 || sourceChips.length > 0 || unavailableCount > 0) ? (
+          <div className={'gal-filters' + filtersFade} ref={filtersRef}>
+            <button
+              className={'chip filter-chip' + (galFilter.length === 0 ? ' on' : '')}
+              onClick={() => setGalFilter([])}
+            >
+              All
+            </button>
+            {typeChips.map(c => (
+              <button
+                key={c.key}
+                className={'chip filter-chip' + (on(c.key) ? ' on' : '')}
+                aria-pressed={on(c.key)}
+                onClick={() => toggle(c.key)}
+              >
+                <span className="fc-ico">
+                  <Icon name={c.glyph} size={13} />
+                </span>
+                {c.label}
+                <span className="fc-count">{c.count}</span>
+              </button>
+            ))}
+            {sourceChips.length > 0 && <span className="filter-sep" />}
+            {sourceChips.map(c => (
+              <button
+                key={c.key}
+                className={'chip filter-chip' + (on(c.key) ? ' on' : '')}
+                aria-pressed={on(c.key)}
+                onClick={() => toggle(c.key)}
+              >
+                {c.glyph ? (
+                  <span className="fc-ico">
+                    <Icon name={c.glyph} size={13} />
+                  </span>
+                ) : (
+                  <span className="fc-dot" style={{ background: c.dot }} />
+                )}
+                {c.label}
+                <span className="fc-count">{c.count}</span>
+              </button>
+            ))}
+            {/* Last, and only once a check has found something: this is a
                   state the library is in, not a kind of thing in it, and an
                   "Unavailable 0" chip would be a filter for an empty set. */}
-              {unavailableCount > 0 && <>
+            {unavailableCount > 0 && (
+              <>
                 <span className="filter-sep" />
-                <button className={'chip filter-chip' + (on('unavailable') ? ' on' : '')}
+                <button
+                  className={'chip filter-chip' + (on('unavailable') ? ' on' : '')}
                   aria-pressed={on('unavailable')}
                   title="Saved links whose content no longer exists"
-                  onClick={() => toggle('unavailable')}>
-                  <span className="fc-ico"><Icon name="trash" size={13} /></span>Unavailable<span className="fc-count">{unavailableCount}</span>
+                  onClick={() => toggle('unavailable')}
+                >
+                  <span className="fc-ico">
+                    <Icon name="trash" size={13} />
+                  </span>
+                  Unavailable<span className="fc-count">{unavailableCount}</span>
                 </button>
-              </>}
-            </div>
-          : <span className="gal-filters-spacer" />}
+              </>
+            )}
+          </div>
+        ) : (
+          <span className="gal-filters-spacer" />
+        )}
         {/* Sort sits with the density toggle, not with the chips: both answer
             "how is this board presented", where a chip answers "what is on
             it". They share the .seg primitive and its height, so the two read
@@ -114,32 +174,64 @@ export function GalleryView({ nav, view, setView, search, setSearch, searchFocus
             column count you get matters less there than what order you are
             reading in. */}
         <div className="seg gal-sort" role="group" aria-label="Sort order">
-          <button className={'seg-btn' + (galSort === 'newest' ? ' on' : '')}
-            aria-pressed={galSort === 'newest'} title="Newest first"
-            onClick={() => setGalSort('newest')}>Newest</button>
-          <button className={'seg-btn' + (galSort === 'oldest' ? ' on' : '')}
-            aria-pressed={galSort === 'oldest'} title="Oldest first"
-            onClick={() => setGalSort('oldest')}>Oldest</button>
+          <button
+            className={'seg-btn' + (galSort === 'newest' ? ' on' : '')}
+            aria-pressed={galSort === 'newest'}
+            title="Newest first"
+            onClick={() => setGalSort('newest')}
+          >
+            Newest
+          </button>
+          <button
+            className={'seg-btn' + (galSort === 'oldest' ? ' on' : '')}
+            aria-pressed={galSort === 'oldest'}
+            title="Oldest first"
+            onClick={() => setGalSort('oldest')}
+          >
+            Oldest
+          </button>
         </div>
         <div className="view-toggle">
-          <button className={view === 'grid4' ? 'on' : ''} onClick={() => setView('grid4')} title="4 columns"><Icon name="grid4" size={16} /></button>
-          <button className={view === 'grid6' ? 'on' : ''} onClick={() => setView('grid6')} title="6 columns"><Icon name="grid6" size={16} /></button>
-          <button className={view === 'grid8' ? 'on' : ''} onClick={() => setView('grid8')} title="8 columns"><Icon name="grid8" size={16} /></button>
+          <button className={view === 'grid4' ? 'on' : ''} onClick={() => setView('grid4')} title="4 columns">
+            <Icon name="grid4" size={16} />
+          </button>
+          <button className={view === 'grid6' ? 'on' : ''} onClick={() => setView('grid6')} title="6 columns">
+            <Icon name="grid6" size={16} />
+          </button>
+          <button className={view === 'grid8' ? 'on' : ''} onClick={() => setView('grid8')} title="8 columns">
+            <Icon name="grid8" size={16} />
+          </button>
         </div>
       </div>
 
       <div className="gal-scroll" ref={scrollRef}>
-        {total === 0 && ready
-          ? <div className="empty">
-              {nav === 'all'
-                ? <img src="/empty-2.svg" alt="" width={80} height={80} />
-                : <Icon name={cat.glyph} size={40} />}
-              {search ? <p>{`NO ${cat.label.toUpperCase()} MATCH FILTER`}</p> : <p>{`NOTHING ADDED YET`}</p>}
-            </div>
-          : <WindowedBoard items={slots} view={view} scroller={scrollRef} onWindow={onWindow}
-              renderItem={(it) => (
-                <ItemCard item={it} onDelete={deleteItem} onExpand={onExpand} collections={collections} onAddTo={addToCollection} onRemoveFrom={removeFromCollection} />
-              )} />}
+        {total === 0 && ready ? (
+          <div className="empty">
+            {nav === 'all' ? (
+              <img src="/empty-2.svg" alt="" width={80} height={80} />
+            ) : (
+              <Icon name={cat.glyph} size={40} />
+            )}
+            {search ? <p>{`NO ${cat.label.toUpperCase()} MATCH FILTER`}</p> : <p>{`NOTHING ADDED YET`}</p>}
+          </div>
+        ) : (
+          <WindowedBoard
+            items={slots}
+            view={view}
+            scroller={scrollRef}
+            onWindow={onWindow}
+            renderItem={it => (
+              <ItemCard
+                item={it}
+                onDelete={deleteItem}
+                onExpand={onExpand}
+                collections={collections}
+                onAddTo={addToCollection}
+                onRemoveFrom={removeFromCollection}
+              />
+            )}
+          />
+        )}
       </div>
     </div>
   )

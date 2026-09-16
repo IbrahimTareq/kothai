@@ -3,10 +3,19 @@ import assert from 'node:assert/strict'
 import { NotePager, PAGE, isPlaceholder, matchesLocal } from '../../client/data/pager.ts'
 import type { UIItem } from '../../client/types.ts'
 
-const item = (id: string, o: Partial<UIItem> = {}): UIItem =>
-  ({ id, ts: 0, type: 'note', tags: [], pending: false, ...o })
+const item = (id: string, o: Partial<UIItem> = {}): UIItem => ({
+  id,
+  ts: 0,
+  type: 'note',
+  tags: [],
+  pending: false,
+  ...o,
+})
 const page = (offset: number, n: number, total: number) => ({
-  offset, total, facets: { types: {}, sources: {} }, pendingTotal: 0,
+  offset,
+  total,
+  facets: { types: {}, sources: {} },
+  pendingTotal: 0,
   notes: Array.from({ length: n }, (_, i) => item(`n${offset + i}`)),
 })
 
@@ -63,7 +72,10 @@ test('local insert/remove/patch shift and patch slots', () => {
   assert.equal((p.slots()[1] as UIItem).id, 'n0')
   p.removeLocal('n1')
   assert.equal(p.total, 3)
-  assert.deepEqual(p.slots().map((s) => (s as UIItem).id), ['new', 'n0', 'n2'])
+  assert.deepEqual(
+    p.slots().map(s => (s as UIItem).id),
+    ['new', 'n0', 'n2'],
+  )
   p.patchLocal('n2', { tags: ['x'] })
   assert.deepEqual((p.slots()[2] as UIItem).tags, ['x'])
 })
@@ -79,18 +91,26 @@ test('reset clears state for a new query', () => {
 
 test('applyDelta patches known ids, prepends fresh newest, ignores unloaded, removes deleted', () => {
   const p = new NotePager()
-  p.applyPage({ offset: 0, total: 3, facets: { types: {}, sources: {} }, pendingTotal: 1,
-    notes: [item('n0', { ts: 300 }), item('n1', { ts: 200 }), item('n2', { ts: 100 })] })
-  p.applyDelta({
-    notes: [
-      item('n1', { ts: 200, tags: ['enriched'] }),   // known → patch in place
-      item('brand-new', { ts: 999 }),                // newer than newest → prepend
-      item('deep-unloaded', { ts: 50 }),             // older, not held → ignore
-    ],
-    deleted: ['n2'],
-    pendingTotal: 0,
-  }, {})
-  const ids = p.slots().map((s) => (s as UIItem).id)
+  p.applyPage({
+    offset: 0,
+    total: 3,
+    facets: { types: {}, sources: {} },
+    pendingTotal: 1,
+    notes: [item('n0', { ts: 300 }), item('n1', { ts: 200 }), item('n2', { ts: 100 })],
+  })
+  p.applyDelta(
+    {
+      notes: [
+        item('n1', { ts: 200, tags: ['enriched'] }), // known → patch in place
+        item('brand-new', { ts: 999 }), // newer than newest → prepend
+        item('deep-unloaded', { ts: 50 }), // older, not held → ignore
+      ],
+      deleted: ['n2'],
+      pendingTotal: 0,
+    },
+    {},
+  )
+  const ids = p.slots().map(s => (s as UIItem).id)
   assert.deepEqual(ids, ['brand-new', 'n0', 'n1'])
   assert.deepEqual((p.slots()[2] as UIItem).tags, ['enriched'])
   assert.equal(p.pendingTotal, 0)
@@ -98,8 +118,13 @@ test('applyDelta patches known ids, prepends fresh newest, ignores unloaded, rem
 
 test('applyDelta keeps identity for JSON-equal patches and respects the query filter on prepends', () => {
   const p = new NotePager()
-  p.applyPage({ offset: 0, total: 1, facets: { types: {}, sources: {} }, pendingTotal: 0,
-    notes: [item('n0', { ts: 300 })] })
+  p.applyPage({
+    offset: 0,
+    total: 1,
+    facets: { types: {}, sources: {} },
+    pendingTotal: 0,
+    notes: [item('n0', { ts: 300 })],
+  })
   const held = p.slots()[0]
   p.applyDelta({ notes: [item('n0', { ts: 300 })], deleted: [], pendingTotal: 0 }, {})
   assert.equal(p.slots()[0], held)
@@ -109,47 +134,65 @@ test('applyDelta keeps identity for JSON-equal patches and respects the query fi
 
 test('applyDelta inserts every new note in a batch, even when the batch arrives newest-first', () => {
   const p = new NotePager()
-  p.applyPage({ offset: 0, total: 1, facets: { types: {}, sources: {} }, pendingTotal: 0,
-    notes: [item('n0', { ts: 100 })] })
+  p.applyPage({
+    offset: 0,
+    total: 1,
+    facets: { types: {}, sources: {} },
+    pendingTotal: 0,
+    notes: [item('n0', { ts: 100 })],
+  })
   // Server's changedSince() returns newly-added notes newest-first (store
   // does unshift() on add), so a batch of 2+ new notes is NOT necessarily
   // in ascending-ts order. Both of these are newer than the n0 (ts 100)
   // that was loaded before the delta and must both survive.
-  p.applyDelta({
-    notes: [
-      item('newer', { ts: 300 }),
-      item('older-but-still-new', { ts: 200 }),
-    ],
-    deleted: [],
-    pendingTotal: 0,
-  }, {})
-  const ids = p.slots().map((s) => (s as UIItem).id)
+  p.applyDelta(
+    {
+      notes: [item('newer', { ts: 300 }), item('older-but-still-new', { ts: 200 })],
+      deleted: [],
+      pendingTotal: 0,
+    },
+    {},
+  )
+  const ids = p.slots().map(s => (s as UIItem).id)
   assert.deepEqual(ids, ['newer', 'older-but-still-new', 'n0'])
   assert.equal(p.total, 3)
 })
 
 test('applyDelta handles a millisecond ts tie between two new notes in one batch', () => {
   const p = new NotePager()
-  p.applyPage({ offset: 0, total: 1, facets: { types: {}, sources: {} }, pendingTotal: 0,
-    notes: [item('n0', { ts: 100 })] })
-  p.applyDelta({
-    notes: [item('a', { ts: 200 }), item('b', { ts: 200 })],
-    deleted: [],
+  p.applyPage({
+    offset: 0,
+    total: 1,
+    facets: { types: {}, sources: {} },
     pendingTotal: 0,
-  }, {})
-  const ids = p.slots().map((s) => (s as UIItem).id)
+    notes: [item('n0', { ts: 100 })],
+  })
+  p.applyDelta(
+    {
+      notes: [item('a', { ts: 200 }), item('b', { ts: 200 })],
+      deleted: [],
+      pendingTotal: 0,
+    },
+    {},
+  )
+  const ids = p.slots().map(s => (s as UIItem).id)
   assert.equal(ids.length, 3)
   assert.ok(ids.includes('a') && ids.includes('b'))
 })
 
 test('thumbless reports loaded instagram slots without thumbs in range', () => {
   const p = new NotePager()
-  p.applyPage({ offset: 0, total: 4, facets: { types: {}, sources: {} }, pendingTotal: 0,
+  p.applyPage({
+    offset: 0,
+    total: 4,
+    facets: { types: {}, sources: {} },
+    pendingTotal: 0,
     notes: [
       item('a', { type: 'video', url: 'https://www.instagram.com/reel/1/' }),
       item('b', { type: 'video', url: 'https://www.instagram.com/reel/2/', thumb: '/uploads/x.jpg' }),
       item('c', { type: 'link', url: 'https://example.com' }),
-    ] })
+    ],
+  })
   assert.deepEqual(p.thumbless(0, 3), ['a'], 'no thumb + instagram only; placeholder at 3 skipped')
 })
 
@@ -166,8 +209,13 @@ test('awaitingThumbCount resolves early once the note actually gets a thumb', ()
   const p = new NotePager()
   p.applyPage(page(0, 1, 1))
   p.markAwaitingThumb(['n0'], 1000, 20000)
-  p.applyPage({ offset: 0, total: 1, facets: { types: {}, sources: {} }, pendingTotal: 0,
-    notes: [item('n0', { thumb: '/uploads/x.jpg' })] })
+  p.applyPage({
+    offset: 0,
+    total: 1,
+    facets: { types: {}, sources: {} },
+    pendingTotal: 0,
+    notes: [item('n0', { thumb: '/uploads/x.jpg' })],
+  })
   assert.equal(p.awaitingThumbCount(2000), 0)
 })
 
@@ -249,14 +297,30 @@ test('matchesLocal: a note matches if it is ANY of the selected types', () => {
 })
 
 test('matchesLocal: a note matches if it is from ANY of the selected sources', () => {
-  const tt = { id: 'a', type: 'video', host: 'www.tiktok.com', url: 'https://www.tiktok.com/video/1', pending: false, ts: 0, tags: [] } as UIItem
+  const tt = {
+    id: 'a',
+    type: 'video',
+    host: 'www.tiktok.com',
+    url: 'https://www.tiktok.com/video/1',
+    pending: false,
+    ts: 0,
+    tags: [],
+  } as UIItem
   assert.equal(matchesLocal(tt, { source: 'tiktok' }), true)
   assert.equal(matchesLocal(tt, { source: 'reels,tiktok' }), true)
   assert.equal(matchesLocal(tt, { source: 'reels' }), false)
 })
 
 test('matchesLocal: facets AND together', () => {
-  const tt = { id: 'a', type: 'video', host: 'www.tiktok.com', url: 'https://www.tiktok.com/video/1', pending: false, ts: 0, tags: [] } as UIItem
+  const tt = {
+    id: 'a',
+    type: 'video',
+    host: 'www.tiktok.com',
+    url: 'https://www.tiktok.com/video/1',
+    pending: false,
+    ts: 0,
+    tags: [],
+  } as UIItem
   assert.equal(matchesLocal(tt, { source: 'tiktok', type: 'video' }), true)
   assert.equal(matchesLocal(tt, { source: 'tiktok', type: 'text' }), false)
 })

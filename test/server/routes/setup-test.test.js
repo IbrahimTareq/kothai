@@ -8,15 +8,20 @@ import { handleSetupTest } from '../../../server/routes/setup-test.js'
 
 function fakeRes() {
   return {
-    statusCode: 0, body: null,
-    writeHead(code) { this.statusCode = code },
-    end(body) { this.body = JSON.parse(body) },
+    statusCode: 0,
+    body: null,
+    writeHead(code) {
+      this.statusCode = code
+    },
+    end(body) {
+      this.body = JSON.parse(body)
+    },
   }
 }
 
 // readBody() is event-based, so a plain object with an async iterator is not
 // enough — the rest of the suite uses Readable.from for exactly this reason.
-const fakeReq = (body) => Readable.from([Buffer.from(JSON.stringify(body))])
+const fakeReq = body => Readable.from([Buffer.from(JSON.stringify(body))])
 
 // A stand-in endpoint: /models answers only with the right bearer token.
 let endpoint, base
@@ -29,7 +34,7 @@ before(async () => {
     res.writeHead(401, { 'content-type': 'application/json' })
     res.end(JSON.stringify({ error: { message: 'bad key' } }))
   })
-  await new Promise((r) => endpoint.listen(0, '127.0.0.1', r))
+  await new Promise(r => endpoint.listen(0, '127.0.0.1', r))
   base = `http://127.0.0.1:${endpoint.address().port}/v1`
 })
 after(() => endpoint.close())

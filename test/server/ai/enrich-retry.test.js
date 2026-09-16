@@ -5,7 +5,13 @@
 // already stranded by the OLD permanent-failure policy.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { metaRetryDelay, metaRetryEligible, isStuckInstagramNote, queueMetaBackfill, _igQueueState } from '../../../server/ai/enrich.js'
+import {
+  metaRetryDelay,
+  metaRetryEligible,
+  isStuckInstagramNote,
+  queueMetaBackfill,
+  _igQueueState,
+} from '../../../server/ai/enrich.js'
 import * as store from '../../../server/data/notes.js'
 
 test('metaRetryDelay backs off 10min * 4^n capped at 24h', () => {

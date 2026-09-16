@@ -76,7 +76,7 @@ export async function scanWeights(dir, inUse = {}) {
     // what turns the basename map into a match. Bare equality also holds for
     // any entry the SDK cached unprefixed.
     const used = isDir
-      ? (await fileNames(full)).map((n) => inUse[n]).find(Boolean) || null
+      ? (await fileNames(full)).map(n => inUse[n]).find(Boolean) || null
       : Object.entries(inUse).find(([base]) => e.name === base || e.name.endsWith(`_${base}`))?.[1] || null
     entries.push({
       name: e.name,

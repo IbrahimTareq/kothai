@@ -32,9 +32,7 @@ export function EndpointPicker({
   // "Continue" in first run, "Save" in Settings.
   onChange: (choice: EndpointChoice | null) => void
 }) {
-  const [picked, setPicked] = useState<EndpointOption | null>(
-    () => endpoints.find((e) => e.id === preselect) || null,
-  )
+  const [picked, setPicked] = useState<EndpointOption | null>(() => endpoints.find(e => e.id === preselect) || null)
   const [key, setKey] = useState('')
   const [probe, setProbe] = useState<Probe>({ state: 'idle', message: '', models: [] })
 
@@ -75,7 +73,7 @@ export function EndpointPicker({
   return (
     <>
       <div className="wizard-providers">
-        {endpoints.map((e) => (
+        {endpoints.map(e => (
           <button
             key={e.id}
             type="button"
@@ -100,15 +98,17 @@ export function EndpointPicker({
             type="password"
             value={key}
             placeholder={picked.needsKey ? keyPlaceholder : 'leave blank'}
-            onChange={(ev) => { setKey(ev.target.value); publish(picked, ev.target.value) }}
+            onChange={ev => {
+              setKey(ev.target.value)
+              publish(picked, ev.target.value)
+            }}
           />
         </label>
       )}
 
       {picked && (
         <div className="wizard-probe">
-          <button className="btn" type="button" onClick={test}
-            disabled={!baseUrl || probe.state === 'testing'}>
+          <button className="btn" type="button" onClick={test} disabled={!baseUrl || probe.state === 'testing'}>
             {probe.state === 'testing' ? 'Checking…' : 'Test connection'}
           </button>
           {probe.state !== 'idle' && probe.state !== 'testing' && (
