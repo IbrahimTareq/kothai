@@ -59,7 +59,17 @@ test('a hashed asset without a session is refused rather than answered with logi
 
 test('the login page can load its font, so the gate does not have to be ugly', async () => {
   const res = await fetch(`${BASE}/vendor/fonts/Geist-latin.woff2`)
-  assert.equal(res.status, 200)
+  // The claim is about the GATE — that PUBLIC_ASSET lets this one path past
+  // unauthenticated — not about whether the bytes are on disk. Those are
+  // served out of ./dist, which only exists after a build, so asserting 200
+  // made this the single test in the suite that failed on a clean clone, for
+  // a reason with nothing to do with authentication.
+  //
+  // So: a 401 is the regression this test exists to catch (drop PUBLIC_ASSET
+  // and the gate renders in a fallback face). A 404 is an unbuilt tree, which
+  // is a fact about the checkout. serveStatic's own behaviour is covered
+  // against a temp directory in test/server/lib/static-cache.test.js.
+  assert.notEqual(res.status, 401, 'the gate must let the login font through unauthenticated')
 })
 
 test('/api/health answers without a session — the container healthcheck has no credentials', async () => {
