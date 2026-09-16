@@ -34,19 +34,14 @@ const rowEmbedding = (v: SQLOutputValue): TagVocabRow['embedding'] | null => (v 
 
 export const THRESHOLD = 0.88
 
-// A value can be null: the legacy-JSON branch of load() stores whatever
-// decodeEmbedding gave it, and an empty stored vector decodes to null. Such an
-// entry is inert rather than harmful — cosine() scores null at 0 and both
-// writers skip it — so it is typed as it is rather than filtered at a
-// behaviour change's cost.
-let registry = new Map<string, Vector | null>() // canonical tag -> embedding vector
+let registry = new Map<string, Vector>() // canonical tag -> embedding vector
 let loaded = false
 
 // ---- pure helpers (no I/O) ---------------------------------------------
 
 // Best-matching entry for `vec` among `entries` ([tag, vector] pairs), but only
 // if its similarity is >= threshold. Returns { tag, score } or null.
-export function nearestTag(vec: Vector, entries: Iterable<[string, Vector | null]>, threshold: number) {
+export function nearestTag(vec: Vector, entries: Iterable<[string, Vector]>, threshold: number) {
   let best: { tag: string; score: number } | null = null
   for (const [tag, v] of entries) {
     const score = cosine(vec, v)
@@ -113,7 +108,14 @@ export async function load() {
     if (typeof row.embedding === 'string') {
       sawText = true
       try {
-        registry.set(rowTag(row.tag), decodeEmbedding(encodeEmbedding(JSON.parse(row.embedding))))
+        // Both branches drop a row whose vector is empty rather than registering
+        // the tag with no vector: canonicalize gates on registry.has(tag), so a
+        // vectorless entry would never re-embed, never persist and never be a
+        // snap target again — and rebuildTableAsBlob has already dropped its row
+        // from the table. Absent, the tag re-embeds for real the next time it
+        // comes up. This branch was the one missing the guard.
+        const vec = decodeEmbedding(encodeEmbedding(JSON.parse(row.embedding)))
+        if (vec) registry.set(rowTag(row.tag), vec)
       } catch {
         // Derived data: losing one entry costs a single re-embed the next time
         // that tag comes up, whereas throwing here would fail the boot.

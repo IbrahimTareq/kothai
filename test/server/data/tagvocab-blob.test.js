@@ -128,3 +128,19 @@ test('an empty legacy table migrates its schema without incident', async () => {
   assert.equal(columnType(db), 'BLOB')
   assert.equal(tagvocab.size(), 0)
 })
+
+test('a legacy row holding an empty vector is dropped, not registered as a null', async () => {
+  // Registering it as null would be worse than losing it: canonicalize gates on
+  // registry.has(tag), so the tag would never re-embed, never persist and never
+  // become a snap target again — while rebuildTableAsBlob has already dropped
+  // its row. Dropping it in memory too lets the next use re-embed it for real.
+  tagvocab._reset({ loaded: false })
+  const db = await getDb()
+  seedLegacy(db, [['recipes', []]])
+
+  await tagvocab.load()
+
+  assert.equal(tagvocab.size(), 0, 'not registered')
+  await tagvocab.canonicalize(['recipes'], { embed: fakeEmbed })
+  assert.equal(rowFor(db, 'recipes').byteLength, 16, 're-embedded and persisted on next use')
+})
