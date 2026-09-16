@@ -10,6 +10,7 @@
 // and pay for an LLM enrichment pass on each one.
 //
 // Verified against a real export (197 favorites, 13 collections, Aug 2026).
+import type { ServerNote } from '../types.ts'
 import { tryJson, clip, isRecord } from './untrusted.ts'
 
 // A favourite as the parser emits it. `savedAt` is Unix SECONDS out of
@@ -261,5 +262,6 @@ export function deriveNote(item: ImportItem) {
     createdAt: seconds > 0 ? new Date(seconds * 1000).toISOString() : new Date().toISOString(),
     importedAt: new Date().toISOString(),
     pending: true,
-  }
+    // See instagram.ts's deriveNote — same reason.
+  } satisfies Partial<ServerNote> & { importedAt: string }
 }

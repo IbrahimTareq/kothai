@@ -3,10 +3,43 @@
 // entry today; TikTok / Twitter / Pocket importers slot in here without
 // touching the route, and the client's per-source Import sections address
 // them by `name`.
+import type { ServerNote } from '../types.ts'
 import * as instagram from './instagram.ts'
 import * as tiktok from './tiktok.ts'
 
-const IMPORTERS = [instagram, tiktok]
+// The contract the header above describes in prose, written down — because
+// `[instagram, tiktok]` on its own types the registry as a UNION of the two
+// module namespaces, and a union of call signatures is only callable with the
+// INTERSECTION of its parameter types. deriveNote's per-importer item type
+// makes that intersection uninhabitable (`savedAt` is `number` in one and
+// `number | string` in the other), so the route could not call deriveNote at
+// all. Naming the contract once collapses the union back to one type, and a
+// third importer now has something to conform to rather than something to
+// guess at.
+//
+// Each importer keeps its OWN, narrower item/result types for its internals;
+// these are the widened shapes the registry hands across the boundary.
+interface ImportItem {
+  url: string
+  poster: string
+  savedAt: number | string
+}
+export interface ParsedExport {
+  items: ImportItem[]
+  collections: { name: string; urls: string[] }[]
+  warnings: string[]
+}
+export interface Importer {
+  name: string
+  // Shown by the route when an upload doesn't match — see instagram.ts.
+  label: string
+  expects: string
+  sniff(files: Map<string, Buffer>): boolean
+  parse(files: Map<string, Buffer>): ParsedExport
+  deriveNote(item: ImportItem): Partial<ServerNote>
+}
+
+const IMPORTERS: Importer[] = [instagram, tiktok]
 
 // Exact-name lookup, used when the upload names its source (each Import
 // sub-section in Settings knows which platform it is). Selecting by name

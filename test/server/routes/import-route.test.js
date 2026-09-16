@@ -166,7 +166,7 @@ mock.module('../../../server/import/index.ts', {
   },
 })
 
-const { handleImport } = await import('../../../server/routes/import.js')
+const { handleImport } = await import('../../../server/routes/import.ts')
 
 // ---- fake req/res helpers -------------------------------------------------
 // A real EventEmitter satisfies readBody's req.on('data'/'end'/'error') +

@@ -12,7 +12,7 @@ import {
   handleDeleteNote,
   handleRetagNote,
 } from './routes/notes.ts'
-import { handleImport } from './routes/import.js'
+import { handleImport } from './routes/import.ts'
 import { handleAvailabilityScan, handleAvailabilityRemove } from './routes/availability.ts'
 import { handleExport } from './routes/export.ts'
 import { handleBackup } from './routes/backup.ts'

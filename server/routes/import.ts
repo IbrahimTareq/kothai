@@ -1,13 +1,18 @@
 // POST /api/import — ties together the ZIP reader, the importer registry, and
 // the phase-one save + background-enrich pattern used by handleSave. This is
 // the ONLY consumer of server/import/* today.
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import * as store from '../data/notes.ts'
 import * as collections from '../data/collections.ts'
 import * as enrich from '../ai/enrich.ts'
 import { findImporter, getImporter, importerNames } from '../import/index.ts'
+import type { Importer, ParsedExport } from '../import/index.ts'
 import { readZip, MAX_TOTAL_BYTES } from '../lib/zip.ts'
 import { json, readBody } from '../lib/http.ts'
 import { runExclusiveImport } from '../data/import-lock.ts'
+// The same narrowing the importers use on a parsed export — an HTTP body from
+// this route is the same untrusted JSON, one layer earlier.
+import { isRecord } from '../import/untrusted.ts'
 
 // Uploads arrive as JSON { name, data } with data base64 (raw or data-URL),
 // matching the app's existing pasted-image transport. This bounds the RAW
@@ -22,7 +27,7 @@ const BODY_LIMIT = 64 * 1024 * 1024
 // base64 decode and a ZIP scan before the body limit above would notice.
 const MAX_UPLOADS = 20
 
-export async function handleImport(req, res) {
+export async function handleImport(req: IncomingMessage, res: ServerResponse): Promise<void> {
   // The flag this takes lives in data/import-lock.js — it is state about the
   // store, and three other bulk routes have to read it.
   const ran = await runExclusiveImport(() => runImport(req, res))
@@ -71,7 +76,7 @@ const IG_SHORTCODE = /\/(?:p|reel|reels|tv)\/([^/]+)/i // path keyword case-inse
 const GLOBAL_TRACKING_PARAM = /^utm_|^igsh$|^fbclid$/i
 const SI_TRACKING_HOSTS = /(^|\.)(youtube\.com|youtu\.be|spotify\.com)$/
 
-function stripTrackingParams(search, host) {
+function stripTrackingParams(search: string, host: string): string {
   if (!search) return ''
   const params = new URLSearchParams(search)
   const stripSi = SI_TRACKING_HOSTS.test(host)
@@ -82,9 +87,9 @@ function stripTrackingParams(search, host) {
   return s ? `?${s}` : ''
 }
 
-function canonicalUrl(raw) {
+function canonicalUrl(raw: unknown): string {
   if (typeof raw !== 'string' || !raw) return ''
-  let u
+  let u: URL
   try {
     u = new URL(raw)
   } catch {
@@ -107,8 +112,12 @@ function canonicalUrl(raw) {
   return `${host}${port}${path}${stripTrackingParams(u.search, host)}`
 }
 
-async function runImport(req, res) {
-  let body
+// What collections.all()/create() hand back. Named so the name index below
+// and its fallback lookup can both spell it without repeating the derivation.
+type Space = Awaited<ReturnType<typeof collections.create>>
+
+async function runImport(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  let body: unknown
   try {
     body = await readBody(req, BODY_LIMIT)
   } catch (e) {
@@ -116,7 +125,7 @@ async function runImport(req, res) {
     // both "too big" and "not valid JSON" — map both to a clean 4xx instead
     // of falling through to the router's generic 500 catch-all, since an
     // oversized/malformed upload is entirely expected user-facing input here.
-    const tooLarge = /payload too large/i.test(e.message)
+    const tooLarge = /payload too large/i.test(e instanceof Error ? e.message : '')
     return json(res, tooLarge ? 413 : 400, {
       error: tooLarge ? 'That file is too large to import.' : 'Could not read the upload as JSON.',
     })
@@ -124,7 +133,7 @@ async function runImport(req, res) {
   // readBody resolves `null` as-is for a literal `null` body (valid JSON,
   // not an object) — guard before touching body.data instead of letting
   // that TypeError fall into the router's generic 500.
-  if (!body || typeof body !== 'object') {
+  if (!isRecord(body)) {
     return json(res, 400, { error: 'Invalid request body.' })
   }
 
@@ -133,32 +142,32 @@ async function runImport(req, res) {
   // making the user import them one at a time is exactly the flow that used
   // to lose their collections. `{ name, data }` stays valid as the one-file
   // shorthand the client used before this.
-  const uploads = Array.isArray(body.files) ? body.files : [{ name: body.name, data: body.data }]
+  const uploads: unknown[] = Array.isArray(body.files) ? body.files : [{ name: body.name, data: body.data }]
   if (!uploads.length) return json(res, 400, { error: 'Provide at least one file.' })
   if (uploads.length > MAX_UPLOADS) {
     return json(res, 400, { error: `Too many files at once — import up to ${MAX_UPLOADS} at a time.` })
   }
 
-  const files = new Map()
+  const files = new Map<string, Buffer>()
   // Decompression budget shared across every archive in this request. Left
   // per-call (readZip's own default), N archives would each get the full
   // MAX_TOTAL_BYTES, so splitting one zip bomb into ten uploads would buy
   // ten times the budget — see server/lib/zip.js.
   let zipBudget = MAX_TOTAL_BYTES
   for (const [i, upload] of uploads.entries()) {
-    if (!upload || typeof upload !== 'object') return json(res, 400, { error: 'Invalid file in upload.' })
-    const b64 = (upload.data || '').toString().replace(/^data:[^;]*;base64,/, '')
+    if (!isRecord(upload)) return json(res, 400, { error: 'Invalid file in upload.' })
+    const b64 = String(upload.data || '').replace(/^data:[^;]*;base64,/, '')
     if (!b64) return json(res, 400, { error: 'Provide each file as base64 `data`.' })
     const buf = Buffer.from(b64, 'base64')
 
     // ZIP magic "PK" → unpack; anything else is treated as a single JSON file
     // (lets someone import a bare saved_posts.json without zipping it first).
     if (buf[0] === 0x50 && buf[1] === 0x4b) {
-      let entries
+      let entries: Map<string, Buffer>
       try {
         entries = readZip(buf, { maxTotalBytes: zipBudget })
       } catch (e) {
-        return json(res, 400, { error: `Could not read that ZIP: ${e.message}` })
+        return json(res, 400, { error: `Could not read that ZIP: ${e instanceof Error ? e.message : e}` })
       }
       for (const [entryName, entryBuf] of entries) {
         zipBudget -= entryBuf.length
@@ -170,7 +179,7 @@ async function runImport(req, res) {
         files.set(`${i}/${entryName}`, entryBuf)
       }
     } else {
-      files.set(`${i}/${(upload.name || 'upload.json').toString()}`, buf)
+      files.set(`${i}/${String(upload.name || 'upload.json')}`, buf)
     }
   }
 
@@ -178,7 +187,7 @@ async function runImport(req, res) {
   // route can check the upload against THAT importer and say what was
   // expected. Sniffing across all importers stays as the fallback for the
   // untagged single-file API.
-  let importer
+  let importer: Importer | null
   if (body.source != null) {
     importer = getImporter(String(body.source))
     if (!importer) {
@@ -205,14 +214,14 @@ async function runImport(req, res) {
     }
   }
 
-  let parsed
+  let parsed: ParsedExport
   try {
     parsed = importer.parse(files)
   } catch (e) {
     // parse() is documented to degrade rather than throw, but the route is
     // the trust boundary for this upload — an unexpected throw here must
     // still land as a clean 400, not the router's generic 500.
-    return json(res, 400, { error: `Could not parse that export: ${e.message}` })
+    return json(res, 400, { error: `Could not parse that export: ${e instanceof Error ? e.message : e}` })
   }
   // A future importer that omits/mis-shapes any of these must not turn into
   // an unhandled throw further down (the .push()/.length/for-of calls below).
@@ -230,7 +239,7 @@ async function runImport(req, res) {
   // and, after the loop, resolving which note id a collection member
   // actually refers to — including items that were skipped as duplicates
   // (see the collections-filing comment below for why that matters).
-  const urlIndex = new Map()
+  const urlIndex = new Map<string, string>()
   for (const n of store.allNotes()) {
     if (!n.url) continue
     const c = canonicalUrl(n.url)
@@ -247,7 +256,7 @@ async function runImport(req, res) {
       skipped++
       continue
     }
-    let note
+    let note: Awaited<ReturnType<typeof store.addNote>>
     try {
       // persist:false — see the batched flush() below. Nothing here does
       // disk I/O, so a mid-loop failure can only be a logic bug, not a
@@ -258,9 +267,13 @@ async function runImport(req, res) {
       // separately made "recently added" sort by millisecond — i.e. by the
       // order the export file happened to list things — which is how a
       // library's OLDEST imported items ended up at the top of the board.
-      note = await store.addNote({ ...importer.deriveNote(item), importedAt: batchImportedAt }, { persist: false })
+      // `importedAt` is a real persisted field that ServerNote/NoteRecord do
+      // not declare, and an undeclared property is rejected only in a FRESH
+      // object literal — hence the variable rather than an inline spread.
+      const fields = { ...importer.deriveNote(item), importedAt: batchImportedAt }
+      note = await store.addNote(fields, { persist: false })
     } catch (e) {
-      console.error('[import] failed to add note for', item.url, '-', e.message)
+      console.error('[import] failed to add note for', item.url, '-', e instanceof Error ? e.message : e)
       failed++
       continue
     }
@@ -281,10 +294,11 @@ async function runImport(req, res) {
     try {
       await store.flush()
     } catch (e) {
-      console.error('[import] failed to persist imported notes, rolling back:', e.message)
+      const why = e instanceof Error ? e.message : String(e)
+      console.error('[import] failed to persist imported notes, rolling back:', why)
       await store.removeMany(imported.map(n => n.id))
       return json(res, 500, {
-        error: `Could not save imported notes (${e.message}). Nothing was imported — try again.`,
+        error: `Could not save imported notes (${why}). Nothing was imported — try again.`,
         code: 'import_rolled_back',
       })
     }
@@ -321,7 +335,7 @@ async function runImport(req, res) {
       enrich.queueEnrich(id, { absPath: null, text: url, isUrl: true, hasImage: false })
     }
   } catch (e) {
-    console.error('[import] failed to queue enrich for imported notes:', e.message)
+    console.error('[import] failed to queue enrich for imported notes:', e instanceof Error ? e.message : e)
   }
 
   // Mirror IG collections → Spaces: match by name (case-insensitive), create
@@ -349,7 +363,7 @@ async function runImport(req, res) {
     // mirror on every single re-import, forever. Explicitly preferring the
     // plain one breaks that: once a mirror exists, it's plain, so it wins
     // the tie on every subsequent run.
-    const spaceByLowerName = new Map()
+    const spaceByLowerName = new Map<string, Space>()
     for (const c of collections.all()) {
       const key = c.name.toLowerCase()
       const prev = spaceByLowerName.get(key)
@@ -358,7 +372,7 @@ async function runImport(req, res) {
     // Creating a Space and indexing it under its own name are one step, never
     // one without the other — both branches below used to write the pair out
     // by hand, which is one place for the index to silently go stale.
-    const ensureSpace = async n => {
+    const ensureSpace = async (n: string) => {
       const created = await collections.create({ name: n })
       spaceByLowerName.set(created.name.toLowerCase(), created)
       return created
@@ -371,8 +385,8 @@ async function runImport(req, res) {
     // collections file whose posts were already saved by hand. Resolving
     // from `items` instead (what this did before) quietly worked only in
     // the first case, creating empty Spaces — or none — in the others.
-    const membersByName = new Map() // collection name -> Set<noteId>
-    const unresolved = new Set() // canonical urls naming a post we don't have — reported, not silently dropped
+    const membersByName = new Map<string, Set<string>>() // collection name -> Set<noteId>
+    const unresolved = new Set<string>() // canonical urls naming a post we don't have — reported, not silently dropped
     for (const entry of parsedCollections) {
       // A future importer mis-shaping an entry must not throw into the
       // generic 500, same guard as items/parsedCollections above.
@@ -393,10 +407,10 @@ async function runImport(req, res) {
       }
     }
     unresolvedMembers = unresolved.size
-    const touchedSpaceIds = new Set() // dedups by Space, not by collection name — two IG names CAN resolve to the same Space
+    const touchedSpaceIds = new Set<string>() // dedups by Space, not by collection name — two IG names CAN resolve to the same Space
     for (const [name, members] of membersByName) {
       if (!members.size) continue
-      let space = spaceByLowerName.get(name.toLowerCase())
+      let space: Space | null = spaceByLowerName.get(name.toLowerCase()) || null
       // A matched Space with a tag rule is a SMART collection: reusing it
       // here would (a) file unrelated posts into a Space the user built
       // around a rule, not an IG grouping, and (b) collections.addItem's
@@ -405,7 +419,7 @@ async function runImport(req, res) {
       // distinct, clearly-labeled Space instead of ever touching a smart one.
       if (space?.tags?.length) {
         const altName = `${name} (Instagram)`
-        let altSpace = spaceByLowerName.get(altName.toLowerCase())
+        let altSpace: Space | null = spaceByLowerName.get(altName.toLowerCase()) || null
         // The fallback name itself could ALSO collide with a user's own
         // smart Space (e.g. one literally named "Recipes (Instagram)") —
         // re-check rather than trusting a name match alone, same reasoning

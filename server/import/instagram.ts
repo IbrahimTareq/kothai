@@ -6,6 +6,7 @@
 // This module sits on the same trust boundary as server/lib/zip.js: the JSON
 // here comes straight from a user-uploaded archive, so it's treated as
 // hostile input, not just "unusual" input — see the guards below.
+import type { ServerNote } from '../types.ts'
 import { tryJson, clip, isRecord } from './untrusted.ts'
 
 // A saved post as the parser emits it. `savedAt` is Unix SECONDS (see
@@ -518,7 +519,10 @@ export function deriveNote(item: ImportItem) {
     createdAt: savedAt > 0 ? new Date(savedAt * 1000).toISOString() : new Date().toISOString(),
     importedAt: new Date().toISOString(),
     pending: true,
-  }
+    // Pins `type` to NoteType rather than letting it widen to `string`: the
+    // route hands this object straight to store.addNote. `importedAt` is
+    // named because it is persisted but undeclared — see ServerNote.
+  } satisfies Partial<ServerNote> & { importedAt: string }
 }
 
 // One-time migration for notes imported before `account` was a first-class
