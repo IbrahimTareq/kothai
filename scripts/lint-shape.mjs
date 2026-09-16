@@ -7,11 +7,22 @@
  * allowlist that long reads as permission rather than debt.
  *
  * So: a file absent from the baseline must fit the budget. A file present in
- * it may never exceed its recorded numbers, and shrinking re-baselines. The
- * baseline can only move one direction.
+ * it may never exceed baseline + headroom. `--update` can only tighten a
+ * baselined file's recorded number down to its current, smaller measurement —
+ * it can never raise one. Without that constraint, the escape from a failing
+ * check was to grow a file, run `--update`, and have the baseline record the
+ * larger number: the person who caused the violation could dismiss it
+ * themselves, which enforces nothing. Raising a baseline now takes a
+ * hand-edit to shape-baseline.json, which shows up in a diff and can be
+ * argued with.
+ *
+ * Headroom is a few lines/exports of slack on top of a baselined file's
+ * recorded number, not a ceiling the baseline is allowed to grow into — it
+ * exists only so a file already over budget can still take the explanatory
+ * comment this repo's own rules require without instantly failing on it.
  *
  * Run: npm run lint:shape   (also runs as part of `npm test`)
- * Re-baseline after a real reduction: npm run lint:shape -- --update
+ * Tighten after a real reduction: npm run lint:shape -- --update
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
@@ -21,6 +32,9 @@ import { fileURLToPath } from 'node:url'
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const BASELINE = join(ROOT, 'scripts', 'shape-baseline.json')
 const BUDGET = { lines: 400, exports: 12 }
+// Slack for baselined files only — see header. Not applied to files absent
+// from the baseline; those must fit BUDGET exactly.
+export const HEADROOM = { lines: 5, exports: 1 }
 
 // Counts export STATEMENTS, not exported bindings: `export { a, b }` is one.
 // Deliberate — the metric is "how many things does this module announce", and
@@ -30,16 +44,34 @@ export const measure = src => ({
   exports: (src.match(/^export /gm) || []).length,
 })
 
-export function checkFile(path, got, baseline, budget) {
+export function checkFile(path, got, baseline, budget, headroom) {
   const base = baseline[path]
   if (!base) {
     if (got.lines > budget.lines) return `${path}: ${got.lines} lines, budget is ${budget.lines}`
     if (got.exports > budget.exports) return `${path}: ${got.exports} exports, budget is ${budget.exports}`
     return null
   }
-  if (got.lines > base.lines) return `${path}: grew to ${got.lines} lines, baseline is ${base.lines}`
-  if (got.exports > base.exports) return `${path}: grew to ${got.exports} exports, baseline is ${base.exports}`
+  if (got.lines > base.lines + headroom.lines) return `${path}: grew to ${got.lines} lines, baseline is ${base.lines}`
+  if (got.exports > base.exports + headroom.exports)
+    return `${path}: grew to ${got.exports} exports, baseline is ${base.exports}`
   return null
+}
+
+// The --update write path: a file's recorded baseline may only tighten. A
+// file already over budget keeps the lower of its old baseline and its
+// current measurement, per metric; a file newly over budget is added at its
+// current values; a file that falls back under the flat budget is dropped
+// (the flat budget governs it from here, which is still tighter than its old,
+// larger baseline entry).
+export function nextBaseline(baseline, measurements, budget) {
+  const next = {}
+  for (const [path, got] of Object.entries(measurements)) {
+    const overBudget = got.lines > budget.lines || got.exports > budget.exports
+    if (!overBudget) continue
+    const base = baseline[path]
+    next[path] = base ? { lines: Math.min(base.lines, got.lines), exports: Math.min(base.exports, got.exports) } : got
+  }
+  return next
 }
 
 const sourceFiles = () =>
@@ -57,26 +89,27 @@ function main() {
     if (!update) console.error('no baseline found — run with --update to create it')
   }
 
-  const failures = []
-  const next = {}
-  const loosened = []
-
-  for (const path of sourceFiles()) {
-    const got = measure(readFileSync(join(ROOT, path), 'utf8'))
-    const fail = checkFile(path, got, baseline, BUDGET)
-    if (fail) failures.push(fail)
-
-    const overBudget = got.lines > BUDGET.lines || got.exports > BUDGET.exports
-    if (overBudget) next[path] = got
-    const base = baseline[path]
-    if (base && !overBudget) loosened.push(path)
-    if (base && overBudget && (got.lines < base.lines || got.exports < base.exports)) loosened.push(path)
-  }
+  const measurements = {}
+  for (const path of sourceFiles()) measurements[path] = measure(readFileSync(join(ROOT, path), 'utf8'))
 
   if (update) {
+    const next = nextBaseline(baseline, measurements, BUDGET)
     writeFileSync(BASELINE, `${JSON.stringify(next, null, 2)}\n`)
     console.log(`shape baseline written: ${Object.keys(next).length} files over budget`)
     return
+  }
+
+  const failures = []
+  const loosened = []
+
+  for (const [path, got] of Object.entries(measurements)) {
+    const fail = checkFile(path, got, baseline, BUDGET, HEADROOM)
+    if (fail) failures.push(fail)
+
+    const overBudget = got.lines > BUDGET.lines || got.exports > BUDGET.exports
+    const base = baseline[path]
+    if (base && !overBudget) loosened.push(path)
+    if (base && overBudget && (got.lines < base.lines || got.exports < base.exports)) loosened.push(path)
   }
 
   if (loosened.length) {
