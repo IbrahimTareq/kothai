@@ -116,7 +116,7 @@ const STALE = {
 
 test('a note the backlog would skip is re-classified and re-embedded', async () => {
   await reset([STALE])
-  const { backlogCount } = await import('../../../server/ai/backlog.js')
+  const { backlogCount } = await import('../../../server/ai/backlog.ts')
   assert.equal(
     backlogCount(notes, { llm: 'ondemand', embed: 'always', vision: 'off' }),
     0,

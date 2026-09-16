@@ -204,7 +204,7 @@ test('a thumbnail already on the note is described even when this pass fetches n
 // reaches describeThumb. It is also already classified and embedded. The
 // enrichment backlog is what reaches it — which is why stepsFor keys this
 // step on the stored description rather than on the lying marker.
-const { stepsFor, backlogCount } = await import('../../../server/ai/backlog.js')
+const { stepsFor, backlogCount } = await import('../../../server/ai/backlog.ts')
 
 const STRANDED = {
   id: 'stranded',

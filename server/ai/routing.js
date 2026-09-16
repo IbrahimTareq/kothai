@@ -4,7 +4,7 @@
 // Pure by design: no imports beyond ROLES, so every branch is unit-testable
 // without a provider, an endpoint or @qvac/sdk. server/ai/index.js is the
 // only caller.
-import { ROLES } from './roles.js'
+import { ROLES } from './roles.ts'
 
 // The rule, in one place:
 //   provider=local                       → every role on-device (unchanged).

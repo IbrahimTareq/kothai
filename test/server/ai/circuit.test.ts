@@ -7,7 +7,7 @@
 // equivalent systemic-outage mode, which is why nothing like this existed.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { Circuit } from '../../../server/ai/circuit.js'
+import { Circuit } from '../../../server/ai/circuit.ts'
 
 const clock = (start = 0) => {
   const o = { t: start, now: () => o.t }

@@ -3,13 +3,13 @@ import * as store from '../data/notes.js'
 import * as settings from '../data/settings.js'
 import * as tagvocab from '../data/tagvocab.js'
 import * as enrich from '../ai/enrich.js'
-import { ROLES, POLICIES, OFF_RESIDENCY } from '../ai/roles.js'
-import { backlogCount } from '../ai/backlog.js'
+import { ROLES, POLICIES, OFF_RESIDENCY } from '../ai/roles.ts'
+import { backlogCount } from '../ai/backlog.ts'
 import { isInstagramPost } from '../ai/meta.js'
 import { json, readBody } from '../lib/http.js'
 import { getAiConfig, setAiCredentials, SETUP_PROVIDER } from '../config.ts'
 import { writeCredentials, clearCredentials } from '../data/credentials.js'
-import { ENDPOINTS } from '../ai/endpoints.js'
+import { ENDPOINTS } from '../ai/endpoints.ts'
 
 // A provider with nothing to download has nothing to CONSENT to — but it still
 // needs one model name per role before any role can run, and on a pure-remote

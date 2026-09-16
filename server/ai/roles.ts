@@ -7,26 +7,43 @@
 //           'ondemand'— loaded on first acquire, refcounted, unloaded after idle.
 //           'off'     — never loaded; acquire throws FeatureDisabledError.
 
-export const ROLES = ['llm', 'embed', 'vision']
-export const POLICIES = ['off', 'ondemand', 'always']
+export const ROLES = ['llm', 'embed', 'vision'] as const
+export const POLICIES = ['off', 'ondemand', 'always'] as const
+
+// Derived from the lists above rather than written out beside them: a second
+// spelling of the role set is a second thing to forget. This module owns both
+// unions — every other module imports them from here.
+export type Role = (typeof ROLES)[number]
+export type Policy = (typeof POLICIES)[number]
+export type Residency = Record<Role, Policy>
 
 // Fresh installs: search always instant, LLM/vision load on demand.
-export const FRESH_RESIDENCY = { llm: 'ondemand', embed: 'always', vision: 'ondemand' }
+export const FRESH_RESIDENCY: Residency = { llm: 'ondemand', embed: 'always', vision: 'ondemand' }
 // Installs that predate residency keep their old behavior exactly.
-export const LEGACY_RESIDENCY = { llm: 'always', embed: 'always', vision: 'ondemand' }
+export const LEGACY_RESIDENCY: Residency = { llm: 'always', embed: 'always', vision: 'ondemand' }
 // "Skip for now" — AI-free mode.
-export const OFF_RESIDENCY = { llm: 'off', embed: 'off', vision: 'off' }
+export const OFF_RESIDENCY: Residency = { llm: 'off', embed: 'off', vision: 'off' }
+
+// The settings row as it comes off disk, which is the whole point of the
+// narrowing below: its per-role values are whatever was stored, not a Policy.
+export interface SavedSettings {
+  configured?: boolean
+  residency?: Partial<Record<Role, string>> | null
+  [key: string]: unknown
+}
 
 // Resolve a residency map from a saved settings shape. Handles the
 // migration: a configured install without a residency key gets legacy
 // (unchanged) behavior; anything else defaults fresh. Invalid per-role
 // values fall back to the applicable default.
-export function resolveResidency(saved = {}) {
+export function resolveResidency(saved: SavedSettings = {}): Residency {
   const base = !saved.residency && saved.configured === true ? LEGACY_RESIDENCY : FRESH_RESIDENCY
-  const out = {}
+  const out: Residency = { ...base }
   for (const role of ROLES) {
     const v = saved.residency?.[role]
-    out[role] = POLICIES.includes(v) ? v : base[role]
+    // find(), not includes(): it both validates the stored string and hands
+    // back the Policy-typed member, so nothing has to be asserted afterwards.
+    out[role] = POLICIES.find(p => p === v) ?? base[role]
   }
   return out
 }
@@ -37,17 +54,75 @@ export function resolveResidency(saved = {}) {
 // for causes config can fix (bad API key, unknown model name) by passing an
 // override, so routes and client keep one error shape to handle.
 export class FeatureDisabledError extends Error {
-  constructor(role, { code, message } = {}) {
+  role: Role
+  code: string
+
+  constructor(role: Role, { code, message }: { code?: string; message?: string } = {}) {
     super(message || `The ${role} model is turned off — enable it in Settings.`)
     this.role = role
     this.code = code || `${role}_off`
   }
 }
 
+// A model handle is opaque on purpose: @qvac/sdk's own id in production, a
+// plain number in the unit tests' fake loader. Nothing in here may assume
+// either shape — it is only ever passed straight back to loader.unload().
+export type ModelHandle = unknown
+
+export interface ModelSrc {
+  name?: string
+}
+
+export interface LoadRequest {
+  modelSrc: ModelSrc
+  modelConfig: Record<string, unknown> | null
+  onProgress: (pct: number) => void
+}
+
+export interface Loader {
+  load(req: LoadRequest): Promise<ModelHandle>
+  unload(id: ModelHandle): Promise<unknown> | unknown
+}
+
+// Methods, not function-typed properties: the handle is opaque here but
+// concrete at both call sites (NodeJS.Timeout in production, a number in the
+// fake), and method bivariance is what lets the real clearTimeout satisfy it.
+export interface Timers {
+  set(fn: () => void, ms: number): unknown
+  clear(handle: unknown): void
+}
+
+export interface RoleStatus {
+  state: 'idle' | 'loading' | 'ready' | 'error' | 'off'
+  progress: number
+  message: string
+  model: string
+}
+
+export interface RoleManagerOptions {
+  loader: Loader
+  idleMs: number
+  timers?: Timers
+}
+
 export class RoleManager {
+  role: Role
+  loader: Loader
+  idleMs: number
+  timers: Timers
+  policy: Policy
+  modelSrc: ModelSrc | null
+  modelConfig: Record<string, unknown> | null
+  modelId: ModelHandle
+  busy: number
+  loadPromise: Promise<void> | null
+  unloadPromise: Promise<void> | null
+  idleTimer: unknown
+  status: RoleStatus
+
   // loader: { load({ modelSrc, modelConfig, onProgress(pct) }) → id, unload(id) }
   // timers: { set(fn, ms) → id, clear(id) } — injectable for tests.
-  constructor(role, { loader, idleMs, timers = { set: setTimeout, clear: clearTimeout } }) {
+  constructor(role: Role, { loader, idleMs, timers = { set: setTimeout, clear: clearTimeout } }: RoleManagerOptions) {
     this.role = role
     this.loader = loader
     this.idleMs = idleMs
@@ -68,7 +143,7 @@ export class RoleManager {
   // load for the previous target is still in flight, wait for it to settle —
   // _ensureLoaded() itself detects the stale target and discards that load,
   // so by the time we get here there's usually nothing left to unload.
-  async setModel(modelSrc, modelConfig = null) {
+  async setModel(modelSrc: ModelSrc | null, modelConfig: Record<string, unknown> | null = null): Promise<void> {
     const changed = this.modelSrc !== modelSrc
     this.modelSrc = modelSrc
     this.modelConfig = modelConfig
@@ -81,7 +156,7 @@ export class RoleManager {
   // Policy transitions only manage residency — they never start a load
   // themselves (that's boot()/warmRole() in providers/local.js), so applying
   // settings stays fast and non-blocking.
-  async setPolicy(policy) {
+  async setPolicy(policy: Policy): Promise<void> {
     if (!POLICIES.includes(policy)) return
     this.policy = policy
     if (policy === 'off') {
@@ -96,7 +171,7 @@ export class RoleManager {
   }
 
   // Get a loaded model id, loading if needed. Callers MUST pair with release().
-  async acquire() {
+  async acquire(): Promise<ModelHandle> {
     if (this.policy === 'off') throw new FeatureDisabledError(this.role)
     this.timers.clear(this.idleTimer)
     this.busy++
@@ -109,21 +184,21 @@ export class RoleManager {
     return this.modelId
   }
 
-  release() {
+  release(): void {
     this.busy = Math.max(0, this.busy - 1)
     if (this.busy === 0 && this.policy === 'ondemand' && this.modelId) this._scheduleIdle()
   }
 
-  isLoaded() {
+  isLoaded(): boolean {
     return this.modelId !== null
   }
 
-  snapshot() {
+  snapshot(): RoleStatus {
     return { ...this.status }
   }
 
   // Unload if resident and not busy (policy change, model swap, cache warm).
-  async unload() {
+  async unload(): Promise<void> {
     this.timers.clear(this.idleTimer)
     if (!this.modelId || this.busy > 0) return
     const id = this.modelId
@@ -143,7 +218,7 @@ export class RoleManager {
   // instead of racing a fresh load against it. Used by unload() for a
   // resident model and by _ensureLoaded() for a discarded stale load; both
   // paths must go through here, or the tracking is incomplete.
-  _trackUnload(id) {
+  _trackUnload(id: ModelHandle): Promise<void> {
     this.unloadPromise = (async () => {
       try {
         await this.loader.unload(id)
@@ -156,14 +231,14 @@ export class RoleManager {
     return this.unloadPromise
   }
 
-  _scheduleIdle() {
+  _scheduleIdle(): void {
     this.timers.clear(this.idleTimer)
     this.idleTimer = this.timers.set(() => {
       this.unload()
     }, this.idleMs)
   }
 
-  async _ensureLoaded() {
+  async _ensureLoaded(): Promise<void> {
     if (this.unloadPromise) await this.unloadPromise
     if (this.modelId) return
     if (!this.modelSrc) throw new Error(`${this.role}: no model configured`)

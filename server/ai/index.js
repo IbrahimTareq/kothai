@@ -12,11 +12,11 @@
 // is safe because server/index.js awaits initProvider() before the HTTP server
 // listens, so no request can arrive first.
 import { getAiConfig, AI_EMBED_PROVIDER } from '../config.ts'
-import { ROLES } from './roles.js'
+import { ROLES } from './roles.ts'
 import { resolveRoleProviders, kindsInUse, mergeStatus, mergeListModels, mergeCapabilities } from './routing.js'
 
-export { FeatureDisabledError } from './roles.js'
-export { PRESETS, DEFAULTS } from './presets.js'
+export { FeatureDisabledError } from './roles.ts'
+export { PRESETS, DEFAULTS } from './presets.ts'
 export { normaliseClassification, isJunkTag, heuristicType, deriveTitle, isLikelyUrl, extractUrl } from './normalise.js'
 
 // { local?, remote? } — only the kinds the role map actually uses.

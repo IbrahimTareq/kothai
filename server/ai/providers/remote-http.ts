@@ -8,8 +8,23 @@
 // are config errors that retrying cannot fix, and each retry against a
 // metered endpoint costs money — so they open the circuit immediately.
 
+export interface RemoteErrorOptions {
+  transient?: boolean
+  retryAfterMs?: number
+  status?: number
+}
+
 export class RemoteError extends Error {
-  constructor(code, message, { transient = true, retryAfterMs = 0, status = 0 } = {}) {
+  code: string
+  transient: boolean
+  retryAfterMs: number
+  status: number
+
+  constructor(
+    code: string,
+    message: string,
+    { transient = true, retryAfterMs = 0, status = 0 }: RemoteErrorOptions = {},
+  ) {
     super(message)
     this.code = code
     this.transient = transient
@@ -18,7 +33,7 @@ export class RemoteError extends Error {
   }
 }
 
-function classify(status, body) {
+function classify(status: number, body: unknown): RemoteError {
   const detail = typeof body === 'string' ? body.slice(0, 200) : JSON.stringify(body).slice(0, 200)
   if (status === 401 || status === 403) {
     return new RemoteError('auth_failed', `Endpoint rejected the credentials (${status}). Check STASH_AI_API_KEY.`, {
@@ -65,24 +80,34 @@ const RETRIES = 3
 const MAX_WAIT_MS = 30_000
 const BACKOFF_MS = [1_000, 4_000, 10_000]
 
-const realSleep = ms => new Promise(r => setTimeout(r, ms))
+const realSleep = (ms: number): Promise<void> => new Promise(r => setTimeout(r, ms))
 
 // How long before the next attempt: what the endpoint asked for if it said,
 // our own backoff if it did not, capped either way. Jitter keeps several
 // callers coming back at slightly different moments rather than in lockstep.
-function waitFor(err, attempt) {
+function waitFor(err: RemoteError, attempt: number): number {
   const asked = err.retryAfterMs > 0 ? err.retryAfterMs : BACKOFF_MS[attempt] + Math.random() * 250
   return Math.min(Math.round(asked), MAX_WAIT_MS)
 }
 
-const retryable = err => err instanceof RemoteError && err.transient && err.code !== 'bad_response'
+// A predicate, not a boolean: withRetry's `err` arrives as unknown from the
+// catch, and this is what narrows it to a RemoteError for waitFor().
+const retryable = (err: unknown): err is RemoteError =>
+  err instanceof RemoteError && err.transient && err.code !== 'bad_response'
+
+export interface RequestOptions {
+  apiKey?: string | null
+  timeoutMs?: number
+  retries?: number
+  sleep?: (ms: number) => Promise<void>
+}
 
 export async function postJson(
-  baseUrl,
-  path,
-  body,
-  { apiKey = null, timeoutMs = 60_000, retries = RETRIES, sleep = realSleep } = {},
-) {
+  baseUrl: string,
+  path: string,
+  body: unknown,
+  { apiKey = null, timeoutMs = 60_000, retries = RETRIES, sleep = realSleep }: RequestOptions = {},
+): Promise<unknown> {
   return withRetry(
     () => request(baseUrl, path, { method: 'POST', body: JSON.stringify(body), apiKey, timeoutMs }),
     retries,
@@ -91,14 +116,18 @@ export async function postJson(
 }
 
 export async function getJson(
-  baseUrl,
-  path,
-  { apiKey = null, timeoutMs = 60_000, retries = RETRIES, sleep = realSleep } = {},
-) {
+  baseUrl: string,
+  path: string,
+  { apiKey = null, timeoutMs = 60_000, retries = RETRIES, sleep = realSleep }: RequestOptions = {},
+): Promise<unknown> {
   return withRetry(() => request(baseUrl, path, { method: 'GET', apiKey, timeoutMs }), retries, sleep)
 }
 
-async function withRetry(attemptFn, retries, sleep) {
+async function withRetry(
+  attemptFn: () => Promise<unknown>,
+  retries: number,
+  sleep: (ms: number) => Promise<void>,
+): Promise<unknown> {
   for (let attempt = 0; ; attempt++) {
     try {
       return await attemptFn()
@@ -111,10 +140,17 @@ async function withRetry(attemptFn, retries, sleep) {
   }
 }
 
-async function request(baseUrl, path, { method, body, apiKey, timeoutMs }) {
+interface Attempt {
+  method: 'GET' | 'POST'
+  body?: string
+  apiKey: string | null
+  timeoutMs: number
+}
+
+async function request(baseUrl: string, path: string, { method, body, apiKey, timeoutMs }: Attempt): Promise<unknown> {
   const ac = new AbortController()
   const timer = setTimeout(() => ac.abort(), timeoutMs)
-  let res
+  let res: Response
   try {
     res = await fetch(baseUrl + path, {
       method,
@@ -125,10 +161,11 @@ async function request(baseUrl, path, { method, body, apiKey, timeoutMs }) {
       body,
       signal: ac.signal,
     })
-  } catch (e) {
+  } catch (e: unknown) {
     // AbortError and every DNS/connect failure land here identically — from
     // the caller's point of view "the endpoint did not answer" is one state.
-    throw new RemoteError('endpoint_unreachable', `Could not reach ${baseUrl}: ${e.message}`, { transient: true })
+    const why = e instanceof Error ? e.message : String(e)
+    throw new RemoteError('endpoint_unreachable', `Could not reach ${baseUrl}: ${why}`, { transient: true })
   } finally {
     clearTimeout(timer)
   }

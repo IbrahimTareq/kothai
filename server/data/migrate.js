@@ -18,8 +18,8 @@ import { existsSync } from 'node:fs'
 import { rename } from 'node:fs/promises'
 import { DATA_DIR } from '../config.ts'
 import { readJson } from './json.js'
-import { ROLES, resolveResidency } from '../ai/roles.js'
-import { DEFAULTS } from '../ai/presets.js'
+import { ROLES, resolveResidency } from '../ai/roles.ts'
+import { DEFAULTS } from '../ai/presets.ts'
 import { encodeEmbedding } from './embedding.ts'
 
 async function withLegacyFile(name, fn) {

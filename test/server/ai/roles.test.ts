@@ -9,7 +9,19 @@ import {
   FRESH_RESIDENCY,
   LEGACY_RESIDENCY,
   POLICIES,
-} from '../../../server/ai/roles.js'
+} from '../../../server/ai/roles.ts'
+import type { Loader, ModelSrc, Timers } from '../../../server/ai/roles.ts'
+
+// The fakes below log as [what, which] pairs whose second element is a model
+// name or an opaque handle, so the log is deliberately loosely typed.
+type LogEntry = [string, unknown]
+
+// Timers plus the two handles the tests drive it by. Declared as one type so
+// the fake's callbacks get their parameter types from it rather than any.
+interface FakeTimers extends Timers {
+  fire(): void
+  count(): number
+}
 
 // ---- resolveResidency ---------------------------------------------------
 test('resolveResidency: fresh install (unconfigured, no residency) → fresh defaults', () => {
@@ -26,9 +38,9 @@ test('resolveResidency: explicit residency wins; invalid values fall back per-ro
 })
 
 // ---- fakes --------------------------------------------------------------
-function fakeTimers() {
+function fakeTimers(): FakeTimers {
   let next = 1
-  const pending = new Map()
+  const pending = new Map<unknown, { fn: () => void; ms: number }>()
   return {
     set: (fn, ms) => {
       const id = next++
@@ -46,7 +58,7 @@ function fakeTimers() {
   }
 }
 
-function fakeLoader(log) {
+function fakeLoader(log: LogEntry[]): Loader {
   let n = 0
   return {
     load: async ({ modelSrc, onProgress }) => {
@@ -64,10 +76,10 @@ function fakeLoader(log) {
 // construct races deterministically (e.g. acquire() firing while an unload
 // or a load for a different model is still in flight).
 function deferredLoader() {
-  const log = []
-  const pending = { load: null, unload: null }
+  const log: LogEntry[] = []
+  const pending: { load: (() => void) | null; unload: (() => void) | null } = { load: null, unload: null }
   let n = 0
-  const loader = {
+  const loader: Loader = {
     load: ({ modelSrc }) => {
       log.push(['load-start', modelSrc.name])
       return new Promise(resolve => {
@@ -79,7 +91,7 @@ function deferredLoader() {
     },
     unload: id => {
       log.push(['unload-start', id])
-      return new Promise(resolve => {
+      return new Promise<void>(resolve => {
         pending.unload = () => {
           log.push(['unload-end', id])
           resolve()
@@ -87,13 +99,20 @@ function deferredLoader() {
       })
     },
   }
-  return { loader, log, resolveLoad: () => pending.load(), resolveUnload: () => pending.unload() }
+  // Non-null-asserted by throwing rather than by `!`: calling either of these
+  // before its half of the loader has been entered is a bug in the test.
+  const fire = (which: 'load' | 'unload') => {
+    const fn = pending[which]
+    if (!fn) throw new Error(`no ${which} is in flight`)
+    fn()
+  }
+  return { loader, log, resolveLoad: () => fire('load'), resolveUnload: () => fire('unload') }
 }
 
-const SRC = { name: 'test-model' }
-const SRC2 = { name: 'other-model' }
+const SRC: ModelSrc = { name: 'test-model' }
+const SRC2: ModelSrc = { name: 'other-model' }
 
-function makeMgr(log = []) {
+function makeMgr(log: LogEntry[] = []) {
   const timers = fakeTimers()
   const mgr = new RoleManager('llm', { loader: fakeLoader(log), idleMs: 1000, timers })
   mgr.setModel(SRC)
@@ -198,7 +217,7 @@ test('setModel: swapping while resident unloads the old model', async () => {
 test('load failure: state=error, and a later acquire retries', async () => {
   const timers = fakeTimers()
   let fail = true
-  const loader = {
+  const loader: Loader = {
     load: async () => {
       if (fail) throw new Error('boom')
       return 7
@@ -263,8 +282,8 @@ test('setModel during an in-flight load discards the stale result; a waiting acq
 
   resolveUnload() // stale-model cleanup completes
   await new Promise(r => setImmediate(r))
-  assert.equal(log.at(-1)[0], 'load-start')
-  assert.equal(log.at(-1)[1], 'other-model') // now SRC2 starts loading
+  assert.equal(log.at(-1)?.[0], 'load-start')
+  assert.equal(log.at(-1)?.[1], 'other-model') // now SRC2 starts loading
 
   resolveLoad() // SRC2 loads
   await acquireP // the original acquire() resolves with SRC2's id
@@ -301,8 +320,8 @@ test('a stale-discard unload is tracked so a fresh acquire waits for it (no over
 
   resolveUnload()
   await new Promise(r => setImmediate(r)) // let the retry's loader.load() fire before resolving it
-  assert.equal(log.at(-1)[0], 'load-start')
-  assert.equal(log.at(-1)[1], 'other-model') // now SRC2 starts loading
+  assert.equal(log.at(-1)?.[0], 'load-start')
+  assert.equal(log.at(-1)?.[1], 'other-model') // now SRC2 starts loading
 
   resolveLoad() // SRC2 loads once the discard settles
   const [idA, idB] = await Promise.all([acquireA, acquireB])

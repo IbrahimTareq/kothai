@@ -4,8 +4,8 @@
 // Everything runs locally / on-device via @qvac/sdk — no data leaves the machine.
 import { loadModel, completion, embed, unloadModel, close, cancel } from '@qvac/sdk'
 import * as MODELS from '@qvac/sdk'
-import { RoleManager, ROLES, FeatureDisabledError } from '../roles.js'
-import { PRESETS, DEFAULTS } from '../presets.js'
+import { RoleManager, ROLES, FeatureDisabledError } from '../roles.ts'
+import { PRESETS, DEFAULTS } from '../presets.ts'
 import {
   CLASSIFY_SCHEMA,
   DESCRIBE_IMAGE_PROMPT,

@@ -12,9 +12,9 @@ import path from 'node:path'
 // exponential backoff on every attempt — 62s of the suite's 68s. Mocking the
 // HTTP layer's own injectable `sleep` (remote-http.js, already proven out by
 // remote-retry.test.js) removes the wait without touching retry semantics.
-const realRemoteHttp = await import('../../../../server/ai/providers/remote-http.js')
+const realRemoteHttp = await import('../../../../server/ai/providers/remote-http.ts')
 const noSleep = async () => {}
-mock.module('../../../../server/ai/providers/remote-http.js', {
+mock.module('../../../../server/ai/providers/remote-http.ts', {
   namedExports: {
     ...realRemoteHttp,
     postJson: (baseUrl, p, body, opts = {}) => realRemoteHttp.postJson(baseUrl, p, body, { ...opts, sleep: noSleep }),

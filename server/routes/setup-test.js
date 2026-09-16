@@ -7,7 +7,7 @@
 // A refused key is a RESULT, not a server error: it comes back 200 with
 // ok:false, because the wizard needs to render it as a message beside the
 // field rather than as a failure of the request.
-import { getJson, TIMEOUTS } from '../ai/providers/remote-http.js'
+import { getJson, TIMEOUTS } from '../ai/providers/remote-http.ts'
 import { json, readBody } from '../lib/http.js'
 
 export async function handleSetupTest(req, res) {

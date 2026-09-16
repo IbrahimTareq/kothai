@@ -71,7 +71,7 @@ test('a mixed save survives a restart: endpoint ids land in the remote store, no
 
   const { _resetDb } = await import('../../../server/data/db.js')
   const settings = await import('../../../server/data/settings.js')
-  const { DEFAULTS } = await import('../../../server/ai/presets.js')
+  const { DEFAULTS } = await import('../../../server/ai/presets.ts')
 
   _resetDb()
   settings._reset()

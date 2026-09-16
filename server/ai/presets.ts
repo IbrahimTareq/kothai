@@ -8,7 +8,20 @@
 // Silicon). Byte sizes are NOT here — they come from the SDK's registry and
 // are resolved by the local provider's presetInfo().
 
-export const PRESETS = {
+import type { Role } from './roles.ts'
+
+export interface Preset {
+  key: string
+  label: string
+  desc: string
+  // Device classes this preset is the sweet spot for; empty means "works, but
+  // is nobody's recommendation".
+  best: string[]
+  // Vision presets only: the companion multimodal projector weights.
+  proj?: string
+}
+
+export const PRESETS: Record<Role, Preset[]> = {
   llm: [
     {
       key: 'QWEN3_600M_INST_Q4',
@@ -86,7 +99,7 @@ export const PRESETS = {
   ],
 }
 
-export const DEFAULTS = {
+export const DEFAULTS: Record<Role, string> = {
   llm: 'QWEN3_1_7B_INST_Q4',
   embed: 'EMBEDDINGGEMMA_300M_Q8_0',
   vision: 'QWEN3_5_2B_MULTIMODAL_Q4_K_M',

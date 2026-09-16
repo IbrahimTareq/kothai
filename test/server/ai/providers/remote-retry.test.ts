@@ -8,29 +8,44 @@
 import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
-import { postJson, RemoteError } from '../../../../server/ai/providers/remote-http.js'
+import type { RequestListener, Server } from 'node:http'
+import { postJson, RemoteError } from '../../../../server/ai/providers/remote-http.ts'
 
-let server, base, handler
+let server: Server
+let base: string
+let handler: RequestListener
 before(async () => {
   server = createServer((req, res) => handler(req, res))
-  await new Promise(r => server.listen(0, r))
-  base = `http://127.0.0.1:${server.address().port}`
+  await new Promise<void>(r => server.listen(0, () => r()))
+  const addr = server.address()
+  // Narrowed rather than asserted: listen(0) on TCP always yields an
+  // AddressInfo, and anything else here should fail loudly at setup.
+  if (addr === null || typeof addr === 'string') throw new Error(`expected a TCP address, got ${addr}`)
+  base = `http://127.0.0.1:${addr.port}`
 })
 after(() => server.close())
 
 // Injected so the tests assert the WAITS without serving them.
 const spy = () => {
-  const waits = []
+  const waits: number[] = []
   return {
     waits,
-    sleep: async ms => {
+    sleep: async (ms: number) => {
       waits.push(ms)
     },
   }
 }
 
+// postJson's contract is "whatever JSON came back", so it hands back unknown.
+// These tests own the fixture server, so one narrowing here beats an
+// assertion at every call site.
+function jsonObject(out: unknown): Record<string, unknown> {
+  if (typeof out !== 'object' || out === null) throw new Error(`expected a JSON object, got ${typeof out}`)
+  return { ...out }
+}
+
 // Fails with `status` the first `times` calls, then succeeds.
-function flaky(status, times, headers = {}) {
+function flaky(status: number, times: number, headers: Record<string, string> = {}) {
   let n = 0
   handler = (_req, res) => {
     if (n++ < times) {
@@ -46,7 +61,7 @@ test('a rate limit that clears is retried rather than lost', async () => {
   flaky(429, 2)
   const { sleep, waits } = spy()
   const out = await postJson(base, '/x', {}, { sleep })
-  assert.equal(out.ok, true)
+  assert.equal(jsonObject(out).ok, true)
   assert.equal(waits.length, 2, 'it waited between attempts')
 })
 
@@ -75,7 +90,7 @@ test('a server error is retried too — it is the same kind of transient', async
   flaky(503, 1)
   const { sleep } = spy()
   const out = await postJson(base, '/x', {}, { sleep })
-  assert.equal(out.ok, true)
+  assert.equal(jsonObject(out).ok, true)
 })
 
 test('a bad key is NOT retried — every attempt costs money and none can succeed', async () => {
@@ -83,7 +98,7 @@ test('a bad key is NOT retried — every attempt costs money and none can succee
   const { sleep, waits } = spy()
   await assert.rejects(
     () => postJson(base, '/x', {}, { sleep }),
-    e => e.code === 'auth_failed',
+    e => e instanceof RemoteError && e.code === 'auth_failed',
   )
   assert.equal(waits.length, 0, 'no retry, no wait')
 })
@@ -117,6 +132,6 @@ test('the final error still carries retryAfterMs for the circuit breaker', async
   const { sleep } = spy()
   await assert.rejects(
     () => postJson(base, '/x', {}, { sleep }),
-    e => e.retryAfterMs === 12_000,
+    e => e instanceof RemoteError && e.retryAfterMs === 12_000,
   )
 })

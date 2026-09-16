@@ -4,14 +4,21 @@
 import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
-import { postJson, RemoteError } from '../../../../server/ai/providers/remote-http.js'
+import type { IncomingMessage, RequestListener, Server, ServerResponse } from 'node:http'
+import { postJson, RemoteError, type RequestOptions } from '../../../../server/ai/providers/remote-http.ts'
 
-let server, base, handler
+let server: Server
+let base: string
+let handler: RequestListener
 
 before(async () => {
   server = createServer((req, res) => handler(req, res))
-  await new Promise(r => server.listen(0, r))
-  base = `http://127.0.0.1:${server.address().port}`
+  await new Promise<void>(r => server.listen(0, () => r()))
+  const addr = server.address()
+  // Narrowed rather than asserted: listen(0) on TCP always yields an
+  // AddressInfo, and anything else here should fail loudly at setup.
+  if (addr === null || typeof addr === 'string') throw new Error(`expected a TCP address, got ${addr}`)
+  base = `http://127.0.0.1:${addr.port}`
 })
 
 after(() => server.close())
@@ -21,9 +28,10 @@ after(() => server.close())
 // cost 68s of the suite's wall time. Injected the same way
 // remote-retry.test.js proves out the retry loop itself.
 const noSleep = async () => {}
-const post = (path, body, opts = {}) => postJson(base, path, body, { sleep: noSleep, ...opts })
+const post = (path: string, body: unknown, opts: RequestOptions = {}) =>
+  postJson(base, path, body, { sleep: noSleep, ...opts })
 
-function reply(status, body, headers = {}) {
+function reply(status: number, body: unknown, headers: Record<string, string> = {}) {
   handler = (_req, res) => {
     res.writeHead(status, { 'content-type': 'application/json', ...headers })
     res.end(JSON.stringify(body))
@@ -31,12 +39,18 @@ function reply(status, body, headers = {}) {
 }
 
 test('posts JSON and returns the parsed body', async () => {
-  let seen = null
-  handler = (req, res) => {
+  // Seeded rather than left null: `seen` is only ever written from the request
+  // handler, and TypeScript cannot see across that closure — starting from an
+  // empty record keeps the assertions below readable, and a handler that never
+  // ran still fails them on the undefined fields.
+  const seen: { url?: string; method?: string; headers: IncomingMessage['headers']; body?: unknown } = {
+    headers: {},
+  }
+  handler = (req: IncomingMessage, res: ServerResponse) => {
     let raw = ''
     req.on('data', c => (raw += c))
     req.on('end', () => {
-      seen = { url: req.url, method: req.method, headers: req.headers, body: JSON.parse(raw) }
+      Object.assign(seen, { url: req.url, method: req.method, headers: req.headers, body: JSON.parse(raw) })
       res.writeHead(200, { 'content-type': 'application/json' })
       res.end(JSON.stringify({ ok: 1 }))
     })
@@ -50,7 +64,7 @@ test('posts JSON and returns the parsed body', async () => {
 })
 
 test('omits the authorization header when no key is configured (Ollama needs none)', async () => {
-  let auth = 'unset'
+  let auth: string | undefined = 'unset'
   handler = (req, res) => {
     auth = req.headers.authorization
     res.writeHead(200, { 'content-type': 'application/json' })
@@ -71,6 +85,7 @@ test('401 maps to a non-transient auth_failed error', async () => {
 test('403 also maps to auth_failed', async () => {
   reply(403, {})
   const e = await post('/x', {}).catch(x => x)
+  assert.ok(e instanceof RemoteError)
   assert.equal(e.code, 'auth_failed')
   assert.equal(e.transient, false)
 })
@@ -78,6 +93,7 @@ test('403 also maps to auth_failed', async () => {
 test('404 maps to a non-transient model_not_found error', async () => {
   reply(404, { error: 'no such model' })
   const e = await post('/x', {}).catch(x => x)
+  assert.ok(e instanceof RemoteError)
   assert.equal(e.code, 'model_not_found')
   assert.equal(e.transient, false)
 })
@@ -85,6 +101,7 @@ test('404 maps to a non-transient model_not_found error', async () => {
 test('429 maps to a transient rate_limited error carrying Retry-After', async () => {
   reply(429, {}, { 'retry-after': '7' })
   const e = await post('/x', {}).catch(x => x)
+  assert.ok(e instanceof RemoteError)
   assert.equal(e.code, 'rate_limited')
   assert.equal(e.transient, true)
   assert.equal(e.retryAfterMs, 7000)
@@ -93,6 +110,7 @@ test('429 maps to a transient rate_limited error carrying Retry-After', async ()
 test('500 maps to a transient endpoint_error', async () => {
   reply(500, {})
   const e = await post('/x', {}).catch(x => x)
+  assert.ok(e instanceof RemoteError)
   assert.equal(e.code, 'endpoint_error')
   assert.equal(e.transient, true)
 })
@@ -100,12 +118,14 @@ test('500 maps to a transient endpoint_error', async () => {
 test('a timeout maps to a transient endpoint_unreachable error', async () => {
   handler = () => {} // never responds
   const e = await post('/x', {}, { timeoutMs: 50 }).catch(x => x)
+  assert.ok(e instanceof RemoteError)
   assert.equal(e.code, 'endpoint_unreachable')
   assert.equal(e.transient, true)
 })
 
 test('a refused connection maps to endpoint_unreachable', async () => {
   const e = await postJson('http://127.0.0.1:1', '/x', {}, { timeoutMs: 500, sleep: noSleep }).catch(x => x)
+  assert.ok(e instanceof RemoteError)
   assert.equal(e.code, 'endpoint_unreachable')
   assert.equal(e.transient, true)
 })
@@ -116,5 +136,6 @@ test('a non-JSON success body maps to a transient bad_response error', async () 
     res.end('not json')
   }
   const e = await post('/x', {}).catch(x => x)
+  assert.ok(e instanceof RemoteError)
   assert.equal(e.code, 'bad_response')
 })

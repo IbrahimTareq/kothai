@@ -31,7 +31,22 @@
 //                 its embedding models are pull-and-run-yourself, not hosted)
 //   groq          needs a key even to list models; unverified here.
 
-export const ENDPOINTS = [
+import type { Role } from './roles.ts'
+
+export interface Endpoint {
+  id: string
+  label: string
+  baseUrl: string
+  needsKey: boolean
+  servesEmbeddings: boolean
+  note: string
+  // Only the endpoints whose embedding catalogue lives off /v1/models carry
+  // this — see the OpenRouter entry below.
+  embeddingsPath?: string
+  defaults: Record<Role, string>
+}
+
+export const ENDPOINTS: Endpoint[] = [
   {
     id: 'openai',
     label: 'OpenAI',
@@ -69,6 +84,9 @@ export const ENDPOINTS = [
   },
 ]
 
-export function findEndpoint(id) {
+// Nullable on purpose: getAiConfig() reports providerId: null whenever the
+// endpoint came from STASH_AI_BASE_URL rather than the first-run wizard, and
+// that path must resolve to "no catalogue entry", not throw.
+export function findEndpoint(id: string | null | undefined): Endpoint | null {
   return ENDPOINTS.find(e => e.id === id) || null
 }

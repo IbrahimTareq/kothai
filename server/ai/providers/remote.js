@@ -11,9 +11,9 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { getAiConfig } from '../../config.ts'
-import { findEndpoint } from '../endpoints.js'
-import { FeatureDisabledError, ROLES } from '../roles.js'
-import { Circuit } from '../circuit.js'
+import { findEndpoint } from '../endpoints.ts'
+import { FeatureDisabledError, ROLES } from '../roles.ts'
+import { Circuit } from '../circuit.ts'
 import {
   CLASSIFY_SCHEMA,
   DESCRIBE_IMAGE_PROMPT,
@@ -25,7 +25,7 @@ import {
   clipToTokens,
 } from '../prompts.js'
 import { normaliseClassification, stripThinking } from '../normalise.js'
-import { postJson, getJson, TIMEOUTS, RemoteError } from './remote-http.js'
+import { postJson, getJson, TIMEOUTS, RemoteError } from './remote-http.ts'
 
 const MIME = {
   '.png': 'image/png',

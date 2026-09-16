@@ -2,10 +2,11 @@
 // needs under a residency map, and the legacy ai-marker migration.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { stepsFor, backlogCount, deriveAiMarkers } from '../../../server/ai/backlog.js'
+import { stepsFor, backlogCount, deriveAiMarkers } from '../../../server/ai/backlog.ts'
+import type { Residency } from '../../../server/ai/roles.ts'
 
-const ALL_ON = { llm: 'ondemand', embed: 'always', vision: 'ondemand' }
-const ALL_OFF = { llm: 'off', embed: 'off', vision: 'off' }
+const ALL_ON: Residency = { llm: 'ondemand', embed: 'always', vision: 'ondemand' }
+const ALL_OFF: Residency = { llm: 'off', embed: 'off', vision: 'off' }
 
 test('stepsFor: bare text note with everything on needs classify + embed', () => {
   assert.deepEqual(stepsFor({ ai: {} }, ALL_ON), ['classify', 'embed'])
@@ -52,7 +53,8 @@ test('deriveAiMarkers: legacy enriched note infers embed + vision, never classif
 })
 
 test('deriveAiMarkers: heuristic-only note infers nothing', () => {
-  assert.deepEqual(deriveAiMarkers({ category: '', tags: [], summary: '', embedding: null }), {})
+  const note = { category: '', tags: [], summary: '', embedding: null }
+  assert.deepEqual(deriveAiMarkers(note), {})
 })
 
 test('deriveAiMarkers: existing ai object is returned untouched', () => {

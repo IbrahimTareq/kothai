@@ -3,7 +3,11 @@
 // would surface as a broken wizard tile, which no server test would catch.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { ENDPOINTS, findEndpoint } from '../../../server/ai/endpoints.js'
+import { ENDPOINTS, findEndpoint } from '../../../server/ai/endpoints.ts'
+
+// Spelled out rather than imported from roles.ts: this asserts the catalogue
+// covers every role, which an import of the list it is typed against could not.
+const ROLE_KEYS = ['llm', 'embed', 'vision'] as const
 
 test('every entry has a unique id', () => {
   const ids = ENDPOINTS.map(e => e.id)
@@ -25,7 +29,7 @@ test('every base URL parses and carries no credential', () => {
 
 test('a provider that serves embeddings offers a default for all three roles', () => {
   for (const e of ENDPOINTS.filter(x => x.servesEmbeddings)) {
-    for (const role of ['llm', 'embed', 'vision']) {
+    for (const role of ROLE_KEYS) {
       assert.ok(e.defaults[role], `${e.id} is missing a ${role} default`)
     }
   }
@@ -56,12 +60,14 @@ test('findEndpoint returns null for an unknown id rather than throwing', () => {
 
 test('openai is the one provider that needs no on-device fallback', () => {
   const openai = findEndpoint('openai')
+  assert.ok(openai, 'openai must be in the catalogue')
   assert.equal(openai.servesEmbeddings, true)
   assert.equal(openai.needsKey, true)
 })
 
 test('a provider reachable without a key is marked so', () => {
   const ollama = findEndpoint('ollama-local')
+  assert.ok(ollama, 'ollama-local must be in the catalogue')
   assert.equal(ollama.needsKey, false)
   assert.equal(ollama.servesEmbeddings, true)
 })

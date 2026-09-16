@@ -12,7 +12,7 @@ import * as store from '../../../server/data/notes.js'
 import { encodeEmbedding, decodeEmbedding } from '../../../server/data/notes.js'
 import { cosine } from '../../../server/data/embedding.ts'
 import { getDb } from '../../../server/data/db.js'
-import { deriveAiMarkers } from '../../../server/ai/backlog.js'
+import { deriveAiMarkers } from '../../../server/ai/backlog.ts'
 
 const vec = n => Array.from({ length: n }, (_, i) => Math.sin(i))
 // float32 keeps ~7 significant digits; cosine similarity does not care, but

@@ -2,6 +2,31 @@
 // current residency map. Used to gate enrichment, count the settings backlog,
 // and migrate pre-residency notes to `ai` markers. No I/O, no SDK.
 
+import type { Residency } from './roles.ts'
+
+// The markers a note carries once a step has run against it. `thumbVision` is
+// written but deliberately not trusted — see the note on stepsFor below.
+export interface AiMarkers {
+  vision?: boolean
+  classify?: boolean
+  embed?: boolean
+  thumbVision?: boolean
+}
+
+// Only the fields these helpers actually read. Narrower than ServerNote on
+// purpose: every caller passes a full note, but nothing here should be able to
+// reach for a field it has no business gating on.
+export interface BacklogNote {
+  ai?: AiMarkers
+  image?: string | null
+  thumb?: string | null
+  thumbDescription?: string | null
+  description?: string | null
+  embedding?: Float32Array | number[] | null
+}
+
+export type Step = 'vision' | 'thumbVision' | 'classify' | 'embed'
+
 // Steps a note needs: the role must be enabled (not off) and the note must not
 // already carry that step's marker. Vision only applies to image notes.
 //
@@ -18,9 +43,9 @@
 // hours, starving every note the user saved in the meantime. Routing it here
 // instead means it is counted in the Settings backlog and runs when the user
 // asks for it — which is exactly what that button is for.
-export function stepsFor(note, residency) {
+export function stepsFor(note: BacklogNote, residency: Residency): Step[] {
   const done = note.ai || {}
-  const steps = []
+  const steps: Step[] = []
   if (residency.vision !== 'off' && note.image && !done.vision) steps.push('vision')
   if (residency.vision !== 'off' && note.thumb && !note.thumbDescription) steps.push('thumbVision')
   if (residency.llm !== 'off' && !done.classify) steps.push('classify')
@@ -28,7 +53,7 @@ export function stepsFor(note, residency) {
   return steps
 }
 
-export function backlogCount(notes, residency) {
+export function backlogCount(notes: BacklogNote[], residency: Residency): number {
   return notes.filter(n => stepsFor(n, residency).length > 0).length
 }
 
@@ -45,9 +70,9 @@ export function backlogCount(notes, residency) {
 // re-classification; a false negative just costs one redundant (self-healing)
 // classify pass on the next enrichment run — so every pre-migration note is
 // classified once rather than risk silently losing some forever.
-export function deriveAiMarkers(note) {
+export function deriveAiMarkers(note: BacklogNote): AiMarkers {
   if (note.ai) return note.ai
-  const ai = {}
+  const ai: AiMarkers = {}
   // Length, not Array.isArray: embeddings load from SQLite as a Float32Array
   // (see data/notes.js). An isArray check would read every stored vector as
   // absent and re-embed the entire library on every boot, forever.

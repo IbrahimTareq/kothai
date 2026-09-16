@@ -16,7 +16,7 @@
 // and the two cannot form a cycle.
 import * as store from '../data/notes.js'
 import { fetchLinkMeta, fetchInstagramSlides, isInstagramPost } from './meta.js'
-import { applyMeta } from './meta-fields.js'
+import { applyMeta } from './meta-fields.ts'
 
 // Called with a noteId once a fetch has produced a caption worth
 // re-classifying on. enrich.js registers the real handler at import; the

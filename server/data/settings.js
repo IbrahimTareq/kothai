@@ -3,8 +3,8 @@
 // / always-loaded, and a `configured` flag marking that the first-run picker
 // has been completed. Single row (id = 1) in the `settings` table.
 import { getDb } from './db.js'
-import { DEFAULTS } from '../ai/presets.js'
-import { ROLES, POLICIES, resolveResidency } from '../ai/roles.js'
+import { DEFAULTS } from '../ai/presets.ts'
+import { ROLES, POLICIES, resolveResidency } from '../ai/roles.ts'
 
 let settings = { ...DEFAULTS }
 let residency = resolveResidency({})
