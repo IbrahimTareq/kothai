@@ -14,8 +14,9 @@
     "start": "npm run build && node server/index.js",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/lint-tokens.mjs && node --experimental-test-module-mocks --test 'test/**/*.test.js' 'test/**/*.test.ts'",
+    "test": "node scripts/lint-tokens.mjs && node scripts/lint-shape.mjs && node --experimental-test-module-mocks --test 'test/**/*.test.js' 'test/**/*.test.ts'",
     "lint:tokens": "node scripts/lint-tokens.mjs",
+    "lint:shape": "node scripts/lint-shape.mjs",
     "format": "biome format --write .",
     "lint": "biome check ."
   },

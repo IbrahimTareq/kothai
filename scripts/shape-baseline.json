@@ -1,0 +1,94 @@
+{
+  "client/app/App.tsx": {
+    "lines": 568,
+    "exports": 1
+  },
+  "client/components/Canvas.tsx": {
+    "lines": 520,
+    "exports": 2
+  },
+  "client/components/Cards.tsx": {
+    "lines": 472,
+    "exports": 4
+  },
+  "client/components/Tweaks.tsx": {
+    "lines": 468,
+    "exports": 9
+  },
+  "client/data/api.ts": {
+    "lines": 486,
+    "exports": 4
+  },
+  "client/layout/canvas.ts": {
+    "lines": 250,
+    "exports": 25
+  },
+  "client/types.ts": {
+    "lines": 270,
+    "exports": 32
+  },
+  "client/views/Core.tsx": {
+    "lines": 573,
+    "exports": 1
+  },
+  "client/views/Expanded.tsx": {
+    "lines": 592,
+    "exports": 1
+  },
+  "client/views/Settings.tsx": {
+    "lines": 548,
+    "exports": 1
+  },
+  "client/views/Spaces.tsx": {
+    "lines": 493,
+    "exports": 2
+  },
+  "server/ai/enrich.js": {
+    "lines": 805,
+    "exports": 13
+  },
+  "server/ai/index.js": {
+    "lines": 293,
+    "exports": 29
+  },
+  "server/ai/meta.js": {
+    "lines": 821,
+    "exports": 25
+  },
+  "server/ai/prompts.js": {
+    "lines": 301,
+    "exports": 16
+  },
+  "server/ai/providers/local.js": {
+    "lines": 451,
+    "exports": 25
+  },
+  "server/ai/providers/remote.js": {
+    "lines": 355,
+    "exports": 14
+  },
+  "server/config.js": {
+    "lines": 104,
+    "exports": 13
+  },
+  "server/data/collections.js": {
+    "lines": 251,
+    "exports": 15
+  },
+  "server/data/notes.js": {
+    "lines": 621,
+    "exports": 23
+  },
+  "server/import/instagram.js": {
+    "lines": 481,
+    "exports": 9
+  },
+  "server/routes/import.js": {
+    "lines": 468,
+    "exports": 1
+  },
+  "server/routes/settings.js": {
+    "lines": 428,
+    "exports": 13
+  }
+}
