@@ -16,6 +16,11 @@ export function normalizeTag(tag) {
 }
 
 // Normalize a list: drop empties, dedup preserving first-seen order, cap to max.
+/**
+ * @param {unknown} tags
+ * @param {{ max?: number }} [opts]
+ * @returns {string[]}
+ */
 export function normalizeTags(tags, { max } = {}) {
   const out = []
   const seen = new Set()

@@ -52,10 +52,11 @@ async function fileNames(dir) {
 /**
  * List the model cache.
  *
- * @param dir          MODELS_DIR
- * @param inUse        { [registryBasename]: role } — see the note above on why
- *                     this is keyed by basename rather than cache filename.
- * @returns { entries, totalBytes, reclaimableBytes }, entries largest first.
+ * @param {string} dir MODELS_DIR
+ * @param {Record<string, string>} [inUse] registryBasename -> role — see the
+ *   note above on why this is keyed by basename rather than cache filename.
+ * @returns {Promise<{ entries: Array<{ name: string, kind: string, sizeBytes: number, inUse: boolean, usedBy: string | null }>, totalBytes: number, reclaimableBytes: number }>}
+ *   entries largest first.
  */
 export async function scanWeights(dir, inUse = {}) {
   let dirents
@@ -95,8 +96,13 @@ export async function scanWeights(dir, inUse = {}) {
   }
 }
 
+/**
+ * @param {string} code
+ * @param {string} message
+ * @returns {Error & { code: string }}
+ */
 function fail(code, message) {
-  const err = new Error(message)
+  const err = /** @type {Error & { code: string }} */ (new Error(message))
   err.code = code
   return err
 }

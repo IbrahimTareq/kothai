@@ -31,6 +31,7 @@ const MAX_HOPS = 5
 // reaching into the tailnet is exactly the thing to prevent, so blocking it
 // here is deliberate, not collateral. 0/8 matters because 0.0.0.0 routes to
 // loopback on Linux, and 240/4 carries the 255.255.255.255 broadcast address.
+/** @type {[string, number][]} */
 const V4_BLOCKED = [
   ['0.0.0.0', 8], // "this host on this network"
   ['10.0.0.0', 8], // RFC1918
