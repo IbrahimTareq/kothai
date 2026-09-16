@@ -12,8 +12,9 @@ import * as collections from '../data/collections.ts'
 import * as chats from '../data/chats.ts'
 import * as settings from '../data/settings.ts'
 import { downloadJson } from '../lib/http.ts'
+import type { ServerResponse } from 'node:http'
 
-export function handleExport(res) {
+export function handleExport(res: ServerResponse) {
   const bundle = {
     version: 1,
     exportedAt: new Date().toISOString(),

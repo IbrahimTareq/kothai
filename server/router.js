@@ -14,10 +14,10 @@ import {
 } from './routes/notes.js'
 import { handleImport } from './routes/import.js'
 import { handleAvailabilityScan, handleAvailabilityRemove } from './routes/availability.js'
-import { handleExport } from './routes/export.js'
+import { handleExport } from './routes/export.ts'
 import { handleBackup } from './routes/backup.ts'
 import { handleCheckpoint } from './routes/checkpoint.ts'
-import { handleWipe } from './routes/wipe.js'
+import { handleWipe } from './routes/wipe.ts'
 import { handleModelFiles, handleDeleteModelFile } from './routes/models.ts'
 import { handleAsk } from './routes/ask.ts'
 import { handleChats, handleChat, handleRenameChat, handleDeleteChat } from './routes/chats.ts'
@@ -28,7 +28,7 @@ import {
   handleAddItem,
   handleRemoveItem,
   handleDeleteCollection,
-} from './routes/collections.js'
+} from './routes/collections.ts'
 import {
   handleStatus,
   handleGetSettings,

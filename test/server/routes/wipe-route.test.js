@@ -67,7 +67,7 @@ mock.module('../../../server/data/settings.ts', {
   },
 })
 
-const { handleWipe, CONFIRM_TOKEN } = await import('../../../server/routes/wipe.js')
+const { handleWipe, CONFIRM_TOKEN } = await import('../../../server/routes/wipe.ts')
 
 function fakeReq(body) {
   const r = Readable.from([Buffer.from(typeof body === 'string' ? body : JSON.stringify(body))])

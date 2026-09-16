@@ -33,7 +33,7 @@ interface TaggedNote {
   tags?: string[] | null
 }
 
-interface CollectionPatch {
+export interface CollectionPatch {
   name?: string
   tags?: string[]
   canvas?: CanvasDoc | null

@@ -14,14 +14,22 @@ import * as chats from '../data/chats.ts'
 import * as tagvocab from '../data/tagvocab.ts'
 import { isImportInProgress, IMPORT_BUSY } from '../data/import-lock.ts'
 import { json, readBody } from '../lib/http.ts'
+import type { IncomingMessage, ServerResponse } from 'node:http'
 
 export const CONFIRM_TOKEN = 'DELETE'
 
 // The body is a single short field; no reason to buffer more than that.
 const BODY_LIMIT = 4 * 1024
 
-export async function handleWipe(req, res) {
-  let body
+// readBody hands back `unknown`, and this route is the one place that must not
+// be talked into a match. Local rather than lifted into server/lib/: that is
+// the security floor, and a guard there needs a test that fails without it.
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null
+}
+
+export async function handleWipe(req: IncomingMessage, res: ServerResponse) {
+  let body: unknown
   try {
     body = await readBody(req, BODY_LIMIT)
   } catch {
@@ -29,7 +37,7 @@ export async function handleWipe(req, res) {
   }
   // Exact match, no trimming or case-folding: "delete" or " DELETE " means
   // the user did not type the confirmation the UI asked for.
-  if (!body || typeof body !== 'object' || body.confirm !== CONFIRM_TOKEN) {
+  if (!isRecord(body) || body.confirm !== CONFIRM_TOKEN) {
     return json(res, 400, { error: `Type ${CONFIRM_TOKEN} to confirm.`, code: 'confirm_required' })
   }
   // An import writes notes in a batch it holds in memory (see import.js) — a

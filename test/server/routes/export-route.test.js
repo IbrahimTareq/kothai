@@ -37,7 +37,7 @@ mock.module('../../../server/data/settings.ts', {
   },
 })
 
-const { handleExport } = await import('../../../server/routes/export.js')
+const { handleExport } = await import('../../../server/routes/export.ts')
 
 function fakeRes() {
   return {
