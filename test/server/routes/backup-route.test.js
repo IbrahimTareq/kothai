@@ -28,15 +28,15 @@ process.env.STASH_DATA_DIR = DATA_DIR
 // — the route answers with it, so a mock that dropped it would 409 with
 // undefined rather than the refusal the client matches on.
 let importRunning = false
-const realLock = await import('../../../server/data/import-lock.js')
-mock.module('../../../server/data/import-lock.js', {
+const realLock = await import('../../../server/data/import-lock.ts')
+mock.module('../../../server/data/import-lock.ts', {
   namedExports: { ...realLock, isImportInProgress: () => importRunning },
 })
 
 const store = await import('../../../server/data/notes.js')
 const settings = await import('../../../server/data/settings.js')
 const { writeCredentials, readCredentials } = await import('../../../server/data/credentials.js')
-const { setAiCredentials } = await import('../../../server/config.js')
+const { setAiCredentials } = await import('../../../server/config.ts')
 const { createServer } = await import('../../../server/router.js')
 
 const server = createServer()

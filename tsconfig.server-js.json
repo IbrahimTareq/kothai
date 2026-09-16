@@ -12,6 +12,12 @@
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
+    // http.js and ssrf.js import '../config.ts' now that wave 0b renamed it.
+    // Without this, tsc fails them with TS5097 ("an import path can only end
+    // with a '.ts' extension when 'allowImportingTsExtensions' is enabled") —
+    // the same flag the other two configs already carry, and safe for the same
+    // reason: noEmit is on, so no .ts specifier is ever written into output.
+    "allowImportingTsExtensions": true,
     "strict": false,
     "skipLibCheck": true,
     "resolveJsonModule": true

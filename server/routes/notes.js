@@ -6,7 +6,7 @@ import * as ai from '../ai/index.js'
 import * as enrich from '../ai/enrich.js'
 import { isInstagramPost } from '../ai/meta.js'
 import * as collections from '../data/collections.js'
-import * as query from '../data/query.js'
+import * as query from '../data/query.ts'
 import { json, readBody, saveImage } from '../lib/http.js'
 
 // ---- API handlers ------------------------------------------------------

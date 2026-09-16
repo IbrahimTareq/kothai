@@ -4,7 +4,7 @@
 // migrate.js to pull in a pre-SQLite install's flat files.
 import { readFile, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { DATA_DIR, UPLOAD_DIR } from '../config.js'
+import { DATA_DIR, UPLOAD_DIR } from '../config.ts'
 
 // Ensure data/ exists (and uploads/ when asked).
 export async function ensureDataDir({ uploads = false } = {}) {

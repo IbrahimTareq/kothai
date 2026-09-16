@@ -10,11 +10,26 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 
+// Written out rather than inferred, because 16 modules import the constants
+// below: letting them infer from process.env (string | undefined) would push a
+// wrong type into every one of those call sites at once.
+interface Config {
+  PORT: number
+  DATA_DIR: string
+  UPLOAD_DIR: string
+  MODELS_DIR: string
+  CONFIG_PATH: string
+  AI_EMBED_PROVIDER: string | null
+  SETUP_PROVIDER: string | null
+  ALLOW_PRIVATE_FETCH: boolean
+  PASSWORD: string | null
+}
+
 // Exported pure so tests can exercise precedence without touching process.env.
-export function resolveConfig(env = process.env, root = ROOT) {
+export function resolveConfig(env: NodeJS.ProcessEnv = process.env, root: string = ROOT): Config {
   const home = env.STASH_HOME ? path.resolve(root, env.STASH_HOME) : null
 
-  const pick = (name, leaf) => {
+  const pick = (name: string, leaf: string): string => {
     if (env[name]) return path.resolve(root, env[name])
     if (home) return path.join(home, leaf)
     return path.join(root, leaf)
@@ -54,15 +69,15 @@ export function resolveConfig(env = process.env, root = ROOT) {
 
 const config = Object.freeze(resolveConfig())
 
-export const PORT = config.PORT
-export const DATA_DIR = config.DATA_DIR
-export const UPLOAD_DIR = config.UPLOAD_DIR
-export const MODELS_DIR = config.MODELS_DIR
-export const CONFIG_PATH = config.CONFIG_PATH
-export const AI_EMBED_PROVIDER = config.AI_EMBED_PROVIDER
-export const SETUP_PROVIDER = config.SETUP_PROVIDER
-export const ALLOW_PRIVATE_FETCH = config.ALLOW_PRIVATE_FETCH
-export const PASSWORD = config.PASSWORD
+export const PORT: number = config.PORT
+export const DATA_DIR: string = config.DATA_DIR
+export const UPLOAD_DIR: string = config.UPLOAD_DIR
+export const MODELS_DIR: string = config.MODELS_DIR
+export const CONFIG_PATH: string = config.CONFIG_PATH
+export const AI_EMBED_PROVIDER: string | null = config.AI_EMBED_PROVIDER
+export const SETUP_PROVIDER: string | null = config.SETUP_PROVIDER
+export const ALLOW_PRIVATE_FETCH: boolean = config.ALLOW_PRIVATE_FETCH
+export const PASSWORD: string | null = config.PASSWORD
 
 // ---- inference endpoint ---------------------------------------------------
 // Resolved on demand rather than frozen at import, because the app can now be
@@ -73,8 +88,25 @@ export const PASSWORD = config.PASSWORD
 // STASH_AI_BASE_URL is set, the key must come from the environment too. Mixing
 // a stored key into an operator-supplied URL would send a credential somewhere
 // its owner never pointed it.
-export function resolveAiConfig(env = process.env, creds = null) {
-  const strip = u => u.replace(/\/+$/, '')
+//
+// Every field is nullable on the way in: the file may hold a URL with no key
+// (a local Ollama needs none), and readCredentials() itself returns null when
+// there is no file at all.
+interface AiCredentials {
+  baseUrl?: string | null
+  apiKey?: string | null
+  providerId?: string | null
+}
+
+interface AiConfig {
+  baseUrl: string | null
+  apiKey: string | null
+  providerId: string | null
+  provider: 'local' | 'remote'
+}
+
+export function resolveAiConfig(env: NodeJS.ProcessEnv = process.env, creds: AiCredentials | null = null): AiConfig {
+  const strip = (u: string): string => u.replace(/\/+$/, '')
   // providerId only ever comes from the file: an operator setting an endpoint
   // by environment variable is naming a URL, not picking a catalogue entry.
   const source = env.STASH_AI_BASE_URL
@@ -92,12 +124,12 @@ export function resolveAiConfig(env = process.env, creds = null) {
 // The credential file, loaded once at boot and refreshed whenever it is
 // written. Kept here rather than read from disk on every access so that
 // getAiConfig() stays synchronous for the many sync callers.
-let aiCredentials = null
+let aiCredentials: AiCredentials | null = null
 
-export function setAiCredentials(creds) {
+export function setAiCredentials(creds: AiCredentials | null): void {
   aiCredentials = creds
 }
 
-export function getAiConfig() {
+export function getAiConfig(): AiConfig {
   return resolveAiConfig(process.env, aiCredentials)
 }

@@ -67,8 +67,8 @@
     "lines": 355,
     "exports": 14
   },
-  "server/config.js": {
-    "lines": 104,
+  "server/config.ts": {
+    "lines": 136,
     "exports": 13
   },
   "server/data/collections.js": {

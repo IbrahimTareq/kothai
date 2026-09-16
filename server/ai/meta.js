@@ -14,7 +14,7 @@ import {
   YoutubeTranscriptNotAvailableLanguageError,
   YoutubeTranscriptVideoUnavailableError,
 } from 'youtube-transcript'
-import { UPLOAD_DIR } from '../config.js'
+import { UPLOAD_DIR } from '../config.ts'
 import { safeFetch } from '../lib/ssrf.js'
 
 const FETCH_TIMEOUT_MS = 8000

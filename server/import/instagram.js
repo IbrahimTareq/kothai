@@ -6,7 +6,7 @@
 // This module sits on the same trust boundary as server/lib/zip.js: the JSON
 // here comes straight from a user-uploaded archive, so it's treated as
 // hostile input, not just "unusual" input — see the guards below.
-import { tryJson, clip } from './untrusted.js'
+import { tryJson, clip } from './untrusted.ts'
 
 export const name = 'instagram'
 // Shown by the route when an upload doesn't match this importer. Kept beside

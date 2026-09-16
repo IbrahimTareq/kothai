@@ -11,7 +11,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import * as tagvocab from '../../../server/data/tagvocab.js'
-import { encodeEmbedding } from '../../../server/data/embedding.js'
+import { encodeEmbedding } from '../../../server/data/embedding.ts'
 import { getDb } from '../../../server/data/db.js'
 
 const fakeEmbed = async tag => (tag === 'recipes' ? [1, 0, 0, 0] : [0, 1, 0, 0])

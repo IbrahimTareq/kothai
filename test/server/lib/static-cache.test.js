@@ -17,8 +17,8 @@ import path from 'node:path'
 
 const TMP_UPLOADS = mkdtempSync(path.join(tmpdir(), 'stash-uploads-'))
 
-const realConfig = await import('../../../server/config.js')
-mock.module('../../../server/config.js', {
+const realConfig = await import('../../../server/config.ts')
+mock.module('../../../server/config.ts', {
   namedExports: { ...realConfig, UPLOAD_DIR: TMP_UPLOADS },
 })
 

@@ -23,8 +23,8 @@ const DATA_DIR = mkdtempSync(path.join(os.tmpdir(), 'kothai-hook-test-'))
 process.env.STASH_DATA_DIR = DATA_DIR
 
 let importRunning = false
-const realLock = await import('../../server/data/import-lock.js')
-mock.module('../../server/data/import-lock.js', {
+const realLock = await import('../../server/data/import-lock.ts')
+mock.module('../../server/data/import-lock.ts', {
   namedExports: { ...realLock, isImportInProgress: () => importRunning },
 })
 

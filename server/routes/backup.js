@@ -16,10 +16,10 @@ import { stat, unlink } from 'node:fs/promises'
 import { pipeline } from 'node:stream/promises'
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
-import { DATA_DIR } from '../config.js'
+import { DATA_DIR } from '../config.ts'
 import { getDb } from '../data/db.js'
 import * as store from '../data/notes.js'
-import { isImportInProgress, IMPORT_BUSY } from '../data/import-lock.js'
+import { isImportInProgress, IMPORT_BUSY } from '../data/import-lock.ts'
 import { json } from '../lib/http.js'
 
 // A backup momentarily needs free space equal to the database's size, so two

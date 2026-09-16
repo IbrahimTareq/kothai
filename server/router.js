@@ -1,6 +1,6 @@
 import http from 'node:http'
 import { json, serveStatic } from './lib/http.js'
-import { PASSWORD } from './config.js'
+import { PASSWORD } from './config.ts'
 import { authGate } from './routes/auth.js'
 import {
   handleSave,

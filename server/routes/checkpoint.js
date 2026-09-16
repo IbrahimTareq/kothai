@@ -15,7 +15,7 @@
 // costs nothing extra but only settles what is already there.
 import { getDb } from '../data/db.js'
 import * as store from '../data/notes.js'
-import { isImportInProgress, IMPORT_BUSY } from '../data/import-lock.js'
+import { isImportInProgress, IMPORT_BUSY } from '../data/import-lock.ts'
 import { json } from '../lib/http.js'
 
 export async function handleCheckpoint(res) {

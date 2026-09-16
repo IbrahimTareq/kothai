@@ -10,7 +10,7 @@
 // they are the user's choice and vary per endpoint.
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
-import { getAiConfig } from '../../config.js'
+import { getAiConfig } from '../../config.ts'
 import { findEndpoint } from '../endpoints.js'
 import { FeatureDisabledError, ROLES } from '../roles.js'
 import { Circuit } from '../circuit.js'

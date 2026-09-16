@@ -7,7 +7,7 @@ import * as enrich from '../ai/enrich.js'
 import { findImporter, getImporter, importerNames } from '../import/index.js'
 import { readZip, MAX_TOTAL_BYTES } from '../lib/zip.ts'
 import { json, readBody } from '../lib/http.js'
-import { runExclusiveImport } from '../data/import-lock.js'
+import { runExclusiveImport } from '../data/import-lock.ts'
 
 // Uploads arrive as JSON { name, data } with data base64 (raw or data-URL),
 // matching the app's existing pasted-image transport. This bounds the RAW

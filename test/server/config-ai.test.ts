@@ -3,7 +3,7 @@
 // changes behaviour when it upgrades.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { resolveAiConfig } from '../../server/config.js'
+import { resolveAiConfig } from '../../server/config.ts'
 
 test('nothing configured anywhere is the local provider', () => {
   assert.deepEqual(resolveAiConfig({}, null), { baseUrl: null, apiKey: null, providerId: null, provider: 'local' })

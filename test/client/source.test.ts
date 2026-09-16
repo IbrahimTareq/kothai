@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { SOURCES, isAwaitingContent } from '../../client/domain/source.ts'
-import { sourceKey } from '../../server/data/query.js'
+import { sourceKey } from '../../server/data/query.ts'
 import type { UIItem } from '../../client/types.ts'
 
 test('server sourceKey agrees with client SOURCES on every predicate', () => {

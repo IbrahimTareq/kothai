@@ -12,7 +12,7 @@
 // tighter cap at its own call site.
 const MAX_FIELD_LEN = 500
 
-export function tryJson(buf) {
+export function tryJson(buf: Buffer): unknown {
   try {
     return JSON.parse(buf.toString('utf8'))
   } catch {
@@ -24,7 +24,7 @@ export function tryJson(buf) {
 // enrichment prompt (a poster "name" full of newlines/control whitespace is a
 // cheap prompt-formatting/injection vector) as well as into the UI, so a
 // multi-MB string field must not be able to ride along.
-export function clip(str) {
+export function clip(str: unknown): string {
   if (typeof str !== 'string') return ''
   return str.replace(/\s+/g, ' ').trim().slice(0, MAX_FIELD_LEN)
 }

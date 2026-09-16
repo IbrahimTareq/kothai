@@ -15,7 +15,7 @@
 // checks the ANSWERS, and follows redirects by hand so each hop is re-checked.
 import dns from 'node:dns/promises'
 import net from 'node:net'
-import { ALLOW_PRIVATE_FETCH } from '../config.js'
+import { ALLOW_PRIVATE_FETCH } from '../config.ts'
 
 // A link preview only ever needs to speak HTTP. Restricting the port keeps an
 // attacker-supplied URL from reaching an admin panel, a database or an SSH

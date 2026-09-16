@@ -7,7 +7,7 @@
 // run the one-time legacy-JSON import).
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import { DATA_DIR } from '../config.js'
+import { DATA_DIR } from '../config.ts'
 import { ensureDataDir } from './json.js'
 import { migrateLegacyJson } from './migrate.js'
 

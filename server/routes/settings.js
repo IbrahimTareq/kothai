@@ -7,7 +7,7 @@ import { ROLES, POLICIES, OFF_RESIDENCY } from '../ai/roles.js'
 import { backlogCount } from '../ai/backlog.js'
 import { isInstagramPost } from '../ai/meta.js'
 import { json, readBody } from '../lib/http.js'
-import { getAiConfig, setAiCredentials, SETUP_PROVIDER } from '../config.js'
+import { getAiConfig, setAiCredentials, SETUP_PROVIDER } from '../config.ts'
 import { writeCredentials, clearCredentials } from '../data/credentials.js'
 import { ENDPOINTS } from '../ai/endpoints.js'
 

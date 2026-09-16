@@ -1,8 +1,23 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { applyFilters, facetsOf, pageOf, sortNotes, sourceKey, matchesQ } from '../../../server/data/query.js'
+import { applyFilters, facetsOf, pageOf, sortNotes, sourceKey, matchesQ } from '../../../server/data/query.ts'
+import type { ServerNote } from '../../../server/types.ts'
 
-const N = o => ({ id: o.id, type: 'link', tags: [], url: null, content: '', title: '', ...o })
+// A complete ServerNote, because a complete one is what the store hands these
+// functions; every fixture below overrides only the fields its case pins.
+const N = (o: Partial<ServerNote> = {}): ServerNote => ({
+  id: 'n',
+  createdAt: '',
+  type: 'link',
+  category: '',
+  title: '',
+  summary: '',
+  tags: [],
+  content: '',
+  url: null,
+  image: null,
+  ...o,
+})
 const LIB = [
   N({ id: 'a', type: 'video', url: 'https://www.instagram.com/reel/AAA/', siteDesc: 'Makkah at night' }),
   N({ id: 'b', type: 'video', url: 'https://www.instagram.com/p/BBB/' }),
@@ -72,9 +87,9 @@ test('pageOf slices with clamped offset/limit', () => {
 
 test('applyFilters: unavailable narrows to marked notes only', () => {
   const notes = [
-    { id: 'a', type: 'video', url: 'https://www.tiktok.com/video/1', unavailable: true },
-    { id: 'b', type: 'video', url: 'https://www.tiktok.com/video/2' },
-    { id: 'c', type: 'link', url: 'https://www.instagram.com/p/X/', unavailable: true },
+    N({ id: 'a', type: 'video', url: 'https://www.tiktok.com/video/1', unavailable: true }),
+    N({ id: 'b', type: 'video', url: 'https://www.tiktok.com/video/2' }),
+    N({ id: 'c', type: 'link', url: 'https://www.instagram.com/p/X/', unavailable: true }),
   ]
   assert.deepEqual(
     applyFilters(notes, { unavailable: true }).map(n => n.id),
@@ -92,10 +107,7 @@ test('applyFilters: unavailable narrows to marked notes only', () => {
 })
 
 test('applyFilters: unavailable composes with type rather than replacing it', () => {
-  const notes = [
-    { id: 'a', type: 'video', unavailable: true },
-    { id: 'b', type: 'link', unavailable: true },
-  ]
+  const notes = [N({ id: 'a', type: 'video', unavailable: true }), N({ id: 'b', type: 'link', unavailable: true })]
   assert.deepEqual(
     applyFilters(notes, { unavailable: true, type: 'video' }).map(n => n.id),
     ['a'],
@@ -103,7 +115,11 @@ test('applyFilters: unavailable composes with type rather than replacing it', ()
 })
 
 test('facetsOf: counts unavailable alongside types and sources', () => {
-  const f = facetsOf([{ type: 'video', unavailable: true }, { type: 'video' }, { type: 'link', unavailable: true }])
+  const f = facetsOf([
+    N({ type: 'video', unavailable: true }),
+    N({ type: 'video' }),
+    N({ type: 'link', unavailable: true }),
+  ])
   assert.equal(f.unavailable, 2)
   // The dead video is not counted under its type: the type chips describe the
   // default view, which does not include it.
@@ -116,11 +132,7 @@ test('facetsOf: counts unavailable alongside types and sources', () => {
 // empty (nothing is both a video and a note), which is why lists widen.
 
 test('applyFilters: several types widen the set rather than narrowing it to nothing', () => {
-  const notes = [
-    { id: 'a', type: 'video' },
-    { id: 'b', type: 'link' },
-    { id: 'c', type: 'text' },
-  ]
+  const notes = [N({ id: 'a', type: 'video' }), N({ id: 'b', type: 'link' }), N({ id: 'c', type: 'text' })]
   assert.deepEqual(
     applyFilters(notes, { type: 'video,link' }).map(n => n.id),
     ['a', 'b'],
@@ -133,9 +145,9 @@ test('applyFilters: several types widen the set rather than narrowing it to noth
 
 test('applyFilters: several sources widen the same way', () => {
   const notes = [
-    { id: 'a', url: 'https://www.tiktok.com/video/1' },
-    { id: 'b', url: 'https://www.instagram.com/p/X/' },
-    { id: 'c', url: 'https://example.com/thing' },
+    N({ id: 'a', url: 'https://www.tiktok.com/video/1' }),
+    N({ id: 'b', url: 'https://www.instagram.com/p/X/' }),
+    N({ id: 'c', url: 'https://example.com/thing' }),
   ]
   const got = applyFilters(notes, { source: 'tiktok,igposts' }).map(n => n.id)
   assert.ok(got.includes('a'), 'tiktok item kept')
@@ -144,8 +156,8 @@ test('applyFilters: several sources widen the same way', () => {
 
 test('applyFilters: facets AND together — type narrows a multi-source selection', () => {
   const notes = [
-    { id: 'a', type: 'video', url: 'https://www.tiktok.com/video/1' },
-    { id: 'b', type: 'link', url: 'https://www.tiktok.com/video/2' },
+    N({ id: 'a', type: 'video', url: 'https://www.tiktok.com/video/1' }),
+    N({ id: 'b', type: 'link', url: 'https://www.tiktok.com/video/2' }),
   ]
   assert.deepEqual(
     applyFilters(notes, { source: 'tiktok', type: 'video' }).map(n => n.id),
@@ -155,9 +167,9 @@ test('applyFilters: facets AND together — type narrows a multi-source selectio
 
 test('applyFilters: unavailable combines with the others instead of replacing them', () => {
   const notes = [
-    { id: 'a', type: 'video', url: 'https://www.tiktok.com/video/1', unavailable: true },
-    { id: 'b', type: 'video', url: 'https://www.tiktok.com/video/2' },
-    { id: 'c', type: 'link', url: 'https://www.tiktok.com/video/3', unavailable: true },
+    N({ id: 'a', type: 'video', url: 'https://www.tiktok.com/video/1', unavailable: true }),
+    N({ id: 'b', type: 'video', url: 'https://www.tiktok.com/video/2' }),
+    N({ id: 'c', type: 'link', url: 'https://www.tiktok.com/video/3', unavailable: true }),
   ]
   assert.deepEqual(
     applyFilters(notes, { unavailable: true, type: 'video' }).map(n => n.id),
@@ -166,10 +178,7 @@ test('applyFilters: unavailable combines with the others instead of replacing th
 })
 
 test('applyFilters: an empty list is not a filter', () => {
-  const notes = [
-    { id: 'a', type: 'video' },
-    { id: 'b', type: 'link' },
-  ]
+  const notes = [N({ id: 'a', type: 'video' }), N({ id: 'b', type: 'link' })]
   assert.equal(applyFilters(notes, { type: '' }).length, 2)
   assert.equal(applyFilters(notes, { type: [] }).length, 2)
   assert.equal(applyFilters(notes, { type: ',, ,' }).length, 2, 'a list of blanks is still no filter')
@@ -178,10 +187,7 @@ test('applyFilters: an empty list is not a filter', () => {
 // --- unavailable is hidden by default ----------------------------------------
 
 test('applyFilters: unavailable notes are out of an ordinary view unless asked for', () => {
-  const notes = [
-    { id: 'a', type: 'video' },
-    { id: 'b', type: 'video', unavailable: true },
-  ]
+  const notes = [N({ id: 'a', type: 'video' }), N({ id: 'b', type: 'video', unavailable: true })]
   assert.deepEqual(
     applyFilters(notes, {}).map(n => n.id),
     ['a'],
@@ -211,8 +217,8 @@ test('applyFilters: unavailable notes are out of an ordinary view unless asked f
 test('facetsOf: type/source counts describe the default view, so they exclude the hidden ones', () => {
   // Otherwise a "TikTok 2" chip opens a board of 1 and the gap reads as a bug.
   const f = facetsOf([
-    { type: 'video', url: 'https://www.tiktok.com/video/1' },
-    { type: 'video', url: 'https://www.tiktok.com/video/2', unavailable: true },
+    N({ type: 'video', url: 'https://www.tiktok.com/video/1' }),
+    N({ type: 'video', url: 'https://www.tiktok.com/video/2', unavailable: true }),
   ])
   assert.equal(f.types.video, 1)
   assert.equal(f.sources.tiktok, 1)
@@ -225,7 +231,7 @@ test('facetsOf: type/source counts describe the default view, so they exclude th
 // at all: notes came back in insertion order, which put a bulk import's OLDEST
 // items at the top of the board.
 
-const dated = (id, createdAt) => ({ id, createdAt })
+const dated = (id: string, createdAt: string): ServerNote => N({ id, createdAt })
 
 const A = dated('a', '2024-12-15T00:00:00Z')
 const B = dated('b', '2025-08-09T00:00:00Z')

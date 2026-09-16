@@ -9,7 +9,7 @@
 // binaries the slim base ships.
 import { mkdirSync, statSync, chownSync, lchownSync, readdirSync } from 'node:fs'
 import path from 'node:path'
-import { DATA_DIR, MODELS_DIR, CONFIG_PATH } from '../server/config.js'
+import { DATA_DIR, MODELS_DIR, CONFIG_PATH } from '../server/config.ts'
 
 const APP_UID = 1000 // the `node` user, already present in node:22-bookworm-slim
 const APP_GID = 1000

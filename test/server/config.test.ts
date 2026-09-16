@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import path from 'node:path'
-import { resolveConfig } from '../../server/config.js'
+import { resolveConfig } from '../../server/config.ts'
 
 const ROOT = '/srv/kothai'
 

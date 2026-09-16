@@ -12,7 +12,7 @@ import { _reset, initProvider } from '../../../server/ai/index.js'
 import { handleSaveEndpoint, handleClearEndpoint, handleGetSettings } from '../../../server/routes/settings.js'
 import { _resetDb } from '../../../server/data/db.js'
 import * as settings from '../../../server/data/settings.js'
-import { setAiCredentials, getAiConfig } from '../../../server/config.js'
+import { setAiCredentials, getAiConfig } from '../../../server/config.ts'
 import { readCredentials, writeCredentials } from '../../../server/data/credentials.js'
 
 function fakeRes() {

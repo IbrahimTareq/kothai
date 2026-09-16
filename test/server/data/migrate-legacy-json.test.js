@@ -9,12 +9,12 @@ import { mkdtempSync, writeFileSync, existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import { decodeEmbedding } from '../../../server/data/embedding.js'
+import { decodeEmbedding } from '../../../server/data/embedding.ts'
 
 const scratch = mkdtempSync(path.join(tmpdir(), 'kothai-migrate-'))
 process.env.STASH_DATA_DIR = scratch
 
-const { DATA_DIR } = await import('../../../server/config.js')
+const { DATA_DIR } = await import('../../../server/config.ts')
 const { migrateLegacyJson } = await import('../../../server/data/migrate.js')
 assert.equal(DATA_DIR, scratch) // sanity: env var actually took
 

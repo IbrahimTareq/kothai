@@ -20,14 +20,14 @@
 // routes had to import a route to find out about it.
 let importInProgress = false
 
-export function isImportInProgress() {
+export function isImportInProgress(): boolean {
   return importInProgress
 }
 
 // Run `fn` as the exclusive import, or answer null if one is already running.
 // Callers distinguish the two by the return value rather than by reading the
 // flag and then setting it, which is the sequence that can interleave.
-export async function runExclusiveImport(fn) {
+export async function runExclusiveImport<T>(fn: () => Promise<T>): Promise<{ result: T } | null> {
   if (importInProgress) return null
   importInProgress = true
   try {

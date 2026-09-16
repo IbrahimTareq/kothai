@@ -10,7 +10,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import * as store from '../../../server/data/notes.js'
 import { encodeEmbedding, decodeEmbedding } from '../../../server/data/notes.js'
-import { cosine } from '../../../server/data/embedding.js'
+import { cosine } from '../../../server/data/embedding.ts'
 import { getDb } from '../../../server/data/db.js'
 import { deriveAiMarkers } from '../../../server/ai/backlog.js'
 

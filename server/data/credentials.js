@@ -8,7 +8,7 @@
 // environment variables still take precedence (see config.js).
 import { readFileSync, writeFileSync, chmodSync, unlinkSync } from 'node:fs'
 import path from 'node:path'
-import { DATA_DIR } from '../config.js'
+import { DATA_DIR } from '../config.ts'
 
 const FILE = 'credentials.json'
 

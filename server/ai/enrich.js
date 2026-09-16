@@ -17,7 +17,7 @@ import * as collections from '../data/collections.js'
 import * as settings from '../data/settings.js'
 import { stepsFor } from './backlog.js'
 import { DESCRIBE_THUMB_PROMPT, EMBED_RECIPE } from './prompts.js'
-import { UPLOAD_DIR } from '../config.js'
+import { UPLOAD_DIR } from '../config.ts'
 import {
   queueIgMeta,
   queueIgSlides,

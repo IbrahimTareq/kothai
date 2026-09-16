@@ -10,7 +10,7 @@
 // and pay for an LLM enrichment pass on each one.
 //
 // Verified against a real export (197 favorites, 13 collections, Aug 2026).
-import { tryJson, clip } from './untrusted.js'
+import { tryJson, clip } from './untrusted.ts'
 
 export const name = 'tiktok'
 export const label = 'TikTok'

@@ -1,8 +1,9 @@
 // Pure filter / facet / page arithmetic for the notes query endpoint.
 // Operates on raw ServerNote records; no store or HTTP imports, so every
 // function here is unit-testable with plain arrays.
+import type { ServerNote } from '../types.ts'
 
-function hostOf(url) {
+function hostOf(url: string): string {
   try {
     return new URL(url).hostname.replace(/^www\./, '')
   } catch {
@@ -13,7 +14,7 @@ function hostOf(url) {
 // Mirror of client/domain/source.ts SOURCES. Kept in sync by the parity test in
 // test/source.test.ts — this is the one place those predicates are
 // duplicated, and facet counts are wrong if they drift.
-const PLATFORM_TESTS = [
+const PLATFORM_TESTS: [string, (n: ServerNote) => boolean][] = [
   ['github', n => /(^|\.)github\.com$/.test(hostOf(n.url || ''))],
   ['reels', n => /instagram\.com\/reel/i.test(n.url || '')],
   ['igposts', n => /instagram\.com\/p\//i.test(n.url || '')],
@@ -22,7 +23,7 @@ const PLATFORM_TESTS = [
   ['reddit', n => /(^|\.)reddit\.com$/.test(hostOf(n.url || ''))],
 ]
 
-export function sourceKey(n) {
+export function sourceKey(n: ServerNote): string | null {
   for (const [key, t] of PLATFORM_TESTS) if (t(n)) return key
   if ((n.type === 'link' || n.type === 'video') && hostOf(n.url || '')) return 'web'
   return null
@@ -30,7 +31,7 @@ export function sourceKey(n) {
 
 // Case-insensitive substring over the same fields the client filter used:
 // content, titles, descriptions, tags, host.
-export function matchesQ(n, q) {
+export function matchesQ(n: ServerNote, q: string): boolean {
   const hay = [n.content, n.title, n.siteTitle, n.siteDesc, (n.tags || []).join(' '), hostOf(n.url || '')]
     .filter(Boolean)
     .join(' ')
@@ -45,7 +46,7 @@ export function matchesQ(n, q) {
 // them — picking Instagram and TikTok widens to either, while adding Videos
 // narrows that to the videos among them. A list that ANDed within a facet
 // would always be empty (nothing is both a video and a note).
-function toList(v) {
+function toList(v: string | string[] | undefined): string[] {
   if (Array.isArray(v)) return v.filter(Boolean)
   if (typeof v === 'string' && v)
     return v
@@ -55,13 +56,32 @@ function toList(v) {
   return []
 }
 
-export function applyFilters(notes, { type, source, q, collection, unavailable } = {}) {
+interface QueryFilters {
+  type?: string | string[]
+  source?: string | string[]
+  q?: string
+  collection?: Set<string>
+  // Three states plus `true`; see the comment on `avail` below.
+  unavailable?: boolean | 'hide' | 'only' | 'all'
+}
+
+export function applyFilters(
+  notes: ServerNote[],
+  { type, source, q, collection, unavailable }: QueryFilters = {},
+): ServerNote[] {
   let out = notes
   if (collection) out = out.filter(n => collection.has(n.id))
   const types = toList(type)
   if (types.length) out = out.filter(n => types.includes(n.type))
   const sources = toList(source)
-  if (sources.length) out = out.filter(n => sources.includes(sourceKey(n)))
+  // sourceKey answers null for a note that belongs to no platform, and null is
+  // never a member of `sources` (toList drops empties), so it is filtered out
+  // explicitly rather than compared.
+  if (sources.length)
+    out = out.filter(n => {
+      const key = sourceKey(n)
+      return key !== null && sources.includes(key)
+    })
   // Three states, not a boolean, because "don't filter on this at all" is a
   // real case: the facet base has to still SEE unavailable notes or the chip
   // that reveals them would always read 0.
@@ -86,9 +106,13 @@ export function applyFilters(notes, { type, source, q, collection, unavailable }
 // available ones only — otherwise "TikTok 198" would open a board of 177 and
 // the difference would look like a bug. `unavailable` is the odd one out and is
 // counted over everything, because it is the count of what is being hidden.
-export function facetsOf(notes) {
-  const types = {}
-  const sources = {}
+export function facetsOf(notes: ServerNote[]): {
+  types: Record<string, number>
+  sources: Record<string, number>
+  unavailable: number
+} {
+  const types: Record<string, number> = {}
+  const sources: Record<string, number> = {}
   let unavailable = 0
   for (const n of notes) {
     if (n.unavailable) {
@@ -117,14 +141,14 @@ export function facetsOf(notes) {
 // showed a date the order plainly did not follow.
 const SORTS = new Set(['newest', 'oldest'])
 
-function timeOf(v) {
+function timeOf(v: string | undefined): number {
   const t = Date.parse(v || '')
   return Number.isFinite(t) ? t : 0
 }
 
-export function sortNotes(notes, sort) {
+export function sortNotes(notes: ServerNote[], sort: string | undefined): ServerNote[] {
   const oldestFirst = sort === 'oldest'
-  if (!SORTS.has(sort) && sort) sort = 'newest' // unknown value: fall back rather than throw
+  if (sort && !SORTS.has(sort)) sort = 'newest' // unknown value: fall back rather than throw
   // Copied, never sorted in place: this array belongs to the note store, and
   // reordering it would quietly reorder every other reader's view too.
   // Ties break on INSERTION order, which is the order `notes` already arrives
@@ -135,7 +159,7 @@ export function sortNotes(notes, sort) {
   // requests. Insertion order is the right one rather than, say, id, because
   // for same-second notes it still means "most recently added first", which is
   // what someone who just saved something expects to see at the top.
-  const out = notes.map((n, i) => [n, i])
+  const out: [ServerNote, number][] = notes.map((n, i) => [n, i])
   out.sort((x, y) => {
     const d = timeOf(x[0].createdAt) - timeOf(y[0].createdAt)
     if (d) return oldestFirst ? d : -d
@@ -144,7 +168,7 @@ export function sortNotes(notes, sort) {
   return out.map(e => e[0])
 }
 
-export function pageOf(notes, offset, limit) {
+export function pageOf(notes: ServerNote[], offset: number, limit: number): ServerNote[] {
   const off = Math.max(0, Math.floor(offset) || 0)
   return notes.slice(off, off + Math.max(1, Math.min(500, Math.floor(limit) || 120)))
 }

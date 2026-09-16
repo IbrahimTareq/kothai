@@ -5,7 +5,13 @@
 // ~15 KB; as float32 it is 3 KB. float32 is what the models emit anyway, and
 // cosine similarity over these vectors is unaffected by the last few digits of
 // mantissa — the ranking is identical.
-export function encodeEmbedding(embedding) {
+//
+// Two input shapes, not one: a Float32Array that came back off disk, and a
+// plain number[] straight from a provider's JSON /embeddings response. See the
+// `embedding` field in server/types.ts.
+type Vector = Float32Array | number[]
+
+export function encodeEmbedding(embedding: Vector | null | undefined): Uint8Array | null {
   if (!embedding?.length) return null
   return new Uint8Array(Float32Array.from(embedding).buffer)
 }
@@ -14,7 +20,7 @@ export function encodeEmbedding(embedding) {
 // buffer at an arbitrary byte offset. Float32Array cannot be constructed over
 // an offset that is not a multiple of 4, so this copies rather than views —
 // the copy is the correctness fix, not an oversight.
-export function decodeEmbedding(blob) {
+export function decodeEmbedding(blob: Uint8Array | null | undefined): Float32Array | null {
   if (!blob?.byteLength) return null
   const bytes = Uint8Array.from(blob)
   return new Float32Array(bytes.buffer, 0, Math.floor(bytes.byteLength / 4))
@@ -27,7 +33,7 @@ export function decodeEmbedding(blob) {
 // the second one commented "local copy ... to keep this module self-contained".
 // Both already imported the codec above, so self-containment was not what the
 // copy bought. It lives here with the vectors it compares.
-export function cosine(a, b) {
+export function cosine(a: Vector | null | undefined, b: Vector | null | undefined): number {
   if (!a || !b || a.length !== b.length) return 0
   let dot = 0
   let na = 0
