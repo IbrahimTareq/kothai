@@ -89,10 +89,10 @@ export function AvailabilityRow() {
           <div className="danger-confirm">
             <label>Permanently delete <b>{scan.unavailable}</b> saved item{scan.unavailable === 1 ? '' : 's'} whose content is gone? This can't be undone.</label>
             <div className="danger-confirm-row">
-              <button className="danger-go" onClick={remove} disabled={removing}>
+              <button className="btn btn--danger btn--solid" onClick={remove} disabled={removing}>
                 {removing ? 'Removing…' : 'Yes, remove them'}
               </button>
-              <button className="danger-cancel" onClick={() => setArmed(false)} disabled={removing}>Cancel</button>
+              <button className="btn" onClick={() => setArmed(false)} disabled={removing}>Cancel</button>
             </div>
           </div>
         </div>

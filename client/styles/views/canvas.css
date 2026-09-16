@@ -11,14 +11,10 @@
   gap: var(--space-12); padding: var(--space-10) var(--space-28); border-bottom: 1px solid var(--line);
 }
 .cv-add, .cv-cmds { display: flex; align-items: center; gap: var(--space-4); }
-.cv-bar button {
-  height: var(--control-md); padding: 0 var(--space-10); border: 0; border-radius: var(--radius);
-  background: transparent; color: var(--ink-faint); font: inherit; font-size: var(--text-xs);
-  white-space: nowrap; cursor: pointer; transition: var(--dur-fast);
-} /* token-lint-ignore: toolbar text buttons on a borderless bar, not icons —
-   a plausible .btn--ghost candidate, deferred: height is fixed to
-   --control-md here and .btn doesn't set an explicit height */
-.cv-bar button:hover { color: var(--ink); background: var(--panel-2); }
+/* The .btn--ghost candidate this rule was deferred on: the only thing .btn
+   could not supply was the fixed toolbar height, and a height is layout, which
+   a view is allowed to add on top of the primitive. */
+.cv-bar .btn { height: var(--control-md); }
 
 .cv-canvas { flex: 1; min-height: 0; position: relative; }
 

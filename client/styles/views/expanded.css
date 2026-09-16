@@ -157,10 +157,13 @@ a.exp-src:hover{color:var(--ink);text-decoration:underline;text-underline-offset
 .exp-note::placeholder{color:var(--ink-faint)}
 .exp-side-actions{display:flex;align-items:center;justify-content:center;gap:var(--space-22);padding:var(--space-16);
   border-top:1px solid var(--line)}
-.exp-side-actions button{position:relative;width:34px;height:34px;display:grid;place-items:center;border:0;border-radius:var(--radius);
-  background:transparent;color:var(--ink-mute);cursor:pointer;transition:var(--dur-fast)}
-.exp-side-actions button:hover{background:var(--panel-2);color:var(--ink)}
-.exp-side-actions button.del:hover{color:var(--danger)}
+/* .btn.btn--icon.btn--ghost is this row: a square borderless glyph that fills
+   on hover. All it needs on top is the positioning its hover label hangs off,
+   which is layout. Only the delete's hover tint is local — .btn--danger would
+   colour it red at rest, and this row reads as four equal actions until you
+   reach for one. */
+.exp-side-actions .btn{position:relative}
+.exp-side-actions .btn.del:hover:not(:disabled){color:var(--danger)}
 /* hover label, same chip as the rail's — above the row rather than beside it,
    since these sit on the sidebar's bottom edge */
 .exp-tip{position:absolute;left:50%;bottom:calc(100% + var(--space-8));transform:translateX(-50%) translateY(4px);
@@ -169,7 +172,6 @@ a.exp-src:hover{color:var(--ink);text-decoration:underline;text-underline-offset
   border-radius:var(--radius);white-space:nowrap;opacity:0;pointer-events:none;
   transition:var(--dur-fast);z-index:var(--z-sticky)}
 .exp-side-actions button:hover .exp-tip{opacity:1;transform:translateX(-50%) translateY(0)}
-.exp-side-actions button:disabled{cursor:default}
 
 @media (max-width:820px){
   .exp-overlay{padding:0}

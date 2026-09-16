@@ -2,8 +2,9 @@
    Part of the Kothai design system. Loaded via style.css, before the per-view
    sheets so those can still override.
 
-   .btn is the button. Use it plus a size (.btn--xs/--sm/--lg) and a tone
-   (.btn--solid/--ghost/--icon/--danger); size and tone compose freely. There
+   .btn is the button. Use it plus a size (.btn--xs/--lg) and a tone
+   (.btn--solid/--ghost/--icon/--danger, and --danger--solid for a filled
+   destructive confirm); size and tone compose freely. There
    are no per-view aliases of .btn left, and lint:tokens fails any new
    duplicate of this box — see scripts/button-chrome.mjs. That doesn't cover
    every button-shaped class in the app: .seg-btn, .residency-btn, .rail-btn,
@@ -30,7 +31,7 @@
 .btn--solid:hover:not(:disabled){background:var(--accent-hover)}
 /* .btn:disabled's ink-faint text assumes the neutral --panel-2 fill underneath
    it — against --solid's own dark --accent fill that text nearly vanishes.
-   Drop the fill instead, matching how .danger-go/.retag-go handle disabled. */
+   Drop the fill instead; --danger--solid does the same, below. */
 .btn--solid:disabled{background:none;border-color:var(--line);color:var(--ink-faint)}
 
 /* ghost — chrome that should recede until touched */
@@ -47,6 +48,14 @@
 
 .btn--danger{color:var(--danger)}
 .btn--danger:hover:not(:disabled){border-color:var(--danger)}
+/* Filled danger — the confirm half of an arm/confirm pair. This combination is
+   why .danger-go, .danger-cancel and .retag-go existed as hand-built boxes:
+   the tone was missing, so three buttons were drawn from scratch to get it,
+   and drifted (6px radius against .btn's 8px, a Cancel with no fill beside a
+   Cancel with one). Tone composes with the sizes like any other. */
+.btn--danger.btn--solid{background:var(--danger);color:var(--bg);border-color:var(--danger)}
+.btn--danger.btn--solid:hover:not(:disabled){background:var(--danger);border-color:var(--danger)}
+.btn--danger.btn--solid:disabled{background:none;border-color:var(--line);color:var(--ink-faint)}
 
 /* ── button sizes ─────────────────────────────────────────────────────────
    Three boxes, each lifted from a button that already existed rather than
@@ -54,15 +63,19 @@
    panel and the wizard's test control, --lg from the onboarding start button.
    The scale describes the app instead of asking it to move.
 
-   Size and tone are orthogonal — .btn--sm says nothing about fill, .btn--solid
-   says nothing about box — so they compose: .btn.btn--sm.btn--solid.
+   Size and tone are orthogonal — .btn--xs says nothing about fill, .btn--solid
+   says nothing about box — so they compose: .btn.btn--xs.btn--solid.
 
-   --xs and --sm share a type size and differ only in padding. That is on
-   purpose: the chat row's delete/cancel pair (Chats.tsx, .btn--xs) sits in a
-   row whose height is load-bearing (core.css:72), and the taller box would
-   push the row open. */
+   There was a fourth rung, --sm: .btn's box at .btn--xs's type size. Its two
+   named sources — the Connection panel and the wizard's test control — are
+   plain .btn now, which left one caller differing from .btn by type size
+   alone. A scale with a rung that says "the default, but smaller text" is how
+   buttons drift, so it went; --xs covers compact.
+
+   --xs exists for the chat row's delete/cancel pair (Chats.tsx), which sits in
+   a row whose height is load-bearing (core.css:72) — the taller box would push
+   the row open. */
 .btn--xs{padding:var(--space-4) var(--space-10);font-size:var(--text-xs)}
-.btn--sm{padding:var(--space-8) var(--space-14);font-size:var(--text-xs)}
 .btn--lg{padding:var(--space-12) var(--space-20);border-radius:var(--radius-lg);
   font-size:var(--text-sm)}
 

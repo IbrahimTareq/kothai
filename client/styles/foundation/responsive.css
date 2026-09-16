@@ -202,7 +202,6 @@
      One rule covers .btn wherever it lands — see components/primitives.css.
      .btn--icon pins its own width/height, which this does not fight. */
   .btn,
-  .retag-go,.danger-go,.danger-cancel,
   .danger-input{min-height:var(--control-md)}
 
   /* A segmented control is a border-box trough with pills inset by --space-4,

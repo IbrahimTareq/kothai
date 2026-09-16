@@ -220,10 +220,10 @@ export function SettingsView({ vault, theme, setTheme }: {
                       : <>{backlog} saved note{backlog === 1 ? '' : 's'} can now be enriched with your current AI settings.</>}
                   </span>
                   <span className="backlog-actions">
-                    <button className="backlog-go" onClick={enrichNow} disabled={enriching}>
+                    <button className="btn btn--solid" onClick={enrichNow} disabled={enriching}>
                       {enriching ? 'Starting…' : 'Enrich now'}
                     </button>
-                    <button className="backlog-later" onClick={() => setBacklog(null)} disabled={enriching}>Later</button>
+                    <button className="btn" onClick={() => setBacklog(null)} disabled={enriching}>Later</button>
                   </span>
                 </div>
               )}
@@ -300,10 +300,10 @@ export function SettingsView({ vault, theme, setTheme }: {
                           Re-tag {noteCount === null ? 'every saved note' : <>all <b>{noteCount}</b> note{noteCount === 1 ? '' : 's'}</>}? It can't be stopped once it starts.
                         </label>
                         <div className="danger-confirm-row">
-                          <button className="retag-go" onClick={retagAll} disabled={retagging}>
+                          <button className="btn btn--solid" onClick={retagAll} disabled={retagging}>
                             {retagging ? 'Starting…' : 'Yes, re-tag everything'}
                           </button>
-                          <button className="danger-cancel" onClick={() => setRetagArmed(false)} disabled={retagging}>
+                          <button className="btn" onClick={() => setRetagArmed(false)} disabled={retagging}>
                             Cancel
                           </button>
                         </div>
@@ -336,10 +336,10 @@ export function SettingsView({ vault, theme, setTheme }: {
                             disabled={wiping} spellCheck={false} autoComplete="off" placeholder={WIPE_TOKEN}
                             onChange={(e) => setWipeConfirm(e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') wipeAll(); if (e.key === 'Escape') { setWipeArmed(false); setWipeConfirm('') } }} />
-                          <button className="danger-go" onClick={wipeAll} disabled={wipeConfirm !== WIPE_TOKEN || wiping}>
+                          <button className="btn btn--danger btn--solid" onClick={wipeAll} disabled={wipeConfirm !== WIPE_TOKEN || wiping}>
                             {wiping ? 'Erasing…' : 'Erase everything'}
                           </button>
-                          <button className="danger-cancel" onClick={() => { setWipeArmed(false); setWipeConfirm('') }} disabled={wiping}>
+                          <button className="btn" onClick={() => { setWipeArmed(false); setWipeConfirm('') }} disabled={wiping}>
                             Cancel
                           </button>
                         </div>

@@ -311,11 +311,11 @@ function CanvasInner({ collectionId, items, doc, onSave, onExpand, onRemoveItem 
       <div className="cv-wrap">
         <div className="cv-bar">
           <div className="cv-add">
-            <button onClick={() => addText(centre())}>+ Note</button>
-            <button onClick={addColumn}>+ Column</button>
+            <button className="btn btn--xs btn--ghost" onClick={() => addText(centre())}>+ Note</button>
+            <button className="btn btn--xs btn--ghost" onClick={addColumn}>+ Column</button>
           </div>
           <div className="cv-cmds">
-            <button onClick={() => { applyDoc(tidy); setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 0) }}>Tidy</button>
+            <button className="btn btn--xs btn--ghost" onClick={() => { applyDoc(tidy); setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 0) }}>Tidy</button>
           </div>
         </div>
         <div className="cv-canvas" ref={wrapRef} onDoubleClick={onDoubleClick} onKeyDown={onKeyDown}>

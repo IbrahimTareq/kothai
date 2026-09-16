@@ -183,8 +183,6 @@
   font-size:var(--text-sm);
 }
 .backlog-actions { display: flex; gap: var(--space-8); }
-.backlog-go { background: var(--ink); color: var(--bg); border: none; border-radius: var(--radius); padding: var(--space-6) var(--space-12); cursor: pointer; }
-.backlog-later { background: none; border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-6) var(--space-12); color: var(--ink-dim); cursor: pointer; }
 
 /* Settings row list — one bordered card, each row an action: title and
    explanation on the left, its control on the right. Confirmation steps and
@@ -313,34 +311,6 @@
 }
 .danger-input:focus { outline: none; border-color: var(--danger); }
 .danger-input::placeholder { color: var(--ink-faint); }
-.danger-go {
-  padding: var(--space-8) var(--space-14);
-  border: 1px solid var(--danger);
-  border-radius: var(--radius);
-  background: var(--danger);
-  color: var(--bg);
-  font-family: inherit;
-  font-size: var(--text-sm);
-  letter-spacing: var(--tracking-tight);
-  cursor: pointer;
-  transition: var(--dur-fast);
-} /* token-lint-ignore: solid danger-zone action, filled with --danger; pairs with
-   .danger-cancel and .danger-input as one arm/confirm row — .btn has no
-   filled-danger tone */
-.danger-go:disabled { background: none; color: var(--ink-faint); border-color: var(--line); cursor: default; }
-.danger-cancel {
-  padding: var(--space-8) var(--space-14);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: none;
-  color: var(--ink-dim);
-  font-family: inherit;
-  font-size: var(--text-sm);
-  letter-spacing: var(--tracking-tight);
-  cursor: pointer;
-} /* token-lint-ignore: ghost half of the danger-zone arm/confirm pair — see
-   .danger-go */
-.danger-cancel:hover:not(:disabled) { color: var(--ink); border-color: var(--ink-faint); }
 
 /* Endpoint model field — a combobox, not a native datalist. The browser's own
    dropdown cannot be styled, renders differently everywhere, and offered all
@@ -349,26 +319,14 @@
 .remote-model-box { display: flex; align-items: center; gap: var(--space-4); }
 .remote-model-input {
   flex: 1;
-  padding: var(--space-10) var(--space-12);
   font-size: var(--text-xs);
-  color: var(--ink);
-  background: var(--panel-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
 }
-.remote-model-input:focus { border-color: var(--line-focus); outline: none; }
 .remote-model-input:disabled { opacity: 0.5; }
-.remote-model-toggle {
-  display: grid; place-items: center;
-  width: 30px; height: 30px;
-  color: var(--ink-faint);
-  background: var(--panel-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-}
-.remote-model-toggle:hover:not(:disabled) { color: var(--ink); border-color: var(--line-hover); }
-.remote-model-toggle:disabled { opacity: 0.4; cursor: default; }
+/* .btn--icon supplies the square box; it keeps the field's own --panel-3 fill
+   because it is attached to the input rather than sitting on the card. */
+.remote-model-toggle { color: var(--ink-faint); background: var(--panel-3); }
+.remote-model-toggle:hover:not(:disabled) { color: var(--ink); }
+.remote-model-toggle:disabled { opacity: 0.4; }
 
 /* Absolute so a long list cannot push the roles below it down the page. */
 .remote-model-list {
@@ -413,23 +371,9 @@
 .remote-model-desc { margin-top: var(--space-6); }
 
 /* Re-tag everything — the same arm/confirm shape as the danger zone, but in
-   the neutral palette: this rebuilds derived metadata rather than destroying
-   anything, so it should not read as an erase button. */
-.retag-go {
-  padding: var(--space-8) var(--space-14);
-  border: 1px solid var(--ink);
-  border-radius: var(--radius);
-  background: var(--ink);
-  color: var(--bg);
-  font-family: inherit;
-  font-size: var(--text-sm);
-  letter-spacing: var(--tracking-tight);
-  cursor: pointer;
-  transition: var(--dur-fast);
-} /* token-lint-ignore: same arm/confirm shape as the danger zone, filled with
-   --ink instead of --danger — see .danger-go */
-.retag-go:disabled { background: none; color: var(--ink-faint); border-color: var(--line); cursor: default; }
-/* Layout is shared with .danger-confirm; only the accent differs. */
+   the neutral tone: this rebuilds derived metadata rather than destroying
+   anything, so its confirm is .btn--solid where the wipe's is --danger--solid.
+   Layout is shared with .danger-confirm; only the accent differs. */
 .danger-confirm.retag-confirm { border-color: var(--line); }
 
 /* The remove button sits under the scan result rather than in the row's action

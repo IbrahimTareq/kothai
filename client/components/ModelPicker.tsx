@@ -208,7 +208,7 @@ export function RemoteModelField({
           onBlur={() => { if (!open && draft.trim() !== value) onCommit(draft.trim()) }}
         />
         <button
-          className="remote-model-toggle"
+          className="btn btn--icon remote-model-toggle"
           type="button"
           disabled={busy || !ids.length}
           aria-label={open ? 'Hide models' : 'Show models'}

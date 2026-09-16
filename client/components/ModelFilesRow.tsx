@@ -77,10 +77,10 @@ export function ModelFilesRow() {
                   : pending === f.name
                     ? (
                       <span className="mf-confirm">
-                        <button className="danger-go" onClick={() => remove(f.name)} disabled={deleting === f.name}>
+                        <button className="btn btn--danger btn--solid" onClick={() => remove(f.name)} disabled={deleting === f.name}>
                           {deleting === f.name ? 'Deleting…' : `Delete ${fmtSize(f.sizeBytes)}`}
                         </button>
-                        <button className="danger-cancel" onClick={() => setPending(null)} disabled={deleting === f.name}>
+                        <button className="btn" onClick={() => setPending(null)} disabled={deleting === f.name}>
                           Cancel
                         </button>
                       </span>

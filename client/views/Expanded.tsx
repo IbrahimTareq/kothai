@@ -440,16 +440,16 @@ export function ExpandedView({ item, onClose, onDelete, onUpdate, onRetag, colle
           </div>
 
           <div className="exp-side-actions">
-            <button aria-label="Copy link" onClick={() => item.url && navigator.clipboard?.writeText(item.url)}>
+            <button className="btn btn--icon btn--ghost" aria-label="Copy link" onClick={() => item.url && navigator.clipboard?.writeText(item.url)}>
               <Icon name="copy" size={16} /><span className="exp-tip">Copy link</span>
             </button>
-            <button aria-label="Open original" onClick={() => openUrl(item.url)}>
+            <button className="btn btn--icon btn--ghost" aria-label="Open original" onClick={() => openUrl(item.url)}>
               <Icon name="external" size={16} /><span className="exp-tip">Open original</span>
             </button>
-            <button aria-label={item.pending ? 'Retagging…' : 'Re-tag'} disabled={item.pending} onClick={() => onRetag(item.id)}>
+            <button className="btn btn--icon btn--ghost" aria-label={item.pending ? 'Retagging…' : 'Re-tag'} disabled={item.pending} onClick={() => onRetag(item.id)}>
               <Icon name="retag" size={16} /><span className="exp-tip">{item.pending ? 'Retagging…' : 'Re-tag'}</span>
             </button>
-            <button className="del" aria-label="Delete" onClick={() => { onDelete(item.id); onClose() }}>
+            <button className="btn btn--icon btn--ghost del" aria-label="Delete" onClick={() => { onDelete(item.id); onClose() }}>
               <Icon name="trash" size={16} /><span className="exp-tip">Delete</span>
             </button>
           </div>
