@@ -1,16 +1,38 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "lib": ["ES2022"],
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "types": ["node"],
-    "allowJs": true,
-    "checkJs": true,
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
     "noEmit": true,
-    "strict": false,
+
+    // Node strips types at load; nothing here is ever compiled. These three are
+    // what make that safe.
+    //
+    // allowImportingTsExtensions: relative imports carry explicit .ts, the only
+    // form node's stripper resolves with no build step in between.
+    //
+    // erasableSyntaxOnly: enum/namespace/parameter properties are NOT erasable.
+    // Node throws ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX on them at load — before any
+    // test body runs, so no test in this repo would catch it.
+    //
+    // verbatimModuleSyntax: node cannot tell a type import from a value import.
+    // `import { SomeType }` without the `type` keyword survives stripping and
+    // dies at load with "does not provide an export named". This flag is the
+    // only thing that turns that boot failure into a typecheck error.
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+
+    "isolatedModules": true,
     "skipLibCheck": true,
     "resolveJsonModule": true
   },
-  "include": ["server/lib/**/*.js"]
+  "include": ["server/**/*.ts", "test/server/**/*.ts", "scripts/**/*.ts", "docker/**/*.ts"]
 }
