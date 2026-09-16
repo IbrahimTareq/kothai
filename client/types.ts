@@ -1,4 +1,6 @@
 // Shared domain types for the Kothai client.
+// Its server-side counterpart is server/types.ts. The duplication is
+// deliberate — see the note there.
 
 // Types the server persists/emits. "text" becomes "note" in the UI.
 export type NoteType = 'link' | 'image' | 'video' | 'code' | 'text'
