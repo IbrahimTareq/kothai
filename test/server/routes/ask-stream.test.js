@@ -137,6 +137,26 @@ test('a provider failure mid-stream arrives as an error frame, not a dead connec
   assert.equal(frames.filter(f => f.event === 'done').length, 0)
 })
 
+// A rejection is not necessarily an Error. providers/local.ts rethrows the QVAC
+// SDK's own rejection value unwrapped through ai/index.ts, so the caught value
+// is whatever the SDK threw — and for `null`/`undefined` a bare `e.message`
+// makes the catch block itself throw. That second failure lands after the 200
+// SSE header is out, where the router's json(res, 500, …) can only produce
+// ERR_HTTP_HEADERS_SENT: the client is left with a stream that just stops,
+// carrying no error frame and no `done`, with nothing said about why.
+test('a null rejection still reaches the client as an error frame', async () => {
+  answerBehaviour = async ({ onToken }) => {
+    onToken?.('partial')
+    throw null
+  }
+  const { res, frames } = await askStream({ question: 'q' })
+  assert.equal(res.status, 200)
+  const err = frames.find(f => f.event === 'error')
+  assert.ok(err, 'reading .message off the rejection must not become a second, unreportable failure')
+  assert.equal(err.data.error, undefined, 'a null rejection has no message to report')
+  assert.equal(frames.filter(f => f.event === 'done').length, 0)
+})
+
 // This asserts the mechanism, not just the outcome. An earlier version only
 // checked that nothing was recorded, which stayed green while the disconnect
 // listener was attached to the request stream — already closed by readBody, so
