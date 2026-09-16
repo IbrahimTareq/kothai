@@ -13,7 +13,7 @@ import { useState, useEffect } from 'react'
 import { Icon } from '../components/icons'
 import { RoleAccordion, RemoteModelField, ROLE_META, fmtGB, type Role } from '../components/ModelPicker'
 import { SettingsGroup, SettingsRow, RowStatus } from '../components/SettingsRow'
-import { EndpointPicker, type EndpointChoice } from '../components/EndpointPicker'
+import { ConnectionPanel } from '../components/ConnectionPanel'
 import { ImportSection } from '../components/ImportSection'
 import { AvailabilityRow } from '../components/AvailabilityRow'
 import { ModelFilesRow } from '../components/ModelFilesRow'
@@ -43,17 +43,6 @@ export function SettingsView({ vault, theme, setTheme }: {
   const [wiping, setWiping] = useState(false)
   const [wipeResult, setWipeResult] = useState<Awaited<ReturnType<typeof API.wipeAll>> | null>(null)
   const [wipeError, setWipeError] = useState<string | null>(null)
-  // Connection panel: collapsed until asked for, because most people set this
-  // once and never look at it again.
-  const [editingConn, setEditingConn] = useState(false)
-  const [connChoice, setConnChoice] = useState<EndpointChoice | null>(null)
-  const [connBusy, setConnBusy] = useState(false)
-  const [connErr, setConnErr] = useState<string | null>(null)
-  // Disconnecting is where the on-device models get chosen, so the confirm step
-  // is a panel rather than a second click: falling back to stored defaults meant
-  // the pickers were only reachable afterwards, unprompted.
-  const [leaving, setLeaving] = useState(false)
-  const [leaveSel, setLeaveSel] = useState<Record<Role, string> | null>(null)
 
   useEffect(() => { API.settings().then(setCfg).catch(() => {}) }, [])
   useEffect(() => { API.status().then((s) => setNoteCount(s.count)).catch(() => {}) }, [])
@@ -61,94 +50,50 @@ export function SettingsView({ vault, theme, setTheme }: {
   const switching = vault.state === 'loading'
   useEffect(() => { if (!switching) setPendingRole(null) }, [switching])
 
-  const pick = async (role: Role, key: string) => {
+  // The three pickers below differ only in which field they set. The envelope
+  // is the same every time — mark the role busy, move the UI before the server
+  // answers, and on failure re-read the server rather than trying to undo the
+  // optimistic edit by hand — and the revert in particular had been written
+  // out three times. `project` is how the row should look if the write lands.
+  const saveRole = async (role: Role, patch: Parameters<typeof API.saveSettings>[0], project: (c: SettingsResponse) => SettingsResponse) => {
+    setBusyRole(role)
+    setCfg((c) => (c ? project(c) : c))
+    try {
+      await API.saveSettings(patch)
+      return true
+    } catch {
+      API.settings().then(setCfg).catch(() => {}) // revert to server truth
+      return false
+    } finally {
+      setBusyRole(null)
+    }
+  }
+
+  const pick = (role: Role, key: string) => {
     if (!cfg || busyRole || cfg.current[role] === key) return
-    setBusyRole(role)
     setPendingRole(role)
-    setCfg((c) => (c ? { ...c, current: { ...c.current, [role]: key } } : c))
-    try {
-      await API.saveSettings({ [role]: key })
-    } catch {
-      API.settings().then(setCfg).catch(() => {}) // revert to server truth
-    }
-    setBusyRole(null)
+    return saveRole(role, { [role]: key }, (c) => ({ ...c, current: { ...c.current, [role]: key } }))
   }
 
-  const saveEndpoint = async () => {
-    if (!connChoice || connBusy) return
-    setConnBusy(true)
-    setConnErr(null)
-    try {
-      await API.saveEndpoint(
-        { providerId: connChoice.providerId, baseUrl: connChoice.baseUrl, apiKey: connChoice.apiKey },
-        connChoice.defaults,
-      )
-      setCfg(await API.settings())
-      setEditingConn(false)
-      setConnChoice(null)
-    } catch (e) {
-      setConnErr((e as Error).message || 'Could not save that endpoint.')
-    }
-    setConnBusy(false)
-  }
-
-  // "up to", not "exactly": a model already in the download cache costs
-  // nothing, and Settings cannot see that cache while an endpoint serves every
-  // role — the route that lists it is gated on the install downloading weights.
-  const leaveBytes = cfg && cfg.localPresets && leaveSel
-    ? (['llm', 'embed', 'vision'] as Role[]).reduce(
-        (sum, role) => sum + (cfg.localPresets![role].find((p) => p.key === leaveSel[role])?.sizeBytes || 0),
-        0,
-      )
-    : 0
-
-  const disconnect = async () => {
-    if (connBusy) return
-    setConnBusy(true)
-    setConnErr(null)
-    try {
-      await API.clearEndpoint(leaveSel || undefined)
-      setCfg(await API.settings())
-      setEditingConn(false)
-      setLeaving(false)
-      setLeaveSel(null)
-    } catch (e) {
-      setConnErr((e as Error).message || 'Could not disconnect.')
-    }
-    setConnBusy(false)
-  }
-
-  const pickRemote = async (role: Role, name: string) => {
+  const pickRemote = (role: Role, name: string) => {
     if (!cfg || busyRole || cfg.remote[role] === name) return
-    setBusyRole(role)
-    setCfg((c) => (c ? { ...c, remote: { ...c.remote, [role]: name } } : c))
-    try {
-      await API.saveSettings({ remote: { [role]: name } })
-    } catch {
-      API.settings().then(setCfg).catch(() => {}) // revert to server truth
-    }
-    setBusyRole(null)
+    return saveRole(role, { remote: { [role]: name } }, (c) => ({ ...c, remote: { ...c.remote, [role]: name } }))
   }
 
   const pickPolicy = async (role: Role, p: Residency) => {
     if (!cfg || busyRole || cfg.residency[role] === p) return
-    const wasOff = cfg.residency[role] === 'off'
-    setBusyRole(role)
     // Turning a role on can trigger a real (possibly multi-GB) background
     // download — give it the same per-role "↓ X%" feedback + auto-expand a
     // model-key swap already gets, instead of only the generic top progress bar.
-    if (wasOff && p !== 'off') setPendingRole(role)
-    setCfg((c) => (c ? { ...c, residency: { ...c.residency, [role]: p } } : c))
-    try {
-      await API.saveSettings({ residency: { [role]: p } })
-      if (wasOff && p !== 'off') {
-        const { count } = await API.backlog()
-        if (count > 0) setBacklog(count)
-      }
-    } catch {
-      API.settings().then(setCfg).catch(() => {}) // revert to server truth
-    }
-    setBusyRole(null)
+    const waking = cfg.residency[role] === 'off' && p !== 'off'
+    if (waking) setPendingRole(role)
+    const saved = await saveRole(role, { residency: { [role]: p } }, (c) => ({ ...c, residency: { ...c.residency, [role]: p } }))
+    // Only once the residency actually stuck, and a failure here is just a
+    // missing banner: previously this shared the save's catch, so a backlog
+    // probe that failed on its own re-read the whole settings document.
+    if (!saved || !waking) return
+    const count = await API.backlog().then((b) => b.count).catch(() => 0)
+    if (count > 0) setBacklog(count)
   }
 
   // Enrich-now: only dismiss the banner on confirmed success — a fire-and-forget
@@ -259,96 +204,7 @@ export function SettingsView({ vault, theme, setTheme }: {
       {!cfg
         ? <div className="settings-loading mono">LOADING…</div>
         : <div className="settings-body">
-            <SettingsGroup label="CONNECTION">
-              <div className="conn">
-                <div className="conn-state">
-                  <span className="conn-where mono">
-                    {cfg.endpoint.configured
-                      ? cfg.endpoint.host || 'a remote endpoint'
-                      : 'Models run on this machine'}
-                  </span>
-                  <span className="conn-sub">
-                    {cfg.endpoint.configured
-                      ? 'Your key is stored on this machine only, and never appears in a backup or an export.'
-                      : cfg.localSupported
-                        ? 'Nothing leaves the box. Connect a service to stop hosting models yourself.'
-                        : 'This is the lite image, which runs no models itself — it needs a service.'}
-                  </span>
-                </div>
-                {!editingConn && !leaving && (
-                  <div className="conn-actions">
-                    <button className="btn btn--sm mono" onClick={() => { setEditingConn(true); setConnErr(null) }}>
-                      {cfg.endpoint.configured ? 'Change' : 'Connect a service'}
-                    </button>
-                    {cfg.endpoint.configured && cfg.localSupported && (
-                      <button className="btn btn--sm mono" disabled={connBusy}
-                        onClick={() => { setLeaving(true); setLeaveSel({ ...cfg.current }); setConnErr(null) }}>
-                        Disconnect
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {leaving && cfg.localPresets && leaveSel && (
-                <div className="conn-edit">
-                  <p className="conn-warn">
-                    These will run on this machine instead. Nothing is sent anywhere, and there is no key
-                    or bill — but the weights have to be downloaded the first time each one is used.
-                  </p>
-                  {(['llm', 'embed', 'vision'] as Role[]).map((role) => (
-                    <RoleAccordion key={role} role={role}
-                      presets={cfg.localPresets![role]}
-                      currentKey={leaveSel[role]}
-                      busy={connBusy}
-                      switching={false}
-                      pct={0}
-                      defaultOpen={false}
-                      onPick={(key) => setLeaveSel((sel) => (sel ? { ...sel, [role]: key } : sel))} />
-                  ))}
-                  <div className="conn-actions">
-                    <button className="btn btn--sm btn--primary mono" disabled={connBusy} onClick={disconnect}>
-                      {connBusy ? 'Switching…' : `Switch — up to ${fmtGB(leaveBytes)} to download`}
-                    </button>
-                    <button className="btn btn--sm mono" disabled={connBusy}
-                      onClick={() => { setLeaving(false); setLeaveSel(null) }}>
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {connErr && <div className="conn-err mono">{connErr}</div>}
-
-              {editingConn && (
-                <div className="conn-edit">
-                  <EndpointPicker
-                    endpoints={cfg.endpoints}
-                    keyPlaceholder={cfg.endpoint.configured ? 'paste a new key' : 'paste it here'}
-                    onChange={setConnChoice}
-                  />
-                  {/* Only when the change would move the embedding role: the
-                      whole library is re-embedded in the background, and a
-                      warning on every endpoint edit would be noise. */}
-                  {connChoice && cfg.capabilities.roles.embed === 'local'
-                    && Boolean(connChoice.defaults.embed) && (
-                    <p className="conn-warn">
-                      This service serves embeddings, so search moves to it and every note is re-indexed
-                      in the background. Search keeps working while that runs.
-                    </p>
-                  )}
-                  <div className="conn-actions">
-                    <button className="btn btn--sm btn--solid mono" disabled={!connChoice || connBusy} onClick={saveEndpoint}>
-                      {connBusy ? 'Saving…' : 'Save'}
-                    </button>
-                    <button className="btn btn--sm mono" disabled={connBusy}
-                      onClick={() => { setEditingConn(false); setConnChoice(null); setConnErr(null) }}>
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
-            </SettingsGroup>
+            <ConnectionPanel cfg={cfg} onChanged={setCfg} />
 
             <SettingsGroup label="MODEL CORES"
               sub={roles.some(isRemote)
