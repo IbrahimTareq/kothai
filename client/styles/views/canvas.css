@@ -15,8 +15,9 @@
   height: var(--control-md); padding: 0 var(--space-10); border: 0; border-radius: var(--radius);
   background: transparent; color: var(--ink-faint); font: inherit; font-size: var(--text-xs);
   white-space: nowrap; cursor: pointer; transition: var(--dur-fast);
-} /* token-lint-ignore: canvas toolbar icon button, sized to the control-md
-   trough — not a .btn box */
+} /* token-lint-ignore: toolbar text buttons on a borderless bar, not icons —
+   a plausible .btn--ghost candidate, deferred: height is fixed to
+   --control-md here and .btn doesn't set an explicit height */
 .cv-bar button:hover { color: var(--ink); background: var(--panel-2); }
 
 .cv-canvas { flex: 1; min-height: 0; position: relative; }
