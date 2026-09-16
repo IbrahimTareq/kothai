@@ -4,10 +4,12 @@
 // being started when it cannot possibly do useful work.
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
+import { mockRes } from '../../helpers/http.ts'
+import type { Residency } from '../../../server/ai/roles.ts'
 
-let retagAllImpl
-let availableImpl
-let residencyImpl
+let retagAllImpl: () => Promise<number>
+let availableImpl: () => boolean
+let residencyImpl: () => Residency
 
 const realEnrich = await import('../../../server/ai/enrich.ts')
 const realAi = await import('../../../server/ai/index.ts')
@@ -21,19 +23,6 @@ mock.module('../../../server/data/settings.ts', {
 
 const { handleRetagAll } = await import('../../../server/routes/settings.ts')
 
-function mockRes() {
-  const r = { code: 0, body: null }
-  r.writeHead = c => {
-    r.code = c
-    return r
-  }
-  r.end = s => {
-    r.body = JSON.parse(s)
-  }
-  r.setHeader = () => {}
-  return r
-}
-
 function ok() {
   availableImpl = () => true
   residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
@@ -42,10 +31,10 @@ function ok() {
 
 test('200 with the queued count on success', async () => {
   ok()
-  const res = mockRes()
+  const { res, sent } = mockRes()
   await handleRetagAll(res)
-  assert.equal(res.code, 200)
-  assert.deepEqual(res.body, { ok: true, queued: 1688 })
+  assert.equal(sent.code, 200)
+  assert.deepEqual(sent.json(), { ok: true, queued: 1688 })
 })
 
 test('503 when the inference provider is unavailable, and nothing is queued', async () => {
@@ -57,10 +46,10 @@ test('503 when the inference provider is unavailable, and nothing is queued', as
     return 0
   }
 
-  const res = mockRes()
+  const { res, sent } = mockRes()
   await handleRetagAll(res)
-  assert.equal(res.code, 503)
-  assert.equal(res.body.code, 'provider_unavailable')
+  assert.equal(sent.code, 503)
+  assert.equal(sent.json().code, 'provider_unavailable')
   assert.equal(called, false, 'a dead endpoint must not be handed the whole library')
 })
 
@@ -73,9 +62,9 @@ test('409 when the language model is off — re-tagging is entirely an LLM job',
     return 0
   }
 
-  const res = mockRes()
+  const { res, sent } = mockRes()
   await handleRetagAll(res)
-  assert.equal(res.code, 409)
-  assert.equal(res.body.code, 'llm_off')
+  assert.equal(sent.code, 409)
+  assert.equal(sent.json().code, 'llm_off')
   assert.equal(called, false, 'without the LLM every note would be marked pending for nothing')
 })

@@ -18,10 +18,16 @@
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 
-let responses // url → { json?, text?, contentType }
-let fetched // every url safeFetch saw, in order
+interface Stub {
+  json?: unknown
+  text?: string
+  contentType?: string
+}
 
-function respond(url) {
+let responses: Record<string, Stub> // url → { json?, text?, contentType }
+let fetched: string[] // every url safeFetch saw, in order
+
+function respond(url: string) {
   const r = responses[url]
   if (!r) return { ok: false, status: 404, headers: new Headers(), text: async () => '', json: async () => ({}) }
   return {
@@ -37,7 +43,7 @@ const realSsrf = await import('../../../server/lib/ssrf.ts')
 mock.module('../../../server/lib/ssrf.ts', {
   namedExports: {
     ...realSsrf,
-    safeFetch: async url => {
+    safeFetch: async (url: string) => {
       fetched.push(url)
       return respond(url)
     },
@@ -46,16 +52,27 @@ mock.module('../../../server/lib/ssrf.ts', {
 
 const { oembedEndpoint, fetchLinkMeta } = await import('../../../server/ai/meta.ts')
 
+// oembedEndpoint answers `string | null` — null is a real answer for a URL no
+// provider claims, and half the tests below assert exactly that. This is for
+// the other half, where a null would mean the registry stopped listing a
+// provider: it fails there, naming the URL, rather than silently keying a
+// response stub under "null".
+function endpointOf(url: string): string {
+  const api = oembedEndpoint(url)
+  assert.ok(api, `the registry no longer resolves an oEmbed endpoint for ${url}`)
+  return api
+}
+
 // ---- provider discovery (pure, real registry) ----------------------------
 
 test('oembedEndpoint resolves the providers the hand-rolled table used to cover', () => {
-  assert.match(oembedEndpoint('https://www.youtube.com/watch?v=dQw4w9WgXcQ'), /^https:\/\/www\.youtube\.com\/oembed\?/)
-  assert.match(oembedEndpoint('https://youtu.be/dQw4w9WgXcQ'), /^https:\/\/www\.youtube\.com\/oembed\?/)
-  assert.match(oembedEndpoint('https://vimeo.com/123456'), /^https:\/\/vimeo\.com\/api\/oembed\.json\?/)
+  assert.match(endpointOf('https://www.youtube.com/watch?v=dQw4w9WgXcQ'), /^https:\/\/www\.youtube\.com\/oembed\?/)
+  assert.match(endpointOf('https://youtu.be/dQw4w9WgXcQ'), /^https:\/\/www\.youtube\.com\/oembed\?/)
+  assert.match(endpointOf('https://vimeo.com/123456'), /^https:\/\/vimeo\.com\/api\/oembed\.json\?/)
 })
 
 test('oembedEndpoint resolves TikTok — the provider this package was adopted for', () => {
-  const api = oembedEndpoint('https://www.tiktok.com/@someone/video/1234567890')
+  const api = endpointOf('https://www.tiktok.com/@someone/video/1234567890')
   assert.match(api, /^https:\/\/www\.tiktok\.com\/oembed\?/)
   const q = new URL(api).searchParams
   assert.equal(q.get('url'), 'https://www.tiktok.com/@someone/video/1234567890')
@@ -63,7 +80,7 @@ test('oembedEndpoint resolves TikTok — the provider this package was adopted f
 })
 
 test('oembedEndpoint percent-encodes the target url into the query, never concatenates it', () => {
-  const api = oembedEndpoint('https://vimeo.com/123?a=1&b=2')
+  const api = endpointOf('https://vimeo.com/123?a=1&b=2')
   assert.equal(new URL(api).searchParams.get('url'), 'https://vimeo.com/123?a=1&b=2')
   // One '?' only — the target url's own query must not leak into the
   // endpoint's query structure.
@@ -96,7 +113,7 @@ const TIKTOK = 'https://www.tiktok.com/@chef/video/7300000000000000000'
 test('fetchLinkMeta: a TikTok URL is resolved via the registry and fetched through the guarded get()', async () => {
   fetched = []
   responses = {
-    [oembedEndpoint(TIKTOK)]: {
+    [endpointOf(TIKTOK)]: {
       json: {
         title: 'three ingredient brown butter pasta #pasta #recipe',
         author_name: 'chef',
@@ -109,7 +126,7 @@ test('fetchLinkMeta: a TikTok URL is resolved via the registry and fetched throu
 
   const meta = await fetchLinkMeta(TIKTOK, 'note-1')
 
-  assert.ok(fetched.includes(oembedEndpoint(TIKTOK)), 'the oEmbed endpoint went through safeFetch, not the package')
+  assert.ok(fetched.includes(endpointOf(TIKTOK)), 'the oEmbed endpoint went through safeFetch, not the package')
   // The caption arrives as oEmbed `title` — for a TikTok that IS the caption,
   // and it is the only text a saved TikTok has to be retrieved by.
   assert.equal(meta.siteTitle, 'three ingredient brown butter pasta #pasta #recipe')
@@ -124,7 +141,7 @@ test('fetchLinkMeta: a TikTok URL is resolved via the registry and fetched throu
 test('fetchLinkMeta: mergeSiteDesc behaviour is unchanged — the real og:description wins, the oEmbed author line trails it', async () => {
   fetched = []
   responses = {
-    [oembedEndpoint(TIKTOK)]: { json: { title: 'T', author_name: 'chef', provider_name: 'TikTok' } },
+    [endpointOf(TIKTOK)]: { json: { title: 'T', author_name: 'chef', provider_name: 'TikTok' } },
     [TIKTOK]: {
       text: '<html><head><meta property="og:description" content="The real description."></head></html>',
       contentType: 'text/html',
@@ -170,7 +187,7 @@ test('fetchLinkMeta: oEmbed fields that are not strings read as absent rather th
   // thumbnail that was never a URL.
   fetched = []
   responses = {
-    [oembedEndpoint(TIKTOK)]: {
+    [endpointOf(TIKTOK)]: {
       json: { title: 42, provider_name: { name: 'TikTok' }, author_name: ['chef'], thumbnail_url: 7 },
     },
     // No og tags, so nothing masks what oEmbed contributed.
@@ -184,7 +201,7 @@ test('fetchLinkMeta: oEmbed fields that are not strings read as absent rather th
   assert.equal(meta.siteDesc, null, 'a non-string author_name produces no "by …" line either')
   assert.deepEqual(
     fetched,
-    [oembedEndpoint(TIKTOK), TIKTOK],
+    [endpointOf(TIKTOK), TIKTOK],
     'the oEmbed call and the page scrape only — no thumbnail download for a thumbnail_url that is not a string',
   )
 })

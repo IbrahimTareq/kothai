@@ -2,20 +2,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import * as store from '../../../server/data/notes.ts'
 import { handleNotesDelta, handleNotes } from '../../../server/routes/notes.ts'
+import { mockRes, records } from '../../helpers/http.ts'
 
-function mockRes() {
-  const r = { code: 0, body: null }
-  r.writeHead = c => {
-    r.code = c
-    return r
-  }
-  r.end = s => {
-    r.body = JSON.parse(s)
-  }
-  r.setHeader = () => {}
-  return r
-}
-const urlOf = qs => new URL(`http://x/api/notes/delta${qs}`)
+const urlOf = (qs: string) => new URL(`http://x/api/notes/delta${qs}`)
 
 test('rev bumps on add/update/delete and changedSince reports patches', async () => {
   store._reset()
@@ -53,7 +42,6 @@ test('deltaOk refuses a since that predates the tombstone window', async () => {
   const ids = []
   for (let i = 0; i < 3; i++) ids.push((await store.addNote({ type: 'text', content: String(i) })).id)
   store._setTombstoneCap(2)
-  const _sinceBefore = store.revState().rev
   for (const id of ids) await store.deleteNote(id)
   assert.equal(store.deltaOk(0), false, 'rev 0 predates the trimmed window')
   assert.equal(store.deltaOk(store.revState().rev), true)
@@ -66,34 +54,37 @@ test('GET /api/notes/delta with matching boot returns notes/deleted', async () =
   const a = await store.addNote({ type: 'text', content: 'a' })
   const { rev: r1 } = store.revState()
   await store.updateNote(a.id, { title: 'patched' })
-  const res = mockRes()
+  const { res, sent } = mockRes()
   handleNotesDelta(res, urlOf(`?since=${r1}&boot=${encodeURIComponent(bootId)}`))
-  assert.equal(res.body.resync, undefined)
+  const body = sent.json()
+  assert.equal(body.resync, undefined)
   assert.deepEqual(
-    res.body.notes.map(n => n.id),
+    records(body.notes).map(n => n.id),
     [a.id],
   )
-  assert.deepEqual(res.body.deleted, [])
-  assert.equal(res.body.bootId, bootId)
+  assert.deepEqual(body.deleted, [])
+  assert.equal(body.bootId, bootId)
 })
 
 test('GET /api/notes/delta with mismatched boot returns resync: true', async () => {
   store._reset()
   await store.addNote({ type: 'text', content: 'a' })
-  const res = mockRes()
+  const { res, sent } = mockRes()
   handleNotesDelta(res, urlOf('?since=0&boot=not-the-real-boot'))
-  assert.equal(res.body.resync, true)
-  assert.ok('rev' in res.body)
-  assert.ok('bootId' in res.body)
-  assert.ok('pendingTotal' in res.body)
+  const body = sent.json()
+  assert.equal(body.resync, true)
+  assert.ok('rev' in body)
+  assert.ok('bootId' in body)
+  assert.ok('pendingTotal' in body)
 })
 
 test('paged /api/notes response includes rev and bootId matching revState', async () => {
   store._reset()
   await store.addNote({ type: 'text', content: 'a' })
-  const res = mockRes()
+  const { res, sent } = mockRes()
   handleNotes(res, new URL('http://x/api/notes?offset=0&limit=10'))
   const state = store.revState()
-  assert.equal(res.body.rev, state.rev)
-  assert.equal(res.body.bootId, state.bootId)
+  const body = sent.json()
+  assert.equal(body.rev, state.rev)
+  assert.equal(body.bootId, state.bootId)
 })

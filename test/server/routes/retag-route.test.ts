@@ -4,41 +4,33 @@
 // status codes and response shape.
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
+import { mockRes } from '../../helpers/http.ts'
+import { note } from '../../helpers/notes.ts'
+import type { ServerNote } from '../../../server/types.ts'
 
-let retagNoteImpl
+let retagNoteImpl: (id: string) => Promise<ServerNote | null>
 
 const realEnrich = await import('../../../server/ai/enrich.ts')
 mock.module('../../../server/ai/enrich.ts', {
-  namedExports: { ...realEnrich, retagNote: id => retagNoteImpl(id) },
+  namedExports: { ...realEnrich, retagNote: (id: string) => retagNoteImpl(id) },
 })
 
 const { handleRetagNote } = await import('../../../server/routes/notes.ts')
 
-function mockRes() {
-  const r = { code: 0, body: null }
-  r.writeHead = c => {
-    r.code = c
-    return r
-  }
-  r.end = s => {
-    r.body = JSON.parse(s)
-  }
-  r.setHeader = () => {}
-  return r
-}
-
 test('handleRetagNote: 200 with the updated note when retagNote succeeds', async () => {
-  retagNoteImpl = async id => ({ id, pending: true, tags: ['@natgeo'] })
-  const res = mockRes()
+  // The impl echoes the id it was handed, so the assertion below also pins
+  // that the route forwards :id rather than retagging something else.
+  retagNoteImpl = async id => note({ id, pending: true, tags: ['@natgeo'] })
+  const { res, sent } = mockRes()
   await handleRetagNote(res, 'n1')
-  assert.equal(res.code, 200)
-  assert.deepEqual(res.body.note, { id: 'n1', pending: true, tags: ['@natgeo'] })
+  assert.equal(sent.code, 200)
+  assert.deepEqual(sent.json().note, note({ id: 'n1', pending: true, tags: ['@natgeo'] }))
 })
 
 test('handleRetagNote: 404 when the note does not exist', async () => {
   retagNoteImpl = async () => null
-  const res = mockRes()
+  const { res, sent } = mockRes()
   await handleRetagNote(res, 'does-not-exist')
-  assert.equal(res.code, 404)
-  assert.equal(res.body.error, 'note not found')
+  assert.equal(sent.code, 404)
+  assert.equal(sent.json().error, 'note not found')
 })

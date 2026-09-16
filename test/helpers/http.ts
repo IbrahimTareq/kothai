@@ -45,6 +45,31 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+// The two narrowings json() cannot do for itself. It answers
+// Record<string, unknown> because that is all a parse can honestly promise, so
+// a test reading `body.notes[0].type` or `body.facets.types` has two or three
+// unknowns to get through and only one one-liner available: a cast.
+//
+// `Array.isArray(body.notes)` would compile without one — and is worse, because
+// it narrows unknown to `any[]`, so every read off the array afterwards is
+// unchecked while looking, in review, like a guard. These keep the elements at
+// Record<string, unknown> and name the offending value when a route's shape
+// changes, so the failure lands here rather than at an undefined property read
+// three assertions later.
+export function record(value: unknown): Record<string, unknown> {
+  if (!isRecord(value)) throw new Error(`expected a JSON object, got ${JSON.stringify(value)?.slice(0, 80)}`)
+  return value
+}
+
+export function records(value: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(value)) throw new Error(`expected an array, got ${JSON.stringify(value)?.slice(0, 80)}`)
+  return value.map((v: unknown, i) => {
+    if (!isRecord(v))
+      throw new Error(`expected element ${i} to be a JSON object, got ${JSON.stringify(v)?.slice(0, 80)}`)
+    return v
+  })
+}
+
 export function mockRes(): { res: ServerResponse; sent: Sent } {
   const res = new ServerResponse(mockReq())
   const sent: Sent = {

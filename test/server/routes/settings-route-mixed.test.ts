@@ -4,9 +4,11 @@
 // which the remote provider never reads.
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
-import { Readable } from 'node:stream'
+import { mockReq, mockRes } from '../../helpers/http.ts'
+import type { RoleProviders, RoutedCapabilities } from '../../../server/ai/routing.ts'
+import type { ModelSelection } from '../../../server/ai/providers/types.ts'
 
-const caps = (roles, managesResidency) => ({
+const caps = (roles: RoleProviders, managesResidency: boolean): RoutedCapabilities => ({
   kind: roles.llm === roles.embed && roles.embed === roles.vision ? roles.llm : 'mixed',
   managesResidency,
   downloadsWeights: managesResidency,
@@ -17,13 +19,16 @@ const caps = (roles, managesResidency) => ({
 // specifier twice, and a mocked module the route has already imported keeps
 // pointing at this namespace anyway. So the provider answer is mutable state
 // each test sets, rather than a fresh mock per test.
-const provider = { caps: caps({ llm: 'local', embed: 'local', vision: 'local' }, true), applied: [] }
+const provider: { caps: RoutedCapabilities; applied: ModelSelection[] } = {
+  caps: caps({ llm: 'local', embed: 'local', vision: 'local' }, true),
+  applied: [],
+}
 
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
     capabilities: () => provider.caps,
     validateModel: () => ({ ok: true }),
-    applySettings: async patch => {
+    applySettings: async (patch: ModelSelection) => {
       provider.applied.push(patch)
     },
     applyResidency: async () => {},
@@ -68,6 +73,7 @@ test('a model id that is not a string is rejected rather than handed to a provid
   provider.caps = caps({ llm: 'remote', embed: 'local', vision: 'remote' }, true)
 
   const out = _validateModels({ remote: { llm: 5 } })
+  assert.ok(out.error)
   assert.match(out.error, /invalid llm model/)
   assert.deepEqual(out.remote, {})
 })
@@ -94,19 +100,10 @@ test('a mixed save survives a restart: endpoint ids land in the remote store, no
     embed: DEFAULTS.embed, // on-device registry key
     remote: { llm: 'gpt-oss:120b', vision: 'qwen2.5-vl' }, // endpoint-defined ids
   }
-  const req = Readable.from([Buffer.from(JSON.stringify(body))])
-  const res = {
-    statusCode: 0,
-    body: null,
-    writeHead(c) {
-      this.statusCode = c
-    },
-    end(b) {
-      this.body = JSON.parse(b)
-    },
-  }
+  const req = mockReq({ method: 'POST', url: '/api/settings', body: JSON.stringify(body) })
+  const { res, sent } = mockRes()
   await handleSaveSettings(req, res)
-  assert.equal(res.statusCode, 200)
+  assert.equal(sent.code, 200)
 
   // The endpoint ids were handed to the facade to apply right away...
   assert.ok(

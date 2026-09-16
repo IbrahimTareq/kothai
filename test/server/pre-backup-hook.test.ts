@@ -18,6 +18,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { listenOnLoopback } from '../helpers/http.ts'
 
 const DATA_DIR = mkdtempSync(path.join(os.tmpdir(), 'kothai-hook-test-'))
 process.env.STASH_DATA_DIR = DATA_DIR
@@ -35,8 +36,7 @@ await store.load()
 const HOOK = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../docker/hooks/pre-backup')
 
 const server = createServer()
-await new Promise(r => server.listen(0, '127.0.0.1', r))
-const PORT = String(server.address().port)
+const PORT = String(await listenOnLoopback(server))
 after(() => {
   server.close()
   rmSync(DATA_DIR, { recursive: true, force: true })
@@ -44,7 +44,13 @@ after(() => {
 
 // Resolves to { code, stdout, stderr } rather than rejecting, so a non-zero
 // exit is an assertable value instead of a thrown error.
-function runHook(env = {}) {
+//
+// `code` stays `number | string` because execFile reports both: a process that
+// ran and exited hands back its numeric status, while a spawn that never
+// happened hands back an errno string like 'ENOENT'. Narrowing it to a number
+// here would turn that second case into a silent 1 — a hook that never ran
+// looking exactly like a hook that failed.
+function runHook(env: NodeJS.ProcessEnv = {}): Promise<{ code: number | string; stdout: string; stderr: string }> {
   return new Promise(resolve => {
     execFile('node', [HOOK], { env: { ...process.env, PORT, ...env } }, (err, stdout, stderr) =>
       resolve({ code: err ? (err.code ?? 1) : 0, stdout, stderr }),

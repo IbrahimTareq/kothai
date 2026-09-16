@@ -6,9 +6,9 @@
 // server-side too — a stray fetch() must not be able to wipe anything.
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
-import { Readable } from 'node:stream'
+import { mockReq, mockRes } from '../../helpers/http.ts'
 
-const calls = []
+const calls: string[] = []
 
 const realStore = await import('../../../server/data/notes.ts')
 const realCollections = await import('../../../server/data/collections.ts')
@@ -69,35 +69,20 @@ mock.module('../../../server/data/settings.ts', {
 
 const { handleWipe, CONFIRM_TOKEN } = await import('../../../server/routes/wipe.ts')
 
-function fakeReq(body) {
-  const r = Readable.from([Buffer.from(typeof body === 'string' ? body : JSON.stringify(body))])
-  return Object.assign(r, { method: 'POST', headers: {} })
-}
-function fakeRes() {
-  return {
-    statusCode: null,
-    headers: null,
-    body: null,
-    writeHead(code, headers) {
-      this.statusCode = code
-      this.headers = headers
-    },
-    end(str) {
-      this.body = str
-    },
-  }
-}
-async function wipe(body) {
-  const res = fakeRes()
-  await handleWipe(fakeReq(body), res)
-  return { res, json: res.body ? JSON.parse(res.body) : null }
+// `body` is unknown rather than a shape: the refusal test deliberately posts
+// null and a non-JSON string, which is half of what it is checking.
+async function wipe(body: unknown) {
+  const { res, sent } = mockRes()
+  const raw = typeof body === 'string' ? body : JSON.stringify(body)
+  await handleWipe(mockReq({ method: 'POST', url: '/api/wipe', body: raw }), res)
+  return sent
 }
 
 test('handleWipe clears notes, spaces, chats, and tag vocab, and reports the counts', async () => {
   calls.length = 0
-  const { res, json } = await wipe({ confirm: CONFIRM_TOKEN })
-  assert.equal(res.statusCode, 200)
-  assert.deepEqual(json.cleared, { notes: 12, collections: 3, chats: 2, tags: 40 })
+  const sent = await wipe({ confirm: CONFIRM_TOKEN })
+  assert.equal(sent.code, 200)
+  assert.deepEqual(sent.json().cleared, { notes: 12, collections: 3, chats: 2, tags: 40 })
   assert.ok(
     calls.includes('notes') && calls.includes('collections') && calls.includes('chats') && calls.includes('tagvocab'),
   )
@@ -116,9 +101,9 @@ test('handleWipe never touches model settings — the app stays configured after
 test('handleWipe refuses without the exact confirmation token, and clears nothing', async () => {
   for (const body of [{}, { confirm: '' }, { confirm: 'delete' }, { confirm: ' DELETE ' }, null, 'not json at all']) {
     calls.length = 0
-    const { res, json } = await wipe(body)
-    assert.ok(res.statusCode === 400, `expected 400 for ${JSON.stringify(body)}, got ${res.statusCode}`)
+    const sent = await wipe(body)
+    assert.ok(sent.code === 400, `expected 400 for ${JSON.stringify(body)}, got ${sent.code}`)
     assert.deepEqual(calls, [], `nothing may be cleared for ${JSON.stringify(body)}`)
-    assert.ok(json.error)
+    assert.ok(sent.json().error)
   }
 })

@@ -11,6 +11,7 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { jsonBody, listenOnLoopback, mockRes, records } from '../../helpers/http.ts'
 
 // Set before config.js is imported, which freezes its resolution at import
 // time — the real ./models dir holds multi-GB weights and must never be the
@@ -39,29 +40,16 @@ function seedCache() {
   writeFileSync(path.join(MODELS_DIR, 'sets/abc123/model.bin'), Buffer.alloc(50))
 }
 
-function fakeRes() {
-  return {
-    statusCode: 0,
-    body: null,
-    writeHead(code) {
-      this.statusCode = code
-    },
-    end(body) {
-      this.body = JSON.parse(body)
-    },
-  }
-}
-
 async function list() {
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   await handleModelFiles(res)
-  return res
+  return sent
 }
 
-async function del(name) {
-  const res = fakeRes()
+async function del(name: string) {
+  const { res, sent } = mockRes()
   await handleDeleteModelFile(res, name)
-  return res
+  return sent
 }
 
 beforeEach(async () => {
@@ -75,38 +63,40 @@ beforeEach(async () => {
 })
 
 test('GET /api/models/files lists the cache with the selected models marked in use', async () => {
-  const res = await list()
-  assert.equal(res.statusCode, 200)
-  const byName = Object.fromEntries(res.body.entries.map(e => [e.name, e]))
+  const sent = await list()
+  assert.equal(sent.code, 200)
+  const body = sent.json()
+  const byName = Object.fromEntries(records(body.entries).map(e => [String(e.name), e]))
   assert.equal(byName[ACTIVE_LLM].inUse, true)
   assert.equal(byName[ACTIVE_LLM].usedBy, 'llm')
   assert.equal(byName[ACTIVE_PROJ].usedBy, 'vision')
   assert.equal(byName[ORPHAN].inUse, false)
   assert.equal(byName.sets.kind, 'dir')
-  assert.equal(res.body.totalBytes, 650)
+  assert.equal(body.totalBytes, 650)
   // What deleting everything deletable would actually free — the number the
   // UI can put in front of the user before they commit to anything.
-  assert.equal(res.body.reclaimableBytes, 150)
+  assert.equal(body.reclaimableBytes, 150)
 })
 
 test('DELETE /api/models/files removes an orphaned model and reports the space freed', async () => {
-  const res = await del(ORPHAN)
-  assert.equal(res.statusCode, 200)
-  assert.deepEqual(res.body, { deleted: ORPHAN, freedBytes: 100 })
+  const sent = await del(ORPHAN)
+  assert.equal(sent.code, 200)
+  assert.deepEqual(sent.json(), { deleted: ORPHAN, freedBytes: 100 })
   assert.equal(existsSync(path.join(MODELS_DIR, ORPHAN)), false)
 })
 
 test('DELETE /api/models/files refuses a model the current selection needs', async () => {
-  const res = await del(ACTIVE_LLM)
-  assert.equal(res.statusCode, 409)
-  assert.equal(res.body.code, 'in_use')
-  assert.match(res.body.error, /llm/)
+  const sent = await del(ACTIVE_LLM)
+  assert.equal(sent.code, 409)
+  const body = sent.json()
+  assert.equal(body.code, 'in_use')
+  assert.ok(typeof body.error === 'string')
+  assert.match(body.error, /llm/)
   assert.equal(existsSync(path.join(MODELS_DIR, ACTIVE_LLM)), true)
 })
 
 test('DELETE /api/models/files refuses the vision projector, not just the vision weights', async () => {
-  const res = await del(ACTIVE_PROJ)
-  assert.equal(res.statusCode, 409)
+  assert.equal((await del(ACTIVE_PROJ)).code, 409)
   assert.equal(existsSync(path.join(MODELS_DIR, ACTIVE_PROJ)), true)
 })
 
@@ -115,9 +105,9 @@ test('DELETE /api/models/files rejects a name that tries to escape the models di
   writeFileSync(outside, Buffer.alloc(4))
   try {
     for (const bad of ['../kothai-models-test-escape', '..', '/etc/passwd', 'sets/abc123/model.bin']) {
-      const res = await del(bad)
-      assert.equal(res.statusCode, 400, `expected 400 for ${bad}`)
-      assert.equal(res.body.code, 'invalid_name')
+      const sent = await del(bad)
+      assert.equal(sent.code, 400, `expected 400 for ${bad}`)
+      assert.equal(sent.json().code, 'invalid_name')
     }
     assert.equal(existsSync(outside), true)
   } finally {
@@ -126,9 +116,9 @@ test('DELETE /api/models/files rejects a name that tries to escape the models di
 })
 
 test('DELETE /api/models/files reports a cache entry that is not there', async () => {
-  const res = await del('deadbeefdeadbeef_NotDownloaded.gguf')
-  assert.equal(res.statusCode, 404)
-  assert.equal(res.body.code, 'not_found')
+  const sent = await del('deadbeefdeadbeef_NotDownloaded.gguf')
+  assert.equal(sent.code, 404)
+  assert.equal(sent.json().code, 'not_found')
 })
 
 test('the model cache endpoints are not offered by a provider that downloads no weights', async () => {
@@ -137,10 +127,10 @@ test('the model cache endpoints are not offered by a provider that downloads no 
   // weights on disk at all. Plain provider=remote here would keep embedding
   // on-device, and that install does have a cache worth managing.
   await initProvider('remote', {}, { localAvailable: false })
-  assert.equal((await list()).statusCode, 404)
-  const res = await del(ORPHAN)
-  assert.equal(res.statusCode, 404)
-  assert.equal(res.body.code, 'no_local_models')
+  assert.equal((await list()).code, 404)
+  const sent = await del(ORPHAN)
+  assert.equal(sent.code, 404)
+  assert.equal(sent.json().code, 'no_local_models')
   // A remote deployment's DELETE must be inert, not merely refused politely.
   assert.equal(existsSync(path.join(MODELS_DIR, ORPHAN)), true)
 })
@@ -151,22 +141,21 @@ test('the model cache endpoints are not offered by a provider that downloads no 
 // where a `..%2F` escape attempt would be handed to the handler.
 const { createServer } = await import('../../../server/router.ts')
 const server = createServer()
-await new Promise(r => server.listen(0, '127.0.0.1', r))
-const BASE = `http://127.0.0.1:${server.address().port}`
+const BASE = `http://127.0.0.1:${await listenOnLoopback(server)}`
 after(() => server.close())
 
 test('the routes are reachable over HTTP', async () => {
   const res = await fetch(`${BASE}/api/models/files`)
-  const body = await res.json()
+  const body = await jsonBody(res)
   assert.equal(res.status, 200)
   assert.equal(
-    body.entries.some(e => e.name === ORPHAN),
+    records(body.entries).some(e => e.name === ORPHAN),
     true,
   )
 
   const del = await fetch(`${BASE}/api/models/files/${ORPHAN}`, { method: 'DELETE' })
   assert.equal(del.status, 200)
-  assert.equal((await del.json()).freedBytes, 100)
+  assert.equal((await jsonBody(del)).freedBytes, 100)
   assert.equal(existsSync(path.join(MODELS_DIR, ORPHAN)), false)
 })
 
@@ -176,7 +165,7 @@ test('a percent-encoded traversal in the URL is rejected, not decoded into a pat
   try {
     const res = await fetch(`${BASE}/api/models/files/..%2Fkothai-models-test-url-escape`, { method: 'DELETE' })
     assert.equal(res.status, 400)
-    assert.equal((await res.json()).code, 'invalid_name')
+    assert.equal((await jsonBody(res)).code, 'invalid_name')
     assert.equal(existsSync(outside), true)
   } finally {
     rmSync(outside, { force: true })

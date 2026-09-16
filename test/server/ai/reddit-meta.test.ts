@@ -11,10 +11,17 @@
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 
-let responses
-let fetched
+interface Stub {
+  json?: unknown
+  text?: string
+  contentType?: string
+  redirectsTo?: string
+}
 
-function respond(url) {
+let responses: Record<string, Stub>
+let fetched: string[]
+
+function respond(url: string) {
   const r = responses[url]
   if (!r) return { ok: false, status: 404, headers: new Headers(), text: async () => '', json: async () => ({}) }
   return {
@@ -33,7 +40,7 @@ const realSsrf = await import('../../../server/lib/ssrf.ts')
 mock.module('../../../server/lib/ssrf.ts', {
   namedExports: {
     ...realSsrf,
-    safeFetch: async url => {
+    safeFetch: async (url: string) => {
       fetched.push(url)
       return respond(url)
     },
@@ -46,9 +53,25 @@ const { isRedditPost, isRedditShare, redditJsonUrl, parseRedditPost, fetchLinkMe
 
 const POST_URL = 'https://www.reddit.com/r/breadit/comments/abc123/my_first_sourdough/'
 
+// redditJsonUrl answers `string | null` — null only for input that is not a URL
+// at all, which no caller here passes. Failing loudly beats keying a response
+// stub under "null" and watching the fetch assertions fail for the wrong
+// reason.
+function jsonUrlOf(url: string): string {
+  const api = redditJsonUrl(url)
+  assert.ok(api, `redditJsonUrl could not build a .json url for ${url}`)
+  return api
+}
+
+interface Comment {
+  author: string
+  body: string
+  stickied?: boolean
+}
+
 // A realistic trimmed payload: the two-Listing array Reddit actually answers
 // with, including the boilerplate a parser has to survive.
-function payload({ post = {}, comments = [] } = {}) {
+function payload({ post = {}, comments = [] }: { post?: Record<string, unknown>; comments?: Comment[] } = {}) {
   return [
     {
       kind: 'Listing',
@@ -70,7 +93,7 @@ function payload({ post = {}, comments = [] } = {}) {
         ],
       },
     },
-    { kind: 'Listing', data: { children: comments.map(data => ({ kind: 't1', data })) } },
+    { kind: 'Listing', data: { children: comments.map((data: Comment) => ({ kind: 't1', data })) } },
   ]
 }
 
@@ -102,6 +125,8 @@ test('parseRedditPost pulls the title, selftext and top comments into the right 
   )
   assert.equal(p.siteTitle, 'My first sourdough')
   assert.equal(p.siteName, 'Reddit')
+  assert.ok(p.siteDesc)
+  assert.ok(p.article)
   assert.match(p.siteDesc, /open crumb/)
   // The article field carries the readable body: sub/author header, the full
   // selftext, and the thread — the part a plain og:description scrape misses
@@ -124,6 +149,7 @@ test('parseRedditPost drops stickied bot comments and deleted bodies', () => {
       ],
     }),
   )
+  assert.ok(p.article)
   assert.doesNotMatch(p.article, /read the rules/)
   assert.doesNotMatch(p.article, /\[deleted\]|\[removed\]/)
   assert.match(p.article, /u\/real: Looks great\./)
@@ -144,6 +170,7 @@ test('parseRedditPost keeps the post when a comment body is nothing but whitespa
     }),
   )
   assert.equal(p.siteTitle, 'My first sourdough', 'the post survives the blank comment')
+  assert.ok(p.article)
   assert.match(p.article, /20 hour cold retard/)
   assert.match(p.article, /u\/real: Looks great\./)
   assert.ok(p.article.split('\n').includes('u/blank: '), 'the blank comment contributes an empty body line')
@@ -153,6 +180,7 @@ test('parseRedditPost handles a link post with no selftext and no comments', () 
   const p = parseRedditPost(payload({ post: { selftext: '' }, comments: [] }))
   assert.equal(p.siteDesc, null, 'no body means no siteDesc, not an empty string')
   assert.equal(p.siteTitle, 'My first sourdough')
+  assert.ok(p.article)
   assert.match(p.article, /r\/Breadit/, 'the sub/author line is still worth having on its own')
 })
 
@@ -190,7 +218,7 @@ test('parseRedditPost prefers the preview image, then a real thumbnail, and neve
 test('fetchLinkMeta routes a Reddit permalink to the .json fetcher, not to oEmbed or the og scraper', async () => {
   fetched = []
   responses = {
-    [redditJsonUrl(POST_URL)]: {
+    [jsonUrlOf(POST_URL)]: {
       json: payload({ comments: [{ author: 'proofer', body: 'Textbook crumb.' }] }),
     },
   }
@@ -198,11 +226,13 @@ test('fetchLinkMeta routes a Reddit permalink to the .json fetcher, not to oEmbe
 
   assert.deepEqual(
     fetched,
-    [redditJsonUrl(POST_URL), 'https://preview.redd.it/loaf.jpg?width=1080'],
+    [jsonUrlOf(POST_URL), 'https://preview.redd.it/loaf.jpg?width=1080'],
     'exactly the JSON fetch and the thumbnail download — no oEmbed call, no page scrape',
   )
   assert.equal(meta.siteTitle, 'My first sourdough')
   assert.equal(meta.siteName, 'Reddit')
+  assert.ok(meta.siteDesc)
+  assert.ok(meta.article)
   assert.match(meta.siteDesc, /open crumb/)
   assert.match(meta.article, /Textbook crumb/)
 })
@@ -224,14 +254,14 @@ test('a walled JSON endpoint degrades to oEmbed/OpenGraph instead of leaving the
   const meta = await fetchLinkMeta(POST_URL, 'note-r2')
   assert.equal(meta.siteTitle, 'Why did the Roman Empire fall?')
   assert.equal(meta.siteName, 'reddit')
-  assert.ok(fetched.includes(redditJsonUrl(POST_URL)), 'the rich route is still tried first')
+  assert.ok(fetched.includes(jsonUrlOf(POST_URL)), 'the rich route is still tried first')
 })
 
 test('a 200 that contains no post (a login wall) degrades the same way as a hard failure', async () => {
   fetched = []
   const oembed = `https://www.reddit.com/oembed?url=${encodeURIComponent(POST_URL)}&format=json`
   responses = {
-    [redditJsonUrl(POST_URL)]: { json: { kind: 'Listing', data: { children: [] } } },
+    [jsonUrlOf(POST_URL)]: { json: { kind: 'Listing', data: { children: [] } } },
     [oembed]: { json: { title: 'Recovered by oEmbed', provider_name: 'reddit' } },
     [POST_URL]: { text: '<html></html>', contentType: 'text/html' },
   }
@@ -267,13 +297,13 @@ test('fetchLinkMeta resolves a share link to the canonical post before fetching 
       text: '<html><head><title>Reddit</title></head></html>',
       redirectsTo: `${POST_URL}?share_id=abc&utm_medium=android_app`,
     },
-    [redditJsonUrl(POST_URL)]: { json: payload() },
+    [jsonUrlOf(POST_URL)]: { json: payload() },
   }
   const meta = await fetchLinkMeta(SHARE_URL, 'note-r4')
 
   assert.deepEqual(
     fetched,
-    [SHARE_URL, redditJsonUrl(POST_URL), 'https://preview.redd.it/loaf.jpg?width=1080'],
+    [SHARE_URL, jsonUrlOf(POST_URL), 'https://preview.redd.it/loaf.jpg?width=1080'],
     'the share link is followed once, then the canonical URL drives the rest',
   )
   assert.equal(meta.siteTitle, 'My first sourdough', 'the real post title, not the "Reddit" shell title')

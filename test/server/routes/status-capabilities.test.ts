@@ -4,30 +4,16 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { initProvider, _reset } from '../../../server/ai/index.ts'
 import { handleStatus, firstRunComplete } from '../../../server/routes/settings.ts'
-
-function fakeRes() {
-  return {
-    statusCode: 0,
-    body: null,
-    headers: {},
-    writeHead(code, headers) {
-      this.statusCode = code
-      this.headers = headers
-    },
-    end(body) {
-      this.body = JSON.parse(body)
-    },
-  }
-}
+import { mockRes } from '../../helpers/http.ts'
 
 test('handleStatus includes a capabilities descriptor', async () => {
   _reset()
   await initProvider('local', {})
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   handleStatus(res)
-  assert.equal(res.statusCode, 200)
+  assert.equal(sent.code, 200)
   // `roles` says who serves each role; a pure-local install owns all three.
-  assert.deepEqual(res.body.capabilities, {
+  assert.deepEqual(sent.json().capabilities, {
     kind: 'local',
     managesResidency: true,
     downloadsWeights: true,
@@ -38,10 +24,11 @@ test('handleStatus includes a capabilities descriptor', async () => {
 test('handleStatus still carries the fields the client already reads', async () => {
   _reset()
   await initProvider('local', {})
-  const res = fakeRes()
+  const { res, sent } = mockRes()
   handleStatus(res)
+  const body = sent.json()
   for (const k of ['roles', 'aggregate', 'configured', 'count']) {
-    assert.ok(k in res.body, `missing ${k}`)
+    assert.ok(k in body, `missing ${k}`)
   }
 })
 

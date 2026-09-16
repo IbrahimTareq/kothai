@@ -3,56 +3,49 @@ import assert from 'node:assert/strict'
 import * as store from '../../../server/data/notes.ts'
 import * as collections from '../../../server/data/collections.ts'
 import { handleNotes, handleDeleteNote } from '../../../server/routes/notes.ts'
+import { mockRes, record, records } from '../../helpers/http.ts'
 
-function mockRes() {
-  const r = { code: 0, body: null }
-  r.writeHead = c => {
-    r.code = c
-    return r
-  }
-  r.end = s => {
-    r.body = JSON.parse(s)
-  }
-  r.setHeader = () => {}
-  return r
-}
-const urlOf = qs => new URL(`http://x/api/notes${qs}`)
+const urlOf = (qs: string) => new URL(`http://x/api/notes${qs}`)
 
 test('paged /api/notes returns page, total, facets, pendingTotal', async () => {
   store._reset()
   for (let i = 0; i < 5; i++) await store.addNote({ type: 'text', content: `n${i}` })
   await store.addNote({ type: 'video', url: 'https://www.instagram.com/reel/Z/', pending: true })
-  const res = mockRes()
+  const { res, sent } = mockRes()
   handleNotes(res, urlOf('?offset=0&limit=3'))
-  assert.equal(res.body.total, 6)
-  assert.equal(res.body.notes.length, 3)
-  assert.equal(res.body.offset, 0)
-  assert.equal(res.body.pendingTotal, 1)
-  assert.equal(res.body.facets.types.video, 1)
-  assert.equal(res.body.notes[0].type, 'video', 'newest first — canonical order')
-  assert.ok(!('embedding' in res.body.notes[0]))
+  const body = sent.json()
+  const notes = records(body.notes)
+  assert.equal(body.total, 6)
+  assert.equal(notes.length, 3)
+  assert.equal(body.offset, 0)
+  assert.equal(body.pendingTotal, 1)
+  assert.equal(record(record(body.facets).types).video, 1)
+  assert.equal(notes[0].type, 'video', 'newest first — canonical order')
+  assert.ok(!('embedding' in notes[0]))
 })
 
 test('filters compose and facets ignore type/source narrowing', async () => {
   store._reset()
   await store.addNote({ type: 'text', content: 'makkah diary' })
   await store.addNote({ type: 'video', url: 'https://www.instagram.com/reel/Y/', siteDesc: 'makkah' })
-  const res = mockRes()
+  const { res, sent } = mockRes()
   handleNotes(res, urlOf('?q=makkah&type=video&limit=10'))
-  assert.equal(res.body.total, 1, 'total reflects the fully filtered set')
-  assert.deepEqual(res.body.facets.types, { text: 1, video: 1 }, 'facets count the q-set only')
+  const body = sent.json()
+  assert.equal(body.total, 1, 'total reflects the fully filtered set')
+  assert.deepEqual(record(body.facets).types, { text: 1, video: 1 }, 'facets count the q-set only')
 })
 
 test('no-param request is paged with defaults (offset 0, limit 120)', async () => {
   store._reset()
   for (let i = 0; i < 3; i++) await store.addNote({ type: 'text', content: String(i) })
-  const res = mockRes()
+  const { res, sent } = mockRes()
   handleNotes(res, urlOf(''))
-  assert.equal(res.body.notes.length, 3)
-  assert.equal(res.body.total, 3)
-  assert.equal(res.body.offset, 0)
-  assert.ok('facets' in res.body)
-  assert.ok('pendingTotal' in res.body)
+  const body = sent.json()
+  assert.equal(records(body.notes).length, 3)
+  assert.equal(body.total, 3)
+  assert.equal(body.offset, 0)
+  assert.ok('facets' in body)
+  assert.ok('pendingTotal' in body)
 })
 
 test('?collection=<id> narrows to only the notes added to that collection', async () => {
@@ -66,17 +59,20 @@ test('?collection=<id> narrows to only the notes added to that collection', asyn
   await collections.addItem(c.id, a.id)
   await collections.addItem(c.id, b.id)
 
-  const res = mockRes()
+  const { res, sent } = mockRes()
   handleNotes(res, urlOf(`?collection=${c.id}&limit=10`))
-  assert.equal(res.body.total, 2, 'only the two notes added to the collection are counted')
-  assert.equal(res.body.notes.length, 2)
-  const ids = res.body.notes.map(n => n.id)
+  const body = sent.json()
+  const notes = records(body.notes)
+  assert.equal(body.total, 2, 'only the two notes added to the collection are counted')
+  assert.equal(notes.length, 2)
+  const ids = notes.map(n => n.id)
   assert.ok(ids.includes(a.id) && ids.includes(b.id))
 
   const missing = mockRes()
-  handleNotes(missing, urlOf('?collection=does-not-exist&limit=10'))
-  assert.equal(missing.body.total, 0, 'unknown collection id falls back to empty, not the full list')
-  assert.equal(missing.body.notes.length, 0)
+  handleNotes(missing.res, urlOf('?collection=does-not-exist&limit=10'))
+  const missingBody = missing.sent.json()
+  assert.equal(missingBody.total, 0, 'unknown collection id falls back to empty, not the full list')
+  assert.equal(records(missingBody.notes).length, 0)
 })
 
 test('deleting a note that owns uploaded files still removes the note', async () => {
@@ -94,9 +90,9 @@ test('deleting a note that owns uploaded files still removes the note', async ()
     thumb: '/uploads/notes-route-thumb.png',
     slides: ['/uploads/notes-route-slide-1.png'],
   })
-  const res = mockRes()
+  const { res, sent } = mockRes()
   await handleDeleteNote(res, note.id)
-  assert.equal(res.code, 200)
-  assert.deepEqual(res.body, { ok: true })
+  assert.equal(sent.code, 200)
+  assert.deepEqual(sent.json(), { ok: true })
   assert.equal(store.allNotes().length, 0)
 })
