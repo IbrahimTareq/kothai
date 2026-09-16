@@ -13,7 +13,7 @@ them. Detail lives in `docs/`.
 |---|---|
 | `pnpm dev` | Node `:5173` + Vite `:5174`. **Develop against 5174.** 5173 shows the production build. |
 | `pnpm test` | Lint, token check, shape ratchet, then 1114 tests. ~5s. Run all of it; it is fast enough. |
-| `pnpm build` | Lint, token check, both typechecks, then the Vite build. Not a superset of `test`, nor the reverse — it has no shape ratchet or test suite; `test` has neither typecheck. |
+| `pnpm build` | Lint, token check, all three typechecks, then the Vite build. Not a superset of `test`, nor the reverse — it has no shape ratchet or test suite; `test` has no typecheck. |
 | `pnpm format` | Apply formatting. Biome decides style; do not argue with it. |
 
 Node 22 (`.nvmrc`). Running the suite on Node 24 once hid a `mock.module()`
