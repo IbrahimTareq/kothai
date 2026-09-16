@@ -1,12 +1,28 @@
 // Unit tests for the remote provider's request shaping and role gating,
 // against a real throwaway http server.
-import { test, before, after, beforeEach } from 'node:test'
+import { test, before, after, beforeEach, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { writeFileSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { createRemoteProvider } from '../../../../server/ai/providers/remote.js'
+
+// createRemoteProvider has no sleep hook of its own, so the retry-driven
+// tests below (the dead-endpoint circuit test especially) paid the real
+// exponential backoff on every attempt — 62s of the suite's 68s. Mocking the
+// HTTP layer's own injectable `sleep` (remote-http.js, already proven out by
+// remote-retry.test.js) removes the wait without touching retry semantics.
+const realRemoteHttp = await import('../../../../server/ai/providers/remote-http.js')
+const noSleep = async () => {}
+mock.module('../../../../server/ai/providers/remote-http.js', {
+  namedExports: {
+    ...realRemoteHttp,
+    postJson: (baseUrl, p, body, opts = {}) => realRemoteHttp.postJson(baseUrl, p, body, { ...opts, sleep: noSleep }),
+    getJson: (baseUrl, p, opts = {}) => realRemoteHttp.getJson(baseUrl, p, { ...opts, sleep: noSleep }),
+  },
+})
+
+const { createRemoteProvider } = await import('../../../../server/ai/providers/remote.js')
 
 let server, base, routes
 

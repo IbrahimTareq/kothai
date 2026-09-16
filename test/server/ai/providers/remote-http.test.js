@@ -16,6 +16,13 @@ before(async () => {
 
 after(() => server.close())
 
+// Every transient status here (429/500/timeout/refused) makes postJson retry
+// with the real exponential backoff by default, which made this file alone
+// cost 68s of the suite's wall time. Injected the same way
+// remote-retry.test.js proves out the retry loop itself.
+const noSleep = async () => {}
+const post = (path, body, opts = {}) => postJson(base, path, body, { sleep: noSleep, ...opts })
+
 function reply(status, body, headers = {}) {
   handler = (req, res) => {
     res.writeHead(status, { 'content-type': 'application/json', ...headers })
@@ -34,7 +41,7 @@ test('posts JSON and returns the parsed body', async () => {
       res.end(JSON.stringify({ ok: 1 }))
     })
   }
-  const out = await postJson(base, '/chat/completions', { model: 'm' }, { apiKey: 'sk-test' })
+  const out = await post('/chat/completions', { model: 'm' }, { apiKey: 'sk-test' })
   assert.deepEqual(out, { ok: 1 })
   assert.equal(seen.url, '/chat/completions')
   assert.equal(seen.method, 'POST')
@@ -49,13 +56,13 @@ test('omits the authorization header when no key is configured (Ollama needs non
     res.writeHead(200, { 'content-type': 'application/json' })
     res.end('{}')
   }
-  await postJson(base, '/x', {}, {})
+  await post('/x', {})
   assert.equal(auth, undefined)
 })
 
 test('401 maps to a non-transient auth_failed error', async () => {
   reply(401, { error: 'bad key' })
-  const e = await postJson(base, '/x', {}, {}).catch(x => x)
+  const e = await post('/x', {}).catch(x => x)
   assert.ok(e instanceof RemoteError)
   assert.equal(e.code, 'auth_failed')
   assert.equal(e.transient, false)
@@ -63,21 +70,21 @@ test('401 maps to a non-transient auth_failed error', async () => {
 
 test('403 also maps to auth_failed', async () => {
   reply(403, {})
-  const e = await postJson(base, '/x', {}, {}).catch(x => x)
+  const e = await post('/x', {}).catch(x => x)
   assert.equal(e.code, 'auth_failed')
   assert.equal(e.transient, false)
 })
 
 test('404 maps to a non-transient model_not_found error', async () => {
   reply(404, { error: 'no such model' })
-  const e = await postJson(base, '/x', {}, {}).catch(x => x)
+  const e = await post('/x', {}).catch(x => x)
   assert.equal(e.code, 'model_not_found')
   assert.equal(e.transient, false)
 })
 
 test('429 maps to a transient rate_limited error carrying Retry-After', async () => {
   reply(429, {}, { 'retry-after': '7' })
-  const e = await postJson(base, '/x', {}, {}).catch(x => x)
+  const e = await post('/x', {}).catch(x => x)
   assert.equal(e.code, 'rate_limited')
   assert.equal(e.transient, true)
   assert.equal(e.retryAfterMs, 7000)
@@ -85,20 +92,20 @@ test('429 maps to a transient rate_limited error carrying Retry-After', async ()
 
 test('500 maps to a transient endpoint_error', async () => {
   reply(500, {})
-  const e = await postJson(base, '/x', {}, {}).catch(x => x)
+  const e = await post('/x', {}).catch(x => x)
   assert.equal(e.code, 'endpoint_error')
   assert.equal(e.transient, true)
 })
 
 test('a timeout maps to a transient endpoint_unreachable error', async () => {
   handler = () => {} // never responds
-  const e = await postJson(base, '/x', {}, { timeoutMs: 50 }).catch(x => x)
+  const e = await post('/x', {}, { timeoutMs: 50 }).catch(x => x)
   assert.equal(e.code, 'endpoint_unreachable')
   assert.equal(e.transient, true)
 })
 
 test('a refused connection maps to endpoint_unreachable', async () => {
-  const e = await postJson('http://127.0.0.1:1', '/x', {}, { timeoutMs: 500 }).catch(x => x)
+  const e = await postJson('http://127.0.0.1:1', '/x', {}, { timeoutMs: 500, sleep: noSleep }).catch(x => x)
   assert.equal(e.code, 'endpoint_unreachable')
   assert.equal(e.transient, true)
 })
@@ -108,6 +115,6 @@ test('a non-JSON success body maps to a transient bad_response error', async () 
     res.writeHead(200, { 'content-type': 'text/plain' })
     res.end('not json')
   }
-  const e = await postJson(base, '/x', {}, {}).catch(x => x)
+  const e = await post('/x', {}).catch(x => x)
   assert.equal(e.code, 'bad_response')
 })
