@@ -4,9 +4,12 @@
 
    .btn is the button. Use it plus a size (.btn--xs/--sm/--lg) and a tone
    (.btn--solid/--ghost/--icon/--danger); size and tone compose freely. There
-   are no per-view button classes left, and lint:tokens fails any new ones —
-   see scripts/button-chrome.mjs. A view may still add a rule for genuine
-   layout (.chat-more's full width) on top of .btn. */
+   are no per-view aliases of .btn left, and lint:tokens fails any new
+   duplicate of this box — see scripts/button-chrome.mjs. That doesn't cover
+   every button-shaped class in the app: .seg-btn, .residency-btn, .rail-btn,
+   .send-btn and .attach-btn are distinct components with their own box, not
+   .btn under another name. A view may still add a rule for genuine layout
+   (.chat-more's full width) on top of .btn. */
 
 /* ── button ───────────────────────────────────────────────────────────────── */
 .btn{
