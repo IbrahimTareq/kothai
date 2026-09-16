@@ -16,6 +16,7 @@ import { stat, unlink } from 'node:fs/promises'
 import { pipeline } from 'node:stream/promises'
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import { DATA_DIR } from '../config.ts'
 import { getDb } from '../data/db.ts'
 import * as store from '../data/notes.ts'
@@ -31,9 +32,9 @@ let backupInProgress = false
 // literal. The filename itself is server-generated, so the only caller-shaped
 // part of this path is DATA_DIR, from the operator's own environment; doubling
 // quotes keeps a directory name containing one from breaking the statement.
-const sqlLiteral = value => `'${value.replace(/'/g, "''")}'`
+const sqlLiteral = (value: string) => `'${value.replace(/'/g, "''")}'`
 
-export async function handleBackup(_req, res) {
+export async function handleBackup(_req: IncomingMessage, res: ServerResponse): Promise<void> {
   // An import holds a batch of notes in memory and writes them at the end (see
   // import.js). A snapshot taken mid-import captures a library that is neither
   // the before nor the after, and the flush below would make that worse by

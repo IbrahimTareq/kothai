@@ -13,16 +13,23 @@
 // time it is selected — so the one thing this must never do is delete a file
 // the current selection depends on. That check lives here rather than in the
 // client: the UI's "in use" badge is a hint, this is the enforcement.
+import type { ServerResponse } from 'node:http'
 import * as ai from '../ai/index.ts'
 import * as settings from '../data/settings.ts'
 import { scanWeights, removeWeight, isSafeEntryName } from '../lib/weights.ts'
 import { json } from '../lib/http.ts'
 import { MODELS_DIR } from '../config.ts'
 
+// removeWeight tags its throws with a `code` (see lib/weights.ts's fail()), and
+// a caught value is `unknown` until something checks it.
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null
+}
+
 // A remote-inference deployment (the lite image) has no download cache at all,
 // and neither does any future provider that reports downloadsWeights: false.
 // 404 rather than 501: for that install these paths simply do not exist.
-function noLocalModels(res) {
+function noLocalModels(res: ServerResponse) {
   return json(res, 404, {
     error: 'This install runs inference remotely and downloads no model files.',
     code: 'no_local_models',
@@ -35,12 +42,12 @@ async function scan() {
   return await scanWeights(MODELS_DIR, ai.weightsInUse(settings.get()))
 }
 
-export async function handleModelFiles(res) {
+export async function handleModelFiles(res: ServerResponse): Promise<void> {
   if (!ai.capabilities().downloadsWeights) return noLocalModels(res)
   json(res, 200, { dir: MODELS_DIR, ...(await scan()) })
 }
 
-export async function handleDeleteModelFile(res, name) {
+export async function handleDeleteModelFile(res: ServerResponse, name: string): Promise<void> {
   if (!ai.capabilities().downloadsWeights) return noLocalModels(res)
   // Before anything touches the filesystem: the name came off the URL.
   if (!isSafeEntryName(name)) {
@@ -64,7 +71,7 @@ export async function handleDeleteModelFile(res, name) {
   } catch (e) {
     // Lost a race with something else touching the cache directory — the file
     // was listed a moment ago and is gone now.
-    if (e.code === 'not_found') return json(res, 404, { error: e.message, code: 'not_found' })
+    if (isRecord(e) && e.code === 'not_found') return json(res, 404, { error: e.message, code: 'not_found' })
     throw e
   }
 }

@@ -13,12 +13,13 @@
 // The sibling of GET /api/backup, for the other kind of backup tool: that one
 // hands you a consistent copy and costs a second copy's worth of disk; this one
 // costs nothing extra but only settles what is already there.
+import type { ServerResponse } from 'node:http'
 import { getDb } from '../data/db.ts'
 import * as store from '../data/notes.ts'
 import { isImportInProgress, IMPORT_BUSY } from '../data/import-lock.ts'
 import { json } from '../lib/http.ts'
 
-export async function handleCheckpoint(res) {
+export async function handleCheckpoint(res: ServerResponse): Promise<void> {
   // import.js holds a batch of notes in memory and commits them as one
   // transaction at the end, with a rollback path if that fails. Flushing
   // underneath it would commit whatever half of the batch is queued so far and

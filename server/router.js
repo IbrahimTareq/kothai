@@ -15,12 +15,12 @@ import {
 import { handleImport } from './routes/import.js'
 import { handleAvailabilityScan, handleAvailabilityRemove } from './routes/availability.js'
 import { handleExport } from './routes/export.js'
-import { handleBackup } from './routes/backup.js'
-import { handleCheckpoint } from './routes/checkpoint.js'
+import { handleBackup } from './routes/backup.ts'
+import { handleCheckpoint } from './routes/checkpoint.ts'
 import { handleWipe } from './routes/wipe.js'
-import { handleModelFiles, handleDeleteModelFile } from './routes/models.js'
-import { handleAsk } from './routes/ask.js'
-import { handleChats, handleChat, handleRenameChat, handleDeleteChat } from './routes/chats.js'
+import { handleModelFiles, handleDeleteModelFile } from './routes/models.ts'
+import { handleAsk } from './routes/ask.ts'
+import { handleChats, handleChat, handleRenameChat, handleDeleteChat } from './routes/chats.ts'
 import {
   handleCollections,
   handleCreateCollection,

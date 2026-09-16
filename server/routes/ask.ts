@@ -1,14 +1,30 @@
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import * as ai from '../ai/index.ts'
 import * as store from '../data/notes.ts'
 import * as chats from '../data/chats.ts'
 import * as settings from '../data/settings.ts'
 import * as prompts from '../ai/prompts.ts'
+import type { ServerNote } from '../types.ts'
 import { json, readBody, saveImage } from '../lib/http.ts'
+
+// readBody hands back `unknown`: the body is whatever the client posted and
+// nothing has checked it. Narrowed at each use below rather than annotated.
+//
+// It guards the caught values too. `e.message` rather than the usual
+// `e instanceof Error ? e.message : e`: a QVAC rejection reaches this file
+// unwrapped (see providers/local.ts — describeImage and answerStream rethrow
+// the SDK's own value), so what these messages have always printed is that
+// property read, not a stringified throw. The guard only stops a null
+// rejection from turning the read itself into a second failure — one thrown
+// after the 200 SSE header is out, where the router's 500 cannot land.
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null
+}
 
 // Server-sent events, opened only once the request has cleared every gate —
 // before that a plain JSON error is still the right answer, and the headers
 // haven't been written yet.
-function openStream(res) {
+function openStream(res: ServerResponse) {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache, no-transform',
@@ -17,7 +33,7 @@ function openStream(res) {
   })
   return {
     // JSON.stringify escapes newlines, so a payload can never break the frame.
-    send(event, data) {
+    send(event: string, data: unknown) {
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
     },
     end() {
@@ -26,12 +42,16 @@ function openStream(res) {
   }
 }
 
-export async function handleAsk(req, res) {
-  const body = await readBody(req)
+export async function handleAsk(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const body: unknown = await readBody(req)
+  const fields: Record<string, unknown> = isRecord(body) ? body : {}
   const wantsStream = /text\/event-stream/.test(req.headers.accept || '')
-  const question = (body.question || '').toString().trim()
-  const imageData = body.image
-  const chatId = body.chatId || null
+  const question = (fields.question || '').toString().trim()
+  const imageData = fields.image
+  // A chat id is a uuid string (see chats.ts). Anything else matched no chat
+  // before this narrowing either, and started a new one — which is what null
+  // does, so the two agree.
+  const chatId = typeof fields.chatId === 'string' ? fields.chatId : null
   if (!question && !imageData) return json(res, 400, { error: 'Ask a question.' })
 
   const residency = settings.getResidency()
@@ -77,10 +97,10 @@ export async function handleAsk(req, res) {
   res.on('close', onGone)
   req.on('close', onGone)
 
-  let out = null // set once the stream is open; until then errors are JSON
+  let out: ReturnType<typeof openStream> | null = null // set once the stream is open; until then errors are JSON
 
   // Persist the exchange so chats survive reloads and can be browsed/resumed.
-  const record = async (answer, sources, image = null) => {
+  const record = async (answer: string, sources: ServerNote[], image: string | null = null) => {
     if (ctl.signal.aborted) return out ? out.end() : undefined
     const chat = await chats.appendExchange(
       chatId,
@@ -95,7 +115,7 @@ export async function handleAsk(req, res) {
 
   // Once the stream is open a failure has to travel down it — the status line
   // has already gone out as 200.
-  const fail = (code, payload) => {
+  const fail = (code: number, payload: unknown) => {
     if (out) {
       out.send('error', payload)
       out.end()
@@ -104,7 +124,9 @@ export async function handleAsk(req, res) {
 
   // Image attached to the question → answer about it directly with the vision model.
   if (imageData) {
-    const img = await saveImage(imageData)
+    // String(), not a typeof guard: saveImage's regex .exec() coerces its
+    // argument exactly this way, so this is the same read it always was.
+    const img = await saveImage(String(imageData))
     if (!img) return json(res, 400, { error: 'Could not read the attached image.' })
     try {
       const answer = await ai.describeImage({
@@ -114,7 +136,7 @@ export async function handleAsk(req, res) {
       return await record(answer, [], img.webPath)
     } catch (e) {
       if (e instanceof ai.FeatureDisabledError) return fail(409, { error: e.message, code: e.code })
-      return fail(500, { error: `Vision model error: ${e.message}` })
+      return fail(500, { error: `Vision model error: ${isRecord(e) ? e.message : undefined}` })
     }
   }
 
@@ -150,18 +172,21 @@ export async function handleAsk(req, res) {
       out = openStream(res)
       out.send('sources', { sources })
     }
+    // `out` is a reassigned `let`, so a narrowing on it does not reach inside
+    // the onToken closure; the alias is what makes it a plain non-null capture.
+    const stream = out
     const answer = await ai.answerStream({
       question,
       contextNotes: sources,
       history,
-      onToken: out ? text => out.send('delta', { text }) : undefined,
+      onToken: stream ? text => stream.send('delta', { text }) : undefined,
       signal: ctl.signal,
     })
     await record(answer, sources)
   } catch (e) {
     if (e instanceof ai.FeatureDisabledError) return fail(409, { error: e.message, code: e.code })
     if (ctl.signal.aborted) return out ? out.end() : undefined
-    if (out) return fail(500, { error: e.message })
+    if (out) return fail(500, { error: isRecord(e) ? e.message : undefined })
     throw e
   }
 }

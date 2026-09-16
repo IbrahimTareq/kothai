@@ -39,7 +39,7 @@ mock.module('../../../server/data/notes.ts', {
 let server, base, handleAsk, chats
 
 before(async () => {
-  ;({ handleAsk } = await import('../../../server/routes/ask.js'))
+  ;({ handleAsk } = await import('../../../server/routes/ask.ts'))
   chats = await import('../../../server/data/chats.ts')
   server = createServer((req, res) => {
     handleAsk(req, res).catch(() => {

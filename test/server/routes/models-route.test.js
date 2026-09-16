@@ -19,7 +19,7 @@ const MODELS_DIR = mkdtempSync(path.join(os.tmpdir(), 'kothai-models-test-'))
 process.env.STASH_MODELS_DIR = MODELS_DIR
 
 const { initProvider, _reset } = await import('../../../server/ai/index.ts')
-const { handleModelFiles, handleDeleteModelFile } = await import('../../../server/routes/models.js')
+const { handleModelFiles, handleDeleteModelFile } = await import('../../../server/routes/models.ts')
 const { _resetDb } = await import('../../../server/data/db.ts')
 const settings = await import('../../../server/data/settings.ts')
 
