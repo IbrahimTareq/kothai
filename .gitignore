@@ -4,7 +4,11 @@ dist/
 models/
 qvac.config.json
 *.log
-.claude
+# Agent governance is versioned; only machine-local state is ignored.
+.claude/*
+!.claude/settings.json
+!.claude/skills/
+!.claude/hooks/
 .superpowers/
 .DS_Store
 
