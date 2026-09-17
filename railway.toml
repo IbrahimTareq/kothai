@@ -1,7 +1,6 @@
 [build]
-dockerfilePath = "Dockerfile"
-# Lite image: remote inference only, ~475 MB, no local models.
-# Change to "runtime" for the full image with on-device AI.
+# Railway-specific Dockerfile: no cache mounts, no VOLUME declarations.
+dockerfilePath = "Dockerfile.railway"
 dockerTarget = "runtime-lite"
 
 [deploy]
