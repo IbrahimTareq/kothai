@@ -61,6 +61,21 @@ export function record(value: unknown): Record<string, unknown> {
   return value
 }
 
+// The same guard for a string field, for the same reason: assert.match's first
+// parameter is `string`, and a field read off a parsed body is `unknown`. Named
+// here rather than re-derived per file because import-route and remote-provider
+// both need it, and a second copy in a sibling file would be the first thing to
+// drift — the argument the header above already makes for the JSON guard.
+export function text(value: unknown): string {
+  if (typeof value !== 'string') throw new Error(`expected a string, got ${JSON.stringify(value)?.slice(0, 80)}`)
+  return value
+}
+
+export function texts(value: unknown): string[] {
+  if (!Array.isArray(value)) throw new Error(`expected an array, got ${JSON.stringify(value)?.slice(0, 80)}`)
+  return value.map((v: unknown) => text(v))
+}
+
 export function records(value: unknown): Record<string, unknown>[] {
   if (!Array.isArray(value)) throw new Error(`expected an array, got ${JSON.stringify(value)?.slice(0, 80)}`)
   return value.map((v: unknown, i) => {

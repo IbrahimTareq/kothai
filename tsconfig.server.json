@@ -34,5 +34,18 @@
     "skipLibCheck": true,
     "resolveJsonModule": true
   },
-  "include": ["server/**/*.ts", "test/server/**/*.ts", "test/helpers/**/*.ts", "scripts/**/*.ts", "docker/**/*.ts"]
+  // test/scripts/ is listed explicitly because it matches no other pattern:
+  // it is not under test/server/, and tsconfig.json covers only client and
+  // test/client. A renamed-but-unincluded test still RUNS, so the suite stays
+  // green while nothing typechecks it — the same silent gap tsconfig.json
+  // records for test/client, which reached 18 files and 54 errors before
+  // anyone noticed on 2026-09-17.
+  "include": [
+    "server/**/*.ts",
+    "test/server/**/*.ts",
+    "test/helpers/**/*.ts",
+    "test/scripts/**/*.ts",
+    "scripts/**/*.ts",
+    "docker/**/*.ts"
+  ]
 }
