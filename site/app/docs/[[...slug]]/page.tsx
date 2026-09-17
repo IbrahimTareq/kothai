@@ -7,8 +7,7 @@ import { source } from '@/lib/source'
 import { getMDXComponents } from '@/components/mdx'
 import { getPageMarkdownUrl } from '@/lib/shared'
 
-// Params are typed by hand rather than with Next's generated PageProps helper,
-// so this file does not depend on .next/types having been generated first.
+// Typed by hand so this file doesn't depend on .next/types being generated first.
 type Props = { params: Promise<{ slug?: string[] }> }
 
 export default async function Page(props: Props) {

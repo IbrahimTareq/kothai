@@ -8,10 +8,8 @@ import { z } from 'zod'
 const docs = defineDocs({
   dir: 'content/docs',
   docs: {
-    // lastModified is written into the mirrored frontmatter by lib/sync.ts,
-    // from `git log` on the *original* file under /docs. Fumadocs' own
-    // lastModified flag reads the mirror, which is gitignored and therefore has
-    // no history at all.
+    // lastModified comes from git log on the original file (see lib/sync.ts),
+    // not Fumadocs' built-in flag which would read the gitignored mirror.
     schema: frontmatterSchema.extend({
       lastModified: z.iso.datetime().optional(),
     }),
@@ -24,10 +22,6 @@ const docs = defineDocs({
 export const source = loader({
   baseUrl: '/docs',
   source: docs.toFumadocsSource(),
-  // Section icons come through meta.json as plain names, which is all JSON can
-  // carry. An unknown name is an error rather than a blank space: the names are
-  // written in lib/sync.ts, so a miss is a typo, and a typo that renders as
-  // nothing is one nobody notices.
   icon(name) {
     if (!name) return
     const Icon = (icons as unknown as Record<string, unknown>)[name]

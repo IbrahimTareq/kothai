@@ -1,18 +1,7 @@
 'use client'
 
-// The sky behind the hero: fractal-noise clouds drifting across a three-stop
-// colour ramp, drawn by a fragment shader over one full-screen quad.
-//
-// From ForgeUI (https://forgeui.dev/components/cloudscape), which is where both
-// shaders come from verbatim. This went Vue and back again when the site moved
-// off VitePress; the React shape here is the original's, minus its cn()/tailwind
-// -merge import, which bought nothing.
-//
-// Two deliberate departures from upstream. The colours are read inside the frame
-// loop rather than captured at init — the original tore down and rebuilt the
-// whole GL context whenever a prop changed — and on top of that they ease, so
-// the day/night switch crosses instead of snapping. CSS cannot do the easing:
-// these are shader uniforms, not styles, so there is no property to transition.
+// Fractal-noise cloud sky from ForgeUI (https://forgeui.dev/components/cloudscape).
+// Colours ease between values via shader uniforms instead of rebuilding the GL context.
 import { useEffect, useRef } from 'react'
 
 const vertexShaderGLSL = `
@@ -76,8 +65,6 @@ const fragmentShaderGLSL = `
   }
 `
 
-// Long enough to read as a sky changing rather than a light switch, short enough
-// that the page is not still settling when the reader looks up.
 const FADE_MS = 600
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -101,8 +88,7 @@ export function Cloudscape({ colorBottom, colorMid, colorTop, speed = 1, classNa
   const hostRef = useRef<HTMLDivElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
-  // Read through a ref so a colour change never re-runs the effect: rebuilding
-  // the GL context mid-fade is exactly what the easing exists to avoid.
+  // Read via ref so colour changes ease instead of triggering an effect re-run.
   const colors = useRef({ colorBottom, colorMid, colorTop, speed })
   colors.current = { colorBottom, colorMid, colorTop, speed }
 
@@ -120,8 +106,6 @@ export function Cloudscape({ colorBottom, colorMid, colorTop, speed = 1, classNa
       gl.shaderSource(shader, source)
       gl.compileShader(shader)
       if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        // Kept because the shaders above are edited by hand, and a compile
-        // failure is otherwise a silently blank canvas.
         console.error('Cloudscape shader compile error:', gl.getShaderInfoLog(shader))
         gl.deleteShader(shader)
         return null
@@ -158,8 +142,7 @@ export function Cloudscape({ colorBottom, colorMid, colorTop, speed = 1, classNa
     const uSpeed = gl.getUniformLocation(program, 'u_speed')
 
     const resize = () => {
-      // Capped at 2 because the shader is six octaves of noise per pixel, and a
-      // 3x display would quadruple that for no visible gain on a soft gradient.
+      // Cap at 2× DPR — six noise octaves per pixel, 3× would waste GPU for no visible gain.
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       const box = host.getBoundingClientRect()
       canvas.width = Math.max(1, Math.floor(box.width * dpr))
@@ -172,10 +155,7 @@ export function Cloudscape({ colorBottom, colorMid, colorTop, speed = 1, classNa
     const observer = new ResizeObserver(resize)
     observer.observe(host)
 
-    // The nine channels of the three stops, seeded from the props so the first
-    // frame is already settled — starting from zeroes would fade up from black
-    // on every page load. A change mid-fade restarts from wherever the colours
-    // currently are, so it never jumps back.
+    // Seed from props so the first frame is settled (not fading up from black).
     const next = new Float32Array(9)
     const from = new Float32Array(9)
     const target = new Float32Array(9)
@@ -207,10 +187,8 @@ export function Cloudscape({ colorBottom, colorMid, colorTop, speed = 1, classNa
         }
       }
 
-      // smoothstep, so the fade eases out of one sky and into the other instead
-      // of moving at full speed from the first frame.
       const t = Math.min(1, (now - fadeStart) / FADE_MS)
-      const eased = t * t * (3 - 2 * t)
+      const eased = t * t * (3 - 2 * t) // smoothstep
       for (let i = 0; i < 9; i++) current[i] = from[i] + (target[i] - from[i]) * eased
 
       gl.uniform1f(uTime, (now - start) / 1000)

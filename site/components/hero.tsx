@@ -8,17 +8,10 @@ import { GithubMark } from '@/components/github-mark'
 import { Cloudscape } from '@/components/cloudscape'
 import { REPO } from '@/lib/constants'
 
-// Two skies. The night set is picked so the dark palette's near-white ink clears
-// 6.8:1 against the lightest cloud band, which is the worst case — the base is
-// darker still. Do not lighten colorTop without re-checking that.
+// Do not lighten colorTop without rechecking contrast (currently 6.8:1).
 const DAY_SKY = { colorBottom: '#87ceeb', colorMid: '#f8f8f8', colorTop: '#ffffff' }
 const NIGHT_SKY = { colorBottom: '#0a1626', colorMid: '#16304f', colorTop: '#2b5580' }
 
-// White ground behind a slate hairline, and the ground stays white in both
-// appearances — which is why the label is a literal ink rather than a theme
-// token that inverts while the button underneath it does not. Hover barely moves
-// the ground: a near-white grey, not the blue, which on a blue sky would read as
-// a second accent instead of as a state.
 const BUTTON =
   'inline-flex items-center gap-2 rounded-lg border bg-white px-4 py-2 text-sm font-semibold ' +
   'text-[#292827] transition-colors duration-200'
@@ -28,8 +21,7 @@ export function Hero() {
   const { resolvedTheme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
-  // The server render has no theme, so anything keyed off it has to wait for the
-  // client or the markup mismatches on hydration.
+  // Wait for client to avoid hydration mismatch on theme-dependent elements.
   useEffect(() => setMounted(true), [])
   const dark = mounted && resolvedTheme === 'dark'
 
@@ -55,7 +47,6 @@ export function Hero() {
           Get started
         </Link>
 
-        {/* Hidden on small screens since it's disabled anyway */}
         <span className={`${BUTTON} hidden cursor-not-allowed border-slate-200 text-[#292827]/40 sm:inline-flex`} aria-disabled>
           <Play className="size-4" />
           Live Demo

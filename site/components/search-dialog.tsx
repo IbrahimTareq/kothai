@@ -15,8 +15,6 @@ import {
 import { useDocsSearch } from 'fumadocs-core/search/client'
 import { staticClient } from 'fumadocs-core/search/client/orama-static'
 
-// Static search dialog for static-exported sites. Downloads the search index
-// at first open and runs queries in the browser.
 export function StaticSearchDialog(props: SharedProps) {
   const { search, setSearch, query } = useDocsSearch({
     client: staticClient(),

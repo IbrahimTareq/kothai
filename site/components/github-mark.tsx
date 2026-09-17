@@ -1,8 +1,6 @@
 import type { SVGProps } from 'react'
 
-// Lucide dropped its brand icons in v1, so the only one the hero needs is
-// inlined. Same 24x24 stroke grid as the lucide glyphs beside it, so the three
-// buttons stay on one visual scale.
+// Inlined because Lucide dropped brand icons in v1.
 export function GithubMark(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
