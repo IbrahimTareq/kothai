@@ -1278,8 +1278,10 @@ test('bulk: a no-op re-import writes the Space row zero times', async () => {
 test('an imported note is stamped with no arrival time — nothing reads one', async () => {
   reset()
   const payload = savedPostsPayload([post('natgeo', 'AAA111', 1718000000)])
-  await handleImport(fakeReq({ name: 'saved_posts.json', data: b64(payload) }), fakeRes())
+  await handleImport(fakeReq({ name: 'saved_posts.json', data: b64(payload) }), mockRes().res)
 
   assert.equal(addNoteCalls.length, 1)
-  assert.equal('importedAt' in addNoteCalls[0].note, false)
+  const [first] = addNoteCalls
+  assert.ok(first, 'the importer must have added a note')
+  assert.equal('importedAt' in first.note, false)
 })
