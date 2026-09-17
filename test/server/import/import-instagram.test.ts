@@ -28,11 +28,20 @@ const COLLECTIONS = JSON.stringify({
   saved_saved_collections: [{ title: 'Recipes', list: [{ href: 'https://www.instagram.com/reel/DEF456/' }] }],
 })
 
-function files(entries) {
-  return new Map(Object.entries(entries).map(([k, v]) => [k, Buffer.from(v)]))
+function files(entries: Record<string, string>): Map<string, Buffer> {
+  return new Map(Object.entries(entries).map(([k, v]): [string, Buffer] => [k, Buffer.from(v)]))
 }
 
-function savedPostsJson(count, prefix) {
+// parseCollections answers `Set<string> | undefined`; every lookup below is
+// for a collection the `map.keys()` assertion beside it just proved is there,
+// so the absent half is a failure to report, not a case to branch on.
+function urlsIn(map: Map<string, Set<string>>, name: string): Set<string> {
+  const set = map.get(name)
+  assert.ok(set, `no collection named ${name}`)
+  return set
+}
+
+function savedPostsJson(count: number, prefix: string) {
   const rows = []
   for (let i = 0; i < count; i++) {
     rows.push({
@@ -60,7 +69,7 @@ test('parseSavedPosts: extracts url/poster/savedAt, skips entries without href',
 // member URLs — instead of joining collection names onto each item. The route
 // resolves those URLs against its canonical-url index, which is what makes a
 // collections file importable on its own, after its posts are already saved.
-function collectionsOf(result, url) {
+function collectionsOf(result: ReturnType<typeof parse>, url: string) {
   return result.collections
     .filter(c => c.urls.includes(url))
     .map(c => c.name)
@@ -70,7 +79,7 @@ function collectionsOf(result, url) {
 test('parseCollections: deep-walks name + href groupings; unknown shapes yield empty map', () => {
   const map = parseCollections(JSON.parse(COLLECTIONS))
   assert.deepEqual([...map.keys()], ['Recipes'])
-  assert.ok(map.get('Recipes').has('https://www.instagram.com/reel/DEF456/'))
+  assert.ok(urlsIn(map, 'Recipes').has('https://www.instagram.com/reel/DEF456/'))
   assert.equal(parseCollections({ totally: 'different' }).size, 0)
 })
 
@@ -99,30 +108,20 @@ test('parse: a collections file on its own still yields its memberships, with no
 })
 
 test('deriveNote: reel → video, post → link, preserved timestamp, instagram tag', () => {
-  const reel = deriveNote({
-    url: 'https://www.instagram.com/reel/DEF456/',
-    poster: 'chefsteps',
-    savedAt: 1721001600,
-    collections: [],
-  })
+  const reel = deriveNote({ url: 'https://www.instagram.com/reel/DEF456/', poster: 'chefsteps', savedAt: 1721001600 })
   assert.equal(reel.type, 'video')
   assert.equal(reel.title, '@chefsteps · Reel')
   assert.equal(reel.createdAt, new Date(1721001600 * 1000).toISOString())
   assert.deepEqual(reel.tags, ['instagram'])
   assert.equal(reel.url, reel.content) // enrich pipeline reads content as text
-  const post = deriveNote({ url: 'https://www.instagram.com/p/ABC123/', poster: 'natgeo', savedAt: 0, collections: [] })
+  const post = deriveNote({ url: 'https://www.instagram.com/p/ABC123/', poster: 'natgeo', savedAt: 0 })
   assert.equal(post.type, 'link')
   assert.equal(post.title, '@natgeo · Post')
   assert.ok(post.createdAt) // savedAt 0/missing falls back to now
 })
 
 test('deriveNote: types by URL pathname only, ignoring query strings', () => {
-  const note = deriveNote({
-    url: 'https://www.instagram.com/p/ABC/?ref=/tv/',
-    poster: 'x',
-    savedAt: 1,
-    collections: [],
-  })
+  const note = deriveNote({ url: 'https://www.instagram.com/p/ABC/?ref=/tv/', poster: 'x', savedAt: 1 })
   assert.equal(note.type, 'link')
 })
 
@@ -180,7 +179,7 @@ test('parseSavedPosts: normalizes whitespace in poster names before clipping (th
 })
 
 test('parseCollections: a maliciously deep-nested JS structure does not blow the stack, degrades to no collection found', () => {
-  let node = [{ href: 'https://www.instagram.com/reel/DEEP/' }]
+  let node: unknown = [{ href: 'https://www.instagram.com/reel/DEEP/' }]
   for (let i = 0; i < 100_000; i++) node = [node]
   const json = { saved_saved_collections: [{ title: 'Deep', list: node }] }
   assert.doesNotThrow(() => parseCollections(json))
@@ -197,7 +196,7 @@ test('parse: a deep-nested collections export (driven through the Buffer boundar
   // our own MAX_WALK_DEPTH (64) while staying safely inside stringify's own
   // limit — this exercises tryJson()/Buffer parsing, not just the in-memory
   // walk.
-  let node = [{ href: 'https://www.instagram.com/reel/DEEP/' }]
+  let node: unknown = [{ href: 'https://www.instagram.com/reel/DEEP/' }]
   for (let i = 0; i < 2000; i++) node = [node]
   const deepJson = JSON.stringify({ saved_saved_collections: [{ title: 'Deep', list: node }] })
   const result = parse(files({ 'your_instagram_activity/saved/saved_collections.json': deepJson }))
@@ -229,9 +228,14 @@ test('parseSavedPosts: normalizes millisecond timestamps and rejects out-of-rang
     ],
   }
   const items = parseSavedPosts(json)
-  assert.equal(items.find(i => i.poster === 'ms').savedAt, 1721001600) // normalized down to seconds, not left as 1721001600000
-  assert.equal(items.find(i => i.poster === 'huge').savedAt, 0) // Infinity degrades to "no timestamp"
-  assert.equal(items.find(i => i.poster === 'future').savedAt, 0)
+  const posted = (poster: string) => {
+    const hit = items.find(i => i.poster === poster)
+    assert.ok(hit, `no item parsed for poster ${poster}`)
+    return hit
+  }
+  assert.equal(posted('ms').savedAt, 1721001600) // normalized down to seconds, not left as 1721001600000
+  assert.equal(posted('huge').savedAt, 0) // Infinity degrades to "no timestamp"
+  assert.equal(posted('future').savedAt, 0)
   // deriveNote must never throw regardless of what savedAt ends up being.
   for (const item of items) assert.doesNotThrow(() => deriveNote(item).createdAt)
 })
@@ -298,9 +302,9 @@ test('parseCollections: nested collections are not lumped into their wrapper', (
   }
   const map = parseCollections(json)
   assert.deepEqual([...map.keys()].sort(), ['Recipes', 'Travel'])
-  assert.ok(map.get('Recipes').has('https://www.instagram.com/reel/R/'))
-  assert.ok(map.get('Travel').has('https://www.instagram.com/p/T/'))
-  assert.ok(!map.get('Recipes').has('https://www.instagram.com/p/T/'))
+  assert.ok(urlsIn(map, 'Recipes').has('https://www.instagram.com/reel/R/'))
+  assert.ok(urlsIn(map, 'Travel').has('https://www.instagram.com/p/T/'))
+  assert.ok(!urlsIn(map, 'Recipes').has('https://www.instagram.com/p/T/'))
   assert.equal(map.has('Saved'), false) // the wrapper itself owns no direct hrefs
 })
 
@@ -362,8 +366,8 @@ test('parseCollections: titled href-bearing leaves are not stolen as their own c
   }
   const map = parseCollections(json)
   assert.deepEqual([...map.keys()], ['Recipes'])
-  assert.ok(map.get('Recipes').has('https://www.instagram.com/p/A/'))
-  assert.ok(map.get('Recipes').has('https://www.instagram.com/p/B/'))
+  assert.ok(urlsIn(map, 'Recipes').has('https://www.instagram.com/p/A/'))
+  assert.ok(urlsIn(map, 'Recipes').has('https://www.instagram.com/p/B/'))
   assert.equal(map.has('natgeo'), false)
   assert.equal(map.has('chefsteps'), false)
 })
@@ -389,10 +393,8 @@ test('deriveNote: is total even for an absurdly large finite savedAt (1e300) tha
   // new Date(1e300 * 1000).toISOString() throws RangeError — anything past
   // ~8.64e12 seconds is outside Date's representable range, and 1e300 is
   // finite so a bare Number.isFinite guard would let it through.
-  assert.doesNotThrow(() =>
-    deriveNote({ url: 'https://www.instagram.com/p/X/', poster: 'x', savedAt: 1e300, collections: [] }),
-  )
-  const note = deriveNote({ url: 'https://www.instagram.com/p/X/', poster: 'x', savedAt: 1e300, collections: [] })
+  assert.doesNotThrow(() => deriveNote({ url: 'https://www.instagram.com/p/X/', poster: 'x', savedAt: 1e300 }))
+  const note = deriveNote({ url: 'https://www.instagram.com/p/X/', poster: 'x', savedAt: 1e300 })
   assert.ok(note.createdAt) // falls back to "now" rather than an Invalid Date
 })
 
@@ -554,7 +556,7 @@ test('parseCollections: recognizes the newer label_values Name shape for a colle
     { label_values: [{ label: 'Name', value: 'Recipes' }], list: [{ href: 'https://www.instagram.com/reel/DEF456/' }] },
   ])
   assert.deepEqual([...map.keys()], ['Recipes'])
-  assert.ok(map.get('Recipes').has('https://www.instagram.com/reel/DEF456/'))
+  assert.ok(urlsIn(map, 'Recipes').has('https://www.instagram.com/reel/DEF456/'))
 })
 
 // Real newer-shape saved_collections.json: a top-level array of rows whose
@@ -635,11 +637,11 @@ const COLLECTIONS_LABEL_VALUES = JSON.stringify([
 test('parseCollections: newer array shape keeps each collection separate instead of collapsing into "Media"', () => {
   const map = parseCollections(JSON.parse(COLLECTIONS_LABEL_VALUES))
   assert.deepEqual([...map.keys()].sort(), ['Filming Style', 'Recipes'])
-  assert.deepEqual([...map.get('Filming Style')].sort(), [
+  assert.deepEqual([...urlsIn(map, 'Filming Style')].sort(), [
     'https://www.instagram.com/p/BBB/',
     'https://www.instagram.com/reel/AAA/',
   ])
-  assert.deepEqual([...map.get('Recipes')], ['https://www.instagram.com/reel/CCC/'])
+  assert.deepEqual([...urlsIn(map, 'Recipes')], ['https://www.instagram.com/reel/CCC/'])
   // "Media"/"Hashtags"/"Owner" are structural wrappers in this shape, never collections.
   assert.equal(map.has('Media'), false)
   assert.equal(map.has('Hashtags'), false)
@@ -668,7 +670,7 @@ test('parse: newer-shape posts and collections join up end to end', () => {
 })
 
 test('parseSavedPosts: a maliciously deep-nested dict in the newer shape does not blow the stack', () => {
-  let node = { dict: [{ label: 'Username', value: 'deep' }] }
+  let node: unknown = { dict: [{ label: 'Username', value: 'deep' }] }
   for (let i = 0; i < 100_000; i++) node = { dict: [node] }
   const rows = [{ timestamp: 1, label_values: [{ label: 'URL', href: 'https://www.instagram.com/p/DEEP/' }, node] }]
   assert.doesNotThrow(() => parseSavedPosts(rows))
@@ -689,12 +691,12 @@ test('parse: a caption that merely starts with a URL is not reported as an unusa
 })
 
 test('deriveNote: persists the poster username as a first-class `account` field', () => {
-  const note = deriveNote({ url: 'https://www.instagram.com/p/ABC123/', poster: 'natgeo', savedAt: 0, collections: [] })
+  const note = deriveNote({ url: 'https://www.instagram.com/p/ABC123/', poster: 'natgeo', savedAt: 0 })
   assert.equal(note.account, 'natgeo')
 })
 
 test('deriveNote: no poster means no account (not the "instagram" title fallback)', () => {
-  const note = deriveNote({ url: 'https://www.instagram.com/p/ABC123/', poster: '', savedAt: 0, collections: [] })
+  const note = deriveNote({ url: 'https://www.instagram.com/p/ABC123/', poster: '', savedAt: 0 })
   assert.equal(note.account, null)
   assert.equal(note.title, '@instagram · Post') // title fallback is unchanged
 })

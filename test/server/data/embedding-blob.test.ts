@@ -13,17 +13,56 @@ import { encodeEmbedding, decodeEmbedding } from '../../../server/data/notes.ts'
 import { cosine } from '../../../server/data/embedding.ts'
 import { getDb } from '../../../server/data/db.ts'
 import { deriveAiMarkers } from '../../../server/ai/backlog.ts'
+import type { SQLOutputValue } from 'node:sqlite'
 
-const vec = n => Array.from({ length: n }, (_, i) => Math.sin(i))
+const vec = (n: number) => Array.from({ length: n }, (_, i) => Math.sin(i))
 // float32 keeps ~7 significant digits; cosine similarity does not care, but
 // the tests should not pretend the round trip is exact.
-const closeTo = (a, b, eps = 1e-6) => Math.abs(a - b) < eps
+const closeTo = (a: number, b: number, eps = 1e-6) => Math.abs(a - b) < eps
+
+// node:sqlite types every column as SQLOutputValue and every get() as possibly
+// undefined, because the connection carries no knowledge of the CREATE TABLE —
+// see the rowData/rowEmbedding pair in notes.ts for the same problem on the
+// production side. These three are where a raw row meets what this file knows
+// about the two columns it reads; a row that is not there, or a column holding
+// something other than what insertRow wrote, is a failure worth naming rather
+// than a case to branch on.
+type Row = Record<string, SQLOutputValue> | undefined
+
+function dataOf(row: Row): string {
+  assert.ok(row, 'expected a notes row')
+  const data = row.data
+  assert.ok(typeof data === 'string', 'the data column holds JSON text')
+  return data
+}
+
+function blobOf(row: Row): Uint8Array | null {
+  assert.ok(row, 'expected a notes row')
+  const blob = row.embedding
+  assert.ok(blob === null || blob instanceof Uint8Array, 'the embedding column holds bytes or NULL')
+  return blob
+}
+
+function bytesOf(row: Row): Uint8Array {
+  const blob = blobOf(row)
+  assert.ok(blob, 'expected the embedding column to hold bytes, not NULL')
+  return blob
+}
+
+// decodeEmbedding correctly answers `Float32Array | null` — NULL and an empty
+// blob are real cases it has its own tests for. Where a vector was just
+// written, the null half is a failure, not an outcome.
+function decoded(blob: Uint8Array | null): Float32Array {
+  const back = decodeEmbedding(blob)
+  assert.ok(back, 'expected a decodable vector')
+  return back
+}
 
 // ---- the codec ----------------------------------------------------------
 
 test('encode/decode round-trips a vector within float32 precision', () => {
   const original = vec(8)
-  const back = decodeEmbedding(encodeEmbedding(original))
+  const back = decoded(encodeEmbedding(original))
   assert.equal(back.length, 8)
   for (let i = 0; i < original.length; i++) {
     assert.ok(closeTo(back[i], original[i]), `component ${i}: ${back[i]} vs ${original[i]}`)
@@ -31,7 +70,9 @@ test('encode/decode round-trips a vector within float32 precision', () => {
 })
 
 test('encode produces exactly 4 bytes per dimension — the whole point of the change', () => {
-  assert.equal(encodeEmbedding(vec(1024)).byteLength, 4096)
+  const bytes = encodeEmbedding(vec(1024))
+  assert.ok(bytes)
+  assert.equal(bytes.byteLength, 4096)
 })
 
 test('encode returns null for the absent cases, so the column holds NULL rather than an empty blob', () => {
@@ -50,12 +91,14 @@ test('decode copies rather than viewing, so a blob at a non-multiple-of-4 offset
   // node:sqlite hands back a Uint8Array that may be a view into a larger
   // buffer at an arbitrary offset. Constructing a Float32Array directly over
   // an unaligned offset throws, so the decoder has to copy.
-  const bytes = new Uint8Array(encodeEmbedding([1, 2, 3, 4]))
+  const encoded = encodeEmbedding([1, 2, 3, 4])
+  assert.ok(encoded)
+  const bytes = new Uint8Array(encoded)
   const backing = new Uint8Array(bytes.byteLength + 1)
   backing.set(bytes, 1)
   const unaligned = backing.subarray(1)
   assert.equal(unaligned.byteOffset, 1)
-  assert.deepEqual([...decodeEmbedding(unaligned)], [1, 2, 3, 4])
+  assert.deepEqual([...decoded(unaligned)], [1, 2, 3, 4])
 })
 
 // ---- persistence --------------------------------------------------------
@@ -65,18 +108,18 @@ test('a saved note keeps its embedding in the BLOB column and out of the JSON', 
   const { id } = await store.addNote({ type: 'text', content: 'hello', embedding: vec(16) })
   const db = await getDb()
   const row = db.prepare('SELECT data, embedding FROM notes WHERE id = ?').get(id)
-  assert.equal(row.embedding.byteLength, 64, '16 dims × 4 bytes')
-  assert.ok(!('embedding' in JSON.parse(row.data)), 'the JSON must no longer carry the vector')
-  assert.equal(JSON.parse(row.data).content, 'hello', 'every other field still round-trips')
+  assert.equal(bytesOf(row).byteLength, 64, '16 dims × 4 bytes')
+  assert.ok(!('embedding' in JSON.parse(dataOf(row))), 'the JSON must no longer carry the vector')
+  assert.equal(JSON.parse(dataOf(row)).content, 'hello', 'every other field still round-trips')
 })
 
 test('an embedding added later by enrichment lands in the BLOB column too', async () => {
   store._reset()
   const { id } = await store.addNote({ type: 'text', content: 'hi' })
   const db = await getDb()
-  assert.equal(db.prepare('SELECT embedding FROM notes WHERE id = ?').get(id).embedding, null)
+  assert.equal(blobOf(db.prepare('SELECT embedding FROM notes WHERE id = ?').get(id)), null)
   await store.updateNote(id, { embedding: vec(16) })
-  assert.equal(db.prepare('SELECT embedding FROM notes WHERE id = ?').get(id).embedding.byteLength, 64)
+  assert.equal(bytesOf(db.prepare('SELECT embedding FROM notes WHERE id = ?').get(id)).byteLength, 64)
 })
 
 test('a reload rehydrates embeddings from the blob and search can use them', async () => {
@@ -108,8 +151,8 @@ test('a legacy row with the vector inside its JSON is migrated into the blob col
   await store.load()
 
   const row = db.prepare('SELECT data, embedding FROM notes WHERE id = ?').get('old')
-  assert.equal(row.embedding.byteLength, 64, 'moved into the blob')
-  assert.ok(!('embedding' in JSON.parse(row.data)), 'and out of the JSON')
+  assert.equal(bytesOf(row).byteLength, 64, 'moved into the blob')
+  assert.ok(!('embedding' in JSON.parse(dataOf(row))), 'and out of the JSON')
   // The in-memory copy has to be usable immediately, not only after a restart.
   assert.ok(store.search(legacy, 1)[0].score > 0.999)
 })
@@ -127,8 +170,8 @@ test('migration is idempotent — a second load rewrites nothing', async () => {
   store._reset({ loaded: false, keepDb: true })
   await store.load()
   const second = db.prepare('SELECT data, embedding FROM notes WHERE id = ?').get('old')
-  assert.equal(second.data, first.data)
-  assert.deepEqual([...second.embedding], [...first.embedding])
+  assert.equal(dataOf(second), dataOf(first))
+  assert.deepEqual([...bytesOf(second)], [...bytesOf(first)])
 })
 
 test('a legacy row with no embedding at all is left alone', async () => {
@@ -140,7 +183,7 @@ test('a legacy row with no embedding at all is left alone', async () => {
   )
   await store.load()
   const row = db.prepare('SELECT embedding FROM notes WHERE id = ?').get('bare')
-  assert.equal(row.embedding, null)
+  assert.equal(blobOf(row), null)
 })
 
 // ---- the type change's blast radius -------------------------------------
@@ -181,8 +224,8 @@ test('an update that does not name the embedding leaves the blob column untouche
   await store.updateNote(id, { summary: 'changed' })
 
   const row = db.prepare('SELECT data, embedding FROM notes WHERE id = ?').get(id)
-  assert.deepEqual([...decodeEmbedding(row.embedding)], [9, 9, 9, 9], 'column not rewritten')
-  assert.equal(JSON.parse(row.data).summary, 'changed', 'the rest of the row still updated')
+  assert.deepEqual([...decoded(blobOf(row))], [9, 9, 9, 9], 'column not rewritten')
+  assert.equal(JSON.parse(dataOf(row)).summary, 'changed', 'the rest of the row still updated')
 })
 
 test('an update that does name the embedding writes it', async () => {
@@ -190,7 +233,7 @@ test('an update that does name the embedding writes it', async () => {
   const { id } = await store.addNote({ type: 'text', content: 'a' })
   await store.updateNote(id, { embedding: vec(8) })
   const db = await getDb()
-  assert.equal(db.prepare('SELECT embedding FROM notes WHERE id = ?').get(id).embedding.byteLength, 32)
+  assert.equal(bytesOf(db.prepare('SELECT embedding FROM notes WHERE id = ?').get(id)).byteLength, 32)
 })
 
 test('the same rule holds for batched { persist: false } writes', async () => {
@@ -202,10 +245,7 @@ test('the same rule holds for batched { persist: false } writes', async () => {
   db.prepare('UPDATE notes SET embedding = ? WHERE id = ?').run(encodeEmbedding([9, 9, 9, 9]), id)
   await store.updateNote(id, { summary: 'batched' }, { persist: false })
   await store.flush()
-  assert.deepEqual(
-    [...decodeEmbedding(db.prepare('SELECT embedding FROM notes WHERE id = ?').get(id).embedding)],
-    [9, 9, 9, 9],
-  )
+  assert.deepEqual([...decoded(blobOf(db.prepare('SELECT embedding FROM notes WHERE id = ?').get(id)))], [9, 9, 9, 9])
 })
 
 // cosine lives beside the codec in embedding.js. notes.js and tagvocab.js each

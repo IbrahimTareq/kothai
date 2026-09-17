@@ -3,25 +3,31 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { textSearch, queryTerms } from '../../../server/data/notes.ts'
+import type { NoteRecord } from '../../../server/data/notes.ts'
+import { note } from '../../helpers/notes.ts'
 
-const NOTES = [
-  {
+const NOTES: NoteRecord[] = [
+  note({
     id: 'a',
     title: 'Sourdough starter guide',
     summary: 'baking bread at home',
-    content: '',
     tags: ['baking', 'bread'],
     embedding: [1],
-  },
-  {
+  }),
+  note({
     id: 'b',
     title: 'React hooks',
-    summary: '',
     content: 'useEffect cleanup patterns',
     tags: ['react'],
     embedding: null,
-  },
-  { id: 'c', title: 'Trip to Kyoto', summary: 'travel notes', content: 'temples and food', tags: ['travel', 'japan'] },
+  }),
+  note({
+    id: 'c',
+    title: 'Trip to Kyoto',
+    summary: 'travel notes',
+    content: 'temples and food',
+    tags: ['travel', 'japan'],
+  }),
 ]
 
 test('matches across title, tags, summary and content', () => {
@@ -51,29 +57,32 @@ test('respects k and strips embeddings', () => {
 })
 
 test('link/video notes are findable via siteTitle/siteDesc when title/content are just heuristic placeholders', () => {
-  const linkNotes = [
-    {
+  const linkNotes: NoteRecord[] = [
+    note({
       id: 'd',
       title: 'https://example.com/foo',
       content: 'https://example.com/foo',
-      tags: [],
       siteTitle: 'Understanding Quantum Entanglement',
       siteDesc: 'A beginner-friendly explainer on entangled particles',
-    },
+    }),
   ]
   assert.equal(textSearch('entanglement', 6, linkNotes)[0].id, 'd')
   assert.equal(textSearch('quantum', 6, linkNotes)[0].id, 'd')
 })
 
 test('link notes are findable by article body text alone', () => {
-  const withArticle = [
+  // `article` lives on NoteRecord rather than ServerNote — it is written by
+  // enrich and never crosses the wire — so it is spread on rather than passed
+  // to note().
+  const withArticle: NoteRecord[] = [
     {
-      id: 'e',
-      title: 'https://example.com/bread',
-      content: 'https://example.com/bread',
-      tags: [],
-      siteTitle: 'A Baking Post',
-      siteDesc: 'Some thoughts on baking',
+      ...note({
+        id: 'e',
+        title: 'https://example.com/bread',
+        content: 'https://example.com/bread',
+        siteTitle: 'A Baking Post',
+        siteDesc: 'Some thoughts on baking',
+      }),
       article: 'Autolyse is the resting period after flour and water are first combined.',
     },
   ]
@@ -83,14 +92,15 @@ test('link notes are findable by article body text alone', () => {
 })
 
 test('video notes are findable by their thumbnail vision description alone', () => {
-  const reel = [
+  const reel: NoteRecord[] = [
     {
-      id: 'f',
-      title: 'Brown butter pasta',
-      content: 'https://www.instagram.com/reel/ABC/',
-      url: 'https://www.instagram.com/reel/ABC/',
-      tags: [],
-      siteDesc: 'chefsteps Three ingredients and ten minutes.',
+      ...note({
+        id: 'f',
+        title: 'Brown butter pasta',
+        content: 'https://www.instagram.com/reel/ABC/',
+        url: 'https://www.instagram.com/reel/ABC/',
+        siteDesc: 'chefsteps Three ingredients and ten minutes.',
+      }),
       thumbDescription: 'A skillet on a wooden board, overlay text reads BEST PASTA EVER.',
     },
   ]
@@ -111,7 +121,7 @@ test('video notes are findable by their thumbnail vision description alone', () 
 // discriminating term sat below 1%.
 
 test("stopwords are dropped, so a question's scaffolding cannot match the whole library", () => {
-  const notes = [{ id: 'a', title: 'The quick brown fox and the dog', content: '', tags: [] }]
+  const notes = [note({ id: 'a', title: 'The quick brown fox and the dog' })]
   // Every term here is scaffolding: nothing is actually being asked about.
   assert.deepEqual(textSearch('what did I save about the and', 6, notes), [])
   // The same note is still found by its content words.
@@ -121,7 +131,7 @@ test("stopwords are dropped, so a question's scaffolding cannot match the whole 
 test('a term present in most of the library is dropped whatever language it is in', () => {
   // No stopword list can cover every language the captions are in, so the
   // frequency cutoff is what actually generalises.
-  const notes = Array.from({ length: 20 }, (_, i) => ({ id: `n${i}`, title: `الصور ${i}`, content: '', tags: [] }))
+  const notes = Array.from({ length: 20 }, (_, i) => note({ id: `n${i}`, title: `الصور ${i}` }))
   notes[0].title = 'الصور ramadan'
   assert.equal(textSearch('الصور ramadan', 6, notes)[0].id, 'n0')
   // 'الصور' is in 100% of them, so only 'ramadan' does any work.
@@ -129,20 +139,17 @@ test('a term present in most of the library is dropped whatever language it is i
 })
 
 test('terms match at a word start, so a rare query word cannot hide inside a longer one', () => {
-  const notes = [{ id: 'a', title: 'underground wonderful thunder', content: '', tags: [] }]
+  const notes = [note({ id: 'a', title: 'underground wonderful thunder' })]
   // "derg" inside "underground" was how an out-of-library question kept
   // finding matches for its most discriminating word.
   assert.deepEqual(textSearch('derg', 6, notes), [])
   // Stem and plural matches, which make this retriever useful, still work.
-  const plural = [{ id: 'b', title: 'game controllers', content: '', tags: [] }]
+  const plural = [note({ id: 'b', title: 'game controllers' })]
   assert.equal(textSearch('controller', 6, plural)[0].id, 'b')
 })
 
 test('a long query must hit at least two terms; a short one still needs only one', () => {
-  const notes = [
-    { id: 'a', title: 'lattice screen in a living room', content: '', tags: [] },
-    { id: 'b', title: 'unrelated', content: '', tags: [] },
-  ]
+  const notes = [note({ id: 'a', title: 'lattice screen in a living room' }), note({ id: 'b', title: 'unrelated' })]
   // Five content terms, one incidental match — a coincidence, not an answer.
   assert.deepEqual(textSearch('quantum chromodynamics lattice gauge theory', 6, notes), [])
   // Two terms asked as a conjunction would be a phrase search nobody wanted.
@@ -163,6 +170,6 @@ test('a term that is merely common IN THIS LIBRARY still counts when nothing els
   // Unlike a stopword, it is genuinely what was asked about — dropping every
   // term of a question about the library's dominant subject would make that
   // question unanswerable.
-  const allPasta = Array.from({ length: 30 }, (_, i) => ({ id: `n${i}`, title: `pasta ${i}`, content: '', tags: [] }))
+  const allPasta = Array.from({ length: 30 }, (_, i) => note({ id: `n${i}`, title: `pasta ${i}` }))
   assert.equal(textSearch('pasta', 6, allPasta).length, 6)
 })

@@ -3,20 +3,29 @@
 import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import * as chats from '../../../server/data/chats.ts'
+import { note } from '../../helpers/notes.ts'
 
 beforeEach(() => chats._reset())
 
-async function seed(turns) {
-  let id = null
+async function seed(turns: [string, string][]) {
+  let id: string | null = null
   for (const [q, a] of turns) {
-    const chat = await chats.appendExchange(
-      id,
-      { role: 'user', text: q },
-      { role: 'ai', text: a, sources: [{ id: 'n1' }] },
-    )
+    const chat = await chats.appendExchange(id, { role: 'user', text: q }, { role: 'ai', text: a, sources: [note()] })
     id = chat.id
   }
+  // Every caller seeds at least one turn and then uses the id as a string. A
+  // null here means the fixture was called with no turns, which is a bug in
+  // the test rather than a case worth branching on at each call site.
+  assert.ok(id)
   return id
+}
+
+// Same reasoning for get(), which answers `Chat | null`: every id below came
+// out of seed() moments earlier.
+function chatOf(id: string) {
+  const chat = chats.get(id)
+  assert.ok(chat, `no chat found for ${id}`)
+  return chat
 }
 
 test('returns the last N exchanges in order, oldest first', async () => {
@@ -59,24 +68,26 @@ test('a chat shorter than the window returns everything it has', async () => {
 
 test('rename replaces the derived title and bumps updatedAt', async () => {
   const id = await seed([['what did I save about coffee?', 'a1']])
-  const before = chats.get(id).updatedAt
+  const before = chatOf(id).updatedAt
   await new Promise(r => setTimeout(r, 2))
   const out = await chats.rename(id, '  Coffee gear  ')
+  assert.ok(out)
   assert.equal(out.title, 'Coffee gear', 'the title is trimmed')
-  assert.equal(chats.get(id).title, 'Coffee gear')
-  assert.ok(chats.get(id).updatedAt >= before)
+  assert.equal(chatOf(id).title, 'Coffee gear')
+  assert.ok(chatOf(id).updatedAt >= before)
 })
 
 test('rename refuses an empty or whitespace-only title', async () => {
   const id = await seed([['q1', 'a1']])
   assert.equal(await chats.rename(id, '   '), null)
   assert.equal(await chats.rename(id, ''), null)
-  assert.equal(chats.get(id).title, 'q1', 'the original title survives a rejected rename')
+  assert.equal(chatOf(id).title, 'q1', 'the original title survives a rejected rename')
 })
 
 test('rename caps the title at the same length as a derived one', async () => {
   const id = await seed([['q1', 'a1']])
   const out = await chats.rename(id, 'x'.repeat(200))
+  assert.ok(out)
   assert.equal(out.title.length, 80)
 })
 

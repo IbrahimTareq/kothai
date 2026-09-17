@@ -3,15 +3,22 @@
 // sources arrive before any prose (the cards render while the answer is still
 // being written), the deltas reconstruct the answer exactly, and `done` carries
 // the chat id the client needs for follow-up questions.
-import { test, mock, before, after, beforeEach } from 'node:test'
+import { test, mock, after, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
+import type { AnswerStreamArgs } from '../../../server/ai/providers/types.ts'
+import { jsonBody, listenOnLoopback, record } from '../../helpers/http.ts'
 
 const SOURCES = [{ id: 'n1', title: 'A note', summary: 'About coffee.' }]
 const ANSWER = 'You saved a note about coffee [1].'
+// The default streaming behaviour's chunks. Hoisted because String.match
+// answers `string[] | null`, and a null degraded into an empty list would turn
+// every "the answer arrives in more than one piece" assertion into a no-op.
+const CHUNKS = ANSWER.match(/[\s\S]{1,6}/g)
+assert.ok(CHUNKS)
 
 // What the mocked provider does on the next call. Reassigned per test.
-let answerBehaviour = null
+let answerBehaviour: (args: AnswerStreamArgs) => Promise<string>
 
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
@@ -21,7 +28,7 @@ mock.module('../../../server/ai/index.ts', {
     }),
     embedText: async () => [0.1, 0.2],
     answer: async () => ANSWER,
-    answerStream: args => answerBehaviour(args),
+    answerStream: (args: AnswerStreamArgs) => answerBehaviour(args),
     describeImage: async () => 'an image',
   },
 })
@@ -36,45 +43,46 @@ mock.module('../../../server/data/notes.ts', {
   },
 })
 
-let server, base, handleAsk, chats
+// Imported at module scope, not inside before(): the mocks above are already
+// installed by the time this line runs, and a module bound in a hook is
+// `T | undefined` for the rest of the file.
+const { handleAsk } = await import('../../../server/routes/ask.ts')
+const chats = await import('../../../server/data/chats.ts')
 
-before(async () => {
-  ;({ handleAsk } = await import('../../../server/routes/ask.ts'))
-  chats = await import('../../../server/data/chats.ts')
-  server = createServer((req, res) => {
-    handleAsk(req, res).catch(() => {
-      if (!res.writableEnded) res.end()
-    })
+const server = createServer((req, res) => {
+  handleAsk(req, res).catch(() => {
+    if (!res.writableEnded) res.end()
   })
-  await new Promise(r => server.listen(0, r))
-  base = `http://127.0.0.1:${server.address().port}/api/ask`
 })
+const base = `http://127.0.0.1:${await listenOnLoopback(server)}/api/ask`
 after(async () => {
-  await new Promise(r => server.close(r))
+  await new Promise<void>(r => {
+    server.close(() => r())
+  })
 })
 
 beforeEach(() => {
   chats._reset()
   answerBehaviour = async ({ onToken }) => {
-    for (const chunk of ANSWER.match(/[\s\S]{1,6}/g)) onToken?.(chunk)
+    for (const chunk of CHUNKS) onToken?.(chunk)
     return ANSWER
   }
 })
 
 // Minimal SSE reader: returns the frames in arrival order.
-async function askStream(body, init = {}) {
+async function askStream(body: Record<string, unknown>, init: RequestInit = {}) {
   const r = await fetch(base, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
     body: JSON.stringify(body),
     ...init,
   })
-  const frames = []
+  const frames: { event: string; data: Record<string, unknown> }[] = []
   const text = await r.text()
   for (const frame of text.split('\n\n')) {
     const event = /^event: (.*)$/m.exec(frame)?.[1]
     const data = /^data: (.*)$/m.exec(frame)?.[1]
-    if (event && data != null) frames.push({ event, data: JSON.parse(data) })
+    if (event && data != null) frames.push({ event, data: record(JSON.parse(data)) })
   }
   return { res: r, frames }
 }
@@ -82,7 +90,9 @@ async function askStream(body, init = {}) {
 test('streams sources, then deltas, then done', async () => {
   const { res, frames } = await askStream({ question: 'what about coffee?' })
   assert.equal(res.status, 200)
-  assert.match(res.headers.get('content-type'), /text\/event-stream/)
+  const contentType = res.headers.get('content-type')
+  assert.ok(typeof contentType === 'string')
+  assert.match(contentType, /text\/event-stream/)
   assert.equal(res.headers.get('cache-control'), 'no-cache, no-transform')
 
   assert.equal(frames[0].event, 'sources', 'sources must lead so the cards can render first')
@@ -97,8 +107,9 @@ test('streams sources, then deltas, then done', async () => {
 test('done carries a chat id that the exchange was recorded under', async () => {
   const { frames } = await askStream({ question: 'what about coffee?' })
   const id = frames[frames.length - 1].data.chatId
-  assert.ok(id)
+  assert.ok(typeof id === 'string')
   const chat = chats.get(id)
+  assert.ok(chat)
   assert.equal(chat.messages.length, 2)
   assert.equal(chat.messages[0].text, 'what about coffee?')
   assert.equal(chat.messages[1].text, ANSWER)
@@ -107,9 +118,12 @@ test('done carries a chat id that the exchange was recorded under', async () => 
 test('a follow-up appends to the same chat rather than starting a new one', async () => {
   const first = await askStream({ question: 'what about coffee?' })
   const id = first.frames[first.frames.length - 1].data.chatId
+  assert.ok(typeof id === 'string')
   const second = await askStream({ question: 'and tea?', chatId: id })
   assert.equal(second.frames[second.frames.length - 1].data.chatId, id)
-  assert.equal(chats.get(id).messages.length, 4)
+  const chat = chats.get(id)
+  assert.ok(chat)
+  assert.equal(chat.messages.length, 4)
 })
 
 test('a newline in the answer cannot break the frame delimiter', async () => {
@@ -133,6 +147,7 @@ test('a provider failure mid-stream arrives as an error frame, not a dead connec
   assert.equal(res.status, 200, 'the status line is already sent — the failure has to travel down the stream')
   const err = frames.find(f => f.event === 'error')
   assert.ok(err, 'an error frame must be sent')
+  assert.ok(typeof err.data.error === 'string')
   assert.match(err.data.error, /model exploded/)
   assert.equal(frames.filter(f => f.event === 'done').length, 0)
 })
@@ -167,10 +182,10 @@ test('a client hangup is observed by the provider as an abort', async () => {
   answerBehaviour = async ({ onToken, signal }) => {
     onToken?.('partial ')
     gate.abort()
-    await new Promise(r => {
+    await new Promise<void>(r => {
       if (signal?.aborted) return r()
-      signal?.addEventListener('abort', r, { once: true })
-      setTimeout(r, 2000) // generous, so a real failure reads as "never fired"
+      signal?.addEventListener('abort', () => r(), { once: true })
+      setTimeout(() => r(), 2000) // generous, so a real failure reads as "never fired"
     })
     sawAbort = Boolean(signal?.aborted)
     return 'partial '
@@ -185,10 +200,10 @@ test('an aborted request records nothing — a stopped question is not a saved a
   answerBehaviour = async ({ onToken, signal }) => {
     onToken?.('partial ')
     gate.abort()
-    await new Promise(r => {
+    await new Promise<void>(r => {
       if (signal?.aborted) return r()
-      signal?.addEventListener('abort', r, { once: true })
-      setTimeout(r, 2000)
+      signal?.addEventListener('abort', () => r(), { once: true })
+      setTimeout(() => r(), 2000)
     })
     return 'partial '
   }
@@ -203,8 +218,10 @@ test('without the event-stream Accept header the response is still plain JSON', 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ question: 'what about coffee?' }),
   })
-  assert.match(r.headers.get('content-type'), /application\/json/)
-  const d = await r.json()
+  const contentType = r.headers.get('content-type')
+  assert.ok(typeof contentType === 'string')
+  assert.match(contentType, /application\/json/)
+  const d = await jsonBody(r)
   assert.equal(d.answer, ANSWER)
   assert.deepEqual(d.sources, SOURCES)
   assert.ok(d.chatId)
