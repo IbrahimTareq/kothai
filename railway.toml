@@ -1,8 +1,8 @@
 [build]
 dockerfilePath = "Dockerfile"
-# Railway must target the right stage — untargeted builds the ONCE stage.
-# Use "runtime-lite" for the lite image (no local AI).
-dockerTarget = "runtime"
+# Lite image: remote inference only, ~475 MB, no local models.
+# Change to "runtime" for the full image with on-device AI.
+dockerTarget = "runtime-lite"
 
 [deploy]
 healthcheckPath = "/api/health"
