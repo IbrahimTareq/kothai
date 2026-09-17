@@ -56,16 +56,17 @@ jobs:
       # copied over a third-party CommonJS native binding inside node_modules
       # and is consumed by @qvac/translation-nmtcpp, not by this repo.
       #
-      # test/ is deliberately out of scope: 50 test files are still .js and
-      # would fail this immediately. Every migration wave measured them and
-      # reverted — hand-rolled mockRes()/fakeReq() object literals that are not
-      # a real ServerResponse/IncomingMessage, server.address() nullability, and
-      # res.json() returning unknown. Each needs non-null assertions or casts to
-      # typecheck, which is a worse trade than leaving them JS. A known gap, not
-      # an oversight; widen the scope when those files move.
+      # test/ was out of scope while 50 test files were still .js: the hand-rolled
+      # mockRes()/fakeReq() literals, server.address() nullability and res.json()
+      # returning unknown each wanted a cast to typecheck, which was a worse
+      # trade than leaving them JS. Shared helpers under test/helpers/ settled
+      # those without a single cast, and the last two files (tagvocab's) moved
+      # with them — so the exclusion is closed and test/ is now in scope. It is
+      # the half of the codebase most likely to regrow a .js file, since a test
+      # runs fine as one and no build step objects.
       - name: No JavaScript outside the binding stub
         run: |
-          found=$(git ls-files server scripts docker \
+          found=$(git ls-files server scripts docker test \
                   | grep -E '\.(js|mjs|cjs)$' \
                   | grep -v '^docker/nmtcpp-binding-stub\.js$' || true)
           if [ -n "$found" ]; then
