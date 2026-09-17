@@ -35,6 +35,10 @@ See [What is Kothai?](https://getkothai.com/docs/getting-started/what-is-kothai)
 curl -fsSL https://getkothai.com/install.sh | sh
 ```
 
+Or deploy to Railway:
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/template/kothai?referralCode=kothai)
+
 **Next steps:** [Configuration](https://getkothai.com/docs/getting-started/configuration) · [Remote access](https://getkothai.com/docs/running-it/remote-access) · [Backups](https://getkothai.com/docs/running-it/backups) · [More ways to start](https://getkothai.com/docs/getting-started/more-ways-to-start)
 
 ## How it works
