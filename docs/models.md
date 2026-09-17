@@ -45,3 +45,15 @@ STASH_AI_API_KEY=…        # not needed for Ollama
 ```
 
 Model names are picked in Settings. Credentials are env-only and never written to SQLite.
+
+### Remote defaults
+
+When you pick a provider during setup, Kothai pre-fills models that are known to work for all three roles. You can change them at any time in Settings.
+
+| Provider | Language | Embedding | Vision |
+|---|---|---|---|
+| **OpenAI** | gpt-4o-mini | text-embedding-3-small | gpt-4o-mini |
+| **OpenRouter** | openai/gpt-4o-mini | openai/text-embedding-3-small | openai/gpt-4o-mini |
+| **Ollama (local)** | llama3.2:3b | nomic-embed-text | llama3.2-vision |
+
+These defaults favour the cheapest models that cover all three roles. Any model the endpoint serves can be used instead.
