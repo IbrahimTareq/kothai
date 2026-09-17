@@ -21,6 +21,13 @@ A self-hosted bookmark and note manager with local AI.
 
 You throw links, screenshots and half-formed thoughts at one box. A local model reads each one in the background, gives it a title, picks tags, and turns it into a vector so you can search by meaning instead of exact words. Flip it into Ask and put questions to the pile. Answers are built only from what you saved, and every claim points back at the card it came from.
 
+## Why Kothai?
+
+- **Save anything, find it later.** Links, images, text. A local model reads and indexes everything so you search by meaning, not keywords.
+- **Ask your own stuff.** Answers are built only from what you saved, with every claim citing the card it came from.
+- **Runs on your hardware.** One container, one SQLite file, no cloud account. A Raspberry Pi 5 handles it.
+- **AI is optional.** Use local models, point at any endpoint, or turn it off entirely. Your data never leaves unless you say so.
+
 See [What is Kothai?](https://getkothai.com/docs/getting-started/what-is-kothai) for the full feature list.
 
 ## Quick start
