@@ -1,43 +1,35 @@
-# Railway-compatible lite image. Differences from the main Dockerfile:
-#   - No --mount=type=cache (Railway requires service-specific cache key prefixes)
-#   - No VOLUME declarations (Railway manages volumes separately)
-#
-# Only the lite image is built here. For the full image or local Docker,
-# use the main Dockerfile.
-
+# Railway-compatible lite image.
+# No cache mounts (Railway needs service-specific IDs) and no VOLUME
+# declarations (Railway manages volumes via its dashboard).
 ARG NODE_VERSION=22
 
-# ─────────────────────────── Stage 1: build the client ───────────────────────
 FROM node:${NODE_VERSION}-bookworm-slim AS client
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN corepack enable
 WORKDIR /app
 COPY package.json pnpm-lock.yaml .npmrc ./
 RUN node -e "const p=require('./package.json'); delete p.dependencies['@qvac/sdk']; delete p.dependencies['require-asset']; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2))" \
-  && pnpm install --no-frozen-lockfile --network-concurrency=4
+  && pnpm install --no-frozen-lockfile
 COPY tsconfig.json vite.config.ts index.html ./
 COPY client ./client
 COPY public ./public
 RUN pnpm run build:client
 
-# ─────────────────────── Stage 2: lite runtime (remote inference) ────────────
 FROM node:${NODE_VERSION}-bookworm-slim AS runtime-lite
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN corepack enable
 WORKDIR /app
-
 COPY package.json pnpm-lock.yaml .npmrc ./
 RUN node -e "const p=require('./package.json'); delete p.dependencies['@qvac/sdk']; delete p.dependencies['require-asset']; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2))" \
   && pnpm install --prod --no-frozen-lockfile
-
 COPY server ./server
 COPY docker/entrypoint.ts ./docker/entrypoint.ts
 COPY --from=client /app/dist ./dist
-
 RUN chown node:node /app
 
 ENV PORT=5173
 ENV STASH_AI_PROVIDER=remote
+ENV STASH_HOME=/app/data
 EXPOSE 5173
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

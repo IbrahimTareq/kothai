@@ -43,6 +43,14 @@ function ensureOwned(dir: string, { recursive }: { recursive: boolean }) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
+  // Railway injects RAILWAY_ENVIRONMENT but not RAILWAY_VOLUME_MOUNT_PATH
+  // when no volume is attached. Warn loudly — without a volume the SQLite
+  // database is lost on every deploy.
+  if (process.env.RAILWAY_ENVIRONMENT && !process.env.RAILWAY_VOLUME_MOUNT_PATH) {
+    console.warn('\n  ⚠️  No Railway volume detected. Your data will be lost on redeploy!')
+    console.warn('     Attach a volume at /app/data in the Railway dashboard.\n')
+  }
+
   const { chown, drop } = plan(process.getuid?.())
   if (chown) {
     ensureOwned(DATA_DIR, { recursive: true })
