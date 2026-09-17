@@ -13,19 +13,32 @@ import assert from 'node:assert/strict'
 import * as tagvocab from '../../../server/data/tagvocab.ts'
 import { encodeEmbedding } from '../../../server/data/embedding.ts'
 import { getDb } from '../../../server/data/db.ts'
+import type { DatabaseSync } from 'node:sqlite'
 
-const fakeEmbed = async tag => (tag === 'recipes' ? [1, 0, 0, 0] : [0, 1, 0, 0])
+const fakeEmbed = async (tag: string) => (tag === 'recipes' ? [1, 0, 0, 0] : [0, 1, 0, 0])
 
-const columnType = db =>
-  db
+// node:sqlite types every column as SQLOutputValue — see the rowTag/rowEmbedding
+// pair in tagvocab.ts. These two read back through the same narrowing the source
+// uses, so "the column is BLOB" and "the value is bytes" stay real assertions
+// rather than something the test assumed.
+function columnType(db: DatabaseSync) {
+  const col = db
     .prepare('PRAGMA table_info(tag_vocab)')
     .all()
-    .find(c => c.name === 'embedding').type
+    .find(c => c.name === 'embedding')
+  assert.ok(col, 'tag_vocab has no embedding column at all')
+  return String(col.type)
+}
 
-const rowFor = (db, tag) => db.prepare('SELECT embedding FROM tag_vocab WHERE tag = ?').get(tag).embedding
+function rowFor(db: DatabaseSync, tag: string) {
+  const row = db.prepare('SELECT embedding FROM tag_vocab WHERE tag = ?').get(tag)
+  assert.ok(row, `no tag_vocab row for "${tag}"`)
+  assert.ok(row.embedding instanceof Uint8Array, `tag_vocab.embedding for "${tag}" is not a blob`)
+  return row.embedding
+}
 
 // Recreate the pre-migration table shape: TEXT column, JSON-encoded vectors.
-function seedLegacy(db, entries) {
+function seedLegacy(db: DatabaseSync, entries: [string, number[]][]) {
   db.exec('DROP TABLE IF EXISTS tag_vocab')
   db.exec('CREATE TABLE tag_vocab (tag TEXT PRIMARY KEY, embedding TEXT NOT NULL)')
   const ins = db.prepare('INSERT INTO tag_vocab (tag, embedding) VALUES (?, ?)')
@@ -117,7 +130,9 @@ test('a corrupt legacy row is dropped with a warning rather than failing the boo
 
   assert.equal(tagvocab.size(), 1, 'the good entry survived')
   assert.equal(columnType(db), 'BLOB')
-  assert.equal(db.prepare('SELECT count(*) n FROM tag_vocab').get().n, 1)
+  const counted = db.prepare('SELECT count(*) n FROM tag_vocab').get()
+  assert.ok(counted, 'count(*) always returns a row')
+  assert.equal(counted.n, 1)
 })
 
 test('an empty legacy table migrates its schema without incident', async () => {

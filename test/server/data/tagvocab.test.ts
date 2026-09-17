@@ -8,11 +8,14 @@ import assert from 'node:assert/strict'
 import * as tagvocab from '../../../server/data/tagvocab.ts'
 
 test('nearestTag: returns best entry when ≥ threshold, else null', () => {
-  const entries = [
+  const entries: [string, number[]][] = [
     ['recipes', [1, 0, 0]],
     ['travel', [0, 1, 0]],
   ]
   const near = tagvocab.nearestTag([0.97, 0.24, 0], entries, 0.88)
+  // nearestTag answers null below the threshold, so the match has to be pinned
+  // before it is read — the two cases below are the null half of the contract.
+  assert.ok(near, 'cosine ≈ 0.971 is above the 0.88 threshold, so this must match')
   assert.equal(near.tag, 'recipes')
   assert.ok(near.score >= 0.88)
   assert.equal(tagvocab.nearestTag([0.2, 0.9, 0.4], entries, 0.99), null) // best below threshold
@@ -21,12 +24,12 @@ test('nearestTag: returns best entry when ≥ threshold, else null', () => {
 
 // Deterministic fake embedder: known tags get fixed vectors, unknown → [0,0,1].
 // cosine(recipes, cooking) ≈ 0.971 (snaps at 0.88); travel is orthogonal.
-const VECS = {
+const VECS: Record<string, number[]> = {
   recipes: [1, 0, 0],
   cooking: [0.97, 0.24, 0],
   travel: [0, 1, 0],
 }
-const fakeEmbed = async tag => VECS[tag] || [0, 0, 1]
+const fakeEmbed = async (tag: string) => VECS[tag] || [0, 0, 1]
 
 test('canonicalize: snaps a near-duplicate to the existing tag', async () => {
   tagvocab._reset()
@@ -46,7 +49,7 @@ test('canonicalize: below threshold registers as new (unchanged)', async () => {
 test('canonicalize: exact match does not re-embed', async () => {
   tagvocab._reset()
   let calls = 0
-  const counting = async t => {
+  const counting = async (t: string) => {
     calls++
     return VECS[t] || [0, 0, 1]
   }
