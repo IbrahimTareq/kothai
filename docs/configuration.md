@@ -14,6 +14,7 @@ All settings are optional. The defaults are what the image ships with.
 | `STASH_AI_BASE_URL` | *(unset)* | Endpoint URL, e.g. `http://ollama:11434/v1`. Remote only. |
 | `STASH_AI_API_KEY` | *(unset)* | Bearer token for the endpoint. Not needed for Ollama. |
 | `STASH_PASSWORD` | *(unset)* | Require this password before anything is served. Unset means no auth. Set it before exposing Kothai publicly. |
+| `STASH_ALLOW_PRIVATE_FETCH` | *(unset)* | Set to `1` to let link previews reach private/loopback addresses. Off by default as an SSRF guard. Enable only on a trusted network where you stash intranet links. |
 
 A specific variable wins over `STASH_HOME`, which wins over the default.
 
