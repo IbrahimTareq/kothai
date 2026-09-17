@@ -50,7 +50,7 @@ export function Hero() {
       </h1>
 
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <Link href="/docs/getting-started/self-hosting" className={LIVE}>
+        <Link href="/docs/getting-started/what-is-kothai" className={LIVE}>
           <ArrowRight className="size-4" />
           Get started
         </Link>
