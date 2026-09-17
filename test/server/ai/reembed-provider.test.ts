@@ -175,7 +175,7 @@ test('an install that was embedding remotely still notices a later wholesale fli
   assert.equal(embedCalls.length, 0)
   assert.equal(storedProvider, 'remote')
 
-  // Boot two, after STASH_AI_PROVIDER was flipped wholesale. Inferring from
+  // Boot two, after KOTHAI_AI_PROVIDER was flipped wholesale. Inferring from
   // the environment again would compare 'local' against 'local' and miss it.
   assert.equal(enrich.queueEmbedProviderReembed({ resolved: 'local', wasRemote: false }), true)
   await drain()

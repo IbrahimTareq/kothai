@@ -62,7 +62,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     if (req.method === 'GET' && (p === '/api/health' || p === '/up')) return json(res, 200, { ok: true })
     // Guards every route below AND the static/uploads fallthrough, which is why
     // it lives here rather than being repeated per handler. No-op when
-    // STASH_PASSWORD is unset.
+    // KOTHAI_PASSWORD is unset.
     if (PASSWORD && (await authGate(req, res, p, { password: PASSWORD }))) return
 
     if (req.method === 'POST' && p === '/api/save') return await handleSave(req, res)

@@ -62,6 +62,6 @@ services:
       # compromised peer does not hand over the whole archive. Unset or empty
       # leaves the gate off. Rotating it invalidates every session everywhere,
       # including your own, because the signing key is derived from it.
-      STASH_PASSWORD: ${STASH_PASSWORD:-}
+      KOTHAI_PASSWORD: ${KOTHAI_PASSWORD:-}
     restart: unless-stopped
     depends_on: [tailscale]

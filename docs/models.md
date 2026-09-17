@@ -39,9 +39,9 @@ All three are swappable live from Settings.
 ## Remote inference
 
 ```bash
-STASH_AI_PROVIDER=remote
-STASH_AI_BASE_URL=http://localhost:11434/v1
-STASH_AI_API_KEY=…        # not needed for Ollama
+KOTHAI_AI_PROVIDER=remote
+KOTHAI_AI_BASE_URL=http://localhost:11434/v1
+KOTHAI_AI_API_KEY=…        # not needed for Ollama
 ```
 
 Model names are picked in Settings. Credentials are env-only and never written to SQLite.

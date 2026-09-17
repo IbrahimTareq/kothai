@@ -10,7 +10,7 @@ test('nothing configured anywhere is the local provider', () => {
 })
 
 test('env alone works exactly as it did before the credential file existed', () => {
-  const c = resolveAiConfig({ STASH_AI_BASE_URL: 'https://ollama.com/v1/', STASH_AI_API_KEY: 'k' }, null)
+  const c = resolveAiConfig({ KOTHAI_AI_BASE_URL: 'https://ollama.com/v1/', KOTHAI_AI_API_KEY: 'k' }, null)
   assert.equal(c.baseUrl, 'https://ollama.com/v1')
   assert.equal(c.apiKey, 'k')
   assert.equal(c.provider, 'remote')
@@ -25,7 +25,7 @@ test('the credential file supplies the endpoint when env does not', () => {
 
 test('env wins over the file as a PAIR — a file key never attaches to an env URL', () => {
   const c = resolveAiConfig(
-    { STASH_AI_BASE_URL: 'https://env.example/v1' },
+    { KOTHAI_AI_BASE_URL: 'https://env.example/v1' },
     { baseUrl: 'https://file.example/v1', apiKey: 'file-key' },
   )
   assert.equal(c.baseUrl, 'https://env.example/v1')
@@ -33,17 +33,17 @@ test('env wins over the file as a PAIR — a file key never attaches to an env U
 })
 
 test('the lite image default — provider=remote with no URL yet — still resolves remote', () => {
-  const c = resolveAiConfig({ STASH_AI_PROVIDER: 'remote' }, null)
+  const c = resolveAiConfig({ KOTHAI_AI_PROVIDER: 'remote' }, null)
   assert.equal(c.provider, 'remote')
   assert.equal(c.baseUrl, null)
 })
 
-test('a stored endpoint implies remote without STASH_AI_PROVIDER being set', () => {
+test('a stored endpoint implies remote without KOTHAI_AI_PROVIDER being set', () => {
   assert.equal(resolveAiConfig({}, { baseUrl: 'https://api.openai.com/v1' }).provider, 'remote')
 })
 
 test('an unknown provider value degrades to local rather than throwing', () => {
-  assert.equal(resolveAiConfig({ STASH_AI_PROVIDER: 'nonsense' }, null).provider, 'local')
+  assert.equal(resolveAiConfig({ KOTHAI_AI_PROVIDER: 'nonsense' }, null).provider, 'local')
 })
 
 test('a trailing slash is stripped whichever source the URL came from', () => {

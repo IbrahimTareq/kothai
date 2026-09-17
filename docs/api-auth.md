@@ -1,13 +1,13 @@
 # Auth
 
-Only active when `STASH_PASSWORD` is set.
+Only active when `KOTHAI_PASSWORD` is set.
 
 ## POST /api/login
 
 <TypeTable
   type={{
     password: {
-      description: 'The password set via STASH_PASSWORD',
+      description: 'The password set via KOTHAI_PASSWORD',
       type: 'string',
       required: true,
     },

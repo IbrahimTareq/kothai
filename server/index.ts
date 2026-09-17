@@ -59,10 +59,10 @@ server.listen(PORT, () => {
   // Stated on every boot, both ways round: "no password" is the historical
   // default and safe on a LAN, but it is exactly the thing you want to notice
   // before pointing a public hostname at this.
-  if (PASSWORD) console.log('  Auth: password required (STASH_PASSWORD is set)\n')
+  if (PASSWORD) console.log('  Auth: password required (KOTHAI_PASSWORD is set)\n')
   else
     console.log(
-      '  Auth: none — anyone who can reach this port has full access. Set STASH_PASSWORD to require a password.\n',
+      '  Auth: none — anyone who can reach this port has full access. Set KOTHAI_PASSWORD to require a password.\n',
     )
   if (reembedding || providerReembedding)
     console.log('  Re-embedding the library in the background after an embedding change…\n')

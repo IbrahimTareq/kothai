@@ -3,10 +3,10 @@
 // router can reach, so testing it by calling handlers directly would test the
 // opposite of what matters.
 //
-// STASH_PASSWORD is set before the dynamic import because server/config.ts
+// KOTHAI_PASSWORD is set before the dynamic import because server/config.ts
 // freezes its resolved config at import time; node --test gives each file its
 // own process, so this env var cannot leak into any other test.
-process.env.STASH_PASSWORD = 'hunter2'
+process.env.KOTHAI_PASSWORD = 'hunter2'
 const { createServer } = await import('../../../server/router.ts')
 
 import test, { after } from 'node:test'
@@ -102,7 +102,7 @@ test('/api/status stays behind the gate — it reports model config and note cou
 })
 
 test('/api/checkpoint stays behind the gate — it writes to the database', async () => {
-  // The ONCE pre-backup hook runs inside the container, so it has STASH_PASSWORD
+  // The ONCE pre-backup hook runs inside the container, so it has KOTHAI_PASSWORD
   // in its environment and logs in like any other client. Leaving this endpoint
   // open so the hook could skip that would hand an unauthenticated stranger a
   // repeatable write and disk-flush.

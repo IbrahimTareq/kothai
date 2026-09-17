@@ -7,16 +7,16 @@ All settings are optional. The defaults are what the image ships with.
 | Variable | Default | What it does |
 |---|---|---|
 | `PORT` | `5173` | HTTP port. |
-| `STASH_HOME` | *(unset)* | Root for the three paths below. Useful on hosts that allow only one volume. |
-| `STASH_DATA_DIR` | `<app>/data` | Notes, chats, settings, uploads. |
-| `STASH_MODELS_DIR` | `<app>/models` | Model weights. |
-| `STASH_AI_PROVIDER` | `local` | `local` runs models on-device. `remote` sends them to an inference endpoint. |
-| `STASH_AI_BASE_URL` | *(unset)* | Endpoint URL, e.g. `http://ollama:11434/v1`. Remote only. |
-| `STASH_AI_API_KEY` | *(unset)* | Bearer token for the endpoint. Not needed for Ollama. |
-| `STASH_PASSWORD` | *(unset)* | Require this password before anything is served. Unset means no auth. Set it before exposing Kothai publicly. |
-| `STASH_ALLOW_PRIVATE_FETCH` | *(unset)* | Set to `1` to let link previews reach private/loopback addresses. Off by default as an SSRF guard. Enable only on a trusted network where you stash intranet links. |
+| `KOTHAI_HOME` | *(unset)* | Root for the three paths below. Useful on hosts that allow only one volume. |
+| `KOTHAI_DATA_DIR` | `<app>/data` | Notes, chats, settings, uploads. |
+| `KOTHAI_MODELS_DIR` | `<app>/models` | Model weights. |
+| `KOTHAI_AI_PROVIDER` | `local` | `local` runs models on-device. `remote` sends them to an inference endpoint. |
+| `KOTHAI_AI_BASE_URL` | *(unset)* | Endpoint URL, e.g. `http://ollama:11434/v1`. Remote only. |
+| `KOTHAI_AI_API_KEY` | *(unset)* | Bearer token for the endpoint. Not needed for Ollama. |
+| `KOTHAI_PASSWORD` | *(unset)* | Require this password before anything is served. Unset means no auth. Set it before exposing Kothai publicly. |
+| `KOTHAI_ALLOW_PRIVATE_FETCH` | *(unset)* | Set to `1` to let link previews reach private/loopback addresses. Off by default as an SSRF guard. Enable only on a trusted network where you stash intranet links. |
 
-A specific variable wins over `STASH_HOME`, which wins over the default.
+A specific variable wins over `KOTHAI_HOME`, which wins over the default.
 
 ## RAM usage
 

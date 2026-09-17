@@ -6,10 +6,10 @@
 // failure means backups that quietly omit recent notes. What matters is the
 // process exit code, since that is the entire channel ONCE reads.
 //
-// STASH_PASSWORD is set here because the authenticated path is the one with
+// KOTHAI_PASSWORD is set here because the authenticated path is the one with
 // moving parts — the hook has to log in and carry the session cookie. The
 // unauthenticated path is the same code with the login block skipped.
-process.env.STASH_PASSWORD = 'hunter2'
+process.env.KOTHAI_PASSWORD = 'hunter2'
 
 import { test, after, mock } from 'node:test'
 import assert from 'node:assert/strict'
@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url'
 import { listenOnLoopback } from '../helpers/http.ts'
 
 const DATA_DIR = mkdtempSync(path.join(os.tmpdir(), 'kothai-hook-test-'))
-process.env.STASH_DATA_DIR = DATA_DIR
+process.env.KOTHAI_DATA_DIR = DATA_DIR
 
 let importRunning = false
 const realLock = await import('../../server/data/import-lock.ts')
@@ -67,7 +67,7 @@ test('it checkpoints a password-protected instance and reports success', async (
 })
 
 test('a wrong password fails loudly rather than letting a lossy backup proceed', async () => {
-  const { code, stderr } = await runHook({ STASH_PASSWORD: 'not-the-password' })
+  const { code, stderr } = await runHook({ KOTHAI_PASSWORD: 'not-the-password' })
   assert.equal(code, 1)
   assert.match(stderr, /login failed/)
 })

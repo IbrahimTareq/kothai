@@ -140,7 +140,7 @@ EXPOSE 5173
 # configuration never reaches state=ready at all — gating on readiness would
 # make orchestrators restart-loop the container and redownload forever.
 # /api/health, not /api/status: the healthcheck carries no credentials, and
-# /api/status sits behind the optional password gate (STASH_PASSWORD), so
+# /api/status sits behind the optional password gate (KOTHAI_PASSWORD), so
 # setting a password would otherwise restart-loop the container the same way.
 # `node -e` because curl/wget are not guaranteed in the slim base.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
@@ -182,8 +182,8 @@ RUN chown node:node /app
 ENV PORT=5173
 # The lite image cannot run local inference at all: @qvac/sdk is not
 # installed. Defaulting the provider here means a bare `docker run` gives the
-# clear "set STASH_AI_BASE_URL" state rather than a module-not-found crash.
-ENV STASH_AI_PROVIDER=remote
+# clear "set KOTHAI_AI_BASE_URL" state rather than a module-not-found crash.
+ENV KOTHAI_AI_PROVIDER=remote
 EXPOSE 5173
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
@@ -203,10 +203,10 @@ ENTRYPOINT ["node", "docker/entrypoint.ts"]
 # set of defaults, not a second build of the app.
 FROM runtime AS runtime-once
 
-# STASH_HOME is the single-root switch that already existed for hosts allowing
+# KOTHAI_HOME is the single-root switch that already existed for hosts allowing
 # only one volume (Railway); ONCE's /storage contract is the same shape. Notes,
 # uploads, model weights and qvac.config.json all land underneath it.
-ENV STASH_HOME=/storage
+ENV KOTHAI_HOME=/storage
 ENV PORT=80
 
 # uid 1000 binding a privileged port works because Docker sets

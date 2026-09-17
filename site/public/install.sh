@@ -194,12 +194,12 @@ mkdir -p "$DIR/data" || die "Cannot write to $DIR"
 
 set -- run -d --name "$NAME" --restart unless-stopped -p "$PORT:5173" -v "$DIR/data:/app/data"
 [ "$LITE" = 1 ] || set -- "$@" -v "$DIR/models:/app/models"
-[ -z "$ENDPOINT" ] || set -- "$@" -e STASH_AI_PROVIDER=remote -e "STASH_AI_BASE_URL=$ENDPOINT"
-[ -z "$APIKEY" ] || set -- "$@" -e "STASH_AI_API_KEY=$APIKEY"
-[ -z "$PASSWORD" ] || set -- "$@" -e "STASH_PASSWORD=$PASSWORD"
+[ -z "$ENDPOINT" ] || set -- "$@" -e KOTHAI_AI_PROVIDER=remote -e "KOTHAI_AI_BASE_URL=$ENDPOINT"
+[ -z "$APIKEY" ] || set -- "$@" -e "KOTHAI_AI_API_KEY=$APIKEY"
+[ -z "$PASSWORD" ] || set -- "$@" -e "KOTHAI_PASSWORD=$PASSWORD"
 # An id, never a credential: it only tells the first-run screen which questions
 # have already been answered here.
-[ -z "$PROVIDER" ] || set -- "$@" -e "STASH_SETUP_PROVIDER=$PROVIDER"
+[ -z "$PROVIDER" ] || set -- "$@" -e "KOTHAI_SETUP_PROVIDER=$PROVIDER"
 set -- "$@" "$IMAGE:$TAG"
 
 say ""
@@ -281,7 +281,7 @@ case ${1:-help} in
     p=$(port)
     restart=$(docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$NAME")
     mounts=$(docker inspect -f '{{range .Mounts}}-v {{.Source}}:{{.Destination}} {{end}}' "$NAME")
-    envs=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$NAME" | grep -E '^(STASH_|PORT=)' || true)
+    envs=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$NAME" | grep -E '^(KOTHAI_|PORT=)' || true)
     printf '  Pulling %s…\n' "$img"
     docker pull "$img" >/dev/null || die "Pull failed."
     docker rm -f "$NAME" >/dev/null

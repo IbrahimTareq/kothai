@@ -22,17 +22,17 @@ test('provider=remote with a local provider keeps embedding on-device', () => {
   assert.deepEqual(r, { llm: 'remote', embed: 'local', vision: 'remote' })
 })
 
-test('STASH_AI_EMBED_PROVIDER=remote restores the all-remote behaviour', () => {
+test('KOTHAI_AI_EMBED_PROVIDER=remote restores the all-remote behaviour', () => {
   const r = resolveRoleProviders({ provider: 'remote', embedProvider: 'remote', localAvailable: true })
   assert.deepEqual(r, { llm: 'remote', embed: 'remote', vision: 'remote' })
 })
 
-test('STASH_AI_EMBED_PROVIDER=local cannot conjure a provider that is not installed', () => {
+test('KOTHAI_AI_EMBED_PROVIDER=local cannot conjure a provider that is not installed', () => {
   const r = resolveRoleProviders({ provider: 'remote', embedProvider: 'local', localAvailable: false })
   assert.equal(r.embed, 'remote')
 })
 
-test('an unrecognised STASH_AI_EMBED_PROVIDER value is ignored, not fatal', () => {
+test('an unrecognised KOTHAI_AI_EMBED_PROVIDER value is ignored, not fatal', () => {
   const r = resolveRoleProviders({ provider: 'remote', embedProvider: 'banana', localAvailable: true })
   assert.equal(r.embed, 'local')
 })
@@ -188,7 +188,7 @@ test('no endpoint embedding model keeps the role on-device, exactly as before', 
 
 // The env var is an operator override and must still beat the model name, in
 // both directions — someone who pinned it did so for a reason.
-test('STASH_AI_EMBED_PROVIDER=local beats a named endpoint model', () => {
+test('KOTHAI_AI_EMBED_PROVIDER=local beats a named endpoint model', () => {
   const r = resolveRoleProviders({
     provider: 'remote',
     localAvailable: true,
@@ -198,7 +198,7 @@ test('STASH_AI_EMBED_PROVIDER=local beats a named endpoint model', () => {
   assert.equal(r.embed, 'local')
 })
 
-test('STASH_AI_EMBED_PROVIDER=remote still works with no model named yet', () => {
+test('KOTHAI_AI_EMBED_PROVIDER=remote still works with no model named yet', () => {
   const r = resolveRoleProviders({ provider: 'remote', localAvailable: true, embedProvider: 'remote' })
   assert.equal(r.embed, 'remote')
 })

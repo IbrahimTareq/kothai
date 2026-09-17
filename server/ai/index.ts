@@ -99,8 +99,8 @@ export async function _selectProvider(kind: ProviderKind, load: ProviderLoader |
   } catch (e) {
     if (isRecord(e) && e.code === 'ERR_MODULE_NOT_FOUND') {
       throw new Error(
-        'STASH_AI_PROVIDER=local but @qvac/sdk is not installed. This is the lite image — ' +
-          'set STASH_AI_PROVIDER=remote and STASH_AI_BASE_URL to point at an OpenAI-compatible endpoint.',
+        'KOTHAI_AI_PROVIDER=local but @qvac/sdk is not installed. This is the lite image — ' +
+          'set KOTHAI_AI_PROVIDER=remote and KOTHAI_AI_BASE_URL to point at an OpenAI-compatible endpoint.',
       )
     }
     throw e
@@ -111,7 +111,7 @@ export async function _selectProvider(kind: ProviderKind, load: ProviderLoader |
 // not installed and the import throws ERR_MODULE_NOT_FOUND. A full image whose
 // native binding won't load on this host (no AVX2, glibc mismatch) is the same
 // answer arrived at the hard way — and killing boot over it would strand the
-// operator who set STASH_AI_PROVIDER=remote precisely to escape that, so it
+// operator who set KOTHAI_AI_PROVIDER=remote precisely to escape that, so it
 // degrades to all-remote rather than throwing. A genuinely local install never
 // reaches here: _selectProvider still fails loudly for it.
 export async function _localAvailable(load: ProviderLoader | null = null): Promise<boolean> {

@@ -359,7 +359,7 @@ test('a missing @qvac/sdk means no on-device role, not a crash', async () => {
 })
 
 test('a broken native binding degrades to all-remote instead of killing boot', async () => {
-  // The operator on this host set STASH_AI_PROVIDER=remote precisely to escape
+  // The operator on this host set KOTHAI_AI_PROVIDER=remote precisely to escape
   // on-device inference; refusing to boot because the escape route probed the
   // thing being escaped would be the worst possible answer.
   const boom = Object.assign(new Error('dlopen failed'), { code: 'ERR_DLOPEN_FAILED' })

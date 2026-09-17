@@ -17,7 +17,7 @@ import { jsonBody, listenOnLoopback, mockRes, records } from '../../helpers/http
 // time — the real ./models dir holds multi-GB weights and must never be the
 // thing a delete test points at.
 const MODELS_DIR = mkdtempSync(path.join(os.tmpdir(), 'kothai-models-test-'))
-process.env.STASH_MODELS_DIR = MODELS_DIR
+process.env.KOTHAI_MODELS_DIR = MODELS_DIR
 
 const { initProvider, _reset } = await import('../../../server/ai/index.ts')
 const { handleModelFiles, handleDeleteModelFile } = await import('../../../server/routes/models.ts')

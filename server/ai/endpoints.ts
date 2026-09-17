@@ -15,7 +15,7 @@
 // Every entry here currently serves embeddings, and that is the point: a tile
 // on the first-run screen is a recommendation, and recommending an endpoint
 // that cannot do half the job is not one. Chat-only services still work — by
-// --endpoint, or STASH_AI_BASE_URL, or by typing the model names in Settings —
+// --endpoint, or KOTHAI_AI_BASE_URL, or by typing the model names in Settings —
 // they are just not offered as a one-click answer. The field stays because
 // resolveRoleProviders still has to handle an endpoint configured that way.
 //
@@ -85,7 +85,7 @@ export const ENDPOINTS: Endpoint[] = [
 ]
 
 // Nullable on purpose: getAiConfig() reports providerId: null whenever the
-// endpoint came from STASH_AI_BASE_URL rather than the first-run wizard, and
+// endpoint came from KOTHAI_AI_BASE_URL rather than the first-run wizard, and
 // that path must resolve to "no catalogue entry", not throw.
 export function findEndpoint(id: string | null | undefined): Endpoint | null {
   return ENDPOINTS.find(e => e.id === id) || null

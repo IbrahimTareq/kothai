@@ -103,7 +103,7 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
     if (!baseUrl)
       throw new FeatureDisabledError(role, {
         code: `${role}_off`,
-        message: 'No inference endpoint configured — set STASH_AI_BASE_URL.',
+        message: 'No inference endpoint configured — set KOTHAI_AI_BASE_URL.',
       })
     if (!modelFor(role))
       throw new FeatureDisabledError(role, {

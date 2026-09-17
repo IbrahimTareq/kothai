@@ -71,7 +71,7 @@ export interface RoleProviderInput {
 // means an install that predates this carries no name and resolves exactly as
 // it did before, with no surprise re-index on upgrade.
 //
-// STASH_AI_EMBED_PROVIDER still wins over both, in either direction: an
+// KOTHAI_AI_EMBED_PROVIDER still wins over both, in either direction: an
 // operator who pinned it did so for a reason.
 export function resolveRoleProviders({
   provider,

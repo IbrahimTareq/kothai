@@ -169,7 +169,7 @@ phase "Boot"
 
 RUN_ARGS=(-d --name "$NAME" -p "${PORT}:5173" -v "$WORKDIR/data:/app/data")
 [ "$LITE" = 0 ] && RUN_ARGS+=(-v "$WORKDIR/models:/app/models")
-[ "$LITE" = 1 ] && RUN_ARGS+=(-e STASH_AI_PROVIDER=remote)
+[ "$LITE" = 1 ] && RUN_ARGS+=(-e KOTHAI_AI_PROVIDER=remote)
 
 if docker run "${RUN_ARGS[@]}" "$IMAGE" >/dev/null 2>&1; then
   pass "container started"
@@ -251,10 +251,10 @@ fi
 # ─────────────────────────────── auth ───────────────────────────────────────
 phase "Password gate"
 
-# A second container, because STASH_PASSWORD is read at boot. No models needed:
+# A second container, because KOTHAI_PASSWORD is read at boot. No models needed:
 # the gate is provider-independent.
 if docker run -d --name "$AUTH_NAME" -p "${AUTH_PORT}:5173" \
-     -e STASH_PASSWORD="$PASSWORD" -e STASH_AI_PROVIDER=remote \
+     -e KOTHAI_PASSWORD="$PASSWORD" -e KOTHAI_AI_PROVIDER=remote \
      "$IMAGE" >/dev/null 2>&1; then
   AUTH_BASE="http://127.0.0.1:${AUTH_PORT}"
   if wait_for_health "$AUTH_BASE" 90 "$AUTH_NAME"; then

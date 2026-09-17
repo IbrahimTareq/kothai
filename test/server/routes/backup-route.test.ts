@@ -21,7 +21,7 @@ import { jsonBody, listenOnLoopback } from '../../helpers/http.ts'
 // its resolution at import time). The route writes a temp snapshot into
 // DATA_DIR, and pointing that at the developer's real ./data would litter it.
 const DATA_DIR = mkdtempSync(path.join(os.tmpdir(), 'kothai-backup-test-'))
-process.env.STASH_DATA_DIR = DATA_DIR
+process.env.KOTHAI_DATA_DIR = DATA_DIR
 
 // The backup refuses to run mid-import; mocked so that state can be driven
 // without actually importing anything. Must be installed before router.js

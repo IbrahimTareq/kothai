@@ -10,7 +10,7 @@ http://localhost:5173/api
 
 ## Authentication
 
-When `STASH_PASSWORD` is set, most endpoints require a session cookie obtained via `POST /api/login`. The exceptions are `/api/health` and `/api/login` itself.
+When `KOTHAI_PASSWORD` is set, most endpoints require a session cookie obtained via `POST /api/login`. The exceptions are `/api/health` and `/api/login` itself.
 
 ## Errors
 

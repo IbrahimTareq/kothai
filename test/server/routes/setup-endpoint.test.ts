@@ -170,7 +170,7 @@ test('a provider that serves embeddings takes the embedding role too', async () 
 
 // Not a catalogue entry — the offered providers all serve embeddings now. This
 // is the endpoint someone points at themselves with --endpoint or
-// STASH_AI_BASE_URL, where naming no embedding model is the whole signal.
+// KOTHAI_AI_BASE_URL, where naming no embedding model is the whole signal.
 test('an endpoint with no embedding model named leaves that role on this machine', async () => {
   const d = dir()
   await initProvider('local', {}, { load, localAvailable: true })

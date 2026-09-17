@@ -29,7 +29,7 @@ test('clearing the loaded credential returns the process to local', () => {
 
 test('an env endpoint still wins over a loaded credential', () => {
   const c = resolveAiConfig(
-    { STASH_AI_BASE_URL: 'https://env.example/v1' },
+    { KOTHAI_AI_BASE_URL: 'https://env.example/v1' },
     { baseUrl: 'https://file.example/v1', apiKey: 'file-key' },
   )
   assert.equal(c.baseUrl, 'https://env.example/v1')

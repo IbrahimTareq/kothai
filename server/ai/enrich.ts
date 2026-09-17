@@ -757,7 +757,7 @@ export function queueEmbedProviderReembed({ resolved, wasRemote }: { resolved: s
   if (!embedProviderChanged({ stored, resolved, wasRemote })) {
     // Record the inference the first time it is made. Without this, an install
     // whose marker is still null re-derives "what it was doing" from the
-    // current environment on every boot, so a later wholesale STASH_AI_PROVIDER
+    // current environment on every boot, so a later wholesale KOTHAI_AI_PROVIDER
     // flip is measured against the new value and looks like no change at all —
     // and the library keeps serving vectors from a model it no longer runs.
     if (!stored) settings.save({ embedProvider: resolved }).catch(() => {})

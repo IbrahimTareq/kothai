@@ -1,6 +1,6 @@
 // Tests for server/data/migrate.ts — importing the old flat-JSON store
 // (data/*.json) into SQLite the first time data/kothai.db is created.
-// STASH_DATA_DIR is pointed at a scratch temp dir BEFORE any server module
+// KOTHAI_DATA_DIR is pointed at a scratch temp dir BEFORE any server module
 // is imported (config.js resolves it once, at import time), so this exercises
 // the real DATA_DIR/readJson path rather than a stubbed one.
 import { test, after } from 'node:test'
@@ -13,7 +13,7 @@ import type { SQLOutputValue } from 'node:sqlite'
 import { decodeEmbedding } from '../../../server/data/embedding.ts'
 
 const scratch = mkdtempSync(path.join(tmpdir(), 'kothai-migrate-'))
-process.env.STASH_DATA_DIR = scratch
+process.env.KOTHAI_DATA_DIR = scratch
 
 const { DATA_DIR } = await import('../../../server/config.ts')
 const { migrateLegacyJson } = await import('../../../server/data/migrate.ts')

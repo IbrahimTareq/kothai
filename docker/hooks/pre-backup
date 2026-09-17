@@ -11,13 +11,13 @@
 // Node rather than shell: the slim base image ships neither curl nor wget,
 // which is also why the Dockerfile's HEALTHCHECK is a `node -e`.
 //
-// Runs inside the app container, so STASH_PASSWORD is in this environment when
+// Runs inside the app container, so KOTHAI_PASSWORD is in this environment when
 // the operator set one — the hook authenticates like any other client rather
 // than the endpoint being exempted from the gate for its benefit.
 
 const PORT = process.env.PORT || '80'
 const BASE = `http://127.0.0.1:${PORT}`
-const PASSWORD = process.env.STASH_PASSWORD || null
+const PASSWORD = process.env.KOTHAI_PASSWORD || null
 
 const fail = (msg) => { console.error(`[pre-backup] ${msg}`); process.exit(1) }
 
@@ -33,7 +33,7 @@ async function main() {
       headers,
       body: JSON.stringify({ password: PASSWORD }),
     })
-    if (!login.ok) fail(`login failed (${login.status}) — is STASH_PASSWORD the password this instance runs with?`)
+    if (!login.ok) fail(`login failed (${login.status}) — is KOTHAI_PASSWORD the password this instance runs with?`)
     const cookie = login.headers.get('set-cookie')
     if (!cookie) fail('login returned no session cookie')
     headers.Cookie = cookie.split(';')[0]

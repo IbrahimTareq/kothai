@@ -36,7 +36,7 @@ export class RemoteError extends Error {
 function classify(status: number, body: unknown): RemoteError {
   const detail = typeof body === 'string' ? body.slice(0, 200) : JSON.stringify(body).slice(0, 200)
   if (status === 401 || status === 403) {
-    return new RemoteError('auth_failed', `Endpoint rejected the credentials (${status}). Check STASH_AI_API_KEY.`, {
+    return new RemoteError('auth_failed', `Endpoint rejected the credentials (${status}). Check KOTHAI_AI_API_KEY.`, {
       transient: false,
       status,
     })
@@ -44,7 +44,7 @@ function classify(status: number, body: unknown): RemoteError {
   if (status === 404) {
     return new RemoteError(
       'model_not_found',
-      `Endpoint returned 404 — check the model name and STASH_AI_BASE_URL. ${detail}`,
+      `Endpoint returned 404 — check the model name and KOTHAI_AI_BASE_URL. ${detail}`,
       { transient: false, status },
     )
   }

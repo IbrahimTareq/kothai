@@ -8,7 +8,7 @@
 import { test, mock, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 
-process.env.STASH_TEARDOWN_GRACE_MS = '300' // read at import, below
+process.env.KOTHAI_TEARDOWN_GRACE_MS = '300' // read at import, below
 
 const order: string[] = []
 // A no-op stand-in until the first completion() replaces it: it is assigned

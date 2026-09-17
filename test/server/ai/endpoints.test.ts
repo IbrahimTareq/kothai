@@ -38,7 +38,7 @@ test('a provider that serves embeddings offers a default for all three roles', (
 // The current invariant, asserted directly rather than left to a filter that
 // happens to match nothing: a tile is a recommendation, and an endpoint that
 // cannot do semantic search is not one. Chat-only services still work through
-// --endpoint or STASH_AI_BASE_URL; they are just not offered here.
+// --endpoint or KOTHAI_AI_BASE_URL; they are just not offered here.
 test('every offered provider can do the whole job', () => {
   for (const e of ENDPOINTS) {
     assert.equal(e.servesEmbeddings, true, `${e.id} would leave search half-working`)

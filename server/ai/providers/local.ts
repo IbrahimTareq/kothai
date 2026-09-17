@@ -391,7 +391,7 @@ export async function answer({ question, contextNotes, history = [] }: AnswerArg
 // How long to wait for a cancelled run to actually release the model before
 // giving up and freeing the role lock anyway. Overridable so the test for the
 // give-up path doesn't have to sit through the real grace period.
-const TEARDOWN_GRACE_MS = Number(process.env.STASH_TEARDOWN_GRACE_MS) || 5000
+const TEARDOWN_GRACE_MS = Number(process.env.KOTHAI_TEARDOWN_GRACE_MS) || 5000
 
 // @qvac/sdk allows one completion per model and rejects the rest outright
 // ("rejected by registry concurrency policy"). The refcount in roles.js does

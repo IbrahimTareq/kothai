@@ -4,7 +4,7 @@ Kothai is a **single-user, local-first** app, built on the assumption that every
 
 ## The password gate
 
-Set `STASH_PASSWORD` and the app requires login. Unset, there's no auth at all.
+Set `KOTHAI_PASSWORD` and the app requires login. Unset, there's no auth at all.
 
 Sessions are 30-day tokens signed with a key derived from the password. Changing the password invalidates all sessions. Login is rate-limited.
 
@@ -12,11 +12,11 @@ Sessions are 30-day tokens signed with a key derived from the password. Changing
 
 Every URL Kothai fetches for a link preview is attacker-influenced. The SSRF guard resolves the hostname and blocks private/loopback ranges.
 
-`STASH_ALLOW_PRIVATE_FETCH=1` disables the check for previewing intranet links on a trusted network.
+`KOTHAI_ALLOW_PRIVATE_FETCH=1` disables the check for previewing intranet links on a trusted network.
 
 ## Secrets handling
 
-`STASH_PASSWORD` is env-only and never written to SQLite, so it can't leak via backup.
+`KOTHAI_PASSWORD` is env-only and never written to SQLite, so it can't leak via backup.
 
 The inference endpoint and key go to `data/credentials.json`, never into the database.
 
@@ -26,7 +26,7 @@ The inference endpoint and key go to `data/credentials.json`, never into the dat
 |---|---|
 | **Localhost / LAN** | Nothing. |
 | **Tailscale** | Recommended. Nothing exposed publicly. |
-| **Public hostname** | Set `STASH_PASSWORD` and put TLS in front. |
+| **Public hostname** | Set `KOTHAI_PASSWORD` and put TLS in front. |
 
 > [!CAUTION]
-> Without `STASH_PASSWORD` set, anyone who can reach the port can read, write, and delete everything.
+> Without `KOTHAI_PASSWORD` set, anyone who can reach the port can read, write, and delete everything.

@@ -80,7 +80,7 @@ export function mapNote(n: ServerNote): UIItem {
 // content type, so the browser preflights any cross-origin attempt and the
 // server rejects anything without it (see server/routes/auth.ts) — which is
 // what closes the CSRF hole SameSite=Lax leaves open between ports on
-// localhost. Harmless when STASH_PASSWORD is unset and the rule is not applied.
+// localhost. Harmless when KOTHAI_PASSWORD is unset and the rule is not applied.
 const JSON_HEADERS = { 'Content-Type': 'application/json' }
 
 // One envelope for every /api call. Thirty-odd call sites used to spell out the

@@ -27,4 +27,4 @@ docker compose up -d
 ```
 
 > [!IMPORTANT]
-> **There is no login until you set `STASH_PASSWORD`.** Anyone who can reach the port can read and write everything. On your own machine or a home LAN that's fine and is the default. Set a password before Kothai is reachable from anywhere else (a public hostname, a VPS, a forwarded port) and put TLS in front of it. [security.md](security.md) has the threat model.
+> **There is no login until you set `KOTHAI_PASSWORD`.** Anyone who can reach the port can read and write everything. On your own machine or a home LAN that's fine and is the default. Set a password before Kothai is reachable from anywhere else (a public hostname, a VPS, a forwarded port) and put TLS in front of it. [security.md](security.md) has the threat model.

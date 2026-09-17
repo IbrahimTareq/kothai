@@ -1,11 +1,11 @@
 // The other half of the gate's contract, and the one that matters for people
-// who already run this: with STASH_PASSWORD unset there is no gate at all.
+// who already run this: with KOTHAI_PASSWORD unset there is no gate at all.
 //
 // A characterization test — it passed the moment the gate was written, which is
 // the point. Its job is to fail later, if some future change makes auth
 // implicitly on and silently locks every existing LAN install out on upgrade.
 // Its own process, so it cannot see the password the sibling auth test sets.
-delete process.env.STASH_PASSWORD
+delete process.env.KOTHAI_PASSWORD
 const { createServer } = await import('../../../server/router.ts')
 
 import test, { after } from 'node:test'

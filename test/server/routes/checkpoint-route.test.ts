@@ -28,7 +28,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { jsonBody, listenOnLoopback } from '../../helpers/http.ts'
 
 const DATA_DIR = mkdtempSync(path.join(os.tmpdir(), 'kothai-checkpoint-test-'))
-process.env.STASH_DATA_DIR = DATA_DIR
+process.env.KOTHAI_DATA_DIR = DATA_DIR
 
 let importRunning = false
 const realLock = await import('../../../server/data/import-lock.ts')
