@@ -21,19 +21,7 @@ A self-hosted bookmark and note manager with local AI.
 
 You throw links, screenshots and half-formed thoughts at one box. A local model reads each one in the background, gives it a title, picks tags, and turns it into a vector so you can search by meaning instead of exact words. Flip it into Ask and put questions to the pile. Answers are built only from what you saved, and every claim points back at the card it came from.
 
-In case you're wondering, Kothai is Bengali for "where". It's the question you end up asking when you're trying to find something, which is the problem this is built around.
-
-## Features
-
-- **Two-phase saving.** A card appears the moment you hit Enter. Models catch up in the background.
-- **Ask your archive.** Hybrid retrieval (cosine + keyword), cited answers, no hallucination beyond your data.
-- **Images count as notes.** A vision model captions them so they show up in search.
-- **Links turn into cards.** Metadata, YouTube captions, and full article text get fetched and indexed.
-- **Spaces.** Collections with optional tag rules and a freeform canvas view.
-- **Swappable models.** Three slots (language, embedding, vision), all changeable live.
-- **Tunable memory.** Each model role can be always on, on demand, or off. Turn all three off for a plain bookmark manager on 1 GB.
-- **Runs on modest hardware.** Raspberry Pi 5 handles the small models. A lite image (475 MB) sends inference to any OpenAI-compatible endpoint instead.
-- **Your data stays yours.** One SQLite file, JSON export in a click, hot backups with no downtime.
+See [What is Kothai?](https://getkothai.com/docs/getting-started/what-is-kothai) for the full feature list.
 
 ## Quick start
 
