@@ -5,7 +5,7 @@
   },
   "client/components/Canvas.tsx": {
     "lines": 520,
-    "exports": 2
+    "exports": 1
   },
   "client/components/Cards.tsx": {
     "lines": 472,
@@ -13,7 +13,7 @@
   },
   "client/components/Tweaks.tsx": {
     "lines": 468,
-    "exports": 9
+    "exports": 8
   },
   "client/data/api.ts": {
     "lines": 486,
@@ -21,11 +21,7 @@
   },
   "client/layout/canvas.ts": {
     "lines": 250,
-    "exports": 25
-  },
-  "client/types.ts": {
-    "lines": 270,
-    "exports": 32
+    "exports": 20
   },
   "client/views/Core.tsx": {
     "lines": 573,
@@ -94,7 +90,7 @@
   "_governance": {
     "claudeMdLines": 45,
     "cleanCodeRulesLines": 41,
-    "baselineEntries": 23,
-    "exportTotal": 562
+    "baselineEntries": 22,
+    "exportTotal": 500
   }
 }
