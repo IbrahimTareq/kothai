@@ -12,11 +12,16 @@
 // silently destroy every correction the user has ever made.
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
+import { note } from '../../helpers/notes.ts'
+import type { NoteRecord } from '../../../server/data/notes.ts'
+import type { LinkMeta } from '../../../server/ai/meta.ts'
+import type { Residency } from '../../../server/ai/roles.ts'
+import type { ClassifyArgs } from '../../../server/ai/providers/types.ts'
 
-let notes = []
-let classifyCalls = []
-let embedCalls = []
-let persisted = [] // ids written with { persist: false }
+let notes: NoteRecord[] = []
+let classifyCalls: string[] = []
+let embedCalls: string[] = []
+let persisted: string[] = [] // ids written with { persist: false }
 let flushes = 0
 let availableImpl = () => true
 
@@ -31,7 +36,7 @@ const realMeta = await import('../../../server/ai/meta.ts')
 mock.module('../../../server/ai/meta.ts', {
   namedExports: {
     ...realMeta,
-    fetchLinkMeta: async () => ({
+    fetchLinkMeta: async (): Promise<LinkMeta> => ({
       siteTitle: 'A Title',
       siteDesc: 'a caption',
       siteName: 'S',
@@ -44,9 +49,9 @@ mock.module('../../../server/data/notes.ts', {
   namedExports: {
     ...realStore,
     allNotes: () => notes,
-    getNote: id => notes.find(n => n.id === id) ?? null,
+    getNote: (id: string) => notes.find(n => n.id === id) ?? null,
     count: () => notes.length,
-    updateNote: async (id, patch, opts) => {
+    updateNote: async (id: string, patch: Partial<NoteRecord>, opts?: { persist?: boolean }) => {
       const n = notes.find(x => x.id === id)
       if (!n) return null
       if (opts && opts.persist === false) persisted.push(id)
@@ -59,12 +64,14 @@ mock.module('../../../server/data/notes.ts', {
   },
 })
 mock.module('../../../server/lib/tags.ts', { namedExports: { ...realTags, buildVocabulary: () => [] } })
-mock.module('../../../server/data/tagvocab.ts', { namedExports: { ...realTagvocab, canonicalize: async t => t } })
+mock.module('../../../server/data/tagvocab.ts', {
+  namedExports: { ...realTagvocab, canonicalize: async (t: string[]) => t },
+})
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
     ...realNormalise,
     available: () => availableImpl(),
-    classify: async args => {
+    classify: async (args: ClassifyArgs) => {
       classifyCalls.push(args.text)
       return {
         type: 'link',
@@ -74,7 +81,7 @@ mock.module('../../../server/ai/index.ts', {
         tags: ['fresh', 'tags'],
       }
     },
-    embedText: async text => {
+    embedText: async (text: string) => {
       embedCalls.push(text)
       return [1, 2, 3]
     },
@@ -82,7 +89,10 @@ mock.module('../../../server/ai/index.ts', {
 })
 mock.module('../../../server/data/collections.ts', { namedExports: { ...realCollections, autoAdd: async () => {} } })
 mock.module('../../../server/data/settings.ts', {
-  namedExports: { ...realSettings, getResidency: () => ({ llm: 'ondemand', embed: 'always', vision: 'off' }) },
+  namedExports: {
+    ...realSettings,
+    getResidency: (): Residency => ({ llm: 'ondemand', embed: 'always', vision: 'off' }),
+  },
 })
 
 const enrich = await import('../../../server/ai/enrich.ts')
@@ -90,7 +100,7 @@ const enrich = await import('../../../server/ai/enrich.ts')
 // Jobs queued by an earlier test keep draining on the shared FIFO, so the
 // chain is settled BEFORE the counters are cleared — otherwise the next test
 // starts counting the previous one's work.
-async function reset(list) {
+async function reset(list: NoteRecord[]) {
   await enrich.queueJob(() => {})
   notes = list.map(n => ({ ...n }))
   classifyCalls = []
@@ -102,26 +112,26 @@ async function reset(list) {
 
 // A note classified long ago from its URL alone, which has since gained a
 // caption — exactly what this action exists to fix.
-const STALE = {
-  id: 'a',
-  content: 'https://example.com/x',
-  url: 'https://example.com/x',
-  type: 'link',
-  title: 'https://example.com/x',
-  tags: ['link'],
-  siteDesc: 'a caption that arrived after the note was classified',
-  metaFetched: true,
+const STALE: NoteRecord = {
+  ...note({
+    id: 'a',
+    content: 'https://example.com/x',
+    url: 'https://example.com/x',
+    type: 'link',
+    title: 'https://example.com/x',
+    tags: ['link'],
+    siteDesc: 'a caption that arrived after the note was classified',
+    metaFetched: true,
+  }),
   ai: { classify: true, embed: true },
 }
+
+const RESIDENCY: Residency = { llm: 'ondemand', embed: 'always', vision: 'off' }
 
 test('a note the backlog would skip is re-classified and re-embedded', async () => {
   await reset([STALE])
   const { backlogCount } = await import('../../../server/ai/backlog.ts')
-  assert.equal(
-    backlogCount(notes, { llm: 'ondemand', embed: 'always', vision: 'off' }),
-    0,
-    'precondition: the backlog offers nothing',
-  )
+  assert.equal(backlogCount(notes, RESIDENCY), 0, 'precondition: the backlog offers nothing')
 
   const queued = await enrich.retagAll()
   await enrich.queueJob(() => {})
@@ -144,6 +154,7 @@ test('hand-edited tags survive — the whole difference from the single-note ret
   assert.equal(notes[0].title, 'A Real Title')
   assert.equal(notes[0].summary, 'A real summary.')
   assert.equal(embedCalls.length, 1)
+  assert.ok(notes[0].ai)
   assert.equal(notes[0].ai.tagsEdited, true, 'the marker is preserved, so the next retag protects them too')
 })
 
@@ -155,6 +166,7 @@ test('the marker is cleared for classify and embed, but vision work is left alon
 
   // Re-describing every thumbnail is a far longer job with its own backlog
   // entry; this action is about classification.
+  assert.ok(notes[0].ai)
   assert.equal(notes[0].ai.vision, true)
   assert.equal(notes[0].ai.thumbVision, true)
 })

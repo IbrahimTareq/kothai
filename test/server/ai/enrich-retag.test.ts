@@ -4,29 +4,34 @@
 // zero network I/O and zero real model calls.
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
+import { note } from '../../helpers/notes.ts'
+import type { NoteRecord } from '../../../server/data/notes.ts'
+import type { LinkMeta } from '../../../server/ai/meta.ts'
+import type { Residency } from '../../../server/ai/roles.ts'
+import type { Classification, ClassifyArgs } from '../../../server/ai/providers/types.ts'
 
 const IG_URL = 'https://www.instagram.com/p/AAA111/'
 
-let notes
-function seedNotes(list) {
+let notes: NoteRecord[]
+function seedNotes(list: NoteRecord[]) {
   notes = list.map(n => ({ ...n }))
 }
 function fakeAllNotes() {
   return notes
 }
-async function fakeUpdateNote(id, patch) {
+async function fakeUpdateNote(id: string, patch: Partial<NoteRecord>) {
   const n = notes.find(x => x.id === id)
   if (!n) return null
   Object.assign(n, patch)
   return n
 }
 
-let classifyImpl
-let embedTextImpl
-let fetchLinkMetaImpl
-let residencyImpl
-let classifyCalls
-let autoAddCalls
+let classifyImpl: (args: ClassifyArgs) => Promise<Classification>
+let embedTextImpl: (text: string) => Promise<number[]>
+let fetchLinkMetaImpl: (url: string, id: string) => Promise<LinkMeta>
+let residencyImpl: () => Residency
+let classifyCalls: ClassifyArgs[]
+let autoAddCalls: { id: string; tags: string[] | null | undefined }[]
 
 function reset() {
   seedNotes([])
@@ -48,32 +53,34 @@ const realCollections = await import('../../../server/data/collections.ts')
 const realSettings = await import('../../../server/data/settings.ts')
 
 mock.module('../../../server/ai/meta.ts', {
-  namedExports: { ...realMeta, fetchLinkMeta: async (url, id) => fetchLinkMetaImpl(url, id) },
+  namedExports: { ...realMeta, fetchLinkMeta: async (url: string, id: string) => fetchLinkMetaImpl(url, id) },
 })
 mock.module('../../../server/data/notes.ts', {
   namedExports: {
     ...realStore,
     allNotes: () => fakeAllNotes(),
-    getNote: id => fakeAllNotes().find(n => n.id === id) ?? null,
-    updateNote: (id, patch) => fakeUpdateNote(id, patch),
+    getNote: (id: string) => fakeAllNotes().find(n => n.id === id) ?? null,
+    updateNote: (id: string, patch: Partial<NoteRecord>) => fakeUpdateNote(id, patch),
   },
 })
 mock.module('../../../server/lib/tags.ts', { namedExports: { ...realTags, buildVocabulary: () => [] } })
-mock.module('../../../server/data/tagvocab.ts', { namedExports: { ...realTagvocab, canonicalize: async tags => tags } })
+mock.module('../../../server/data/tagvocab.ts', {
+  namedExports: { ...realTagvocab, canonicalize: async (tags: string[]) => tags },
+})
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
     ...realNormalise,
-    classify: args => {
+    classify: (args: ClassifyArgs) => {
       classifyCalls.push(args)
       return classifyImpl(args)
     },
-    embedText: text => embedTextImpl(text),
+    embedText: (text: string) => embedTextImpl(text),
   },
 })
 mock.module('../../../server/data/collections.ts', {
   namedExports: {
     ...realCollections,
-    autoAdd: async (id, tags) => {
+    autoAdd: async (id: string, tags: string[] | null | undefined) => {
       autoAddCalls.push({ id, tags })
     },
   },
@@ -101,24 +108,26 @@ async function drainIgQueue(timeoutMs = 2000) {
 
 test('enrichNote: a note with an account gets "@handle" prepended to its classified tags', async () => {
   reset()
-  seedNotes([{ id: 'n1', content: 'hello world', account: 'ChefSteps', ai: {} }])
+  seedNotes([{ ...note({ id: 'n1', content: 'hello world', account: 'ChefSteps' }), ai: {} }])
   await enrich.queueEnrich('n1', { absPath: null, text: 'hello world', isUrl: false, hasImage: false })
-  const note = notes.find(n => n.id === 'n1')
-  assert.deepEqual(note.tags, ['@chefsteps', 'topic'])
+  const stored = notes.find(n => n.id === 'n1')
+  assert.ok(stored)
+  assert.deepEqual(stored.tags, ['@chefsteps', 'topic'])
 })
 
 test('enrichNote: a note with no account is classified normally, no stray tag', async () => {
   reset()
-  seedNotes([{ id: 'n2', content: 'hello world', account: null, ai: {} }])
+  seedNotes([{ ...note({ id: 'n2', content: 'hello world', account: null }), ai: {} }])
   await enrich.queueEnrich('n2', { absPath: null, text: 'hello world', isUrl: false, hasImage: false })
-  const note = notes.find(n => n.id === 'n2')
-  assert.deepEqual(note.tags, ['topic'])
+  const stored = notes.find(n => n.id === 'n2')
+  assert.ok(stored)
+  assert.deepEqual(stored.tags, ['topic'])
 })
 
 test('reclassifyWithCaption (the Instagram caption path): also gets the account tag', async () => {
   reset()
   const id = 'n3'
-  seedNotes([{ id, content: IG_URL, url: IG_URL, type: 'link', account: 'natgeo', ai: {} }])
+  seedNotes([{ ...note({ id, content: IG_URL, url: IG_URL, type: 'link', account: 'natgeo' }), ai: {} }])
   fetchLinkMetaImpl = async () => ({
     siteTitle: 'Title',
     siteDesc: 'Title\ncaption body',
@@ -128,8 +137,9 @@ test('reclassifyWithCaption (the Instagram caption path): also gets the account 
   enrich.queueIgMeta(id, IG_URL)
   await drainIgQueue()
   await enrich.queueJob(() => {})
-  const note = notes.find(n => n.id === id)
-  assert.deepEqual(note.tags, ['@natgeo', 'topic'])
+  const stored = notes.find(n => n.id === id)
+  assert.ok(stored)
+  assert.deepEqual(stored.tags, ['@natgeo', 'topic'])
 })
 
 test('retagNote: forces a fresh classify even on an already-classified, hand-edited note — old tags are discarded', async () => {
@@ -137,10 +147,7 @@ test('retagNote: forces a fresh classify even on an already-classified, hand-edi
   const id = 'n4'
   seedNotes([
     {
-      id,
-      content: 'hello world',
-      account: 'natgeo',
-      tags: ['user-picked-this-tag'],
+      ...note({ id, content: 'hello world', account: 'natgeo', tags: ['user-picked-this-tag'] }),
       ai: { classify: true, embed: true, tagsEdited: true },
     },
   ])
@@ -152,16 +159,19 @@ test('retagNote: forces a fresh classify even on an already-classified, hand-edi
     tags: ['fresh-topic'],
   })
   const returned = await enrich.retagNote(id)
+  assert.ok(returned, 'retagNote found the note it was asked about')
   assert.equal(returned.pending, true, 'the immediate response is optimistic — pending until the queued job lands')
   await enrich.queueJob(() => {}) // drain the job retagNote queued
-  const note = notes.find(n => n.id === id)
-  assert.deepEqual(note.tags, ['@natgeo', 'fresh-topic'], 'old hand-edited tag is gone, account tag re-applied')
+  const stored = notes.find(n => n.id === id)
+  assert.ok(stored)
+  assert.deepEqual(stored.tags, ['@natgeo', 'fresh-topic'], 'old hand-edited tag is gone, account tag re-applied')
+  assert.ok(stored.ai)
   assert.equal(
-    note.ai.tagsEdited,
+    stored.ai.tagsEdited,
     false,
     'the tagsEdited guard is cleared — this is an explicit user-triggered replace',
   )
-  assert.equal(note.pending, false, 'pending is flipped back once the queued job actually completes')
+  assert.equal(stored.pending, false, 'pending is flipped back once the queued job actually completes')
   assert.equal(autoAddCalls.length, 1)
   assert.deepEqual(autoAddCalls[0], { id, tags: ['@natgeo', 'fresh-topic'] })
 })

@@ -10,12 +10,16 @@
 // wrong baseline and never noticed at all.
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
+import { note } from '../../helpers/notes.ts'
+import type { NoteRecord } from '../../../server/data/notes.ts'
+import type { SettingsPatch } from '../../../server/data/settings.ts'
+import type { Residency } from '../../../server/ai/roles.ts'
 
-let notes = []
-let embedCalls = []
-let residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
-let storedProvider = null
-let savedPatches = []
+let notes: NoteRecord[] = []
+let embedCalls: { text: string; markerNow: string | null }[] = []
+let residencyImpl = (): Residency => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
+let storedProvider: string | null = null
+let savedPatches: SettingsPatch[] = []
 
 const realStore = await import('../../../server/data/notes.ts')
 const realTags = await import('../../../server/lib/tags.ts')
@@ -28,9 +32,9 @@ mock.module('../../../server/data/notes.ts', {
   namedExports: {
     ...realStore,
     allNotes: () => notes,
-    getNote: id => notes.find(n => n.id === id) ?? null,
+    getNote: (id: string) => notes.find(n => n.id === id) ?? null,
     count: () => notes.length,
-    updateNote: async (id, patch) => {
+    updateNote: async (id: string, patch: Partial<NoteRecord>) => {
       const n = notes.find(x => x.id === id)
       if (n) Object.assign(n, patch)
       return n
@@ -39,14 +43,16 @@ mock.module('../../../server/data/notes.ts', {
   },
 })
 mock.module('../../../server/lib/tags.ts', { namedExports: { ...realTags, buildVocabulary: () => [] } })
-mock.module('../../../server/data/tagvocab.ts', { namedExports: { ...realTagvocab, canonicalize: async t => t } })
+mock.module('../../../server/data/tagvocab.ts', {
+  namedExports: { ...realTagvocab, canonicalize: async (t: string[]) => t },
+})
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
     ...realNormalise,
     classify: async () => ({ type: 'link', category: 'General', title: 'T', summary: 'S', tags: [] }),
     // Each call records the marker as it stands mid-sweep, so the test can see
     // whether the new value was written before the vectors it describes exist.
-    embedText: async text => {
+    embedText: async (text: string) => {
       embedCalls.push({ text, markerNow: storedProvider })
       return [text.length]
     },
@@ -59,7 +65,7 @@ mock.module('../../../server/data/settings.ts', {
     getResidency: () => residencyImpl(),
     getEmbedRecipe: () => 'recipe-current',
     getEmbedProvider: () => storedProvider,
-    save: async patch => {
+    save: async (patch: SettingsPatch) => {
       savedPatches.push(patch)
       if (patch.embedProvider !== undefined) storedProvider = patch.embedProvider
       return {}
@@ -69,15 +75,15 @@ mock.module('../../../server/data/settings.ts', {
 
 const enrich = await import('../../../server/ai/enrich.ts')
 
-const NOTE = {
+const NOTE: NoteRecord = note({
   id: 'n1',
   title: 'Brown butter pasta',
   summary: 'A ten minute recipe.',
   content: 'text',
   tags: ['pasta'],
-}
+})
 
-function reset(list = [], marker = null) {
+function reset(list: NoteRecord[] = [], marker: string | null = null) {
   notes = list.map(n => ({ ...n }))
   embedCalls = []
   savedPatches = []

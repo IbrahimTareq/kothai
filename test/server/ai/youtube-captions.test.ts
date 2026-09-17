@@ -9,17 +9,29 @@
 // gating worth more than usual.
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
+import type { TranscriptResponse } from 'youtube-transcript'
+import { note } from '../../helpers/notes.ts'
+import type { NoteRecord } from '../../../server/data/notes.ts'
+import type { LinkMeta } from '../../../server/ai/meta.ts'
+import type { Residency } from '../../../server/ai/roles.ts'
+import type { ClassifyArgs } from '../../../server/ai/providers/types.ts'
 
 const WATCH = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
 
-let transcriptImpl
-let transcriptCalls
+// A cue as the package actually hands one back. The fixtures used to be bare
+// `{ text }` literals, which is not what fetchTranscript returns and not what
+// joinCaptions is handed in production — the timings are always there, they
+// are simply not what this step reads.
+const seg = (text: string): TranscriptResponse => ({ text, duration: 1, offset: 0 })
+
+let transcriptImpl: (id: string) => Promise<TranscriptResponse[]>
+let transcriptCalls: string[]
 
 const realYt = await import('youtube-transcript')
 mock.module('youtube-transcript', {
   namedExports: {
     ...realYt,
-    fetchTranscript: async id => {
+    fetchTranscript: async (id: string) => {
       transcriptCalls.push(id)
       return transcriptImpl(id)
     },
@@ -58,18 +70,20 @@ test('youtubeVideoId rejects anything that is not a single YouTube video', () =>
 })
 
 test('joinCaptions folds cue-sized segments into one block and caps it at the article limit', () => {
-  assert.equal(joinCaptions([{ text: 'never gonna' }, { text: '  give you up ' }]), 'never gonna give you up')
-  assert.equal(joinCaptions([{ text: '' }, { text: '   ' }]), null, 'nothing but blanks is no transcript')
+  assert.equal(joinCaptions([seg('never gonna'), seg('  give you up ')]), 'never gonna give you up')
+  assert.equal(joinCaptions([seg(''), seg('   ')]), null, 'nothing but blanks is no transcript')
   assert.equal(joinCaptions([]), null)
   assert.equal(joinCaptions(null), null)
-  assert.equal(joinCaptions([{ text: 'x '.repeat(20000) }]).length, 8000)
+  const capped = joinCaptions([seg('x '.repeat(20000))])
+  assert.ok(capped)
+  assert.equal(capped.length, 8000)
 })
 
 // ---- permanent vs transient ---------------------------------------------
 
 test('fetchYouTubeCaptions returns the transcript and marks the answer final', async () => {
   transcriptCalls = []
-  transcriptImpl = async () => [{ text: 'we are no strangers' }, { text: 'to love' }]
+  transcriptImpl = async () => [seg('we are no strangers'), seg('to love')]
   const r = await fetchYouTubeCaptions(WATCH)
   assert.deepEqual(transcriptCalls, ['dQw4w9WgXcQ'], 'the package is handed a validated id, never the raw URL')
   assert.equal(r.text, 'we are no strangers to love')
@@ -95,7 +109,9 @@ test('a video with captions disabled is a final answer, not an error — recorde
 })
 
 test('a rate limit or a network blip stays retryable', async () => {
-  for (const err of [new realYt.YoutubeTranscriptTooManyRequestError('slow down'), new Error('ECONNRESET')]) {
+  // YoutubeTranscriptTooManyRequestError carries its own fixed message and
+  // takes no argument — the string this used to pass was discarded.
+  for (const err of [new realYt.YoutubeTranscriptTooManyRequestError(), new Error('ECONNRESET')]) {
     transcriptImpl = async () => {
       throw err
     }
@@ -116,9 +132,9 @@ test('fetchYouTubeCaptions never calls out for a non-YouTube URL', async () => {
 // Same harness shape as test/enrich-article.test.js: every module enrich.js
 // touches is stubbed, so this asserts behaviour with no network and no model.
 
-let notes = []
-let classifyCalls = []
-let embedCalls = []
+let notes: NoteRecord[] = []
+let classifyCalls: string[] = []
+let embedCalls: string[] = []
 
 const realMeta = await import('../../../server/ai/meta.ts')
 const realStore = await import('../../../server/data/notes.ts')
@@ -128,12 +144,12 @@ const realNormalise = await import('../../../server/ai/normalise.ts')
 const realCollections = await import('../../../server/data/collections.ts')
 const realSettings = await import('../../../server/data/settings.ts')
 
-let residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
+let residencyImpl = (): Residency => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
 
 mock.module('../../../server/ai/meta.ts', {
   namedExports: {
     ...realMeta,
-    fetchLinkMeta: async () => ({
+    fetchLinkMeta: async (): Promise<LinkMeta> => ({
       siteTitle: 'Rick Astley - Never Gonna Give You Up',
       siteDesc: null,
       siteName: 'YouTube',
@@ -146,8 +162,8 @@ mock.module('../../../server/data/notes.ts', {
   namedExports: {
     ...realStore,
     allNotes: () => notes,
-    getNote: id => notes.find(n => n.id === id) ?? null,
-    updateNote: async (id, patch) => {
+    getNote: (id: string) => notes.find(n => n.id === id) ?? null,
+    updateNote: async (id: string, patch: Partial<NoteRecord>) => {
       const n = notes.find(x => x.id === id)
       if (n) Object.assign(n, patch)
       return n
@@ -155,15 +171,17 @@ mock.module('../../../server/data/notes.ts', {
   },
 })
 mock.module('../../../server/lib/tags.ts', { namedExports: { ...realTags, buildVocabulary: () => [] } })
-mock.module('../../../server/data/tagvocab.ts', { namedExports: { ...realTagvocab, canonicalize: async t => t } })
+mock.module('../../../server/data/tagvocab.ts', {
+  namedExports: { ...realTagvocab, canonicalize: async (t: string[]) => t },
+})
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
     ...realNormalise,
-    classify: async args => {
+    classify: async (args: ClassifyArgs) => {
       classifyCalls.push(args.text)
       return { type: 'video', category: 'Music', title: 'T', summary: 'S', tags: [] }
     },
-    embedText: async text => {
+    embedText: async (text: string) => {
       embedCalls.push(text)
       return [0, 0, 0]
     },
@@ -176,8 +194,8 @@ mock.module('../../../server/data/settings.ts', {
 
 const enrich = await import('../../../server/ai/enrich.ts')
 
-function seed(note) {
-  notes = [{ id: 'y1', content: WATCH, url: WATCH, type: 'video', ai: {}, ...note }]
+function seed(over: Partial<NoteRecord> = {}) {
+  notes = [{ ...note({ id: 'y1', content: WATCH, url: WATCH, type: 'video' }), ai: {}, ...over }]
   classifyCalls = []
   embedCalls = []
   transcriptCalls = []
@@ -185,14 +203,15 @@ function seed(note) {
 
 test('a transcript reaches classify, embed and the stored article field', async () => {
   seed()
-  transcriptImpl = async () => [{ text: 'we are no strangers to love' }]
+  transcriptImpl = async () => [seg('we are no strangers to love')]
   await enrich.queueEnrich('y1', { absPath: null, text: WATCH, isUrl: true, hasImage: false })
 
   assert.match(classifyCalls[0], /no strangers to love/, 'transcript missing from the classify input')
   assert.match(embedCalls[0], /no strangers to love/, 'transcript missing from the embed input')
-  const note = notes[0]
-  assert.equal(note.article, 'we are no strangers to love')
-  assert.equal(note.ai.captions, true)
+  const stored = notes[0]
+  assert.equal(stored.article, 'we are no strangers to love')
+  assert.ok(stored.ai)
+  assert.equal(stored.ai.captions, true)
 })
 
 test('a video with no captions is marked done once and never fetched again', async () => {
@@ -202,6 +221,7 @@ test('a video with no captions is marked done once and never fetched again', asy
   }
   await enrich.queueEnrich('y1', { absPath: null, text: WATCH, isUrl: true, hasImage: false })
   assert.equal(transcriptCalls.length, 1)
+  assert.ok(notes[0].ai)
   assert.equal(notes[0].ai.captions, true)
   assert.equal(notes[0].article, undefined, 'no captions means no article, not an empty one')
 
@@ -213,15 +233,18 @@ test('a video with no captions is marked done once and never fetched again', asy
 test('a transient caption failure leaves the note eligible for a later retry', async () => {
   seed()
   transcriptImpl = async () => {
-    throw new realYt.YoutubeTranscriptTooManyRequestError('429')
+    throw new realYt.YoutubeTranscriptTooManyRequestError()
   }
   await enrich.queueEnrich('y1', { absPath: null, text: WATCH, isUrl: true, hasImage: false })
+  assert.ok(notes[0].ai)
   assert.equal(notes[0].ai.captions, undefined)
 
-  transcriptImpl = async () => [{ text: 'the transcript, eventually' }]
+  transcriptImpl = async () => [seg('the transcript, eventually')]
   await enrich.queueEnrich('y1', { absPath: null, text: WATCH, isUrl: true, hasImage: false })
   assert.equal(transcriptCalls.length, 2, 'the retry actually happened')
+  assert.ok(notes[0].article)
   assert.match(notes[0].article, /the transcript, eventually/)
+  assert.ok(notes[0].ai)
   assert.equal(notes[0].ai.captions, true)
 })
 
@@ -231,7 +254,7 @@ test('a transcript landing on an ALREADY-embedded note forces a re-embed — oth
   // embed, and without the forced step the transcript would sit on disk
   // invisible to search.
   seed({ ai: { classify: true, embed: true } })
-  transcriptImpl = async () => [{ text: 'a transcript worth embedding' }]
+  transcriptImpl = async () => [seg('a transcript worth embedding')]
   await enrich.queueEnrich('y1', { absPath: null, text: WATCH, isUrl: true, hasImage: false })
 
   assert.equal(classifyCalls.length, 0, 'classify was already done and must not be re-run')
@@ -242,26 +265,29 @@ test('a transcript landing on an ALREADY-embedded note forces a re-embed — oth
 test('with the embed role off, the transcript is still fetched and stored — it is not a model step', async () => {
   seed({ ai: { classify: true, embed: true } })
   residencyImpl = () => ({ llm: 'off', embed: 'off', vision: 'off' })
-  transcriptImpl = async () => [{ text: 'still worth storing' }]
+  transcriptImpl = async () => [seg('still worth storing')]
   await enrich.queueEnrich('y1', { absPath: null, text: WATCH, isUrl: true, hasImage: false })
   residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
 
   assert.equal(embedCalls.length, 0)
+  assert.ok(notes[0].article)
   assert.match(notes[0].article, /still worth storing/, 'textSearch and the answer prompt still benefit')
+  assert.ok(notes[0].ai)
   assert.equal(notes[0].ai.captions, true)
 })
 
 test('a non-YouTube link never reaches the caption step', async () => {
-  notes = [{ id: 'v1', content: 'https://vimeo.com/12345', url: 'https://vimeo.com/12345', type: 'video', ai: {} }]
+  const vimeo = 'https://vimeo.com/12345'
+  notes = [{ ...note({ id: 'v1', content: vimeo, url: vimeo, type: 'video' }), ai: {} }]
   transcriptCalls = []
-  await enrich.queueEnrich('v1', { absPath: null, text: 'https://vimeo.com/12345', isUrl: true, hasImage: false })
+  await enrich.queueEnrich('v1', { absPath: null, text: vimeo, isUrl: true, hasImage: false })
   assert.deepEqual(transcriptCalls, [])
+  assert.ok(notes[0].ai)
   assert.equal(notes[0].ai.captions, undefined)
 })
 
 test('English captions are preferred, with a fall back to whatever the video actually has', async () => {
-  const _calls = []
-  transcriptImpl = async () => [{ text: 'the english transcript' }]
+  transcriptImpl = async () => [seg('the english transcript')]
   transcriptCalls = []
   // The mock records ids; wrap it to see the language option too.
   const realFetch = realYt.fetchTranscript
@@ -278,7 +304,7 @@ test('English captions are preferred, with a fall back to whatever the video act
   let attempt = 0
   transcriptImpl = async () => {
     if (attempt++ === 0) throw new realYt.YoutubeTranscriptNotAvailableLanguageError('en', ['ar'], 'dQw4w9WgXcQ')
-    return [{ text: 'الترجمة العربية' }]
+    return [seg('الترجمة العربية')]
   }
   transcriptCalls = []
   const fallback = await fetchYouTubeCaptions(WATCH)

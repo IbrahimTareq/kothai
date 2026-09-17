@@ -9,22 +9,27 @@
 // model are involved.
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
+import { note } from '../../helpers/notes.ts'
+import type { NoteRecord } from '../../../server/data/notes.ts'
+import type { LinkMeta } from '../../../server/ai/meta.ts'
+import type { Residency } from '../../../server/ai/roles.ts'
+import type { ClassifyArgs, DescribeImageArgs } from '../../../server/ai/providers/types.ts'
 
 const TIKTOK = 'https://www.tiktok.com/@chef/video/7300000000000000000'
 
-let notes = []
-let classifyCalls = []
-let embedCalls = []
-let describeCalls = []
-let describeImpl = async () => 'Overlay text reads 3 INGREDIENT PASTA. A skillet on a wooden board.'
-let linkMetaImpl = async () => ({
+let notes: NoteRecord[] = []
+let classifyCalls: string[] = []
+let embedCalls: string[] = []
+let describeCalls: DescribeImageArgs[] = []
+let describeImpl = async (): Promise<string> => 'Overlay text reads 3 INGREDIENT PASTA. A skillet on a wooden board.'
+let linkMetaImpl = async (): Promise<LinkMeta> => ({
   siteTitle: 'a caption',
   siteDesc: null,
   siteName: 'TikTok',
   thumb: '/uploads/meta-t1.jpg',
   article: null,
 })
-let residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
+let residencyImpl = (): Residency => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
 
 const realMeta = await import('../../../server/ai/meta.ts')
 const realStore = await import('../../../server/data/notes.ts')
@@ -35,14 +40,14 @@ const realCollections = await import('../../../server/data/collections.ts')
 const realSettings = await import('../../../server/data/settings.ts')
 
 mock.module('../../../server/ai/meta.ts', {
-  namedExports: { ...realMeta, fetchLinkMeta: async (...a) => linkMetaImpl(...a) },
+  namedExports: { ...realMeta, fetchLinkMeta: async () => linkMetaImpl() },
 })
 mock.module('../../../server/data/notes.ts', {
   namedExports: {
     ...realStore,
     allNotes: () => notes,
-    getNote: id => notes.find(n => n.id === id) ?? null,
-    updateNote: async (id, patch) => {
+    getNote: (id: string) => notes.find(n => n.id === id) ?? null,
+    updateNote: async (id: string, patch: Partial<NoteRecord>) => {
       const n = notes.find(x => x.id === id)
       if (n) Object.assign(n, patch)
       return n
@@ -50,21 +55,23 @@ mock.module('../../../server/data/notes.ts', {
   },
 })
 mock.module('../../../server/lib/tags.ts', { namedExports: { ...realTags, buildVocabulary: () => [] } })
-mock.module('../../../server/data/tagvocab.ts', { namedExports: { ...realTagvocab, canonicalize: async t => t } })
+mock.module('../../../server/data/tagvocab.ts', {
+  namedExports: { ...realTagvocab, canonicalize: async (t: string[]) => t },
+})
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
     ...realNormalise,
-    classify: async args => {
+    classify: async (args: ClassifyArgs) => {
       classifyCalls.push(args.text)
       return { type: 'video', category: 'Food', title: 'T', summary: 'S', tags: [] }
     },
-    embedText: async text => {
+    embedText: async (text: string) => {
       embedCalls.push(text)
       return [0, 0, 0]
     },
-    describeImage: async args => {
+    describeImage: async (args: DescribeImageArgs) => {
       describeCalls.push(args)
-      return describeImpl(args)
+      return describeImpl()
     },
   },
 })
@@ -76,8 +83,8 @@ mock.module('../../../server/data/settings.ts', {
 const enrich = await import('../../../server/ai/enrich.ts')
 const { DESCRIBE_THUMB_PROMPT } = await import('../../../server/ai/prompts.ts')
 
-function seed(note = {}) {
-  notes = [{ id: 't1', content: TIKTOK, url: TIKTOK, type: 'video', ai: {}, ...note }]
+function seed(over: Partial<NoteRecord> = {}) {
+  notes = [{ ...note({ id: 't1', content: TIKTOK, url: TIKTOK, type: 'video' }), ai: {}, ...over }]
   classifyCalls = []
   embedCalls = []
   describeCalls = []
@@ -85,6 +92,7 @@ function seed(note = {}) {
 
 async function run(id = 't1') {
   const n = notes.find(x => x.id === id)
+  assert.ok(n, `run() was pointed at ${id}, which is not seeded`)
   await enrich.queueEnrich(id, { absPath: null, text: n.content, isUrl: true, hasImage: false })
 }
 
@@ -96,9 +104,11 @@ test('a non-Instagram note with a thumbnail gets its cover frame described', asy
   assert.match(describeCalls[0].absPath, /meta-t1\.jpg$/)
   assert.equal(describeCalls[0].prompt, DESCRIBE_THUMB_PROMPT)
 
-  const note = notes[0]
-  assert.match(note.thumbDescription, /3 INGREDIENT PASTA/)
-  assert.equal(note.ai.thumbVision, true)
+  const stored = notes[0]
+  assert.ok(stored.thumbDescription)
+  assert.match(stored.thumbDescription, /3 INGREDIENT PASTA/)
+  assert.ok(stored.ai)
+  assert.equal(stored.ai.thumbVision, true)
   assert.match(classifyCalls[0], /3 INGREDIENT PASTA/, 'the description must reach classify')
   assert.match(embedCalls[0], /3 INGREDIENT PASTA/, 'the description must reach the embedding')
 })
@@ -119,6 +129,7 @@ test('vision residency off skips the describe call entirely, and the rest of enr
 
   assert.equal(describeCalls.length, 0)
   assert.equal(notes[0].thumbDescription, undefined)
+  assert.ok(notes[0].ai)
   assert.equal(notes[0].ai.thumbVision, undefined)
   assert.equal(classifyCalls.length, 1, 'classify still ran off the caption alone')
 })
@@ -161,6 +172,7 @@ test('a describe failure leaves the marker unset so a later pass retries, and do
   describeImpl = async () => 'Overlay text reads 3 INGREDIENT PASTA. A skillet on a wooden board.'
 
   assert.equal(describeCalls.length, 1)
+  assert.ok(notes[0].ai)
   assert.equal(notes[0].ai.thumbVision, undefined)
   assert.equal(notes[0].thumbDescription, undefined)
   assert.equal(classifyCalls.length, 1, 'a vision failure is isolated, like every other step')
@@ -206,13 +218,12 @@ test('a thumbnail already on the note is described even when this pass fetches n
 // step on the stored description rather than on the lying marker.
 const { stepsFor, backlogCount } = await import('../../../server/ai/backlog.ts')
 
-const STRANDED = {
-  id: 'stranded',
-  thumb: '/uploads/meta-stranded.jpg',
+const STRANDED: NoteRecord = {
+  ...note({ id: 'stranded', thumb: '/uploads/meta-stranded.jpg' }),
   // Exactly the shape ~1,280 notes of the live library are in.
   ai: { classify: true, embed: true, thumbVision: true, igReclassified: true },
 }
-const ON = { llm: 'ondemand', embed: 'always', vision: 'ondemand' }
+const ON: Residency = { llm: 'ondemand', embed: 'always', vision: 'ondemand' }
 
 test('the backlog offers thumbVision for a note whose marker claims done but whose description is gone', () => {
   assert.ok(stepsFor(STRANDED, ON).includes('thumbVision'))
@@ -233,6 +244,7 @@ test('running the backlog on a stranded note recovers the description and re-emb
   await run('stranded')
 
   assert.equal(describeCalls.length, 1)
+  assert.ok(notes[0].thumbDescription)
   assert.match(notes[0].thumbDescription, /3 INGREDIENT PASTA/)
   assert.equal(embedCalls.length, 1, 'the recovered text must reach a vector')
 })

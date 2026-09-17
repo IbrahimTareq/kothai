@@ -9,13 +9,18 @@
 // downgraded the library's own vectors. Both halves are covered here.
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
+import { note } from '../../helpers/notes.ts'
+import type { NoteRecord } from '../../../server/data/notes.ts'
+import type { SettingsPatch } from '../../../server/data/settings.ts'
+import type { EmbedOptions } from '../../../server/ai/providers/types.ts'
+import type { Residency } from '../../../server/ai/roles.ts'
 
-let notes = []
-let embedCalls = []
-let embedImpl = async text => [text.length]
-let residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
-let storedRecipe = null
-let savedPatches = []
+let notes: NoteRecord[] = []
+let embedCalls: { text: string; opts: EmbedOptions | undefined }[] = []
+let embedImpl = async (text: string) => [text.length]
+let residencyImpl = (): Residency => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
+let storedRecipe: string | null = null
+let savedPatches: SettingsPatch[] = []
 let flushes = 0
 
 const realStore = await import('../../../server/data/notes.ts')
@@ -29,9 +34,9 @@ mock.module('../../../server/data/notes.ts', {
   namedExports: {
     ...realStore,
     allNotes: () => notes,
-    getNote: id => notes.find(n => n.id === id) ?? null,
+    getNote: (id: string) => notes.find(n => n.id === id) ?? null,
     count: () => notes.length,
-    updateNote: async (id, patch) => {
+    updateNote: async (id: string, patch: Partial<NoteRecord>) => {
       const n = notes.find(x => x.id === id)
       if (n) Object.assign(n, patch)
       return n
@@ -42,12 +47,14 @@ mock.module('../../../server/data/notes.ts', {
   },
 })
 mock.module('../../../server/lib/tags.ts', { namedExports: { ...realTags, buildVocabulary: () => [] } })
-mock.module('../../../server/data/tagvocab.ts', { namedExports: { ...realTagvocab, canonicalize: async t => t } })
+mock.module('../../../server/data/tagvocab.ts', {
+  namedExports: { ...realTagvocab, canonicalize: async (t: string[]) => t },
+})
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
     ...realNormalise,
     classify: async () => ({ type: 'link', category: 'General', title: 'T', summary: 'S', tags: [] }),
-    embedText: async (text, opts) => {
+    embedText: async (text: string, opts?: EmbedOptions) => {
       embedCalls.push({ text, opts })
       return embedImpl(text)
     },
@@ -59,7 +66,7 @@ mock.module('../../../server/data/settings.ts', {
     ...realSettings,
     getResidency: () => residencyImpl(),
     getEmbedRecipe: () => storedRecipe,
-    save: async patch => {
+    save: async (patch: SettingsPatch) => {
       savedPatches.push(patch)
       if (patch.embedRecipe !== undefined) storedRecipe = patch.embedRecipe
       return {}
@@ -70,29 +77,31 @@ mock.module('../../../server/data/settings.ts', {
 const enrich = await import('../../../server/ai/enrich.ts')
 const { EMBED_RECIPE } = await import('../../../server/ai/prompts.ts')
 
-function reset(list = []) {
+function reset(list: NoteRecord[] = []) {
   notes = list.map(n => ({ ...n }))
   embedCalls = []
   savedPatches = []
   flushes = 0
   storedRecipe = null
-  embedImpl = async text => [text.length]
+  embedImpl = async (text: string) => [text.length]
   residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
 }
 
 // A saved reel: everything worth embedding lives in fields the old inlined
 // sweep did not read.
-const REEL = {
-  id: 'r1',
-  title: 'Brown butter pasta',
-  summary: 'A ten minute recipe.',
-  content: 'https://www.instagram.com/reel/ABC/',
-  url: 'https://www.instagram.com/reel/ABC/',
-  siteTitle: 'chefsteps',
-  siteDesc: 'Three ingredients and ten minutes. #pasta',
+const REEL: NoteRecord = {
+  ...note({
+    id: 'r1',
+    title: 'Brown butter pasta',
+    summary: 'A ten minute recipe.',
+    content: 'https://www.instagram.com/reel/ABC/',
+    url: 'https://www.instagram.com/reel/ABC/',
+    siteTitle: 'chefsteps',
+    siteDesc: 'Three ingredients and ten minutes. #pasta',
+    tags: ['pasta', 'brownbutter'],
+  }),
   article: 'A longer transcript of the video.',
   thumbDescription: 'Overlay text reads 3 INGREDIENT PASTA.',
-  tags: ['pasta', 'brownbutter'],
 }
 
 test('embedBodyFor reads every field enrichment embeds, not the short legacy list', () => {
@@ -127,7 +136,7 @@ test('reembedAll embeds every note once, writes once, and records the new recipe
 
 test('reembedAll survives one unembeddable note rather than abandoning the rest of the library', async () => {
   reset([REEL, { ...REEL, id: 'r2' }, { ...REEL, id: 'r3' }])
-  embedImpl = async text => {
+  embedImpl = async (text: string) => {
     if (embedCalls.length === 2) throw new Error('model blew up')
     return [text.length]
   }
@@ -139,7 +148,7 @@ test('reembedAll survives one unembeddable note rather than abandoning the rest 
 })
 
 test('reembedAll skips a note with no embeddable text at all', async () => {
-  reset([{ id: 'empty', tags: [] }])
+  reset([note({ id: 'empty' })])
   await enrich.reembedAll('test')
   assert.equal(embedCalls.length, 0)
 })
@@ -192,8 +201,9 @@ test('an empty library records the recipe without queueing a sweep over nothing'
 })
 
 test('notes enriched normally record the recipe they were embedded under', async () => {
-  reset([{ id: 'n1', content: 'plain text note', type: 'text', ai: {} }])
+  reset([{ ...note({ id: 'n1', content: 'plain text note', type: 'text' }), ai: {} }])
   await enrich.queueEnrich('n1', { absPath: null, text: 'plain text note', isUrl: false, hasImage: false })
+  assert.ok(notes[0].ai)
   assert.equal(notes[0].ai.embed, true)
   assert.equal(notes[0].ai.embedRecipe, EMBED_RECIPE)
 })
