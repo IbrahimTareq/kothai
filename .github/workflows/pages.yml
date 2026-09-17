@@ -36,6 +36,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Access environment secrets (Umami analytics config)
+    environment: github-pages
     steps:
       # Full history: each page dates itself from `git log` on its file in
       # docs/, read by site/lib/sync.ts, which a shallow clone would not have.
@@ -60,6 +62,9 @@ jobs:
       - name: Build
         run: pnpm run build
         working-directory: site
+        env:
+          NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${{ secrets.NEXT_PUBLIC_UMAMI_WEBSITE_ID }}
+          NEXT_PUBLIC_UMAMI_URL: ${{ secrets.NEXT_PUBLIC_UMAMI_URL }}
 
       # enablement creates the Pages site on first run rather than requiring it
       # to be switched on in repo settings first — without it the action fails
