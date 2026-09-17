@@ -22,8 +22,12 @@ qvac.config.json
 
 # Docs site: mirrored markdown, mirrored app assets, and build output
 site/node_modules/
-site/src/
+site/content/
 site/public/logo.svg
 site/public/vendor/
-site/.vitepress/dist/
-site/.vitepress/cache/
+site/.next/
+site/.source/
+site/out/
+site/next-env.d.ts
+site/AGENTS.md
+site/CLAUDE.md

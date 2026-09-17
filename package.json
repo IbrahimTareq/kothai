@@ -10,6 +10,7 @@
   },
   "scripts": {
     "dev": "concurrently -k -n server,vite -c blue,magenta \"node server/index.ts\" \"vite\"",
+    "dev:site": "pnpm --dir site install --frozen-lockfile && pnpm --dir site dev",
     "build": "biome check . && node scripts/lint-tokens.ts && pnpm run typecheck && pnpm run build:client",
     "build:client": "vite build",
     "start": "npm run build && node server/index.ts",

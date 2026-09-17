@@ -2,22 +2,36 @@
   "name": "kothai-site",
   "private": true,
   "type": "module",
-  "description": "Documentation site for Kothai. Deliberately its own package so the app's CI never installs it.",
+  "description": "Documentation site for Kothai. Deliberately its own package so the app's CI never installs it, and so none of this reaches the Docker image.",
   "packageManager": "pnpm@10.15.1",
   "engines": {
     "node": ">=22.13.0 <23"
   },
   "scripts": {
-    "dev": "vitepress dev --port 5175 --strictPort",
-    "build": "vitepress build",
-    "preview": "vitepress preview --port 5175 --strictPort"
+    "predev": "node lib/sync.ts",
+    "dev": "next dev --port 5175",
+    "prebuild": "node lib/sync.ts",
+    "build": "next build",
+    "preview": "npx serve out -l 5175"
   },
   "devDependencies": {
-    "vitepress": "^1.6.3"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/mdx": "^2.0.14",
+    "@types/node": "^22.20.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "fumadocs-core": "^16.15.11",
+    "fumadocs-mdx": "^15.4.1",
+    "fumadocs-ui": "^16.15.11",
+    "lucide-react": "^1.46.0",
+    "mermaid": "^12.0.0",
+    "next": "^16.3.5",
+    "next-themes": "^0.4.6",
+    "postcss": "^8.5.28",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3",
+    "zod": "^4.6.5"
   }
 }

@@ -142,9 +142,9 @@ choose_setup() {
   # test passes and the first prompt then dies on a redirect.
   ( : < /dev/tty ) 2>/dev/null || return 0
 
-  printf '\n  Where should the AI run?\n\n' > /dev/tty
-  printf '    1) A cloud service — nothing to download, needs an API key\n' > /dev/tty
-  printf '    2) On this machine — private, no key, no bills, ~3 GB\n\n' > /dev/tty
+  printf '\n  Kothai\'s search capabilities requires AI. Where should the AI be hosted?\n\n' > /dev/tty
+  printf '    1) A cloud service like OpenAI — nothing to download, needs an API key\n' > /dev/tty
+  printf '    2) On this machine — private, no key, no bills but expect about ~3 GB of models\n\n' > /dev/tty
   where=$(ask '  > ')
 
   # Anything unrecognised takes the on-machine path: it is what this installer
@@ -203,7 +203,7 @@ set -- run -d --name "$NAME" --restart unless-stopped -p "$PORT:5173" -v "$DIR/d
 set -- "$@" "$IMAGE:$TAG"
 
 say ""
-say "Pulling $IMAGE:$TAG — this is the slow part."
+say "Pulling $IMAGE:$TAG"
 docker "$@" >/dev/null || die "docker run failed. If the port is taken, try --port with a different number."
 
 # ---- the `kothai` command -------------------------------------------------

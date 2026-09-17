@@ -146,7 +146,7 @@ curl -fsSL https://getkothai.com/install.sh | sh -s -- \
 You can still set the endpoint with environment variables rather than in the
 browser — `STASH_AI_PROVIDER=remote`, `STASH_AI_BASE_URL`, `STASH_AI_API_KEY` —
 and those win over anything set in the app. See
-[Self-hosting](docs/self-hosting.md).
+[Configuration](docs/configuration.md).
 
 ### Everything baked in — heavier
 
@@ -191,8 +191,9 @@ do: anything saved meanwhile gets its title and tags from a quick
 heuristic, then gets properly enriched once the bar says Ready. That's when Ask
 starts working too.
 
-HTTPS, backups, upgrades and the rest of the hosting story are in
-[Self-hosting](docs/self-hosting.md).
+[Configuration](docs/configuration.md) covers the environment variables,
+[Reaching Kothai from elsewhere](docs/remote-access.md) covers HTTPS and
+Tailscale, and [Backups and upgrades](docs/backups.md) covers the rest.
 
 ## How it works
 
@@ -218,6 +219,9 @@ doesn't have them fighting over the same weights.
 | **call the API** from a script or another client | [HTTP API](docs/api.md) |
 | **understand the AI layer**: roles, residency, RAM | [Models & inference](docs/models.md) |
 | **run it on your own hardware** | [Self-hosting](docs/self-hosting.md) |
+| **change a setting or work out RAM** | [Configuration](docs/configuration.md) |
+| **back it up, or upgrade it** | [Backups and upgrades](docs/backups.md) |
+| **reach it from outside the house** | [Remote access](docs/remote-access.md) |
 | **expose it beyond your LAN** | [Security](docs/security.md) |
 | **touch any CSS** | [Design system](docs/design-system.md) |
 

@@ -1,17 +1,6 @@
 # Development
 
-Setup, the commands you'll actually use, how the tests are laid out, and
-recipes for the common extensions.
-
-- [Setup](#setup)
-- [Commands](#commands)
-- [The two ports](#the-two-ports)
-- [TypeScript](#typescript)
-- [The test suite](#the-test-suite)
-- [Governance](#governance)
-- [Conventions](#conventions)
-- [Recipes](#recipes)
-- [CI](#ci)
+Setup, commands, tests, and recipes for common extensions.
 
 ## Setup
 
@@ -22,22 +11,9 @@ corepack enable          # provides the pnpm version pinned in package.json
 pnpm install
 ```
 
-Node **22** — pinned in [`.nvmrc`](../.nvmrc), matched by CI and by the
-Dockerfile's `ARG NODE_VERSION`, with a CI step that fails if those two drift.
-They already did once: contributors on Node 24 while CI and the image ran 22,
-which hid a `mock.module()` misuse that only fails on 22.
+Node **22** is pinned in [`.nvmrc`](../.nvmrc) and matched by CI and the Dockerfile.
 
-`pnpm install` is the slow step — `@qvac/sdk` ships large native prebuilds for
-every OS and arch.
-
-Claude Code contributors also need `jq` on `PATH` — the `SessionStart` hook
-(`.claude/hooks/inject-rules.sh`) shells out to it with no fallback.
-
-> [!TIP]
-> Don't want ~3 GB of model weights on your dev box? Set
-> `STASH_AI_PROVIDER=remote` and `STASH_AI_BASE_URL=http://localhost:11434/v1`
-> and point it at Ollama. Or pick *"Skip for now"* in the first-run flow and
-> develop against an AI-free install — most of the app doesn't need a model.
+`pnpm install` is the slow step. `@qvac/sdk` ships large native prebuilds for every OS and arch.
 
 ## Commands
 
@@ -45,21 +21,14 @@ Claude Code contributors also need `jq` on `PATH` — the `SessionStart` hook
 |---|---|
 | `pnpm dev` | Node server on `:5173` **and** Vite with HMR on `:5174`, concurrently. **This is the one you want.** |
 | `pnpm start` | Full build, then serve on `:5173`. What production does. |
-| `pnpm preview` | `vite preview` — serve the already-built `dist/` via Vite's own static server, not the Node server. |
-| `pnpm build` | Biome → token lint → typecheck (both tsconfig projects) → Vite build. |
+| `pnpm dev:site` | The docs site alone on `:5175`. |
+| `pnpm build` | Biome → token lint → typecheck → Vite build. |
 | `pnpm test` | Biome → token lint → shape lint → 1142 tests. ~5s. |
-| `pnpm typecheck` | `tsc --noEmit` over both projects: `tsconfig.json` (client) and `tsconfig.server.json`. |
-| `pnpm typecheck:server` | `tsc -p tsconfig.server.json --noEmit` alone (the TypeScript server files). |
+| `pnpm typecheck` | `tsc --noEmit` over both projects. |
 | `pnpm lint` | Biome check alone. |
-| `pnpm format` | Apply formatting. Biome decides style; do not argue with it. |
-| `pnpm lint:tokens` | The design-token linter alone. |
-| `pnpm lint:shape` | The file-shape ratchet alone — see [Governance](#governance). |
+| `pnpm format` | Apply formatting. Biome decides style. |
 
-Note that `build` runs Biome, the token lint, and both typechecks, which
-is why CI has no separate lint or typecheck step. `test` runs
-that same Biome and token-lint pass plus the shape ratchet before the suite,
-so a red `pnpm test` can mean a lint or shape failure, not just a failing
-test.
+`build` runs Biome, the token lint, and both typechecks. `test` runs that same pass plus the shape ratchet before the suite, so a red `pnpm test` can mean a lint or shape failure, not just a failing test.
 
 ## The two ports
 
@@ -69,45 +38,16 @@ test.
 :5173  Node    → owns /api, /uploads, and serves ./dist in production ←────┘
 ```
 
-Develop against **5174**. Open **5173** to check what a production build
-actually looks like.
-
-> [!WARNING]
-> If you configure a launch/preview target, point it at **5173**, not 5174.
-> Hitting 5174 before Vite is ready leaves the app stuck on `BOOTING…`.
+Develop against **5174**. Open **5173** to check what a production build actually looks like.
 
 ## TypeScript
 
-There is **no build step on the server**. `node server/index.ts` runs the
-source directly; node strips the types at load and never checks them. The
-compiler is therefore a separate gate — `pnpm typecheck` — over two projects,
-because client and server are different runtimes:
+There is **no build step on the server**. `node server/index.ts` runs the source directly. Node strips the types at load and never checks them. The compiler is a separate gate (`pnpm typecheck`) over two projects:
 
 | | |
 |---|---|
-| `tsconfig.json` | `client/` — DOM libs, JSX, `moduleResolution: bundler`. Vite owns the bundle. |
-| `tsconfig.server.json` | `server/`, `test/server/`, `scripts/`, `docker/` — node libs, `moduleResolution: nodenext`. Nothing here is ever compiled. |
-
-Both are `noEmit`, and neither runs in `pnpm test` — only in `pnpm build`. A
-type error survives a green test run.
-
-Three flags in `tsconfig.server.json` are not style preferences. Each one
-converts a **boot failure** into a typecheck error. Without them the failure
-lands at load, before any test body runs, so no test in this repo would catch
-it:
-
-- **`allowImportingTsExtensions`** — relative imports carry an explicit `.ts`
-  extension (`./routes/notes.ts`, never `./routes/notes`). That is the only
-  form node's type-stripper resolves with no build step in between.
-- **`erasableSyntaxOnly`** — `enum`, `namespace` and constructor parameter
-  properties cannot be erased. Node throws
-  `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX` on them at load.
-- **`verbatimModuleSyntax`** — every type-only import must say `import type`.
-  Node cannot tell a type import from a value import, so `import { SomeType }`
-  survives stripping and the process dies at load with *"does not provide an
-  export named"*. Writing `import { Foo }` for a type is not a style slip, it
-  is a boot failure — which is why the keyword is mandatory rather than
-  preferred.
+| `tsconfig.json` | `client/` with DOM libs, JSX, `moduleResolution: bundler`. Vite owns the bundle. |
+| `tsconfig.server.json` | `server/`, `test/server/`, `scripts/`, `docker/` with node libs, `moduleResolution: nodenext`. Nothing here is ever compiled. |
 
 ## The test suite
 
@@ -123,7 +63,7 @@ node --test --test-name-pattern="residency"   # by name
 
 ```
 test/
-├─ client/          pure client modules — layout, router, markdown, source, pager
+├─ client/          pure client modules: layout, router, markdown, source, pager
 └─ server/
    ├─ ai/           facade, enrich chain, prompts, normalise, backlog, circuit
    │  └─ providers/ local, remote, and the shared contract test
@@ -133,249 +73,3 @@ test/
    └─ routes/       each route's handler
 ```
 
-### Why the tests are fast
-
-Because the logic worth testing doesn't do I/O. Layout maths, tag
-normalisation, residency policy, query filters, prompt construction, URL
-classification, RRF — all pure modules. `RoleManager` takes its loader *and its
-timers* as constructor arguments; `Circuit` takes its clock. Tests drive model
-lifecycles and 60-second cooldowns without sleeping.
-
-TypeScript test files run **natively** — Node strips types, there's no build
-step. Two consequences:
-
-- sibling imports in pure client modules need **explicit `.ts` extensions**
-  (which is why `allowImportingTsExtensions` is on in `tsconfig.json`),
-- and a pure module that imports React or the DOM stops being testable this
-  way. Keep `domain/`, `layout/` and `util/` clean.
-
-### Provider contract test
-
-`test/server/ai/providers/provider-contract.test.js` asserts both providers
-expose the same surface. If you add a method to one, add it to the other or the
-test tells you.
-
-## Governance
-
-Four tiers hold the rules that keep this codebase from drifting, cheapest and
-most mechanical first:
-
-1. **`pnpm test` / `pnpm build`** — everything a checker can verify: Biome,
-   the token lint, the shape ratchet, both typechecks, the test suite itself.
-2. **The `Stop` hook** (`.claude/hooks/verify.sh`) — runs `pnpm test` on Node
-   22 before an agent's turn can end, so a red suite never survives past the
-   turn that broke it.
-3. **`.claude/skills/`** — procedures, loaded on demand rather than kept in
-   context all the time (`add-route`, `amend`, `split-module`).
-4. **`CLAUDE.md` + `.claude/clean-code-rules.md`** — the rules no checker can
-   verify at all.
-
-The governing rule: **push every rule as far down as it goes.** A rule
-belongs at the cheapest tier that can hold it — Biome over a script, a script
-over a test, a test over prose. Prose that duplicates a check is dead weight:
-it dilutes the rules still doing real work. `.claude/skills/amend/` has the
-ordered test a candidate rule walks before it's allowed to become prose.
-
-`CLAUDE.md` and `.claude/clean-code-rules.md` are meant to **shrink**, not
-grow. `/amend` is the procedure for changing either — adding a rule requires
-citing the violation that earned it, and removing one is mandatory the moment
-a mechanical check takes over enforcing it.
-
-### The shape ratchet
-
-`scripts/lint-shape.ts` (wired into `pnpm test`) caps file size and export
-count, measuring only `client/` and `server/` — `scripts/` and `test/` are
-unbounded. 23 files currently carry budget debt in `scripts/shape-baseline.json`
-— they were over budget when the ratchet was introduced and are grandfathered
-at their recorded size. `--update` can only tighten a baselined number down
-to a smaller measurement; it can never raise one. Raising a baseline takes a
-hand-edit to `shape-baseline.json` — but `lint-shape.ts` also diffs that file
-against the last commit and fails on anything widened or newly added there,
-so the edit cannot pass `pnpm test` until it is itself committed to `main`.
-There is no PR review in this repo to catch it otherwise; the commit, and its
-permanent place in `git log`, is what stands in for one.
-
-**Known gap:** the ratchet reads `git ls-files`, so a brand-new **untracked**
-file that's already oversized is invisible to it until staged. CI still
-catches it — nothing reaches CI unstaged — so this is a known gap in local
-feedback, not a bug to fix now.
-
-### Baseline (2026-09-17)
-
-Recorded so the governance system's own health can be judged later, not
-asserted:
-
-| | |
-|---|---|
-| Tests | 1142, ~5s (Node 22) |
-| `CLAUDE.md` | 45 lines |
-| `.claude/clean-code-rules.md` | 41 lines |
-| `scripts/shape-baseline.json` | 23 entries |
-| Export statements (`client/` + `server/`) | 500 |
-| Source files (`.ts`/`.tsx`, `client/` + `server/`) | 106 |
-
-The prose files should not grow past this, the debt register should not gain
-entries, and total exports should trend down — all four are recorded under
-`_governance` in `scripts/shape-baseline.json` and enforced by
-`scripts/lint-shape.ts` alongside the per-file ratchet above, not left as
-prose to trust.
-
-The export count excludes `export type` and `export interface`: both are
-erased before the code runs, so they add no runtime API surface, which is what
-"trend down" is about. Counting them made the metric un-satisfiable during the
-TypeScript migration — 45f7fd6 tripped the ratchet by adding `server/types.ts`,
-two type declarations and nothing else. The 500 above is the new measure; the
-recorded `_governance.exportTotal` is still 562, from the old one.
-
-## Conventions
-
-**Comments explain *why*.** This codebase is unusually heavily commented on
-purpose. A comment recording the bug a line prevents — the ARM SVE `SIGILL`, the
-`Float32Array` byte-offset copy, the stale-load discard in `RoleManager` — is
-worth far more than one restating what the line does. Match that density.
-
-**Pure logic lives in pure modules.** If a new bit of logic has a decision in
-it, it probably belongs in a file with no imports from `node:fs`, the network,
-or React — where it can be tested directly.
-
-**The server stays thin.** No framework, no ORM, no build step, five runtime
-dependencies. Hand-rolling ZIP reading and session signing was cheaper than the
-supply chain.
-
-**One place per concern.** Every env var resolves in `server/config.ts`. Every
-route registers in `server/router.ts`. Every model call goes through
-`server/ai/index.ts`. Every design token lives in
-`client/styles/foundation/tokens.css`.
-
-**CSS goes through tokens.** Every size, colour, radius, spacing step, duration
-and z-index must come from a token — enforced by `scripts/lint-tokens.ts`,
-which runs in both `build` and `test`. There's an escape hatch for values that
-genuinely can't be tokens:
-
-```css
-background: rgba(0, 0, 0, 0.45); /* token-lint-ignore: overlay on arbitrary imagery */
-```
-
-Always say why. Full rules in [design-system.md](design-system.md).
-
-## Recipes
-
-<details>
-<summary><b>Add an API route</b></summary>
-
-1. Write the handler in `server/routes/<domain>.ts`. Take `(req, res)`, use
-   `json(res, status, body)` and `readBody(req)` from `server/lib/http.ts`.
-2. Register it in `server/router.ts`. Order matters — specific paths before
-   the prefix matches, and everything after the auth gate.
-3. Add a test in `test/server/routes/<domain>.test.js`.
-
-Errors the client needs to *act* on get a stable `code` alongside the message
-(`llm_off`, `import_in_progress`, `confirm_required`, `provider_unavailable`),
-so the UI can render a real state instead of parsing prose.
-
-</details>
-
-<details>
-<summary><b>Add an importer (TikTok, Pocket, bookmarks…)</b></summary>
-
-`server/import/index.ts` is a registry. An importer is a module exporting:
-
-```js
-export const name = 'tiktok'
-export function sniff(files) { /* Map<entryName, Buffer> → boolean */ }
-export function parse(files) { /* → items */ }
-export function deriveNote(item) { /* → note record */ }
-```
-
-Add it to the `IMPORTERS` array. The route and the client's per-source Import
-sections address importers by `name`, so nothing else needs touching.
-
-Two things the Instagram importer learned the hard way, both worth copying:
-
-- **Canonicalise URLs before deduping.** A manually saved link and the same
-  post arriving via export almost never match byte-for-byte — tracking params,
-  optional `www.`, cosmetic trailing slashes, and `/p/` vs `/reel/` for the
-  same post.
-- **Be defensive in `sniff()` and `parse()`.** Both run over an untrusted
-  upload. `findImporter` wraps `sniff()` in a try/catch so one importer
-  throwing on an unexpected shape can't break detection for the rest.
-
-</details>
-
-<details>
-<summary><b>Add a model preset</b></summary>
-
-`server/ai/presets.ts` is pure data — no SDK import, because the settings store
-needs `DEFAULTS` even in the lite image where no local provider exists.
-
-```js
-{ key: 'QWEN3_4B_INST_Q4_K_M', label: 'Qwen3 4B', desc: '…', best: ['m2'] }
-```
-
-`key` must exist in the QVAC registry. `best` marks the sweet spot per device
-class (`pi`, `m2`). Byte sizes aren't here — they come from the registry via
-the local provider's `presetInfo()`. Vision entries also carry `proj` for the
-mmproj file.
-
-</details>
-
-<details>
-<summary><b>Add a source platform (for filter chips and facets)</b></summary>
-
-Platform predicates are duplicated in exactly two places — `client/domain/source.ts`
-(client filtering) and `server/data/query.ts` (server facet counts). Add to
-both; a parity test fails if they drift.
-
-</details>
-
-<details>
-<summary><b>Add a CSS token</b></summary>
-
-Define it in `client/styles/foundation/tokens.css`, then use `var(--…)`.
-Stylesheets are layered `foundation/` → `components/` → `views/` and imported
-in that order by `client/style.css`. Run `pnpm lint:tokens`.
-
-</details>
-
-## CI
-
-[`ci.yml`](../.github/workflows/ci.yml) runs on every push and PR to `main`:
-install → assert `.nvmrc` and the Dockerfile agree on Node → **build** → test.
-
-The build runs *before* the tests deliberately: `server/lib/http.ts` serves
-static assets from `./dist`, and the auth-gate tests drive a real listening
-server to check the login page can fetch its font. With no `dist` that 404s. It
-passed locally only because contributors have a stale build lying around, which
-CI never does.
-
-[`docker.yml`](../.github/workflows/docker.yml) publishes the multi-arch image
-to GHCR on a `v*` tag, gated on `ci.yml`. Every build passes an explicit
-`--target`, because Docker builds the *last* stage when none is given and the
-Dockerfile ends with `runtime-once` — an untargeted build silently publishes the
-wrong image.
-
-```bash
-git tag v1.0.2 && git push --tags
-```
-
-### Verifying an amd64 build
-
-Development happens on Apple Silicon, so the arm64 image is exercised constantly
-and the amd64 one mostly isn't. Native prebuilds fail on an untested CPU in two
-ways quiet enough to miss:
-
-- **Illegal instruction** — a prebuild compiled for a wider SIMD level than the
-  CPU implements dies on load. The project already carries the arm64 version of
-  this workaround (`@qvac/translation-nmtcpp` is built with SVE and `SIGILL`s on
-  Pi and Apple Silicon, so the Dockerfile swaps in a JS stub). The amd64
-  equivalent is a prebuild assuming AVX-512 on a shared vCPU that has only AVX2.
-- **OOM during model load** — the kernel kills the process, Docker restarts it,
-  it downloads the weights again. Presents as a network problem rather than a
-  memory one.
-
-`docker.yml` boot-tests amd64 on a native x86 runner, which covers both for
-released images. To check an unreleased change, `scripts/vps-smoke.sh` runs the
-same checks against any box (`--help` for flags). Use a **Hetzner CX32** (8 GB)
-for the full image — CX22's 4 GB OOMs partway through the model load — and
-deliberately pick a box *without* AVX-512, since nearly all shared vCPUs lack it
-and one that has it proves less.

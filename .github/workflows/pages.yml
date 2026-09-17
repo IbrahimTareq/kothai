@@ -37,8 +37,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      # Full history: the page footers date themselves from `git log` on the
-      # file in docs/, which a shallow clone would not have.
+      # Full history: each page dates itself from `git log` on its file in
+      # docs/, read by site/lib/sync.ts, which a shallow clone would not have.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -72,7 +72,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'
         with:
-          path: site/.vitepress/dist
+          path: site/out
 
   deploy:
     needs: build

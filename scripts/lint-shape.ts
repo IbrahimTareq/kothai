@@ -26,7 +26,7 @@
  * comment this repo's own rules require without instantly failing on it.
  *
  * The same ratchet also covers four numbers about the governance system
- * itself (docs/development.md's Baseline section) — CLAUDE.md's and
+ * itself (docs/development.md, "The governance budget") — CLAUDE.md's and
  * clean-code-rules.md's line counts, the size of this file's own debt
  * register, and the total export count across client/ + server/. They live
  * under the `_governance` key below, in this same file rather than a second

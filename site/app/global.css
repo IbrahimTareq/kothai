@@ -1,0 +1,85 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+@source '../content';
+@source '../components';
+@source '../app';
+
+/* Same self-hosted variable faces the app ships, mirrored out of the app's
+   public/ by lib/sync.ts rather than committed a second time. */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/vendor/fonts/Geist-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url('/vendor/fonts/GeistMono-latin.woff2') format('woff2');
+}
+
+@theme {
+  --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* The sky, and the accent taken from it. The deep tone is darkened until body
+     links clear AA on the page ground (6.5:1); the soft tone is a tint that
+     reads as a background rather than as ink. */
+  --color-kt-blue: #66b3f4;
+  --color-kt-blue-soft: #d9ecfc;
+  --color-kt-blue-deep: #0b5a9d;
+}
+
+/* The Fumadocs UI accent, set to the sky's blue. --color-fd-primary is used
+   both as ink (active sidebar item, TOC marker, prose links) and as a fill with
+   --color-fd-primary-foreground on top, so it cannot be #66b3f4 flat: that blue
+   is 2.25:1 on white and unreadable as text. It takes the same split the
+   landing page uses — the deep tone carries the ink at 6.5:1 on light and the
+   lifted tone at 11.4:1 on dark, while the brand blue itself shows as the tint
+   behind hovered and active rows. */
+:root {
+  --color-fd-primary: #0b5a9d;
+  --color-fd-primary-foreground: #ffffff;
+  --color-fd-ring: #0b5a9d;
+  --color-fd-accent: rgba(102, 179, 244, 0.16);
+  --color-fd-accent-foreground: #0b5a9d;
+}
+
+.dark {
+  --color-fd-primary: #a0d0f8;
+  --color-fd-primary-foreground: #0a1626;
+  --color-fd-ring: #66b3f4;
+  --color-fd-accent: rgba(102, 179, 244, 0.18);
+  --color-fd-accent-foreground: #c6e3fb;
+}
+
+/* Fumadocs leaves prose links in the body ink with an underline. The accent is
+   the one place a docs theme actually shows, and it is what the site had
+   before, so links take it — still underlined, so colour is not the only thing
+   marking them.
+
+   Scoped to the containers prose links actually live in rather than `.prose a`:
+   Fumadocs wraps every heading in an anchor for its copy-link affordance, and
+   the broad selector turned all of them blue. */
+.prose :is(p, li, td, th, blockquote, figcaption) a {
+  color: var(--color-fd-primary);
+  text-decoration-color: color-mix(in srgb, var(--color-fd-primary) 40%, transparent);
+}
+
+.prose :is(p, li, td, th, blockquote, figcaption) a:hover {
+  text-decoration-color: var(--color-fd-primary);
+}
+
+/* Headings sit between normal and medium with tight tracking — it is why the
+   site reads calm at large sizes where semibold would shout. Geist is variable
+   across 300-700, so the weight is real rather than rounded. */
+h1, h2, h3, h4 {
+  font-weight: 460;
+  letter-spacing: -0.0275em;
+}
