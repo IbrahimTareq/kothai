@@ -112,6 +112,7 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
       <SetupWizard
         endpoints={cfg!.endpoints}
         preselect={preAnswered}
+        localSupported={cfg!.localSupported}
         onLocal={() => setWizardDone(true)}
         onSkip={skip}
         onConnected={async r => {

@@ -14,6 +14,7 @@ export type WizardResult = EndpointChoice
 export function SetupWizard({
   endpoints,
   preselect,
+  localSupported,
   onLocal,
   onConnected,
   onSkip,
@@ -23,6 +24,8 @@ export function SetupWizard({
   // question is skipped entirely — it has been answered in the terminal, and
   // asking again would make the installer's question pointless.
   preselect?: string | null
+  // False on the lite image, where @qvac/sdk is absent.
+  localSupported: boolean
   onLocal: () => void
   onConnected: (r: WizardResult) => void
   onSkip: () => void
@@ -52,12 +55,14 @@ export function SetupWizard({
                 Nothing to download. You paste an API key and pay the provider for what you use.
               </span>
             </button>
-            <button className="wizard-choice" onClick={onLocal}>
-              <span className="wizard-choice-title">On this machine</span>
-              <span className="wizard-choice-desc">
-                Nothing leaves the box, no key, no bills. Downloads a few GB of models.
-              </span>
-            </button>
+            {localSupported && (
+              <button className="wizard-choice" onClick={onLocal}>
+                <span className="wizard-choice-title">On this machine</span>
+                <span className="wizard-choice-desc">
+                  Nothing leaves the box, no key, no bills. Downloads a few GB of models.
+                </span>
+              </button>
+            )}
           </div>
 
           <button className="onboarding-skip" onClick={onSkip}>
