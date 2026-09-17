@@ -1,6 +1,7 @@
 
+<div align="center">
 
-![Kothai](public/logo.svg)
+<img src="public/logo.svg" alt="Kothai" width="120">
 
 ### Save now. Remember later.
 
@@ -8,12 +9,14 @@ A self-hosted bookmark and note manager with local AI.
 
 [Documentation](https://getkothai.com/docs/getting-started/what-is-kothai) · [Quick start](#quick-start) · [API](https://getkothai.com/docs/reference/api/api-auth)
 
-![release](https://img.shields.io/github/v/tag/IbrahimTareq/kothai?style=flat-square&label=release&labelColor=1a1a1a&color=blue)  
-![image](https://img.shields.io/badge/ghcr.io-kothai-2496ed?style=flat-square&logo=docker&logoColor=white&labelColor=1a1a1a)  
-![qvac](https://img.shields.io/badge/tether-qvac-14E4C2?style=flat-square&logo=tether&logoColor=white&labelColor=1a1a1a)  
-![license](https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square&labelColor=1a1a1a)
+[![release](https://img.shields.io/github/v/tag/IbrahimTareq/kothai?style=flat-square&label=release&labelColor=1a1a1a&color=blue)](https://github.com/IbrahimTareq/kothai/releases)
+[![image](https://img.shields.io/badge/ghcr.io-kothai-2496ed?style=flat-square&logo=docker&logoColor=white&labelColor=1a1a1a)](https://github.com/IbrahimTareq/kothai/pkgs/container/kothai)
+[![qvac](https://img.shields.io/badge/tether-qvac-14E4C2?style=flat-square&logo=tether&logoColor=white&labelColor=1a1a1a)](https://github.com/tetherto/qvac)
+[![license](https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square&labelColor=1a1a1a)](LICENSE)
 
+`your data stays yours` · `no account` · `no telemetry` · `runs on a Raspberry Pi`
 
+</div>
 
 ---
 
