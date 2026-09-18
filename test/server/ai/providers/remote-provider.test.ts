@@ -353,3 +353,29 @@ test('a malformed catalogue row is skipped, not allowed to fail the whole probe'
   )
   assert.equal(p.statusSnapshot().aggregate.state, 'ready', 'a bad row is not the endpoint being down')
 })
+
+test('an endpoint that had no models at boot is re-probed rather than cached as empty', async () => {
+  // The Railway template boots Kothai in seconds beside an Ollama that spends
+  // minutes pulling weights. init() saw an endpoint serving nothing, cached
+  // that, and the model picker stayed empty until someone restarted the
+  // container — there is no other path that re-probes.
+  let pulled = false
+  let hits = 0
+  routes['/models'] = (_req, res) => {
+    hits += 1
+    okJson(res, { data: pulled ? [{ id: 'llama3.2:3b' }, { id: 'nomic-embed-text' }] : [] })
+  }
+  const p = make()
+  await p.init()
+  assert.deepEqual((await p.listModels()).llm, [], 'still pulling — nothing to offer yet')
+  assert.equal(hits, 2, 'an empty catalogue is asked again, not trusted')
+
+  pulled = true
+  assert.deepEqual(
+    (await p.listModels()).llm.map(x => x.key),
+    ['llama3.2:3b', 'nomic-embed-text'],
+    'the pull finished, and reading the list again must find it — without a restart',
+  )
+  await p.listModels()
+  assert.equal(hits, 3, 'a filled catalogue is served from cache')
+})

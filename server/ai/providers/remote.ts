@@ -169,6 +169,11 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
     },
 
     async listModels(): Promise<Record<Role, ModelOption[]>> {
+      // An endpoint still starting when init() ran answers with no models, and
+      // that empty list used to be cached for the life of the process: on
+      // Railway, Ollama pulls for minutes while Kothai boots in seconds, and the
+      // picker stayed empty until a restart. The circuit bounds the re-probing.
+      if (baseUrl && !catalogue.length && circuit.allow()) await this.init()
       const asOpts = (ids: string[]): ModelOption[] =>
         ids.map(id => ({ key: id, label: id, desc: '', best: [], sizeBytes: 0 }))
       const opts = asOpts(catalogue)
