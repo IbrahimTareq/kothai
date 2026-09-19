@@ -11,7 +11,7 @@ checker can verify; everything mechanizable lives in `pnpm test`. See `docs/`.
 |---|---|
 | `pnpm dev` | Node `:5173` + Vite `:5174`. **Develop against 5174.** 5173 shows the production build. |
 | `pnpm dev:site` | Docs site alone on `:5175` (Next + Fumadocs). Installs `site/` first — it is a separate package and root `pnpm install` skips it. |
-| `pnpm test` | Lint, token check, shape ratchet, then 1142 tests. ~5s. Run all of it; it is fast enough. |
+| `pnpm test` | Lint, token check, shape ratchet, then 1143 tests. ~5s. Run all of it; it is fast enough. |
 | `pnpm build` | Lint, token check, both typechecks, then the Vite build. Not a superset of `test`, nor the reverse — it has no shape ratchet or test suite; `test` has no typecheck. |
 | `pnpm format` | Apply formatting. Biome decides style; do not argue with it. |
 
@@ -24,9 +24,9 @@ misuse that only fails on 22 — switch first.
   `handleX` export in `server/routes/`, wired there. Never register from inside
   a handler module.
 - The auth gate sits above every route in `router.ts`, so handlers never check
-  auth themselves. Only `/api/health` and `/up` sit in front of it, and they
-  must stay silent about the install — the container healthcheck carries no
-  credentials, and a 401 there restart-loops the container forever.
+  auth themselves. Only `/api/health` sits in front of it, and it must stay
+  silent about the install — the container healthcheck carries no credentials,
+  and a 401 there restart-loops the container forever.
 - `server/lib/` is the security floor (`auth.ts`, `ssrf.ts`, `http.ts`). A
   change there needs a test that fails without it.
 - The server ships as `.ts` and node strips the types at load — there is no

@@ -96,7 +96,7 @@ jobs:
         with:
           context: .
           # REQUIRED. Without it Docker builds the last stage in the Dockerfile
-          # (runtime-once), and this job would smoke-test and publish that
+          # (runtime-lite), and this job would smoke-test and publish that
           # image as :latest instead of the full one.
           target: runtime
           platforms: linux/amd64

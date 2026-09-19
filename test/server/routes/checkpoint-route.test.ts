@@ -1,7 +1,7 @@
 // POST /api/checkpoint — make data/kothai.db self-contained on disk.
 //
-// This exists for snapshot-based backup tools, ONCE (basecamp/once) first among
-// them: they archive the whole data directory from outside the process and have
+// This exists for snapshot-based backup tools (restic, Borg, a NAS snapshot):
+// they archive the whole data directory from outside the process and have
 // no way to ask the app to settle first. Two things make a raw snapshot lossy,
 // and neither is visible to the tool taking it:
 //

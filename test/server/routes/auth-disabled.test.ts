@@ -10,7 +10,7 @@ const { createServer } = await import('../../../server/router.ts')
 
 import test, { after } from 'node:test'
 import assert from 'node:assert/strict'
-import { jsonBody, listenOnLoopback } from '../../helpers/http.ts'
+import { listenOnLoopback } from '../../helpers/http.ts'
 
 const server = createServer()
 const BASE = `http://127.0.0.1:${await listenOnLoopback(server)}`
@@ -36,12 +36,4 @@ test('with no password set the JSON content-type rule does not apply either', as
 
 test('/api/health answers whether or not auth is configured', async () => {
   assert.equal((await fetch(`${BASE}/api/health`)).status, 200)
-})
-
-test('/up answers whether or not auth is configured', async () => {
-  // Body, not just status — see the sibling assertion in auth-route.test.js:
-  // the SPA fallback answers 200 for any unmatched path.
-  const res = await fetch(`${BASE}/up`)
-  assert.equal(res.status, 200)
-  assert.equal((await jsonBody(res)).ok, true)
 })

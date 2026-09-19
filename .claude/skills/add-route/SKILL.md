@@ -57,12 +57,12 @@ handlers never check auth themselves. If you find yourself writing an auth
 check inside a handler, the gate was misread — remove it and register the
 route normally.
 
-The only two routes in front of the gate are `GET /api/health` and `GET /up`,
-and both must stay silent about the install (no note counts, no config, just
-`{ ok: true }`). They exist there deliberately: the container healthcheck
-carries no credentials, and if they sat behind the gate a healthcheck would
-get 401'd and the orchestrator would restart-loop the container forever.
-Do not add a third route in front of the gate without the same justification.
+The only route in front of the gate is `GET /api/health`, and it must stay
+silent about the install (no note counts, no config, just `{ ok: true }`). It
+exists there deliberately: the container healthcheck carries no credentials,
+and if it sat behind the gate a healthcheck would get 401'd and the
+orchestrator would restart-loop the container forever.
+Do not add a second route in front of the gate without the same justification.
 
 ## 4. The test
 

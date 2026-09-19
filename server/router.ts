@@ -49,17 +49,12 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   const url = new URL(req.url ?? '', `http://${req.headers.host}`)
   const p = url.pathname
   try {
-    // Liveness, and the ONLY things in front of the password gate. The container
+    // Liveness, and the ONLY thing in front of the password gate. The container
     // healthcheck carries no credentials, so a 401 here would have every
     // orchestrator mark the container unhealthy and restart-loop it forever.
     // Deliberately says nothing about the install; /api/status, which reports
     // model config and note counts, stays behind the gate.
-    //
-    // `/up` is the same probe under the path ONCE (basecamp/once) requires. It
-    // must be routed explicitly even though the SPA fallback already answers
-    // 200 for any unmatched path: that 200 is an HTML login page, and it stops
-    // existing the moment dist/ is missing.
-    if (req.method === 'GET' && (p === '/api/health' || p === '/up')) return json(res, 200, { ok: true })
+    if (req.method === 'GET' && p === '/api/health') return json(res, 200, { ok: true })
     // Guards every route below AND the static/uploads fallthrough, which is why
     // it lives here rather than being repeated per handler. No-op when
     // KOTHAI_PASSWORD is unset.

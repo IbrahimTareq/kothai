@@ -1,9 +1,8 @@
 // POST /api/checkpoint — settle the live database files in place.
 //
 // For snapshot-based backup tools that archive the data directory from outside
-// the process (ONCE's pre-backup hook is the reason this exists). They cannot
-// ask the app to settle first, and two things would otherwise make their
-// snapshot quietly lossy:
+// the process (restic, Borg, a NAS snapshot). They cannot ask the app to settle
+// first, and two things would otherwise make their snapshot quietly lossy:
 //
 //   - Batched writes ({ persist: false }, used by the enrichment sweeps in
 //     ai/enrich.js) are queued in memory and exist in no file until flushed.
