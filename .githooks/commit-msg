@@ -1,0 +1,16 @@
+#!/bin/sh
+# release-please drops any commit subject that is not conventional, and does it
+# without an error — the entry simply never appears in CHANGELOG.md. Commits
+# here land straight on main with no PR gate (see CLAUDE.md), so this hook is
+# the only place a bad subject can still be rejected rather than merely
+# reported after the fact by ci.yml.
+set -e
+
+root=$(git rev-parse --show-toplevel)
+
+if [ ! -x "$root/node_modules/.bin/commitlint" ]; then
+  echo "commit-msg: commitlint is missing. Run 'pnpm install' before committing." >&2
+  exit 1
+fi
+
+exec "$root/node_modules/.bin/commitlint" --edit "$1"

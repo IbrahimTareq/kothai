@@ -9,6 +9,7 @@ git clone https://github.com/IbrahimTareq/kothai.git
 cd kothai
 corepack enable          # provides the pnpm version pinned in package.json
 pnpm install
+git config --local core.hooksPath .githooks   # commit-msg runs commitlint
 ```
 
 Node **22** is pinned in [`.nvmrc`](../.nvmrc) and matched by CI and the Dockerfile.
