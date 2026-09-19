@@ -18,6 +18,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          # commitlint below resolves a commit RANGE, and a depth-1 clone does
+          # not contain github.event.before — the step dies on "unknown
+          # revision" rather than linting anything. pages.yml fetches full
+          # history for the same class of reason.
+          fetch-depth: 0
 
       # Before setup-node, so `cache: pnpm` can find the binary it keys on.
       # Version comes from package.json's "packageManager" — same pin the
@@ -36,6 +42,26 @@ jobs:
       # the pnpm store cache above keeps it to roughly a minute on repeat runs.
       - name: Install
         run: pnpm install --frozen-lockfile
+
+      # release-please builds CHANGELOG.md from conventional-commit subjects and
+      # silently discards anything that does not parse. The commit-msg hook is
+      # the real gate; this catches what reaches main from a checkout where
+      # `git config --local core.hooksPath .githooks` was never run. It cannot
+      # block anything — the commit is already on main by the time this runs —
+      # so its job is to turn a silent changelog omission into a red build.
+      - name: Commit messages are conventional
+        if: github.event_name == 'push'
+        run: |
+          before='${{ github.event.before }}'
+          # A tag push, and a branch's first push, both report an all-zero
+          # "before". There is no range to lint, so check the tip alone —
+          # on a release tag that tip is the bot's "chore(main): release X".
+          case "$before" in
+            0000000000000000000000000000000000000000)
+              pnpm exec commitlint --from HEAD~1 --to HEAD ;;
+            *)
+              pnpm exec commitlint --from "$before" --to '${{ github.sha }}' ;;
+          esac
 
       # .nvmrc governs Node everywhere, but `FROM` cannot read a file, so the
       # Dockerfile carries a default for plain `docker build .`. Assert the two
