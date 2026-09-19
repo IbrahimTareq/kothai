@@ -16,10 +16,15 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  issues: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Cancelling mid-run can leave a tag pushed with no matching Release — the
+  # job pushes tags, cuts Releases and edits the release PR, and there's
+  # nothing to gain by interrupting it since a rerun with nothing to release
+  # is cheap and idempotent.
+  cancel-in-progress: false
 
 jobs:
   release-please:
@@ -35,10 +40,14 @@ jobs:
         env:
           RELEASE_PLEASE_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
         run: |
-          if [ -z "$RELEASE_PLEASE_TOKEN" ]; then
-            echo "::error::RELEASE_PLEASE_TOKEN is unset — a release would tag without ever building an image."
-            exit 1
-          fi
+          case "$RELEASE_PLEASE_TOKEN" in
+            "")
+              echo "::error::RELEASE_PLEASE_TOKEN is unset — a release would tag without ever building an image."
+              exit 1 ;;
+            ghs_*)
+              echo "::error::RELEASE_PLEASE_TOKEN looks like a GITHUB_TOKEN (ghs_ prefix), not a PAT — GitHub won't let it trigger docker.yml on the tag push."
+              exit 1 ;;
+          esac
 
       - uses: googleapis/release-please-action@v4
         with:
