@@ -1,6 +1,5 @@
 # Kothai design system
 
-A monochrome, restrained language adapted from [trybehold.com](https://trybehold.com).
 Everything visual comes from a token in `client/styles/foundation/tokens.css`. If a
 value is not a token, it is either a documented exception or a bug —
 `npm run lint:tokens` tells you which.
