@@ -48,12 +48,13 @@ Model names are picked in Settings. Credentials are env-only and never written t
 
 ### Remote defaults
 
-When you pick a provider during setup, Kothai pre-fills models that are known to work for all three roles. You can change them at any time in Settings.
+When you pick a provider during setup, Kothai pre-fills models known to work on it. You can change them at any time in Settings.
 
 | Provider | Language | Embedding | Vision |
 |---|---|---|---|
 | **OpenAI** | gpt-4o-mini | text-embedding-3-small | gpt-4o-mini |
 | **OpenRouter** | openai/gpt-4o-mini | openai/text-embedding-3-small | openai/gpt-4o-mini |
 | **Ollama (local)** | llama3.2:3b | nomic-embed-text | llama3.2-vision |
+| **Ollama on Railway** | llama3.2:3b | nomic-embed-text | *(none — CPU-only)* |
 
-These defaults favour the cheapest models that cover all three roles. Any model the endpoint serves can be used instead.
+These defaults favour the cheapest models that cover the roles the endpoint can fill. Any model it serves can be used instead. The Railway template stocks its own Ollama and pulls no vision model, so that role starts off — CPU-only captioning is impractical there.

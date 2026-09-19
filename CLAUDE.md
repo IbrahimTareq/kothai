@@ -11,7 +11,7 @@ checker can verify; everything mechanizable lives in `pnpm test`. See `docs/`.
 |---|---|
 | `pnpm dev` | Node `:5173` + Vite `:5174`. **Develop against 5174.** 5173 shows the production build. |
 | `pnpm dev:site` | Docs site alone on `:5175` (Next + Fumadocs). Installs `site/` first — it is a separate package and root `pnpm install` skips it. |
-| `pnpm test` | Lint, token check, shape ratchet, then 1143 tests. ~5s. Run all of it; it is fast enough. |
+| `pnpm test` | Lint, token check, shape ratchet, then 1146 tests. ~5s. Run all of it; it is fast enough. |
 | `pnpm build` | Lint, token check, both typechecks, then the Vite build. Not a superset of `test`, nor the reverse — it has no shape ratchet or test suite; `test` has no typecheck. |
 | `pnpm format` | Apply formatting. Biome decides style; do not argue with it. |
 

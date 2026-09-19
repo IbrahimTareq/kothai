@@ -93,6 +93,25 @@ test('GET /api/settings offers the catalogue so the wizard can render tiles', as
   assert.ok(endpoints.some(e => e.id === 'openai'))
 })
 
+test('the Railway tile is offered on Railway and withheld everywhere else', async () => {
+  // ollama.railway.internal resolves only inside the project the template
+  // deploys, so the tile is a dead end on a laptop or a VPS install.
+  await initProvider('local', {}, { load, localAvailable: true })
+  const offered = async () => {
+    const { res, sent } = mockRes()
+    await handleGetSettings(res)
+    return records(sent.json().endpoints).some(e => e.id === 'ollama-railway')
+  }
+  assert.equal(await offered(), false, 'a non-Railway install must not be offered it')
+
+  process.env.RAILWAY_ENVIRONMENT = 'production'
+  try {
+    assert.equal(await offered(), true, 'the template deploys with this set')
+  } finally {
+    delete process.env.RAILWAY_ENVIRONMENT
+  }
+})
+
 test('GET /api/settings still never echoes a credential', async () => {
   setAiCredentials({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-secret' })
   await initProvider('remote', {}, { load, localAvailable: false })

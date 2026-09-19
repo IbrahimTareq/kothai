@@ -72,6 +72,22 @@ export const ENDPOINTS: Endpoint[] = [
     defaults: { llm: 'openai/gpt-4o-mini', embed: 'openai/text-embedding-3-small', vision: 'openai/gpt-4o-mini' },
   },
   {
+    id: 'ollama-railway',
+    label: 'Ollama on Railway',
+    // Deterministic, which is what makes this a catalogue entry rather than a
+    // per-install URL: Railway gives every service <name>.railway.internal on
+    // the project's private network, and the template names this one `ollama`.
+    baseUrl: 'http://ollama.railway.internal:11434/v1',
+    needsKey: false,
+    servesEmbeddings: true,
+    note: 'The Ollama service deployed beside this one. Nothing leaves your project.',
+    // No vision default: the template pulls no vision model, because CPU-only
+    // inference makes captioning impractical there. Naming one anyway would
+    // seed the field with a model the endpoint does not serve — a 404 at the
+    // first image rather than a role that is simply off.
+    defaults: { llm: 'llama3.2:3b', embed: 'nomic-embed-text', vision: '' },
+  },
+  {
     id: 'ollama-local',
     label: 'Ollama on this machine',
     // host.docker.internal resolves to the host from inside the container on

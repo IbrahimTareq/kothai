@@ -107,7 +107,11 @@ export async function handleGetSettings(res: ServerResponse): Promise<void> {
     endpoint: ROLES.some(r => caps.roles[r] === 'remote') ? endpointInfo() : { configured: false, host: null },
     // Static catalogue, so the wizard can render provider tiles without a
     // second request. Contains no credentials — it is public reference data.
-    endpoints: ENDPOINTS,
+    // ollama-railway is withheld off Railway: its base URL resolves only
+    // inside the project the template deploys, and a first-run tile that
+    // cannot connect is worse than one tile fewer. findEndpoint still sees it,
+    // so an install that did choose it keeps its catalogue entry.
+    endpoints: ENDPOINTS.filter(e => e.id !== 'ollama-railway' || Boolean(process.env.RAILWAY_ENVIRONMENT)),
     // What the installer already asked. An id only; null when nobody asked.
     setup: { providerId: SETUP_PROVIDER },
     // Whether this image COULD run models on-device — false on lite, where

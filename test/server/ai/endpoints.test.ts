@@ -5,10 +5,6 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { ENDPOINTS, findEndpoint } from '../../../server/ai/endpoints.ts'
 
-// Spelled out rather than imported from roles.ts: this asserts the catalogue
-// covers every role, which an import of the list it is typed against could not.
-const ROLE_KEYS = ['llm', 'embed', 'vision'] as const
-
 test('every entry has a unique id', () => {
   const ids = ENDPOINTS.map(e => e.id)
   assert.equal(new Set(ids).size, ids.length)
@@ -27,11 +23,16 @@ test('every base URL parses and carries no credential', () => {
   }
 })
 
-test('a provider that serves embeddings offers a default for all three roles', () => {
+// Vision used to be required here too. It no longer is: ollama-railway is
+// served by an Ollama the template stocks itself, on CPU-only hardware where
+// captioning is impractical, so it pulls no vision model — and a default
+// naming one anyway would seed the field with a 404 at the first image
+// instead of a role that is simply off. Language and embedding stay required,
+// because an empty default there is a first run that does nothing.
+test('a provider that serves embeddings offers a language and an embedding default', () => {
   for (const e of ENDPOINTS.filter(x => x.servesEmbeddings)) {
-    for (const role of ROLE_KEYS) {
-      assert.ok(e.defaults[role], `${e.id} is missing a ${role} default`)
-    }
+    assert.ok(e.defaults.llm, `${e.id} is missing a language default`)
+    assert.ok(e.defaults.embed, `${e.id} is missing an embedding default`)
   }
 })
 
@@ -63,6 +64,18 @@ test('openai is the one provider that needs no on-device fallback', () => {
   assert.ok(openai, 'openai must be in the catalogue')
   assert.equal(openai.servesEmbeddings, true)
   assert.equal(openai.needsKey, true)
+})
+
+test('the Railway entry addresses the private network and claims no vision model', () => {
+  const railway = findEndpoint('ollama-railway')
+  assert.ok(railway, 'ollama-railway must be in the catalogue')
+  assert.equal(railway.needsKey, false)
+  assert.equal(
+    new URL(railway.baseUrl).hostname,
+    'ollama.railway.internal',
+    'the template reaches Ollama over Railway private networking, never a public host',
+  )
+  assert.equal(railway.defaults.vision, '', 'the template pulls no vision model')
 })
 
 test('a provider reachable without a key is marked so', () => {
