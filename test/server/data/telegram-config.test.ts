@@ -43,3 +43,14 @@ test('clearTelegram: removing a file that is already gone is not an error', () =
   clearTelegram(dir)
   assert.equal(readTelegram(dir), null)
 })
+
+test('writeTelegram: a write carrying only a token clears the binding — a new bot has never been bound', () => {
+  const dir = freshDir()
+  writeTelegram({ botToken: '123:abc', boundChatId: 42 }, dir)
+  writeTelegram({ botToken: '456:def' }, dir)
+  assert.deepEqual(readTelegram(dir), { botToken: '456:def', boundChatId: null })
+})
+
+test('writeTelegram: a write to an unwritable directory throws — a token that silently vanishes is worse', () => {
+  assert.throws(() => writeTelegram({ botToken: '123:abc' }, '/nonexistent-dir-xyz'))
+})

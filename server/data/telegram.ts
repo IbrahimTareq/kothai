@@ -34,6 +34,13 @@ export function readTelegram(dir: string = DATA_DIR): TelegramConfig | null {
 
 // Throws on failure, deliberately: a token that appears to save and is gone
 // after the next restart is worse than an error the user can see now.
+//
+// Replaces the whole file rather than merging in the caller's partial input —
+// a write carrying only botToken clears boundChatId, and vice versa. That is
+// intentional, not an oversight to fix with a read-modify-write merge: the
+// settings route saves a new token by clearing the binding, because a chat id
+// bound to the previous bot has never spoken to this one. A merge would leave
+// a stale binding pointing at a bot that hasn't heard from that chat.
 export function writeTelegram(
   { botToken = null, boundChatId = null }: Partial<TelegramConfig>,
   dir: string = DATA_DIR,
