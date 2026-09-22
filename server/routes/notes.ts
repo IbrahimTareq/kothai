@@ -10,7 +10,8 @@ import * as enrich from '../ai/enrich.ts'
 import { isInstagramPost } from '../ai/meta.ts'
 import * as collections from '../data/collections.ts'
 import * as query from '../data/query.ts'
-import { json, readBody, saveImage } from '../lib/http.ts'
+import { json, readBody } from '../lib/http.ts'
+import { saveCapture } from '../capture.ts'
 
 // readBody hands back `unknown` on purpose — the body is whatever a client
 // posted, and an annotation here would be a claim nothing checks at runtime.
@@ -31,22 +32,8 @@ export async function handleSave(req: IncomingMessage, res: ServerResponse): Pro
   const imageData = fields.image // optional data URL
   if (!text && !imageData) return json(res, 400, { error: 'Provide text and/or an image.' })
 
-  // The typeof stands in for saveImage's own coercion: it matches a data-URL
-  // regex against `dataUrl || ''`, so anything that is not a string was always
-  // going to come back null.
-  const img = typeof imageData === 'string' ? await saveImage(imageData) : null
-  const isUrl = ai.isLikelyUrl(text)
-
-  const note = await store.addNote({
-    type: img ? 'image' : ai.heuristicType({ hasImage: false, isUrl, text }),
-    title: ai.deriveTitle(text) || (img ? 'Image' : 'Untitled'),
-    content: text,
-    url: isUrl ? text : null,
-    image: img?.webPath || null,
-    pending: true,
-  })
+  const note = await saveCapture({ text, image: typeof imageData === 'string' ? imageData : null })
   json(res, 200, { note, aiClassified: false })
-  enrich.queueEnrich(note.id, { absPath: img?.absPath, text, isUrl, hasImage: !!img })
 }
 
 // One note by id. The client's deep-linked expanded view (/item/<id>) opens
