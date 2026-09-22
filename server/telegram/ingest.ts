@@ -22,6 +22,24 @@ export interface IngestIO {
   bind: (chatId: number | null) => void
 }
 
+// The bound chat is already authenticated, so — unlike the silence rule
+// below, which exists purely so a stranger probing the bot learns nothing —
+// telling it the truth costs nothing. Returns null when there is nothing to
+// report: a save went through clean, or the update had no attachment at all.
+function droppedAttachmentReply(saved: boolean, unsupportedType: boolean, photoFailed: boolean): string | null {
+  if (unsupportedType) {
+    return saved
+      ? 'Saved the caption. Only links, text and photos are supported — other files are dropped.'
+      : "Didn't save that — only links, text and photos are supported."
+  }
+  if (photoFailed) {
+    return saved
+      ? 'Saved the caption, but the photo failed to download.'
+      : "Couldn't download that photo — nothing saved."
+  }
+  return null
+}
+
 export async function ingestUpdate(
   update: TelegramUpdate,
   state: { boundChatId: number | null; pairingCode: string | null },
@@ -56,9 +74,29 @@ export async function ingestUpdate(
   // largest, which is the one worth captioning.
   const largest = message.photo?.[message.photo.length - 1]
   const image = largest ? await io.fetchPhotoDataUrl(largest.file_id) : null
+  const photoFailed = Boolean(largest) && !image
+  // Only text, captions and a compressed `photo` are ever saved. A PDF,
+  // video, voice note, sticker or a photo sent "as a file" (uncompressed —
+  // Telegram delivers that as `document`, not `photo`) arrives here as none
+  // of those, and used to be dropped with no reply at all — which, per
+  // docs/telegram.md's "if nothing happens" guidance, reads to the owner as
+  // "not bound, or wrong code" rather than "not supported".
+  const unsupportedType = Boolean(
+    message.document ||
+      message.video ||
+      message.voice ||
+      message.video_note ||
+      message.audio ||
+      message.sticker ||
+      message.animation,
+  )
 
-  if (!text && !image) return
+  if (!text && !image) {
+    const reply = droppedAttachmentReply(false, unsupportedType, photoFailed)
+    if (reply) await io.sendMessage(chatId, reply)
+    return
+  }
 
   await io.saveCapture({ text, image })
-  await io.sendMessage(chatId, 'Saved.')
+  await io.sendMessage(chatId, droppedAttachmentReply(true, unsupportedType, photoFailed) ?? 'Saved.')
 }

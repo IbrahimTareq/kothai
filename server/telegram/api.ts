@@ -17,6 +17,16 @@ export interface TelegramMessage {
   text?: string
   caption?: string
   photo?: { file_id: string; file_size?: number }[]
+  // Attachment kinds Kothai does not store. Only their presence is checked —
+  // by ingest.ts, to decide whether the bound chat is owed an honest "not
+  // saved" reply instead of the file being dropped without a word.
+  document?: unknown
+  video?: unknown
+  voice?: unknown
+  video_note?: unknown
+  audio?: unknown
+  sticker?: unknown
+  animation?: unknown
 }
 
 export interface TelegramUpdate {
@@ -36,12 +46,19 @@ async function describeError(res: Response): Promise<string> {
 }
 
 // A network-level failure (DNS, timeout, connection reset — and Telegram's
-// file_path download URLs do expire) degrades to null here, matching every
-// other failure path in this module, instead of throwing. Letting it throw
-// would wedge Task 5's poll loop: that loop deliberately does not advance the
-// update offset when handling an update throws, so a crash redelivers rather
-// than drops a capture — which means one throw on a transient blip gets
-// Telegram redelivering the same update forever, and every retry throws again.
+// file_path download URLs do expire) degrades to null here instead of
+// throwing. Letting it throw would wedge Task 5's poll loop: that loop
+// deliberately does not advance the update offset when handling an update
+// throws, so a crash redelivers rather than drops a capture — which means one
+// throw on a transient blip gets Telegram redelivering the same update
+// forever, and every retry throws again.
+//
+// getUpdates below is the one caller that does NOT go through this: it calls
+// fetch directly, so a network failure there does throw. That's fine there —
+// a getUpdates failure happens between updates rather than while handling
+// one, so it propagates out of pollOnce and is caught by startPolling's
+// `run().catch`, which just counts it as a failed pass and backs off like any
+// other, no redelivery loop at risk.
 async function fetchOrNull(url: string, init?: RequestInit): Promise<Response | null> {
   try {
     return await fetch(url, init)
@@ -97,9 +114,16 @@ export async function fetchPhotoDataUrl(token: string, fileId: string): Promise<
     console.error(`[telegram] getFile failed: ${meta.status}${await describeError(meta)}`)
     return null
   }
-  const body = (await meta.json()) as { result?: { file_path?: string } }
-  const filePath = body.result?.file_path
-  if (!filePath) return null
+  // Like every other parse in this module, a non-JSON 200 (a captive portal,
+  // a transparent proxy) degrades to null here rather than throwing — an
+  // uncaught throw here would propagate out of ingestUpdate and stall the
+  // offset the same way an uncaught network error would.
+  const body = (await meta.json().catch(() => null)) as { result?: { file_path?: string } } | null
+  const filePath = body?.result?.file_path
+  if (!filePath) {
+    console.error('[telegram] getFile: response carried no file_path')
+    return null
+  }
   const bin = await fetchOrNull(`${API}/file/bot${token}/${filePath}`)
   if (!bin) return null
   if (!bin.ok) {

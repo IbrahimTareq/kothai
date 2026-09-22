@@ -4,6 +4,7 @@
 import { randomBytes } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { readTelegram, writeTelegram, clearTelegram, type TelegramConfig } from '../data/telegram.ts'
+import { isCaptureStopped } from '../telegram/index.ts'
 import { json, readBody } from '../lib/http.ts'
 
 // No I/O/0/1 — a code shown on a settings screen has to survive being read
@@ -25,8 +26,12 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 function stateOf(config: TelegramConfig | null) {
+  // A 409 (another poller already consuming this bot's updates) stops the
+  // loop for the rest of the process's life — see poll.ts. Folding that in
+  // here is what keeps Settings from saying "Connected — saving to your
+  // chat" indefinitely after capture has actually died.
   return {
-    connected: Boolean(config?.botToken),
+    connected: Boolean(config?.botToken) && !isCaptureStopped(),
     boundChatId: config?.boundChatId ?? null,
     pairingCode: config?.pairingCode ?? null,
   }

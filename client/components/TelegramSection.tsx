@@ -12,6 +12,13 @@ export function TelegramSection() {
   const [token, setToken] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // handleClearTelegram only deletes the config file — the running poll loop
+  // still holds the old token and bound chat in its closure and keeps saving
+  // until the process restarts, so "disconnected" here is a lie until then.
+  // Surfaced at the point of disconnecting, not just in the general restart
+  // hint below, because this is the one case where "still running" is a
+  // privacy problem rather than a mere inconvenience.
+  const [justDisconnected, setJustDisconnected] = useState(false)
 
   useEffect(() => {
     API.telegram()
@@ -26,6 +33,7 @@ export function TelegramSection() {
     try {
       setState(await API.saveTelegram(token))
       setToken('')
+      setJustDisconnected(false)
     } catch (e) {
       setError(apiError(e, 'Could not connect — check the token and try again.'))
     }
@@ -38,6 +46,7 @@ export function TelegramSection() {
     setError(null)
     try {
       setState(await API.clearTelegram())
+      setJustDisconnected(true)
     } catch (e) {
       setError(apiError(e, 'Could not disconnect — check the server and try again.'))
     }
@@ -56,7 +65,8 @@ export function TelegramSection() {
       sub={
         <>
           Message a bot to save from your phone. Create one by messaging <code>@BotFather</code> on Telegram and sending
-          it <code>/newbot</code>. Anything you send the bot passes through Telegram's servers before it reaches Kothai.
+          it <code>/newbot</code>. Only links, plain text and photos are saved — other attachments (files, video, voice
+          notes, stickers) are dropped. Whatever you send passes through Telegram's servers before it reaches Kothai.
         </>
       }
     >
@@ -95,6 +105,9 @@ export function TelegramSection() {
               <span className="telegram-pairing-code mono">{state.pairingCode}</span>
               <p className="settings-row-desc">Send exactly that, as a message, to the bot to pair it.</p>
             </div>
+          )}
+          {justDisconnected && !error && (
+            <RowStatus tone="ok">Disconnected. The bot keeps saving until you restart Kothai.</RowStatus>
           )}
           {error && <RowStatus tone="error">{error}</RowStatus>}
         </SettingsRow>

@@ -6,9 +6,20 @@ import { getUpdates, sendMessage, fetchPhotoDataUrl } from './api.ts'
 import { ingestUpdate } from './ingest.ts'
 import { pollOnce, startPolling } from './poll.ts'
 
+// Read by GET /api/telegram (routes/telegram.ts) so Settings can stop
+// claiming "Connected — saving to your chat" once a 409 has permanently
+// stopped the loop (see poll.ts's conflict handling) — without this, the only
+// evidence the owner has that capture died is one log line in the container.
+let stopped = false
+
+export function isCaptureStopped(): boolean {
+  return stopped
+}
+
 export function startTelegramCapture(): boolean {
   const config = readTelegram()
   if (!config?.botToken) return false
+  stopped = false
   const token = config.botToken
   let bound = config.boundChatId
   // Read once and never refreshed — unlike `bound`, this one doesn't need it.
@@ -21,10 +32,11 @@ export function startTelegramCapture(): boolean {
   const pairingCode = config.pairingCode
   let offset = 0
 
-  startPolling(async () => {
+  startPolling(async giveUp => {
     const result = await pollOnce({
       offset,
       getUpdates: at => getUpdates(token, at),
+      giveUp,
       handle: update =>
         ingestUpdate(
           update,
@@ -34,15 +46,22 @@ export function startTelegramCapture(): boolean {
             sendMessage: (chatId, text) => sendMessage(token, chatId, text),
             fetchPhotoDataUrl: fileId => fetchPhotoDataUrl(token, fileId),
             bind: chatId => {
-              bound = chatId
+              // Write before touching `bound`: if this throws (read-only volume,
+              // full disk), `bound` must stay null so the redelivered pairing
+              // message still takes the bind path above next pass, instead of
+              // `ingestUpdate` treating the chat as already bound and saving the
+              // still-live pairing code as note content — see IngestIO.bind's
+              // comment in ingest.ts.
+              writeTelegram({ botToken: token, boundChatId: chatId, pairingCode: null })
               // Clearing the pairing code is what stops it being replayed — see
               // the binding rule in ingest.ts.
-              writeTelegram({ botToken: token, boundChatId: chatId, pairingCode: null })
+              bound = chatId
             },
           },
         ),
     })
     offset = result.offset
+    if (result.conflict) stopped = true
     return result
   })
   return true
