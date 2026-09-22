@@ -1,0 +1,37 @@
+# Telegram capture
+
+Message a bot from your phone and it becomes a note. Kothai long-polls Telegram's API from inside the container — an outbound connection — so nothing needs to be reachable from the internet: no public URL, no certificate, no port forward, and your tailnet doesn't need to be up.
+
+## Set it up
+
+1. Message `@BotFather` on Telegram and send it `/newbot`. Follow the prompts and copy the token it gives you.
+2. Paste the token into Settings → **TELEGRAM** and click **Connect**.
+3. Restart Kothai. Polling only starts at boot, so the bot won't respond to anything until you do.
+4. Settings now shows a six-character pairing code. Send exactly that, as a message, to your bot.
+5. The bot replies "Connected. Anything you send here is saved to Kothai." — from then on, anything you send it is saved.
+
+## Why the pairing code
+
+A bot's username is public from the moment BotFather creates it, and it's usually easy to guess from the bot's display name. Without a pairing step, whoever messages the bot first — a stranger, a scraper — would bind it to their own chat, gain write access to your archive, and lock you out, silently, since the bot never explains why it isn't responding to you. The pairing code, shown only on your own Settings screen, is what proves the chat binding the bot is the one that set it up.
+
+## If nothing happens
+
+A chat that isn't bound yet gets silence for anything except the correct pairing code — no reply, no note. A wrong code is met with the same silence. That's deliberate: replying at all, even to reject, would tell a stranger the bot is live and worth attacking. So if you send the code and nothing happens, don't conclude it's broken — check what you typed and send it again.
+
+Once a chat is bound, the same rule protects it going forward: messages from any other chat get no reply and create no note.
+
+## The privacy tradeoff
+
+Kothai's data never leaves your machine unless you say so. Connecting Telegram is you saying so — anything you send the bot passes through Telegram's servers before it reaches Kothai. Only turn this on if that's a path you're fine with for whatever you plan to send it.
+
+## While Kothai is down
+
+Telegram holds unacknowledged updates for you. If Kothai is stopped, restarting, or briefly offline, whatever you send in the meantime isn't lost — it arrives on the next poll, as long as you're within Telegram's retention window. Kothai only acknowledges an update once the note behind it is actually saved, so a crash mid-save redelivers that update rather than dropping it.
+
+## Rotating the token
+
+Revoke the old token in BotFather, paste the new one into Settings, and reconnect. Saving a new token resets the binding — the chat that was bound to the old bot has never spoken to the new one, so there's nothing to carry forward — and issues a fresh pairing code. Restart, then pair again as in step 4 above.
+
+## Group chats
+
+Binding is per-chat, not per-person. Add the bot to a group and pair that group, and anyone in it can save to your archive — there's no separate check on who sent the message.

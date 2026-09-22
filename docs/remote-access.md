@@ -28,3 +28,7 @@ The app shares the sidecar's network namespace and publishes no ports of its own
 At home Tailscale routes directly over the LAN, so the same URL is fast inside the house and works unchanged outside it.
 
 **From a device you can't install a client on** (a borrowed laptop, a hotel PC) you need a genuinely public URL. Tailscale Funnel (add `"AllowFunnel"` to `serve.json`) is the quickest route. Cloudflare Tunnel with Access in front is the safer one, because unauthenticated requests never reach your machine.
+
+## Telegram (needs no reachability at all)
+
+If all you want is to add notes remotely — not browse the archive — [Telegram capture](telegram.md) skips this page entirely. Kothai polls Telegram from inside the container, an outbound connection, so none of the above applies: no tailnet, no port forward, no certificate.

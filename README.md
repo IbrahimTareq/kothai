@@ -26,6 +26,7 @@ You throw links, screenshots and half-formed thoughts at one box. A local model 
 - **Ask your own stuff.** Answers are built only from what you saved, with every claim citing the card it came from.
 - **Runs on your hardware.** One container, one SQLite file, no cloud account. A Raspberry Pi 5 handles it.
 - **AI is optional.** Use local models, point at any endpoint, or turn it off entirely. Your data never leaves unless you say so.
+- **Capture from your phone.** Message a link or photo to a Telegram bot and it lands in your archive — no app to install, nothing exposed to the internet.
 
 See [What is Kothai?](https://getkothai.com/docs/getting-started/what-is-kothai) for the full feature list.
 

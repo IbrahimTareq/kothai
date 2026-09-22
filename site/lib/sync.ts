@@ -30,7 +30,7 @@ const SECTIONS = [
     title: 'Running it',
     description: 'Keep it alive and reachable',
     icon: 'ServerCog',
-    pages: ['remote-access', 'backups', 'troubleshooting'],
+    pages: ['remote-access', 'telegram', 'backups', 'troubleshooting'],
   },
   {
     dir: 'how-it-works',
