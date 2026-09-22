@@ -36,8 +36,8 @@ export interface NoteRecord extends ServerNote {
 }
 
 // What every read path hands back — see stripEmbedding at the bottom for why
-// those two fields never leave this module. Exported (as a type, so it costs
-// nothing against the export-count ratchet) for server/capture.ts's saveCapture.
+// those two fields never leave this module. Exported for server/capture.ts's
+// saveCapture.
 export type PublicNote = Omit<NoteRecord, 'embedding' | '_rev'>
 
 // A retrieval result: a note plus the score the retriever gave it. Both

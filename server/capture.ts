@@ -9,10 +9,7 @@ import { saveImage } from './lib/http.ts'
 import type { PublicNote } from './data/notes.ts'
 
 export async function saveCapture({ text, image }: { text: string; image?: string | null }): Promise<PublicNote> {
-  // The typeof stands in for saveImage's own coercion: it matches a data-URL
-  // regex against `dataUrl || ''`, so anything that is not a string was always
-  // going to come back null.
-  const img = typeof image === 'string' ? await saveImage(image) : null
+  const img = await saveImage(image)
   const isUrl = ai.isLikelyUrl(text)
   const note = await store.addNote({
     type: img ? 'image' : ai.heuristicType({ hasImage: false, isUrl, text }),
