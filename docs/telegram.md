@@ -10,6 +10,10 @@ Message a bot from your phone and it becomes a note. Kothai long-polls Telegram'
 4. Settings now shows a six-character pairing code. Send exactly that, as a message, to your bot.
 5. The bot replies "Connected. Anything you send here is saved to Kothai." — from then on, anything you send it is saved.
 
+## What gets saved
+
+Links, plain text and photos. Anything else — a file, video, voice note, sticker or GIF — is dropped rather than saved, and once your chat is bound the bot tells you so: it saves the caption if you attached one and replies that the attachment itself didn't make it. A photo that fails to download gets the same treatment — the caption is saved, and the bot says the photo didn't come through.
+
 ## Why the pairing code
 
 A bot's username is public from the moment BotFather creates it, and it's usually easy to guess from the bot's display name. Without a pairing step, whoever messages the bot first — a stranger, a scraper — would bind it to their own chat, gain write access to your archive, and lock you out, silently, since the bot never explains why it isn't responding to you. The pairing code, shown only on your own Settings screen, is what proves the chat binding the bot is the one that set it up.
@@ -18,7 +22,11 @@ A bot's username is public from the moment BotFather creates it, and it's usuall
 
 A chat that isn't bound yet gets silence for anything except the correct pairing code — no reply, no note. A wrong code is met with the same silence. That's deliberate: replying at all, even to reject, would tell a stranger the bot is live and worth attacking. So if you send the code and nothing happens, don't conclude it's broken — check what you typed and send it again.
 
-Once a chat is bound, the same rule protects it going forward: messages from any other chat get no reply and create no note.
+Once a chat is bound, that silence still protects it from everyone else — messages from any other chat get no reply and create no note. But your own bound chat is different: from that point on it always gets a reply, even when nothing was saved (see "What gets saved" above). If your bound chat goes quiet, the bot itself has likely stopped — see "If capture has stopped" below.
+
+## If capture has stopped
+
+Only one process can long-poll a bot's token at a time. If Telegram sees a second poller — a second Kothai instance pointed at the same bot, for example — it answers with a conflict, and Kothai stops polling for the rest of that run rather than fight the other poller over every message. Settings will show the bot as disconnected even though the token is still saved on disk; only a restart, with just one poller left running, brings capture back.
 
 ## The privacy tradeoff
 
@@ -27,6 +35,10 @@ Kothai's data never leaves your machine unless you say so. Connecting Telegram i
 ## While Kothai is down
 
 Telegram holds unacknowledged updates for you. If Kothai is stopped, restarting, or briefly offline, whatever you send in the meantime isn't lost — it arrives on the next poll, as long as you're within Telegram's retention window. Kothai only acknowledges an update once the note behind it is actually saved, so a crash mid-save redelivers that update rather than dropping it.
+
+## Disconnecting
+
+Clicking Disconnect in Settings deletes the saved token, but the poll loop that's already running holds its own copy of the token and the bound chat, and keeps saving until Kothai restarts. If you're disconnecting for privacy — handing your phone to someone, say — the token disappearing from Settings doesn't mean the bot stopped listening. Restart to actually stop it.
 
 ## Rotating the token
 
