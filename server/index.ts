@@ -16,6 +16,7 @@ const settings = await import('./data/settings.ts')
 const enrich = await import('./ai/enrich.ts')
 const collections = await import('./data/collections.ts')
 const tagvocab = await import('./data/tagvocab.ts')
+const telegram = await import('./telegram/index.ts')
 
 const server = createServer()
 
@@ -23,6 +24,9 @@ await store.load()
 await chats.load()
 await settings.load()
 await collections.load()
+// After the stores are open: an update can arrive and be saved within
+// milliseconds of the first poll returning.
+const telegramActive = telegram.startTelegramCapture()
 const hadTagRegistry = await tagvocab.load()
 // Before any provider is resolved: a stored endpoint decides which provider
 // kind initProvider picks, so loading it later would boot the wrong one.
@@ -64,6 +68,7 @@ server.listen(PORT, () => {
     console.log(
       '  Auth: none — anyone who can reach this port has full access. Set KOTHAI_PASSWORD to require a password.\n',
     )
+  if (telegramActive) console.log('  Telegram capture: on\n')
   if (reembedding || providerReembedding)
     console.log('  Re-embedding the library in the background after an embedding change…\n')
   if (!ai.capabilities().downloadsWeights) console.log(`  Inference: remote endpoint\n`)
