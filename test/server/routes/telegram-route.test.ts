@@ -17,6 +17,7 @@ interface FakeConfig {
 let stored: FakeConfig | null = null
 const writes: FakeConfig[] = []
 let clears = 0
+let stopped = false
 
 mock.module('../../../server/data/telegram.ts', {
   namedExports: {
@@ -37,6 +38,9 @@ mock.module('../../../server/data/telegram.ts', {
     },
   },
 })
+mock.module('../../../server/telegram/index.ts', {
+  namedExports: { isCaptureStopped: () => stopped },
+})
 
 const { handleGetTelegram, handleSaveTelegram, handleClearTelegram } = await import(
   '../../../server/routes/telegram.ts'
@@ -48,6 +52,7 @@ beforeEach(() => {
   stored = null
   writes.length = 0
   clears = 0
+  stopped = false
 })
 
 test('GET reports disconnected on an unconfigured install', () => {
@@ -71,6 +76,14 @@ test('GET reports connection state and the pairing code, and never the token', (
   // absent from the parsed shape would still pass a `'botToken' in body`
   // check if the server had serialised it under another name.
   assert.ok(!String(sent.body).includes('secret-token-123'), 'the bot token must never appear in the response body')
+})
+
+test('GET reports disconnected once the poll loop has permanently stopped, even with a token still on disk', () => {
+  stored = { botToken: 'secret-token-123', boundChatId: 42, pairingCode: null }
+  stopped = true
+  const { res, sent } = mockRes()
+  handleGetTelegram(res)
+  assert.equal(sent.json().connected, false, 'a 409-stopped loop is no longer actually saving anything')
 })
 
 test('POST stores the token, clears any previous binding, and generates a pairing code', async () => {

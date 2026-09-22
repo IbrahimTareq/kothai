@@ -118,3 +118,53 @@ test('an update with no message — e.g. a channel_post — binds nothing, sends
   assert.deepEqual(d.sent, [])
   assert.deepEqual(d.saved, [])
 })
+
+// droppedAttachmentReply's four cases below only ever fire for the BOUND
+// chat — it is already authenticated, so telling it the truth costs nothing.
+// A stranger probing the unbound bot still gets total silence (pinned last),
+// because a reply of any kind — even "that file type isn't supported" —
+// would confirm the bot is live.
+
+test('an unsupported attachment with a caption: the caption is saved, and the reply says other files are dropped', async () => {
+  const d = deps()
+  const update = msg(99, { text: undefined, caption: 'read this later', document: { file_id: 'doc1' } })
+  await ingestUpdate(update, { boundChatId: 99, pairingCode: null }, d.io)
+  assert.equal(d.saved.length, 1, 'the caption is text — there is no reason to lose it')
+  assert.equal(d.saved[0].text, 'read this later')
+  assert.equal(d.saved[0].image, null)
+  assert.equal(d.sent.length, 1)
+  assert.equal(d.sent[0].chatId, 99)
+  assert.match(d.sent[0].text, /only links, text and photos are supported/i)
+  assert.match(d.sent[0].text, /saved the caption/i)
+})
+
+test('an unsupported attachment with no caption: nothing is saved, and the reply explains why instead of pretending it worked', async () => {
+  const d = deps()
+  const update = msg(99, { text: undefined, video: { file_id: 'vid1' } })
+  await ingestUpdate(update, { boundChatId: 99, pairingCode: null }, d.io)
+  assert.deepEqual(d.saved, [], 'nothing here is text, a caption or a photo')
+  assert.equal(d.sent.length, 1)
+  assert.equal(d.sent[0].chatId, 99)
+  assert.match(d.sent[0].text, /only links, text and photos are supported/i)
+  assert.doesNotMatch(d.sent[0].text, /saved/i, 'nothing was saved — the reply must not claim otherwise')
+})
+
+test('a photo download failure with a caption: the caption is saved, and the reply says the photo specifically failed', async () => {
+  const d = deps()
+  d.io.fetchPhotoDataUrl = async () => null
+  const update = msg(99, { text: undefined, caption: 'the good bit', photo: [{ file_id: 'a' }] })
+  await ingestUpdate(update, { boundChatId: 99, pairingCode: null }, d.io)
+  assert.equal(d.saved.length, 1)
+  assert.equal(d.saved[0].text, 'the good bit')
+  assert.equal(d.sent.length, 1)
+  assert.match(d.sent[0].text, /photo failed to download/i)
+})
+
+test('the silence rule for an unbound/wrong chat is unchanged by the new replies — an unsupported attachment from a stranger still gets nothing back', async () => {
+  const d = deps()
+  const update = msg(1234, { text: undefined, document: { file_id: 'doc1' } })
+  await ingestUpdate(update, { boundChatId: 99, pairingCode: null }, d.io)
+  assert.deepEqual(d.saved, [])
+  assert.deepEqual(d.sent, [], 'the new honest replies must never leak to a chat that is not the bound one')
+  assert.deepEqual(d.bound, [])
+})
