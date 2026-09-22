@@ -44,6 +44,7 @@ import {
   handleRetagAll,
 } from './routes/settings.ts'
 import { handleSetupTest } from './routes/setup-test.ts'
+import { handleGetTelegram, handleSaveTelegram, handleClearTelegram } from './routes/telegram.ts'
 
 async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? '', `http://${req.headers.host}`)
@@ -80,6 +81,11 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     if (req.method === 'POST' && p === '/api/setup/endpoint') return await handleSetupEndpoint(req, res)
     if (req.method === 'POST' && p === '/api/settings/endpoint') return await handleSaveEndpoint(req, res)
     if (req.method === 'DELETE' && p === '/api/settings/endpoint') return await handleClearEndpoint(req, res)
+    if (p === '/api/telegram') {
+      if (req.method === 'GET') return handleGetTelegram(res)
+      if (req.method === 'POST') return await handleSaveTelegram(req, res)
+      if (req.method === 'DELETE') return handleClearTelegram(res)
+    }
     if (req.method === 'POST' && p === '/api/import') return await handleImport(req, res)
     if (req.method === 'GET' && p === '/api/export') return handleExport(res)
     if (req.method === 'GET' && p === '/api/backup') return await handleBackup(req, res)

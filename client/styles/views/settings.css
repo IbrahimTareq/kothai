@@ -489,3 +489,9 @@
    has to read before the field above it means anything. */
 .conn-err{margin-top:var(--space-10);font-size:var(--text-xs);line-height:1.55;
   letter-spacing:var(--tracking-tight);color:var(--ink)}
+
+/* The Telegram pairing code: sized to read off the screen at a glance and
+   type into a phone's chat with the bot, rather than sitting at body size
+   like the rest of the row. */
+.telegram-pairing-code{display:inline-block;font-size:var(--text-2xl);letter-spacing:var(--tracking-mono);
+  padding:var(--space-8) var(--space-12);background:var(--panel-3);border-radius:var(--radius-md);color:var(--ink)}

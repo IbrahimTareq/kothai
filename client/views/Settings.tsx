@@ -15,6 +15,7 @@ import { RoleAccordion, RemoteModelField, ROLE_META, fmtGB, type Role } from '..
 import { SettingsGroup, SettingsRow, RowStatus } from '../components/SettingsRow'
 import { ConnectionPanel } from '../components/ConnectionPanel'
 import { ImportSection } from '../components/ImportSection'
+import { TelegramSection } from '../components/TelegramSection'
 import { AvailabilityRow } from '../components/AvailabilityRow'
 import { ModelFilesRow } from '../components/ModelFilesRow'
 import { API, apiError } from '../data/api'
@@ -332,6 +333,8 @@ export function SettingsView({
           )}
 
           <ImportSection />
+
+          <TelegramSection />
 
           <SettingsGroup label="YOUR DATA">
             <div className="settings-rows">

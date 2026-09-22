@@ -215,6 +215,14 @@ export interface SettingsResponse {
   localPresets: { llm: ModelPreset[]; embed: ModelPreset[]; vision: ModelPreset[] } | null
 }
 
+// GET/POST/DELETE /api/telegram all answer with this shape — never the bot
+// token itself (see server/routes/telegram.ts).
+export interface TelegramState {
+  connected: boolean
+  boundChatId: number | null
+  pairingCode: string | null
+}
+
 // One entry in the model download cache — a weights file, or a companion-set
 // directory. `usedBy` is the role whose current selection needs it; the server
 // refuses to delete anything with one (server/routes/models.js).

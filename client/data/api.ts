@@ -12,6 +12,7 @@ import type {
   Residency,
   ServerNote,
   SettingsResponse,
+  TelegramState,
   UIItem,
   UIType,
 } from '../types'
@@ -348,6 +349,10 @@ export const API = {
   async saveSettings(patch: SettingsPatch): Promise<{ ok: boolean; current: SettingsPatch }> {
     return apiPost('/api/settings', patch)
   },
+  // telegram capture
+  telegram: (): Promise<TelegramState> => apiGet<TelegramState>('/api/telegram'),
+  saveTelegram: (botToken: string): Promise<TelegramState> => apiPost<TelegramState>('/api/telegram', { botToken }),
+  clearTelegram: (): Promise<TelegramState> => apiDel<TelegramState>('/api/telegram'),
   // first-run: commit the chosen models and kick off their initial download
   // Ask the server whether an endpoint answers with this key. Never throws on
   // a refused key — that comes back as ok:false with a message to show.
