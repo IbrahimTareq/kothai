@@ -10,10 +10,10 @@ import { readTelegram, writeTelegram, clearTelegram } from '../../../server/data
 
 const freshDir = () => mkdtempSync(path.join(tmpdir(), 'kothai-tg-'))
 
-test('writeTelegram/readTelegram: a token and bound chat round-trip', () => {
+test('writeTelegram/readTelegram: a token, bound chat and pairing code round-trip', () => {
   const dir = freshDir()
-  writeTelegram({ botToken: '123:abc', boundChatId: 42 }, dir)
-  assert.deepEqual(readTelegram(dir), { botToken: '123:abc', boundChatId: 42 })
+  writeTelegram({ botToken: '123:abc', boundChatId: 42, pairingCode: 'swordfish' }, dir)
+  assert.deepEqual(readTelegram(dir), { botToken: '123:abc', boundChatId: 42, pairingCode: 'swordfish' })
 })
 
 test('readTelegram: no file reads as null rather than throwing', () => {
@@ -46,9 +46,9 @@ test('clearTelegram: removing a file that is already gone is not an error', () =
 
 test('writeTelegram: a write carrying only a token clears the binding — a new bot has never been bound', () => {
   const dir = freshDir()
-  writeTelegram({ botToken: '123:abc', boundChatId: 42 }, dir)
+  writeTelegram({ botToken: '123:abc', boundChatId: 42, pairingCode: 'swordfish' }, dir)
   writeTelegram({ botToken: '456:def' }, dir)
-  assert.deepEqual(readTelegram(dir), { botToken: '456:def', boundChatId: null })
+  assert.deepEqual(readTelegram(dir), { botToken: '456:def', boundChatId: null, pairingCode: null })
 })
 
 test('writeTelegram: a write to an unwritable directory throws — a token that silently vanishes is worse', () => {

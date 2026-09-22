@@ -14,6 +14,12 @@ const FILE = 'telegram.json'
 export interface TelegramConfig {
   botToken: string | null
   boundChatId: number | null
+  // The shared secret the owner pastes into the bot chat to claim it — shown
+  // only on Kothai's own settings screen, since the bot's username is public
+  // from the moment BotFather creates it and trust-on-first-message would let
+  // whoever finds that username bind the bot before the owner does. Cleared
+  // the moment a chat binds, so it cannot be replayed.
+  pairingCode: string | null
 }
 
 // Missing, unreadable or malformed all read as "not configured" rather than
@@ -24,9 +30,10 @@ export function readTelegram(dir: string = DATA_DIR): TelegramConfig | null {
     const parsed: Record<string, unknown> = JSON.parse(readFileSync(path.join(dir, FILE), 'utf8'))
     const botToken = typeof parsed.botToken === 'string' && parsed.botToken ? parsed.botToken : null
     const boundChatId = typeof parsed.boundChatId === 'number' ? parsed.boundChatId : null
+    const pairingCode = typeof parsed.pairingCode === 'string' && parsed.pairingCode ? parsed.pairingCode : null
     // A chat id without a token cannot poll anything, so it is not a
     // configuration — reporting it as one would start a loop with no token.
-    return botToken ? { botToken, boundChatId } : null
+    return botToken ? { botToken, boundChatId, pairingCode } : null
   } catch {
     return null
   }
@@ -42,15 +49,15 @@ export function readTelegram(dir: string = DATA_DIR): TelegramConfig | null {
 // bound to the previous bot has never spoken to this one. A merge would leave
 // a stale binding pointing at a bot that hasn't heard from that chat.
 export function writeTelegram(
-  { botToken = null, boundChatId = null }: Partial<TelegramConfig>,
+  { botToken = null, boundChatId = null, pairingCode = null }: Partial<TelegramConfig>,
   dir: string = DATA_DIR,
 ): TelegramConfig {
   const file = path.join(dir, FILE)
-  writeFileSync(file, JSON.stringify({ botToken, boundChatId }, null, 2), { mode: 0o600 })
+  writeFileSync(file, JSON.stringify({ botToken, boundChatId, pairingCode }, null, 2), { mode: 0o600 })
   // writeFileSync's `mode` applies only when it creates the file, so an
   // existing permissive file would keep its old permissions without this.
   chmodSync(file, 0o600)
-  return { botToken, boundChatId }
+  return { botToken, boundChatId, pairingCode }
 }
 
 export function clearTelegram(dir: string = DATA_DIR): void {
