@@ -124,7 +124,7 @@ function LinkTile({ item, overlay }: { item: UIItem; overlay?: ReactElement }): 
         </span>
         <div className="lt-cap">
           <div className="lt-title">{item.title || item.host}</div>
-          <div className="lt-label mono">{label}</div>
+          <div className="lt-label eyebrow">{label}</div>
         </div>
       </div>
       {item.thumb && (
@@ -202,7 +202,7 @@ export function CardInner({ item, overlay }: { item: UIItem; overlay?: ReactElem
             <span className="code-dot"></span>
             <span className="code-dot"></span>
             <span className="code-dot"></span>
-            <span className="code-lang">{it.lang}</span>
+            <span className="code-lang eyebrow">{it.lang}</span>
           </div>
           <pre className="code-block mono">{it.text}</pre>
         </Fragment>

@@ -185,7 +185,7 @@ function CodePanel({ item }: { item: UIItem }): ReactElement {
         <span className="code-dot" />
         <span className="code-dot" />
         <span className="code-dot" />
-        <span className="code-lang">{item.lang}</span>
+        <span className="code-lang eyebrow">{item.lang}</span>
       </div>
       <pre className="code-block mono">{item.text}</pre>
     </div>
@@ -199,7 +199,7 @@ function NotePanel({ item }: { item: UIItem }): ReactElement {
 function Field({ label, value, big }: { label: string; value: string; big?: boolean }): ReactElement {
   return (
     <div className="exp-field">
-      <div className="exp-field-label">{label}</div>
+      <div className="exp-field-label eyebrow">{label}</div>
       <div className={`exp-field-val${big ? ' big' : ''}`}>{value}</div>
     </div>
   )
@@ -437,7 +437,7 @@ export function ExpandedView({
           </div>
 
           <section className="exp-sec">
-            <div className="exp-sec-h">
+            <div className="exp-sec-h eyebrow">
               Tags <span className="exp-sec-n">{tags.length}</span>
             </div>
             <div className="exp-tags">
@@ -470,7 +470,7 @@ export function ExpandedView({
           </section>
 
           <section className="exp-sec">
-            <div className="exp-sec-h">Notes</div>
+            <div className="exp-sec-h eyebrow">Notes</div>
             <Textarea
               className="exp-note"
               placeholder="Type here to add a note…"
@@ -481,7 +481,7 @@ export function ExpandedView({
           </section>
 
           <section className="exp-sec">
-            <div className="exp-sec-h">
+            <div className="exp-sec-h eyebrow">
               Spaces <span className="exp-sec-n">{inSpaces.length}</span>
             </div>
             <div className="exp-colls">

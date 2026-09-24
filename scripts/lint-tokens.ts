@@ -22,6 +22,7 @@ import {
   countRawSizes,
   findBtnClass,
   findButtonChrome,
+  findEyebrowChrome,
 } from './button-chrome.ts'
 import { checkAgainstHead } from './lint-shape.ts'
 
@@ -134,6 +135,21 @@ for (const file of files) {
     report.push(
       `  ${file}:${hit.line}  [button-chrome] ${hit.selector} builds a button box` +
         `\n      use <Button> (client/ui/Button.tsx) with its size/tone/danger props`,
+    )
+    failures++
+  }
+}
+
+/* ── eyebrows built from scratch ──────────────────────────────────────────
+ * The small caps label — a section's or a field's name — was written thirteen
+ * times across five sheets, in three sizes, two trackings and three greys,
+ * though Settings had already named it the eyebrow. .eyebrow in
+ * primitives.css is the one; small text set in caps anywhere else rebuilds it. */
+for (const file of files) {
+  if (basename(file) === 'primitives.css') continue
+  for (const hit of findEyebrowChrome(readFileSync(join(STYLES, file), 'utf8'))) {
+    report.push(
+      `  ${file}:${hit.line}  [eyebrow] ${hit.selector} rebuilds the eyebrow\n      add the .eyebrow class and keep only layout here`,
     )
     failures++
   }

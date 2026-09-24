@@ -335,7 +335,7 @@ export function CoreView({
 
       {!hasThread && chatList.length > 0 && (
         <div className="recent">
-          <div className="recent-h">CHAT HISTORY</div>
+          <div className="recent-h eyebrow">CHAT HISTORY</div>
           <div className="chat-list">
             {chatList.map(c => (
               <ChatRow
@@ -392,7 +392,7 @@ function AiAnswer({ m, jumpTo }: { m: ThreadMsg; jumpTo: (item: UIItem) => void 
       )}
       {others.length > 0 && (
         <div className="also">
-          <button className="also-toggle mono" onClick={() => setShowOthers(v => !v)} aria-expanded={showOthers}>
+          <button className="also-toggle eyebrow" onClick={() => setShowOthers(v => !v)} aria-expanded={showOthers}>
             <span className={`also-caret${showOthers ? ' open' : ''}`}></span>
             {featured.length > 0 ? 'ALSO CONSIDERED' : 'SOURCES SEARCHED'}{' '}
             <span className="also-count">{others.length}</span>

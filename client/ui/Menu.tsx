@@ -45,7 +45,7 @@ export function Menu({
           onClick={contain}
           onKeyDown={contain}
         >
-          {title && <DropdownMenu.Label className="menu-title">{title}</DropdownMenu.Label>}
+          {title && <DropdownMenu.Label className="menu-title eyebrow">{title}</DropdownMenu.Label>}
           {items.length === 0 && <div className="menu-empty">{empty}</div>}
           {items.map(it => {
             const body = (

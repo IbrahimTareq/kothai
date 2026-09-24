@@ -41,8 +41,7 @@
 .exp-card-logo.lg{width:56px;height:56px;margin:0 auto;align-items:center;border-radius:var(--radius);
   background:var(--panel-2);font-size:var(--text-2xl);font-weight:var(--fw-medium)}
 .exp-field{display:flex;flex-direction:column;gap:var(--space-6)}
-.exp-field-label{font-family:var(--font-mono);font-size:var(--text-2xs);letter-spacing:var(--tracking-mono);
-  text-transform:uppercase;color:var(--ink-faint)}
+.exp-field-label{display:block}
 .exp-field-val{font-size:var(--text-sm);line-height:var(--leading-normal);color:var(--ink-dim)}
 .exp-field-val.big{font-size:var(--text-2xl);color:var(--ink);letter-spacing:var(--tracking-tight)}
 .exp-card-cta{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-8);margin-top:var(--space-4);padding:var(--space-14) 0 var(--space-2);
@@ -133,8 +132,7 @@
 a.exp-src{text-decoration:none;transition:var(--dur-fast)}
 a.exp-src:hover{color:var(--ink);text-decoration:underline;text-underline-offset:2px}
 .exp-sec{margin-top:var(--space-28)}
-.exp-sec-h{display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-12);font-family:var(--font-mono);
-  font-size:var(--text-2xs);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--ink-faint)}
+.exp-sec-h{display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-12)}
 .exp-sec-n{display:grid;place-items:center;min-width:15px;height:15px;padding:0 var(--space-4);border-radius:var(--radius-full);
   background:var(--panel-2);color:var(--ink-mute);font-size:var(--text-2xs)}
 .exp-tags{display:flex;flex-wrap:wrap;gap:var(--space-8)}

@@ -70,9 +70,7 @@
   line-height:var(--leading-snug);letter-spacing:var(--tracking-tighter);
   color:var(--ink);display:-webkit-box;-webkit-line-clamp:4;
   -webkit-box-orient:vertical;overflow:hidden}
-.lt-label{font-family:var(--font-mono);font-size:var(--text-2xs);
-  letter-spacing:var(--tracking-label);text-transform:uppercase;
-  color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lt-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* On a tile with no preview image .lt-body is the last child, so .card-actions
    — absolutely positioned into the bottom-right corner — lands on the label's
    own line and squeezes it to an ellipsis in a narrow column. This clears a
@@ -96,8 +94,7 @@
 /* code */
 .code-head{display:flex;align-items:center;gap:var(--space-6);padding-bottom:var(--space-2)}
 .code-dot{width:7px;height:7px;border-radius:var(--radius-circle);background:var(--line);border:1px solid var(--line)}
-.code-lang{margin-left:auto;font-family:var(--font-mono);font-size:var(--text-3xs);
-  letter-spacing:var(--tracking-label);color:var(--ink-dim);text-transform:uppercase}
+.code-lang{margin-left:auto}
 .code-block{margin:0;font-family:var(--font-mono);font-size:var(--text-xs);line-height:var(--leading-normal);
   color:rgba(255,255,255,.82);background:#050505;border:1px solid var(--line);  /* token-lint-ignore: code blocks keep a dark surface in both themes, like an editor */
   border-radius:var(--radius);padding:var(--space-12) var(--space-12);overflow-x:auto;white-space:pre;

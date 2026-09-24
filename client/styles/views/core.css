@@ -51,9 +51,7 @@
 
 /* recent strip */
 .recent{width:min(680px,100%);margin-top:var(--space-32)}
-.recent-h{display:flex;align-items:center;gap:var(--space-12);font-family:var(--font-mono);
-  font-size:var(--text-2xs);letter-spacing:var(--tracking-label);color:var(--ink-faint);
-  text-transform:uppercase;margin-bottom:var(--space-14)}
+.recent-h{display:flex;align-items:center;gap:var(--space-12);margin-bottom:var(--space-14)}
 .recent-h::after{content:"";flex:1;height:1px;background:var(--line)}
 
 /* saved chat history (ask mode, empty thread) */
@@ -139,8 +137,7 @@
 /* collapsible "also considered" evidence */
 .also{margin-top:var(--space-16)}
 .also-toggle{display:flex;align-items:center;gap:var(--space-8);padding:0;border:0;background:none;cursor:pointer;
-  font-size:var(--text-3xs);letter-spacing:var(--tracking-label);text-transform:uppercase;
-  color:var(--ink-faint);transition:color var(--dur-fast)}
+  transition:color var(--dur-fast)}
 .also-toggle:hover{color:var(--ink-dim)}
 .also-caret{flex-shrink:0;width:0;height:0;border-style:solid;
   border-width:4px 0 4px 6px;border-color:transparent transparent transparent var(--ink);

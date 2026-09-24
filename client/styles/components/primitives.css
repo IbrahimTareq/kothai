@@ -205,8 +205,7 @@
    whatever height the viewport leaves it */
 .pop--list{width:var(--radix-popover-trigger-width,244px);gap:0;padding:var(--space-4);
   max-height:min(240px,var(--radix-popover-content-available-height,240px));overflow-y:auto}
-.menu-title{padding:var(--space-4) var(--space-6) var(--space-6);font-size:var(--text-xs);
-  letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--ink-mute)}
+.menu-title{padding:var(--space-4) var(--space-6) var(--space-6)}
 .menu-empty{padding:var(--space-4) var(--space-6);font-size:var(--text-xs);color:var(--ink-mute)}
 .menu-item{display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8) var(--space-6);
   border-radius:var(--radius-md);font-size:var(--text-sm);cursor:pointer;outline:none;user-select:none}
@@ -301,3 +300,12 @@ textarea.field{resize:vertical;line-height:var(--leading-normal)}
 .confirm--inline .confirm-q{flex:1;min-width:0;margin:0;color:var(--ink);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .confirm--inline .confirm-actions{flex:none;flex-wrap:nowrap}
+
+/* ── eyebrow ───────────────────────────────────────────────────────────────
+   The small caps name over a section or beside a field: Ask's chat history,
+   Settings' groups, Expanded's Tags / Notes / Spaces and field labels, a menu's
+   title, a code block's language. Settings named this role (mono 10, faint)
+   and thirteen rules wrote it anyway, in three sizes, two trackings and three
+   greys. Add the class; keep only layout in the view's own rule. */
+.eyebrow{font-family:var(--font-mono);font-size:var(--text-2xs);letter-spacing:var(--tracking-label);
+  text-transform:uppercase;color:var(--ink-faint)}

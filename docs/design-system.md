@@ -118,6 +118,14 @@ word to type first. It moves focus to the decision when it appears, and Escape
 cancels. It replaced six hand-built confirms, of which two answered Escape, one
 moved focus, and one — the chat row's — confirmed with an outline button.
 
+**The small caps name over a section or beside a field is `.eyebrow`**: mono
+10px, label tracking, faint — the role Settings already called the eyebrow.
+Ask's chat history, Settings' groups, Expanded's sections and field labels, a
+menu's title and a code block's language all carry it, and keep only layout in
+their own rule. It had been written thirteen times in three sizes, two
+trackings and three greys; `lint:tokens` now fails small text set in caps
+anywhere but `primitives.css`.
+
 **Every page opens with `<PageHeader>`** (`client/ui/`). Two rows: identity
 (`lead`, `title`, a mono `meta` count, `actions` on the right) over a toolbar
 of `filters` on the left — what is shown — and `display` on the right — how

@@ -18,7 +18,7 @@ export function SettingsGroup({
 }) {
   return (
     <section className={`settings-group${className ? ` ${className}` : ''}`}>
-      <div className="recent-h">{label}</div>
+      <div className="recent-h eyebrow">{label}</div>
       {sub && <div className="settings-group-sub">{sub}</div>}
       {children}
     </section>
