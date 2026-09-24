@@ -2,7 +2,7 @@
    Part of the Kothai design system. Loaded via index.css. */
 /* ---- Spaces landing ---- */
 .spaces-view { display: flex; flex-direction: column; height: 100%; overflow: hidden; padding-top: var(--topbar-h); }
-.spaces-scroll { flex: 1; overflow-y: auto; padding: var(--space-20) var(--space-28) var(--space-22); }
+.spaces-scroll { flex: 1; overflow-y: auto; padding: var(--under-head) var(--space-28) var(--space-22); }
 .space-form { display: flex; gap: var(--space-8); padding: var(--space-20) var(--space-28) 0; flex-wrap: wrap; }
 .space-form-name { min-width: 200px; }
 .space-form-tags { flex: 1; min-width: 220px; }

@@ -43,7 +43,7 @@
 .search-box input{flex:1;width:100%;background:transparent;border:0;outline:none;color:var(--ink);  /* token-lint-ignore: .search-box.focus brightens the underline */
   font-family:var(--font-mono);font-size:var(--text-sm);letter-spacing:var(--tracking-mono)}
 .search-box input::placeholder{color:var(--ink-faint)}
-.gal-scroll{flex:1;overflow-y:auto;padding:var(--space-20) var(--space-28) var(--space-40)}
+.gal-scroll{flex:1;overflow-y:auto;padding:var(--under-head) var(--space-28) var(--space-40)}
 /* board (windowed masonry) — every cell is absolutely positioned from
    coordinates computed in lib/masonry.ts, which also owns the column count and
    its breakpoints. There is deliberately NO CSS grid here: the old version was

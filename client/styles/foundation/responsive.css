@@ -62,6 +62,7 @@
   /* Except on the demo, whose banner needs the band back: two short lines at
      phone width. */
   :root[data-demo]{--topbar-h:calc(env(safe-area-inset-top, 0px) + var(--space-44))}
+  :root{--under-head:var(--space-16)}
   .demo-banner{flex-direction:column;gap:var(--space-2);padding-top:env(safe-area-inset-top, var(--space-0));text-align:center}
 
   /* Icons only, splitting the pill evenly. The old bar was 46px icons whose
@@ -112,8 +113,8 @@
   .gallery-view .page-meta{display:none}
   /* clears the tab bar AND the FAB parked above it, so the last row of cards
      can still be read and tapped */
-  .gal-scroll{padding:var(--space-16) var(--space-14) calc(var(--navbar-h) + var(--space-40))}
-  .spaces-scroll{padding:var(--space-16) var(--space-14) calc(var(--navbar-h) + var(--space-24))}
+  .gal-scroll{padding:var(--under-head) var(--space-14) calc(var(--navbar-h) + var(--space-40))}
+  .spaces-scroll{padding:var(--under-head) var(--space-14) calc(var(--navbar-h) + var(--space-24))}
   .space-form{padding:var(--space-16) var(--space-14) 0}
   /* .settings-view is its own scroller and had only the desktop --space-28
      bottom padding, so its last row ("Erase all data") sat under the bar */

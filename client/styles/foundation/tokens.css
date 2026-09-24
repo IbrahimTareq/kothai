@@ -250,6 +250,9 @@
 
   --rail:74px;
   --topbar-h:44px;
+  /* The gap between a page header's toolbar and the scroller under it, which
+     stays open as a clear band once the page scrolls (components/primitives.css). */
+  --under-head:var(--space-24);
   /* Phone tab bar (see foundation/responsive.css). Unused above --bp-md.
      --navbar-pill is the floating bar's own height, which the capture button
      matches so the two read as one cluster; --navbar-h is the space the

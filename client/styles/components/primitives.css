@@ -256,6 +256,18 @@
 .page-toolbar{display:flex;align-items:center;gap:var(--space-16);min-height:var(--control-md)}
 .page-filters{flex:1;min-width:0;display:flex;align-items:center}
 .page-display{flex:none;display:flex;align-items:center;gap:var(--space-8)}
+/* The header's bottom edge, drawn by the scroller under it. With no rule and
+   no padding of its own, the header had no edge once the page moved: cards
+   scrolled straight up to the chips and were sliced off flush with their
+   bottom. --under-head is the scroller's top padding, and scrolled, the same
+   gap stays open: its top half is clear, as if the header's background ran on
+   below the toolbar, and content fades in across the rest. Fully opaque
+   --space-4 short of the padding, so a first-row card lifting 3px on hover
+   (card.css) is never dimmed at rest. Mask stops are alpha, not colour, so
+   this follows no theme. */
+.gal-scroll,.spaces-scroll{
+  -webkit-mask-image:linear-gradient(to bottom,transparent calc(var(--under-head) / 2),#000 calc(var(--under-head) - var(--space-4)));  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
+  mask-image:linear-gradient(to bottom,transparent calc(var(--under-head) / 2),#000 calc(var(--under-head) - var(--space-4)))}  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
 
 /* ── field ─────────────────────────────────────────────────────────────────
    What <Input> and <Textarea> in client/ui/ draw: Settings' field box, which
