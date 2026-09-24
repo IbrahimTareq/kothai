@@ -10,6 +10,7 @@
 // everything is ready.
 import { useEffect, useState } from 'react'
 import { API } from './api'
+import { setDemo } from '../components/Demo'
 import type { VaultStatus } from '../types'
 
 const TICK_LOADING_MS = 1300
@@ -42,6 +43,7 @@ export function useVaultStatus(): VaultSource {
         // Decided once, from the first successful poll — afterwards Onboarding
         // owns the gate, so it stays up through the download.
         setNeedsSetup(v => (v === null ? !s.configured : v))
+        setDemo(s.demo)
         setLlmOff(s.roles.llm.state === 'off')
         // Tied to the llm role specifically, not the aggregate — the aggregate
         // can be "loading" because an unrelated role (e.g. vision) is warming

@@ -74,7 +74,7 @@ const LITE = { localAvailable: false }
 test('GET /api/status leaves first run open on a fresh pure-remote install', async () => {
   await initProvider('remote', {}, LITE)
   const { res, sent } = mockRes()
-  handleStatus(res)
+  handleStatus(res, null)
   const body = sent.json()
   assert.equal(record(body.capabilities).downloadsWeights, false)
   assert.equal(body.configured, false)
@@ -90,7 +90,7 @@ test('GET /api/status leaves an install that predates the gate alone', async () 
   await settings.load()
   await initProvider('remote', {}, LITE)
   const { res, sent } = mockRes()
-  handleStatus(res)
+  handleStatus(res, null)
   assert.equal(sent.json().configured, true)
 })
 
@@ -103,7 +103,7 @@ test('names written DURING first run leave it open', async () => {
   await initProvider('remote', {}, LITE)
   await settings.save({ remote: { llm: 'gpt-oss:120b' } })
   const { res, sent } = mockRes()
-  handleStatus(res)
+  handleStatus(res, null)
   assert.equal(sent.json().configured, false, 'first run is not over until the user says so')
 })
 
@@ -113,7 +113,7 @@ test('a mixed install is gated on the stored flag, not on endpoint ids', async (
   await settings.save({ remote: { llm: 'gpt-oss:120b' } })
   await initProvider('remote', {}, { localAvailable: true })
   const { res, sent } = mockRes()
-  handleStatus(res)
+  handleStatus(res, null)
   const body = sent.json()
   assert.equal(record(body.capabilities).kind, 'mixed')
   assert.equal(body.configured, false)
@@ -143,7 +143,7 @@ test('POST /api/setup stores endpoint ids on a pure-remote install', async () =>
   assert.deepEqual(settings.get(), localBefore)
 
   const status = mockRes()
-  handleStatus(status.res)
+  handleStatus(status.res, null)
   assert.equal(status.sent.json().configured, true)
 })
 

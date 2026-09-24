@@ -23,6 +23,7 @@ import { Button } from '../ui/Button'
 import { PageHeader } from '../ui/PageHeader'
 import { Segmented } from '../ui/Segmented'
 import { Confirm } from '../ui/Confirm'
+import { useDemo } from '../components/Demo'
 
 export function SettingsView({
   vault,
@@ -33,6 +34,7 @@ export function SettingsView({
   theme: 'dark' | 'light'
   setTheme: (t: 'dark' | 'light') => void
 }) {
+  const demo = !!useDemo()
   const [cfg, setCfg] = useState<SettingsResponse | null>(null)
   const [busyRole, setBusyRole] = useState<Role | null>(null)
   const [pendingRole, setPendingRole] = useState<Role | null>(null) // role currently downloading
@@ -228,7 +230,15 @@ export function SettingsView({
         </div>
       )}
 
-      {!cfg ? (
+      {/* On the demo the server refuses every setting here, and a page of
+          greyed controls leaves gaps a fieldset cannot close: import takes a
+          dropped file, and export and backup are plain links. */}
+      {demo ? (
+        <p className="settings-demo">
+          Settings are where your own Kothai connects its AI, imports your saves, links Telegram and backs up your
+          library. They are switched off in the demo.
+        </p>
+      ) : !cfg ? (
         <div className="settings-loading mono">LOADING…</div>
       ) : (
         <div className="settings-body">

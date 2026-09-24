@@ -20,6 +20,7 @@ import { GalleryView } from '../views/Gallery'
 import { SpacesView, CollectionView } from '../views/Spaces'
 import type { UIItem, ViewMode } from '../types'
 import { RailButton } from '../components/RailButton'
+import { DemoBanner } from '../components/Demo'
 
 // The type ids the board understands, taken from the icon catalogue so the two
 // cannot drift. boardQuery takes it as an argument rather than importing
@@ -366,7 +367,9 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="topbar"></header>
+      <header className="topbar">
+        <DemoBanner />
+      </header>
 
       <div className="body">
         <nav className="rail">

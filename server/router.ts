@@ -81,7 +81,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       return await handleRenameChat(req, res, p.split('/').pop() ?? '')
     if (req.method === 'DELETE' && p.startsWith('/api/chats/'))
       return await handleDeleteChat(res, p.split('/').pop() ?? '')
-    if (req.method === 'GET' && p === '/api/status') return handleStatus(res)
+    if (req.method === 'GET' && p === '/api/status') return handleStatus(res, viewer)
     if (req.method === 'GET' && p === '/api/settings') return await handleGetSettings(res)
     if (req.method === 'POST' && p === '/api/settings') return await handleSaveSettings(req, res)
     if (req.method === 'POST' && p === '/api/setup') return await handleSetup(req, res)

@@ -104,6 +104,15 @@ export interface ModelStatus {
   aggregate: { state: 'loading' | 'ready' | 'error'; progress: number; message: string }
   configured: boolean // false until the first-run model picker is completed
   count: number
+  demo: DemoAllowance | null
+}
+
+// What this visitor may still do today on the public demo
+// (server/routes/demo.ts). Null on an ordinary install, which is how the whole
+// client tells the two apart.
+export interface DemoAllowance {
+  savesLeft: number
+  asksLeft: number
 }
 
 // Derived, UI-facing status of the model "vault".

@@ -59,6 +59,10 @@
      strip that content scrolls under. Every view derives its top padding from
      this token, so they all follow. */
   :root{--topbar-h:calc(env(safe-area-inset-top, 0px) + var(--space-8))}
+  /* Except on the demo, whose banner needs the band back: two short lines at
+     phone width. */
+  :root[data-demo]{--topbar-h:calc(env(safe-area-inset-top, 0px) + var(--space-44))}
+  .demo-banner{flex-direction:column;gap:var(--space-2);padding-top:env(safe-area-inset-top, var(--space-0));text-align:center}
 
   /* Icons only, splitting the pill evenly. The old bar was 46px icons whose
      active tab was marked by nothing but a 5.5%-opacity fill; here the active

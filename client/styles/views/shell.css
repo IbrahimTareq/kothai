@@ -11,6 +11,32 @@
   background:color-mix(in srgb, var(--bg) 60%, transparent);
   -webkit-backdrop-filter:blur(14px) saturate(140%);
   backdrop-filter:blur(14px) saturate(140%);}
+/* The demo's one line (components/Demo.tsx). It takes the topbar's
+   otherwise empty band, so it costs the page no height on the desktop. */
+.demo-banner{flex:1;display:flex;align-items:center;justify-content:center;gap:var(--space-12);margin:0;
+  font-size:var(--text-xs);color:var(--ink-dim);letter-spacing:var(--tracking-tight)}
+.demo-banner a{color:var(--ink);text-underline-offset:3px}
+/* What the demo leaves out rather than locks: controls whose writes the server
+   refuses (server/routes/demo.ts) and that a visitor would meet only to be told
+   no. display:none rather than pointer-events, so they leave the tab order too.
+   On :root because the item view and capture render in portals outside .app. */
+:root[data-demo] :is(.card-actions, .chat-row .card-del, .attach-btn, .exp-tags .chip--add, .chip-x, .exp-coll-x,
+  .exp-coll-plus, .spaces-view .page-actions, .collection-view .page-actions){display:none}
+/* A space's rule tags go too, being nothing but removable chips and their add
+   (the spark still marks a smart space), and so does the canvas: every drag
+   and every first open of it autosaves. The view-mode switch is the page's
+   one Segmented without .view-toggle. */
+:root[data-demo] .collection-view :is(.coll-rule, .page-display .seg:not(.view-toggle)){display:none}
+:root[data-demo] .coll-name{pointer-events:none}
+/* What it locks instead, where the value itself is worth seeing: an item's
+   tags, note and spaces. A disabled fieldset takes every
+   control inside out of reach, keyboard included; display:contents keeps it
+   from adding a box, so the layout is the one it wraps. It does not stop a
+   Radix menu, which opens on pointerdown and reads only its own disabled prop:
+   "Add to space" opened through it, so that one is in the list above. */
+.demo-lock{display:contents}
+.demo-lock :disabled{cursor:default}
+.demo-lock .chip:disabled{pointer-events:none}
 .body{display:grid;grid-template-columns:var(--rail) 1fr;height:100%;min-height:0}
 
 /* ─────────────────────────── rail ────────────────────────────────────────── */

@@ -10,6 +10,7 @@ import { parseMarkdown } from '../util/markdown'
 import type { Inline } from '../util/markdown'
 import type { ChatSummary, ThreadMsg, UIItem } from '../types'
 import { Button } from '../ui/Button'
+import { useDemo } from '../components/Demo'
 
 interface CoreViewProps {
   focus: boolean
@@ -162,6 +163,7 @@ export function CoreView({
 
   // Sending always pulls the view back to the bottom, however far up the user
   // had scrolled — their own message is the one thing they always want to see.
+  const demo = useDemo() // its limits (server/routes/ask.ts): text only, under 500 characters, a few a day
   const send = () => {
     setStick(true)
     submit()
@@ -281,12 +283,14 @@ export function CoreView({
               value={text}
               disabled={llmOff}
               aria-label="Ask a question about your vault"
-              placeholder={'Ask anything...'}
+              placeholder={demo?.asksLeft === 0 ? 'That’s all the demo answers today' : 'Ask anything...'}
+              maxLength={demo ? 500 : undefined}
               onChange={e => setText(e.target.value)}
               onFocus={onFocus}
               onBlur={onBlur}
               onKeyDown={onKeyDown}
               onPaste={e => {
+                if (demo) return
                 const it = Array.from(e.clipboardData?.items || []).find(x => x.type.startsWith('image/'))
                 if (it) {
                   e.preventDefault()
@@ -323,7 +327,7 @@ export function CoreView({
               <button
                 className="send-btn"
                 aria-label="Send question"
-                disabled={llmOff || (!text.trim() && !pendingImg)}
+                disabled={llmOff || demo?.asksLeft === 0 || (!text.trim() && !pendingImg)}
                 onClick={send}
               >
                 <Icon name="ask" size={18} />

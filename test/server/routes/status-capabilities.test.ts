@@ -4,13 +4,15 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { initProvider, _reset } from '../../../server/ai/index.ts'
 import { handleStatus, firstRunComplete } from '../../../server/routes/settings.ts'
+import { demoLimits } from '../../../server/routes/demo.ts'
+import * as store from '../../../server/data/notes.ts'
 import { mockRes } from '../../helpers/http.ts'
 
 test('handleStatus includes a capabilities descriptor', async () => {
   _reset()
   await initProvider('local', {})
   const { res, sent } = mockRes()
-  handleStatus(res)
+  handleStatus(res, null)
   assert.equal(sent.code, 200)
   // `roles` says who serves each role; a pure-local install owns all three.
   assert.deepEqual(sent.json().capabilities, {
@@ -25,7 +27,7 @@ test('handleStatus still carries the fields the client already reads', async () 
   _reset()
   await initProvider('local', {})
   const { res, sent } = mockRes()
-  handleStatus(res)
+  handleStatus(res, null)
   const body = sent.json()
   for (const k of ['roles', 'aggregate', 'configured', 'count']) {
     assert.ok(k in body, `missing ${k}`)
@@ -67,4 +69,31 @@ test('names written DURING first run do not end it', () => {
   // preGate is decided at load and stays false for a fresh install, however
   // many names get written afterwards.
   assert.equal(firstRunComplete({ downloadsWeights: false }, false, false), false)
+})
+
+// The demo's banner and its capture box both read these, so a visitor sees how
+// many links and questions they have left before a refusal tells them.
+test('on the demo, status tells a visitor what they have left today', async () => {
+  _reset()
+  await initProvider('local', {})
+  demoLimits.save.reset()
+  demoLimits.ask.reset()
+  demoLimits.save.take('a')
+  const { res, sent } = mockRes()
+  handleStatus(res, 'a')
+  assert.deepEqual(sent.json().demo, { savesLeft: 4, asksLeft: 10 })
+  const plain = mockRes()
+  handleStatus(plain.res, null)
+  assert.equal(plain.sent.json().demo, null, 'an ordinary install is not a demo')
+})
+
+test('on the demo, the note count leaves out other visitors’ links', async () => {
+  _reset()
+  await initProvider('local', {})
+  store._reset()
+  await store.addNote({ type: 'text', content: 'seed' })
+  await store.addNote({ type: 'text', content: 'theirs', visitor: 'b' })
+  const { res, sent } = mockRes()
+  handleStatus(res, 'a')
+  assert.equal(sent.json().count, 1)
 })

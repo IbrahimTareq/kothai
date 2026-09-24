@@ -72,7 +72,9 @@ server.listen(PORT, () => {
   // before pointing a public hostname at this.
   if (demo.DEMO) console.log('  Demo: read-only apart from links and questions; visitors reset daily\n')
   if (PASSWORD) console.log('  Auth: password required (KOTHAI_PASSWORD is set)\n')
-  else
+  // A demo with no password is the point of it, and "full access" would be
+  // false there: the demo gate refuses every write but a link and a question.
+  else if (!demo.DEMO)
     console.log(
       '  Auth: none — anyone who can reach this port has full access. Set KOTHAI_PASSWORD to require a password.\n',
     )

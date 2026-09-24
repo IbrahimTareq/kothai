@@ -7,6 +7,7 @@ import { ROLES, POLICIES, OFF_RESIDENCY } from '../ai/roles.ts'
 import { backlogCount } from '../ai/backlog.ts'
 import { isInstagramPost } from '../links/instagram.ts'
 import { json, readBody } from '../lib/http.ts'
+import { demoLimits, visibleTo } from './demo.ts'
 import { getAiConfig, setAiCredentials, SETUP_PROVIDER } from '../config.ts'
 import { writeCredentials, clearCredentials } from '../data/credentials.ts'
 import { ENDPOINTS } from '../ai/endpoints.ts'
@@ -72,13 +73,16 @@ export function firstRunComplete(
   return configured || preGate
 }
 
-export function handleStatus(res: ServerResponse): void {
+// `viewer` is the demo visitor (routes/demo.ts), null on an ordinary install.
+export function handleStatus(res: ServerResponse, viewer: string | null): void {
   const caps = ai.capabilities()
   json(res, 200, {
     ...ai.statusSnapshot(),
     configured: firstRunComplete(caps, settings.isConfigured(), settings.isPreGate()),
-    count: store.count(),
+    count: store.allNotes().filter(visibleTo(viewer)).length,
     capabilities: caps,
+    // Polled every few seconds, so the demo banner's allowance stays current.
+    demo: viewer ? { savesLeft: demoLimits.save.left(viewer), asksLeft: demoLimits.ask.left(viewer) } : null,
   })
 }
 

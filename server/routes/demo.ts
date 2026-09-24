@@ -93,6 +93,9 @@ function allowance(perVisitor: number, perDay: number) {
       total++
       return true
     },
+    left(visitor: string): number {
+      return Math.max(0, Math.min(perVisitor - (used.get(visitor) ?? 0), perDay - total))
+    },
     reset() {
       used.clear()
       total = 0

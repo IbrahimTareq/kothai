@@ -17,6 +17,7 @@ import { Dialog } from '../ui/Dialog'
 import { Menu } from '../ui/Menu'
 import { Textarea } from '../ui/Input'
 import { Tooltip } from '../ui/Tooltip'
+import { useDemo } from '../components/Demo'
 
 function openUrl(url?: string | null) {
   if (url) window.open(url, '_blank')
@@ -255,6 +256,7 @@ export function ExpandedView({
   const [tags, setTags] = useState<string[]>(item.tags || [])
   const [note, setNote] = useState<string>(item.mindNote || '')
   const [adding, setAdding] = useState(false)
+  const demo = !!useDemo()
   const [draft, setDraft] = useState('')
   const brand = sourceGlyph(item)
 
@@ -436,88 +438,90 @@ export function ExpandedView({
             )}
           </div>
 
-          <section className="exp-sec">
-            <div className="exp-sec-h eyebrow">
-              Tags <span className="exp-sec-n">{tags.length}</span>
-            </div>
-            <div className="exp-tags">
-              <Chip compact add onClick={() => setAdding(true)}>
-                + Add tag
-              </Chip>
-              {tags.map(t => (
-                <Chip compact removable key={t} title="Remove tag" onClick={() => removeTag(t)}>
-                  {t}
+          <fieldset className="demo-lock" disabled={demo}>
+            <section className="exp-sec">
+              <div className="exp-sec-h eyebrow">
+                Tags <span className="exp-sec-n">{tags.length}</span>
+              </div>
+              <div className="exp-tags">
+                <Chip compact add onClick={() => setAdding(true)}>
+                  + Add tag
                 </Chip>
-              ))}
-              {adding && (
-                <input
-                  className="exp-tag-input mono"
-                  autoFocus
-                  value={draft}
-                  placeholder="tag…"
-                  onChange={e => setDraft(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') addTag()
-                    if (e.key === 'Escape') {
-                      setAdding(false)
-                      setDraft('')
-                    }
-                  }}
-                  onBlur={addTag}
-                />
-              )}
-            </div>
-          </section>
+                {tags.map(t => (
+                  <Chip compact removable key={t} title="Remove tag" onClick={() => removeTag(t)}>
+                    {t}
+                  </Chip>
+                ))}
+                {adding && (
+                  <input
+                    className="exp-tag-input mono"
+                    autoFocus
+                    value={draft}
+                    placeholder="tag…"
+                    onChange={e => setDraft(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') addTag()
+                      if (e.key === 'Escape') {
+                        setAdding(false)
+                        setDraft('')
+                      }
+                    }}
+                    onBlur={addTag}
+                  />
+                )}
+              </div>
+            </section>
 
-          <section className="exp-sec">
-            <div className="exp-sec-h eyebrow">Notes</div>
-            <Textarea
-              className="exp-note"
-              placeholder="Type here to add a note…"
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              onBlur={commitNote}
-            />
-          </section>
-
-          <section className="exp-sec">
-            <div className="exp-sec-h eyebrow">
-              Spaces <span className="exp-sec-n">{inSpaces.length}</span>
-            </div>
-            <div className="exp-colls">
-              {inSpaces.map(c => (
-                <div key={c.id} className="exp-coll">
-                  {c.tags.length > 0 && <Icon name="spark" size={11} />}
-                  <span className="exp-coll-name">{c.name}</span>
-                  <button
-                    className="exp-coll-x"
-                    aria-label={`Remove from ${c.name}`}
-                    onClick={() => onRemoveFrom(c.id, item.id)}
-                  >
-                    <Icon name="close" size={11} />
-                  </button>
-                </div>
-              ))}
-              <Menu
-                empty={collections.length === 0 ? 'No spaces yet' : 'In every space'}
-                trigger={
-                  <button className="exp-coll-plus">
-                    <Icon name="plus" size={12} /> Add to space
-                  </button>
-                }
-                items={openSpaces.map(c => ({
-                  key: c.id,
-                  label: c.name,
-                  trailing: c.tags.length > 0 && (
-                    <span title="Smart space">
-                      <Icon name="spark" size={11} />
-                    </span>
-                  ),
-                  onSelect: () => onAddTo(c.id, item.id),
-                }))}
+            <section className="exp-sec">
+              <div className="exp-sec-h eyebrow">Notes</div>
+              <Textarea
+                className="exp-note"
+                placeholder={demo ? 'Notes are off in the demo' : 'Type here to add a note…'}
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                onBlur={commitNote}
               />
-            </div>
-          </section>
+            </section>
+
+            <section className="exp-sec">
+              <div className="exp-sec-h eyebrow">
+                Spaces <span className="exp-sec-n">{inSpaces.length}</span>
+              </div>
+              <div className="exp-colls">
+                {inSpaces.map(c => (
+                  <div key={c.id} className="exp-coll">
+                    {c.tags.length > 0 && <Icon name="spark" size={11} />}
+                    <span className="exp-coll-name">{c.name}</span>
+                    <button
+                      className="exp-coll-x"
+                      aria-label={`Remove from ${c.name}`}
+                      onClick={() => onRemoveFrom(c.id, item.id)}
+                    >
+                      <Icon name="close" size={11} />
+                    </button>
+                  </div>
+                ))}
+                <Menu
+                  empty={collections.length === 0 ? 'No spaces yet' : 'In every space'}
+                  trigger={
+                    <button className="exp-coll-plus">
+                      <Icon name="plus" size={12} /> Add to space
+                    </button>
+                  }
+                  items={openSpaces.map(c => ({
+                    key: c.id,
+                    label: c.name,
+                    trailing: c.tags.length > 0 && (
+                      <span title="Smart space">
+                        <Icon name="spark" size={11} />
+                      </span>
+                    ),
+                    onSelect: () => onAddTo(c.id, item.id),
+                  }))}
+                />
+              </div>
+            </section>
+          </fieldset>
         </div>
 
         <div className="exp-side-actions">
@@ -527,15 +531,16 @@ export function ExpandedView({
             { label: 'Copy link', icon: 'copy', onClick: () => item.url && navigator.clipboard?.writeText(item.url) },
             { label: 'Open original', icon: 'external', onClick: () => openUrl(item.url) },
             {
-              label: item.pending ? 'Retagging…' : 'Re-tag',
+              label: demo ? 'Re-tag is off in the demo' : item.pending ? 'Retagging…' : 'Re-tag',
               icon: 'retag',
-              disabled: item.pending,
+              disabled: item.pending || demo,
               onClick: () => onRetag(item.id),
             },
             {
-              label: 'Delete',
+              label: demo ? 'Delete is off in the demo' : 'Delete',
               icon: 'trash',
               className: 'del',
+              disabled: demo,
               onClick: () => {
                 onDelete(item.id)
                 onClose()

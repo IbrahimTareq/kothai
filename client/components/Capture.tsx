@@ -8,6 +8,7 @@ import { Icon, CAT } from './icons'
 import { detectType } from '../domain/detect'
 import type { Detection } from '../types'
 import { Dialog } from '../ui/Dialog'
+import { useDemo } from './Demo'
 
 interface CaptureModalProps {
   onClose: () => void
@@ -27,6 +28,20 @@ export function CaptureModal({ onClose, onSave }: CaptureModalProps) {
   const detected: Detection | null = text.trim() ? detectType(text) : null
   const chip: Detection | null = detected || (pendingImg ? { type: 'image' } : null)
 
+  // The demo saves one thing: a bare http(s) link, the same test as the
+  // server's isLikelyUrl (server/ai/normalise.ts). detectType is looser, since
+  // it also calls "example.com" or a link with a few words around it a link,
+  // and the server would refuse those here after the visitor had pressed save.
+  const demo = useDemo()
+  const demoHint = !demo
+    ? null
+    : demo.savesLeft === 0
+      ? 'That’s all the demo saves today.'
+      : text.trim() && !/^https?:\/\/\S+$/i.test(text.trim())
+        ? 'The demo saves links only: paste one starting with https://'
+        : null
+  const canSave = demo ? !demoHint && !!text.trim() : !!text.trim() || !!pendingImg
+
   // Play the exit animation, then unmount. Matches the .16s cap-out CSS duration.
   const close = () => {
     setClosing(true)
@@ -42,7 +57,7 @@ export function CaptureModal({ onClose, onSave }: CaptureModalProps) {
 
   const save = async () => {
     const raw = text.trim()
-    if ((!raw && !pendingImg) || saving) return
+    if (!canSave || saving) return
     setSaving(true)
     setError(null)
     const err = await onSave(raw, pendingImg)
@@ -87,13 +102,14 @@ export function CaptureModal({ onClose, onSave }: CaptureModalProps) {
           ref={taRef}
           rows={1}
           value={text}
-          placeholder="Drop a link, note, or code…"
+          placeholder={demo ? 'Paste a link…' : 'Drop a link, note, or code…'}
           onChange={e => {
             setText(e.target.value)
             if (error) setError(null)
           }}
           onKeyDown={onKey}
           onPaste={e => {
+            if (demo) return
             const it = Array.from(e.clipboardData?.items || []).find(x => x.type.startsWith('image/'))
             if (it) {
               e.preventDefault()
@@ -127,13 +143,7 @@ export function CaptureModal({ onClose, onSave }: CaptureModalProps) {
         >
           <Icon name="image" size={17} />
         </button>
-        <button
-          className="send-btn"
-          aria-label="Save"
-          title="Save"
-          disabled={(!text.trim() && !pendingImg) || saving}
-          onClick={save}
-        >
+        <button className="send-btn" aria-label="Save" title="Save" disabled={!canSave || saving} onClick={save}>
           <Icon name="send" size={18} />
         </button>
       </div>
@@ -142,6 +152,7 @@ export function CaptureModal({ onClose, onSave }: CaptureModalProps) {
           {error}
         </div>
       )}
+      {!error && demoHint && <div className="cap-hint mono">{demoHint}</div>}
     </Dialog>
   )
 }

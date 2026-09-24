@@ -61,3 +61,10 @@ test('the daily total caps every visitor together', async () => {
 test('an ordinary install has no limit and takes any note', async () => {
   for (let i = 0; i < 7; i++) assert.equal((await save(null, { text: `note ${i}` })).code, 200)
 })
+
+test('what a visitor has left is also capped by the day’s total', async () => {
+  for (let v = 0; v < 40; v++) for (let i = 0; i < 5; i++) demoLimits.save.take(`v${v}`)
+  assert.equal(demoLimits.save.left('fresh'), 0)
+  demoLimits.save.reset()
+  assert.equal(demoLimits.save.left('fresh'), 5)
+})
