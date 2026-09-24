@@ -8,9 +8,9 @@
    destructive confirm) compose freely. There
    are no per-view aliases of .btn left, and lint:tokens fails any new
    duplicate of this box — see scripts/button-chrome.ts. That doesn't cover
-   every button-shaped class in the app: .seg-btn, .residency-btn, .rail-btn,
-   .send-btn and .attach-btn are distinct components with their own box, not
-   .btn under another name. A view may still add a rule for genuine layout
+   every button-shaped class in the app: .seg-btn (drawn by <Segmented>),
+   .rail-btn, .send-btn and .attach-btn are distinct components with their own
+   box, not .btn under another name. A view may still add a rule for genuine layout
    (.mf-delete pinning itself right) on top of .btn. */
 
 /* ── button ───────────────────────────────────────────────────────────────── */
@@ -80,13 +80,6 @@
 .btn--lg{padding:var(--space-12) var(--space-20);border-radius:var(--radius-lg);
   font-size:var(--text-sm)}
 
-/* ── segmented control ────────────────────────────────────────────────────
-   One control for every "pick one of these" that sits on a toolbar: a
-   --control-md trough holding pills. The space header used to run two of these
-   side by side — the view switch as flush segments split by hairlines, the
-   density steps as padded pills in a taller trough — which read as two design
-   systems on one bar. This is the surviving one; .residency-btn keeps its own
-   box but shares the selected treatment so a custom tint reaches it. */
 /* ── chip ──────────────────────────────────────────────────────────────────
    The pill that says "this is one of a set you can pick or drop": Everything's
    type/source filters and a space's rule tags. They were two components with
@@ -101,21 +94,26 @@
 .chip:hover{color:var(--ink);border-color:var(--line-hover)}
 .chip.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 
-.seg,
-.view-toggle{display:inline-flex;align-items:center;flex-shrink:0;gap:var(--space-2);
+/* ── segmented control ────────────────────────────────────────────────────
+   What <Segmented> in client/ui/ draws, and the one box for every "pick one of
+   these": a --control-md trough holding pills. The space header used to run
+   two side by side — the view switch as flush segments split by hairlines,
+   the density steps as padded pills in a taller trough — which read as two
+   design systems on one bar. Settings then did the same: the theme on .seg,
+   each model's residency on the flush, hairline-split box. Both are this now.
+
+   An icon-only option is a fixed square, so a row of glyphs stays evenly
+   spaced whatever each glyph's own width. */
+.seg{display:inline-flex;align-items:center;flex-shrink:0;gap:var(--space-2);
   height:var(--control-md);box-sizing:border-box;padding:var(--space-4);
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md)}
-.seg-btn,
-.view-toggle button{display:grid;place-items:center;height:100%;border:0;background:transparent;
-  color:var(--ink-mute);font:inherit;font-size:var(--text-xs);line-height:1;
+.seg-btn{display:grid;place-items:center;height:100%;padding:0 var(--space-10);border:0;
+  background:transparent;color:var(--ink-mute);font:inherit;font-size:var(--text-xs);line-height:1;
   border-radius:var(--radius);cursor:pointer;transition:var(--dur-fast)}
-.seg-btn{padding:0 var(--space-10)}
-.view-toggle button{width:28px}
-.seg-btn:not(.on):hover,
-.view-toggle button:not(.on):hover{color:var(--ink)}
-.seg-btn.on,
-.view-toggle button.on,
-.residency-btn.active{background:var(--accent);color:var(--on-accent)}
+.seg-btn:has(> svg:only-child){width:28px;padding:0}
+.seg-btn[data-state="off"]:not(:disabled):hover{color:var(--ink)}
+.seg-btn[data-state="on"]{background:var(--accent);color:var(--on-accent)}
+.seg-btn:disabled{opacity:.5;cursor:default}
 
 /* ── tile ──────────────────────────────────────────────────────────────────
    The flat picture-and-caption tile, shared by the Ask thread's citations and

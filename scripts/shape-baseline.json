@@ -28,11 +28,11 @@
     "exports": 1
   },
   "client/views/Settings.tsx": {
-    "lines": 548,
+    "lines": 544,
     "exports": 1
   },
   "client/views/Spaces.tsx": {
-    "lines": 480,
+    "lines": 472,
     "exports": 2
   },
   "server/ai/enrich.ts": {
@@ -83,6 +83,6 @@
     "claudeMdLines": 45,
     "cleanCodeRulesLines": 41,
     "baselineEntries": 20,
-    "exportTotal": 505
+    "exportTotal": 506
   }
 }

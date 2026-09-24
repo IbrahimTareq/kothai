@@ -18,7 +18,7 @@
     "buttons": 1
   },
   "client/components/ModelPicker.tsx": {
-    "buttons": 5
+    "buttons": 4
   },
   "client/views/Core.tsx": {
     "buttons": 9
@@ -27,18 +27,15 @@
     "buttons": 5
   },
   "client/views/Gallery.tsx": {
-    "buttons": 9
+    "buttons": 4
   },
   "client/views/Onboarding.tsx": {
     "buttons": 1
-  },
-  "client/views/Settings.tsx": {
-    "buttons": 2
   },
   "client/views/SetupWizard.tsx": {
     "buttons": 4
   },
   "client/views/Spaces.tsx": {
-    "buttons": 12
+    "buttons": 7
   }
 }

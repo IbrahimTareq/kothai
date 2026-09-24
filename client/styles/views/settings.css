@@ -154,20 +154,8 @@
 .onboarding-progress .settings-progress-track{width:100%;max-width:360px}
 .onboarding-progress .settings-progress-msg{max-width:100%;text-align:center}
 
-/* Residency segmented control (Off / On demand / Always) */
+/* Residency (Off / On demand / Always on): a <Segmented> and its description */
 .residency { padding: var(--space-10) var(--space-12) var(--space-4); }
-.residency-seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden; }
-.residency-btn {
-  padding: var(--space-6) var(--space-14);
-  font-size:var(--text-xs);
-  background: none;
-  border: none;
-  border-right: 1px solid var(--line);
-  color: var(--ink-dim);
-  cursor: pointer;
-}
-.residency-btn:last-child { border-right: none; }
-.residency-btn:disabled { opacity: 0.5; cursor: default; }
 .residency-desc { margin-top: var(--space-8); }
 
 /* Backlog enrich banner */

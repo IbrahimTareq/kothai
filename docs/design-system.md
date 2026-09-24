@@ -72,10 +72,18 @@ so the scale describes the app. There are no per-view aliases of `.btn` left —
 `.conn-btn`/`.wizard-test`/`.chat-confirm`/`.onboarding-start`/`.space-form-go`
 each hand-rolled the same box separately; all are gone now, and
 `npm run lint:tokens` fails any new one. The other button-shaped classes —
-`.seg-btn`, `.residency-btn`, `.rail-btn`, the composer's
-`.send-btn`/`.attach-btn` and the rest — are distinct components with their own
-box, but each is still a raw `<button>` a view drew. They sit on a ratchet
+`.rail-btn`, the composer's `.send-btn`/`.attach-btn` and the rest — are
+distinct components with their own box, but each is still a raw `<button>` a
+view drew. They sit on a ratchet
 (below) until each becomes `<Button>` or its own primitive in `client/ui/`.
+
+**Pick-one-of-a-few is `<Segmented>`** (`client/ui/`), on Radix's toggle
+group: a `label`, a `value`, an `onChange` and `options` of `{ value, label,
+title? }`, where `title` is also the accessible name of an icon-only option.
+It is a radiogroup with arrow-key movement, and a click on the chosen option
+does not clear it. Five were hand-drawn before, in two boxes and four
+accessibility patterns; the model residency picker's flush, hairline-split box
+is gone, so Settings no longer shows two kinds of segment on one page.
 
 **Menus and popovers are `<Menu>` and `<Popover>`** (`client/ui/`), on Radix,
 which owns focus, arrow keys, Escape and outside clicks. `<Menu>` is a list of

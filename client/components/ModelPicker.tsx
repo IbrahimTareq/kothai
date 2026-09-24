@@ -7,6 +7,7 @@ import { Icon } from './icons'
 import type { ModelPreset, Residency } from '../types'
 import { relevantModels } from '../domain/modelRelevance'
 import { Button } from '../ui/Button'
+import { Segmented } from '../ui/Segmented'
 
 export type Role = 'llm' | 'embed' | 'vision'
 
@@ -52,18 +53,13 @@ function ResidencyControl({
   const current = POLICY_META.find(p => p.key === value)
   return (
     <div className="residency">
-      <div className="residency-seg" role="radiogroup">
-        {POLICY_META.map(p => (
-          <button
-            key={p.key}
-            className={`residency-btn mono${value === p.key ? ' active' : ''}`}
-            disabled={busy}
-            onClick={() => onPick(p.key)}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        label="Keep in memory"
+        value={value}
+        onChange={onPick}
+        disabled={busy}
+        options={POLICY_META.map(p => ({ value: p.key, label: p.label }))}
+      />
       {current && <div className="residency-desc">{current.desc}</div>}
     </div>
   )

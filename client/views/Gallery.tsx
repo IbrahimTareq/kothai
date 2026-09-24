@@ -7,6 +7,7 @@ import { WindowedBoard } from '../components/Board'
 import type { Collection, UIItem, UIType, ViewMode } from '../types'
 import type { Slot } from '../data/pager'
 import { useScrollEdges } from '../layout/useScrollEdges'
+import { Segmented } from '../ui/Segmented'
 
 interface GalleryViewProps {
   nav: string
@@ -167,41 +168,32 @@ export function GalleryView({
         )}
         {/* Sort sits with the density toggle, not with the chips: both answer
             "how is this board presented", where a chip answers "what is on
-            it". They share the .seg primitive and its height, so the two read
+            it". They share <Segmented> and its height, so the two read
             as one cluster opposite the filters.
 
             Unlike the density toggle, this stays visible on a phone — which
             column count you get matters less there than what order you are
             reading in. */}
-        <div className="seg gal-sort" role="group" aria-label="Sort order">
-          <button
-            className={`seg-btn${galSort === 'newest' ? ' on' : ''}`}
-            aria-pressed={galSort === 'newest'}
-            title="Newest first"
-            onClick={() => setGalSort('newest')}
-          >
-            Newest
-          </button>
-          <button
-            className={`seg-btn${galSort === 'oldest' ? ' on' : ''}`}
-            aria-pressed={galSort === 'oldest'}
-            title="Oldest first"
-            onClick={() => setGalSort('oldest')}
-          >
-            Oldest
-          </button>
-        </div>
-        <div className="view-toggle">
-          <button className={view === 'grid4' ? 'on' : ''} onClick={() => setView('grid4')} title="4 columns">
-            <Icon name="grid4" size={16} />
-          </button>
-          <button className={view === 'grid6' ? 'on' : ''} onClick={() => setView('grid6')} title="6 columns">
-            <Icon name="grid6" size={16} />
-          </button>
-          <button className={view === 'grid8' ? 'on' : ''} onClick={() => setView('grid8')} title="8 columns">
-            <Icon name="grid8" size={16} />
-          </button>
-        </div>
+        <Segmented
+          label="Sort order"
+          value={galSort}
+          onChange={setGalSort}
+          options={[
+            { value: 'newest', label: 'Newest', title: 'Newest first' },
+            { value: 'oldest', label: 'Oldest', title: 'Oldest first' },
+          ]}
+        />
+        <Segmented
+          label="Columns"
+          className="view-toggle"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'grid4', label: <Icon name="grid4" size={16} />, title: '4 columns' },
+            { value: 'grid6', label: <Icon name="grid6" size={16} />, title: '6 columns' },
+            { value: 'grid8', label: <Icon name="grid8" size={16} />, title: '8 columns' },
+          ]}
+        />
       </div>
 
       <div className="gal-scroll" ref={scrollRef}>

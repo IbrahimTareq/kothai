@@ -171,9 +171,9 @@
    what it sits on, leave the box alone and let an ::after pad carry the hit
    area out to 44. The target grows, the design does not. */
 @media (hover:none){
-  /* Reaches .chip (the Everything filter bar), .seg / .view-toggle
-     (the Grid/Canvas switch), .btn--icon, .coll-act and .coll-del in
-     one move — they are all sized from these two. */
+  /* Reaches .chip (the Everything filter bar), .seg (every <Segmented>),
+     .btn--icon, .coll-act and .coll-del in one move — they are all sized
+     from these two. */
   :root{--control-sm:40px;--control-md:44px}
 
   /* The board's per-card cluster was three 26px buttons 6px apart on a 162px
@@ -209,7 +209,7 @@
      the 1px hairline top and bottom. At --control-md the pill you actually tap
      was 36px. Grow the trough by exactly that, so the pill — not the box
      around it — is the thing that reaches 44. */
-  .seg,.view-toggle{height:calc(var(--control-md) + var(--space-10))}
+  .seg{height:calc(var(--control-md) + var(--space-10))}
 
   /* Expanded view */
   .exp-close-m{width:44px;height:44px}

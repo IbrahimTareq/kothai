@@ -21,6 +21,7 @@ import { ModelFilesRow } from '../components/ModelFilesRow'
 import { API, apiError } from '../data/api'
 import type { Residency, SettingsResponse, VaultStatus } from '../types'
 import { Button } from '../ui/Button'
+import { Segmented } from '../ui/Segmented'
 
 export function SettingsView({
   vault,
@@ -522,22 +523,15 @@ export function SettingsView({
                   </>
                 }
                 action={
-                  <div className="seg" role="group" aria-label="Theme">
-                    <button
-                      className={`seg-btn${theme === 'light' ? ' on' : ''}`}
-                      aria-pressed={theme === 'light'}
-                      onClick={() => setTheme('light')}
-                    >
-                      Light
-                    </button>
-                    <button
-                      className={`seg-btn${theme === 'dark' ? ' on' : ''}`}
-                      aria-pressed={theme === 'dark'}
-                      onClick={() => setTheme('dark')}
-                    >
-                      Dark
-                    </button>
-                  </div>
+                  <Segmented
+                    label="Theme"
+                    value={theme}
+                    onChange={setTheme}
+                    options={[
+                      { value: 'light', label: 'Light' },
+                      { value: 'dark', label: 'Dark' },
+                    ]}
+                  />
                 }
               />
             </div>

@@ -12,6 +12,7 @@ import type { NoteSource } from '../data/useNotes'
 import { isPlaceholder } from '../data/pager'
 import type { CanvasDoc, Collection, UIItem, ViewMode } from '../types'
 import { Button } from '../ui/Button'
+import { Segmented } from '../ui/Segmented'
 import { Popover } from '../ui/Popover'
 
 interface SpacesViewProps {
@@ -398,36 +399,27 @@ export function CollectionView({
 
           <div className="coll-tools">
             {!board && (
-              <div className="view-toggle">
-                <button className={view === 'grid4' ? 'on' : ''} onClick={() => setView('grid4')} title="4 columns">
-                  <Icon name="grid4" size={16} />
-                </button>
-                <button className={view === 'grid6' ? 'on' : ''} onClick={() => setView('grid6')} title="6 columns">
-                  <Icon name="grid6" size={16} />
-                </button>
-                <button className={view === 'grid8' ? 'on' : ''} onClick={() => setView('grid8')} title="8 columns">
-                  <Icon name="grid8" size={16} />
-                </button>
-              </div>
+              <Segmented
+                label="Columns"
+                className="view-toggle"
+                value={view}
+                onChange={setView}
+                options={[
+                  { value: 'grid4', label: <Icon name="grid4" size={16} />, title: '4 columns' },
+                  { value: 'grid6', label: <Icon name="grid6" size={16} />, title: '6 columns' },
+                  { value: 'grid8', label: <Icon name="grid8" size={16} />, title: '8 columns' },
+                ]}
+              />
             )}
-            <div className="seg" role="tablist" aria-label="View mode">
-              <button
-                role="tab"
-                aria-selected={!board}
-                className={`seg-btn${!board ? ' on' : ''}`}
-                onClick={() => setBoard(false)}
-              >
-                Grid
-              </button>
-              <button
-                role="tab"
-                aria-selected={board}
-                className={`seg-btn${board ? ' on' : ''}`}
-                onClick={() => setBoard(true)}
-              >
-                Canvas
-              </button>
-            </div>
+            <Segmented
+              label="View mode"
+              value={board ? 'canvas' : 'grid'}
+              onChange={v => setBoard(v === 'canvas')}
+              options={[
+                { value: 'grid', label: 'Grid' },
+                { value: 'canvas', label: 'Canvas' },
+              ]}
+            />
           </div>
         </div>
       </header>
