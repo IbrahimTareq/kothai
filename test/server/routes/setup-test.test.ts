@@ -83,6 +83,16 @@ test('a bad key fails with a readable message, not a stack trace', async () => {
   assert.ok(res.sent.body.error && res.sent.body.error.length > 0)
 })
 
+// The person reading this is at a key field in the browser, not at the
+// container's environment — pointing them at KOTHAI_AI_API_KEY was advice
+// for a different audience.
+test('a refused key is reported as the key, with no env var to go and set', async () => {
+  const res = fakeRes()
+  await handleSetupTest(fakeReq({ baseUrl: base, apiKey: 'wrong' }), res.raw)
+  assert.match(res.sent.body.error || '', /key was refused/)
+  assert.doesNotMatch(res.sent.body.error || '', /KOTHAI_/)
+})
+
 test('an unreachable endpoint reports that rather than hanging', async () => {
   const res = fakeRes()
   await handleSetupTest(fakeReq({ baseUrl: 'http://127.0.0.1:1/v1', apiKey: '' }), res.raw)

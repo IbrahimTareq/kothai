@@ -36,9 +36,8 @@
 .role-acc-sub,
 .model-desc,
 .wizard-choice-desc,
-.wizard-note,
 .wizard-field-label,
-.wizard-probe-msg,
+.wizard-field-hint,
 .residency-desc,
 .remote-model-desc {
   font-size: var(--text-xs);
@@ -139,7 +138,7 @@
   font-size:var(--text-2xs);letter-spacing:var(--tracking-mono)}
 .onboarding-picker{display:flex;flex-direction:column}
 .onboarding-foot{display:flex;align-items:center;justify-content:space-between;gap:var(--space-16);margin-top:var(--space-22)}
-.onboarding-foot .btn{margin-left:auto}
+.onboarding-foot .btn:last-child{margin-left:auto}
 .onboarding-progress{display:flex;flex-direction:column;gap:var(--space-14);align-items:center;
   padding:var(--space-36) 0 var(--space-10)}
 .onboarding-progress .settings-progress-track{width:100%;max-width:360px}
@@ -368,22 +367,17 @@
 .wizard-choice:disabled{background:none;cursor:default}
 .wizard-choice:disabled .wizard-choice-title,.wizard-choice:disabled .wizard-choice-desc{color:var(--ink-faint)}
 
-.wizard-providers{display:flex;flex-wrap:wrap;gap:var(--space-8);margin:var(--space-20) 0 var(--space-12)}
-.wizard-provider{display:inline-flex;align-items:center;gap:var(--space-8);padding:var(--space-8) var(--space-14);
-  background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-full);cursor:pointer}
-.wizard-provider:hover{border-color:var(--line-hover)}
-.wizard-provider.picked{border-color:var(--accent)}
-.wizard-provider-label{font-size:var(--text-xs);color:var(--ink);letter-spacing:var(--tracking-tight)}
-.wizard-provider-tag{font-size:var(--text-3xs);color:var(--ink-faint)}
-.wizard-note{margin:0 0 var(--space-20)}
+.wizard-providers{display:flex;flex-direction:column;gap:var(--space-6);margin:var(--space-24) 0}
+/* .model-row's disabled state means "busy switching" and says so with a wait
+   cursor; a provider row is disabled because it is unavailable here. */
+.wizard-providers .model-row:disabled{cursor:default}
 
-.wizard-field{display:block;margin-bottom:var(--space-14)}
-.wizard-field-label{display:block;margin-bottom:var(--space-6)}
-.wizard-optional{color:var(--ink-faint)}
-
-.wizard-probe{display:flex;align-items:center;gap:var(--space-12);margin-bottom:var(--space-20)}
-.wizard-probe-msg.ok{color:var(--accent)}
-.wizard-probe-msg.fail{color:var(--ink-mute)}
+.wizard-field{margin-bottom:var(--space-14)}
+.wizard-field-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-12);
+  margin-bottom:var(--space-6)}
+.wizard-key-link{font-size:var(--text-xs);color:var(--ink-dim);letter-spacing:var(--tracking-tight)}
+.wizard-key-link:hover{color:var(--ink)}
+.wizard-field-hint{margin:var(--space-6) 0 0;color:var(--ink-faint)}
 
 /* ---- connection panel ---------------------------------------------------- */
 .conn{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-16);
@@ -392,9 +386,9 @@
 .conn-actions{display:flex;flex-wrap:wrap;gap:var(--space-8);flex-shrink:0}
 /* Two-step, like the wipe control: the second press is the one that acts. */
 .conn-armed{color:var(--ink);border-color:var(--line-focus)}
-/* The panel is a stack of five loosely-related blocks — provider pills, a
-   note, the key field, the probe, a warning — each of which used to carry its
-   own margin, so the spacing between them ran 36/20/14/20/0 down the card and
+/* The panel is a stack of loosely-related blocks — provider rows, the key
+   field, a warning — each of which used to carry its own margin (there were
+   five then, with a note and a probe), so the spacing ran 36/20/14/20/0 down the card and
    the Save row ended up flush against the warning above it. One gap here, and
    the blocks' own margins off, is the whole fix; the classes keep those
    margins for first run, where they are not in a card. */
@@ -402,9 +396,7 @@
   margin-top:var(--space-16);padding:var(--space-16);
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg)}
 .conn-edit > .wizard-providers,
-.conn-edit > .wizard-note,
 .conn-edit > .wizard-field,
-.conn-edit > .wizard-probe,
 .conn-edit > .conn-warn,
 .conn-edit > .role-acc{margin:0}
 /* Reads as the panel's footer rather than another line of its body — the same

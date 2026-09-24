@@ -54,6 +54,14 @@ test('a chat-only provider would leave the embedding default empty', () => {
   }
 })
 
+// Someone at the key field without a key is the commonest way to stall on
+// this screen, and "go find it" is not an answer.
+test('every provider that needs a key links to where one is made', () => {
+  for (const e of ENDPOINTS.filter(x => x.needsKey)) {
+    assert.equal(new URL(e.keyUrl || 'missing:').protocol, 'https:', `${e.id} has no https key link`)
+  }
+})
+
 test('findEndpoint returns null for an unknown id rather than throwing', () => {
   assert.equal(findEndpoint('not-a-provider'), null)
   assert.equal(findEndpoint(undefined), null)

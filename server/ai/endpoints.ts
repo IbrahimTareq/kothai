@@ -40,6 +40,13 @@ export interface Endpoint {
   needsKey: boolean
   servesEmbeddings: boolean
   note: string
+  // Where the key is made. The key field is where first run stalls for
+  // anyone who has not got one yet, so the tile says where to go.
+  keyUrl?: string
+  // Runs beside Kothai rather than as a hosted service. Greyed on the lite
+  // image, beside first run's own "On this machine": lite is what Railway
+  // runs, where there is no machine of the user's beside Kothai to reach.
+  onThisMachine?: boolean
   // Only the endpoints whose embedding catalogue lives off /v1/models carry
   // this — see the OpenRouter entry below.
   embeddingsPath?: string
@@ -60,6 +67,7 @@ export const ENDPOINTS: Endpoint[] = [
     needsKey: true,
     servesEmbeddings: true,
     note: 'Needs API credit — a ChatGPT subscription is a different thing.',
+    keyUrl: 'https://platform.openai.com/api-keys',
     defaults: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small', vision: 'gpt-4o-mini' },
   },
   {
@@ -68,7 +76,8 @@ export const ENDPOINTS: Endpoint[] = [
     baseUrl: 'https://openrouter.ai/api/v1',
     needsKey: true,
     servesEmbeddings: true,
-    note: 'One key, many models — including embeddings, so nothing runs here.',
+    note: 'One key for models from many companies, billed in one place.',
+    keyUrl: 'https://openrouter.ai/settings/keys',
     // Its embedding models are NOT in GET /v1/models, which lists chat models
     // only; they live behind their own path, which the provider probes as well
     // so the embedding field offers the thirty-odd real answers rather than
@@ -85,6 +94,7 @@ export const ENDPOINTS: Endpoint[] = [
     baseUrl: 'http://host.docker.internal:11434/v1',
     needsKey: false,
     servesEmbeddings: true,
+    onThisMachine: true,
     note: 'Nothing leaves your machine, and you manage the models in Ollama.',
     defaults: { llm: 'llama3.2:3b', embed: 'nomic-embed-text', vision: 'llama3.2-vision' },
   },

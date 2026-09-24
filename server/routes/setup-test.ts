@@ -8,7 +8,7 @@
 // ok:false, because the wizard needs to render it as a message beside the
 // field rather than as a failure of the request.
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { getJson, TIMEOUTS } from '../ai/providers/remote-http.ts'
+import { getJson, RemoteError, TIMEOUTS } from '../ai/providers/remote-http.ts'
 import { json, readBody } from '../lib/http.ts'
 
 // readBody and getJson both hand back `unknown` — the request body is whatever
@@ -47,6 +47,12 @@ export async function handleSetupTest(req: IncomingMessage, res: ServerResponse)
   } catch (e) {
     // e.message is already written for a person — remote-http.ts turns a 404
     // into "check the model name", a 401 into an auth message, and so on.
+    // Except the auth one, which is written for whoever set the container's
+    // environment and told someone at the key field to check
+    // KOTHAI_AI_API_KEY.
+    if (e instanceof RemoteError && e.code === 'auth_failed') {
+      return json(res, 200, { ok: false, models: [], error: 'That key was refused. Check it was copied whole.' })
+    }
     const message = e instanceof Error ? e.message : ''
     return json(res, 200, { ok: false, models: [], error: message || 'Could not reach that endpoint.' })
   }

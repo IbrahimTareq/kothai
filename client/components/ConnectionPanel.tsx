@@ -71,14 +71,13 @@ export function ConnectionPanel({
 
   const saveEndpoint = () =>
     choice &&
-    commit(
-      () =>
-        API.saveEndpoint(
-          { providerId: choice.providerId, baseUrl: choice.baseUrl, apiKey: choice.apiKey },
-          choice.defaults,
-        ),
-      'Could not save that endpoint.',
-    )
+    commit(async () => {
+      await API.checkEndpoint(choice.baseUrl, choice.apiKey)
+      await API.saveEndpoint(
+        { providerId: choice.providerId, baseUrl: choice.baseUrl, apiKey: choice.apiKey },
+        choice.defaults,
+      )
+    }, 'Could not save that endpoint.')
 
   const disconnect = () => commit(() => API.clearEndpoint(leaveSel || undefined), 'Could not disconnect.')
 

@@ -1,23 +1,18 @@
-// Provider tiles, endpoint URL, key, and a live connection test.
+// Provider rows and the key field.
 //
 // Shared deliberately: first run (views/SetupWizard) and Settings both need
 // exactly this, and two copies would drift the moment a provider is added or
 // the probe's wording changes.
-import { useState } from 'react'
-import { API } from '../data/api'
+import { useId, useState } from 'react'
 import type { EndpointOption } from '../types'
-import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 
 export interface EndpointChoice {
   providerId: string
   baseUrl: string
   apiKey: string
-  models: string[]
   defaults: { llm: string; embed: string; vision: string }
 }
-
-type Probe = { state: 'idle' | 'testing' | 'ok' | 'fail'; message: string; models: string[] }
 
 export function EndpointPicker({
   endpoints,
@@ -31,91 +26,83 @@ export function EndpointPicker({
   // field is empty because nothing is set.
   keyPlaceholder?: string
   // Fires on every edit, so the parent owns the submit button and its label —
-  // "Continue" in first run, "Save" in Settings.
+  // "Connect" in first run, "Save" in Settings.
   onChange: (choice: EndpointChoice | null) => void
 }) {
   const [picked, setPicked] = useState<EndpointOption | null>(() => endpoints.find(e => e.id === preselect) || null)
   const [key, setKey] = useState('')
-  const [probe, setProbe] = useState<Probe>({ state: 'idle', message: '', models: [] })
+  const keyId = useId()
 
-  // Every catalogue entry carries its own URL — there is no hand-typed
-  // endpoint here. Someone pointing at their own server uses --endpoint or
-  // KOTHAI_AI_BASE_URL, which win over anything set in the app.
-  const baseUrl = (picked?.baseUrl || '').trim()
-
-  const publish = (next: EndpointOption | null, nextKey = key, models = probe.models) => {
+  // Null until the choice could connect: the parent's button stays off
+  // without a key rather than letting the server refuse a blank one.
+  const publish = (e: EndpointOption, nextKey: string) => {
+    const apiKey = e.needsKey ? nextKey.trim() : ''
     onChange(
-      next?.baseUrl
-        ? { providerId: next.id, baseUrl: next.baseUrl.trim(), apiKey: nextKey.trim(), models, defaults: next.defaults }
-        : null,
+      e.needsKey && !apiKey ? null : { providerId: e.id, baseUrl: e.baseUrl.trim(), apiKey, defaults: e.defaults },
     )
   }
 
+  // A key belongs to one provider, so switching clears it rather than sending
+  // an OpenAI key to OpenRouter.
   const pick = (e: EndpointOption) => {
     setPicked(e)
-    setProbe({ state: 'idle', message: '', models: [] })
-    publish(e, key, [])
-  }
-
-  const test = async () => {
-    if (!baseUrl) return
-    setProbe({ state: 'testing', message: '', models: [] })
-    try {
-      const r = await API.testEndpoint(baseUrl, key.trim())
-      const next: Probe = r.ok
-        ? { state: 'ok', message: `${r.models.length} models available`, models: r.models }
-        : { state: 'fail', message: r.error || 'Could not reach that endpoint.', models: [] }
-      setProbe(next)
-      publish(picked, key, next.models)
-    } catch (e) {
-      setProbe({ state: 'fail', message: (e as Error).message || 'Could not reach that endpoint.', models: [] })
-    }
+    setKey('')
+    publish(e, '')
   }
 
   return (
     <>
+      {/* Rows with every provider's note showing, not pills that revealed it
+          only once picked: the note is what the choice is made on. Drawn as
+          the model picker's rows, which is the next thing first run shows. */}
       <div className="wizard-providers">
-        {endpoints.map(e => (
-          <button
-            key={e.id}
-            type="button"
-            className={`wizard-provider${picked?.id === e.id ? ' picked' : ''}`}
-            onClick={() => pick(e)}
-          >
-            <span className="wizard-provider-label">{e.label}</span>
-            {!e.servesEmbeddings && <span className="wizard-provider-tag mono">chat only</span>}
-          </button>
-        ))}
+        {endpoints.map(e => {
+          const on = picked?.id === e.id
+          return (
+            <button
+              key={e.id}
+              type="button"
+              className={`model-row${on ? ' active' : ''}`}
+              disabled={!e.available}
+              onClick={() => pick(e)}
+            >
+              <span className="model-radio">{on && <span className="model-radio-dot"></span>}</span>
+              <span className="model-main">
+                <span className="model-name">{e.label}</span>
+                <span className="model-desc">
+                  {e.available ? e.note : 'Not on the lite image, which runs nothing on this machine.'}
+                </span>
+              </span>
+            </button>
+          )
+        })}
       </div>
 
-      {picked && <p className="wizard-note">{picked.note}</p>}
-
-      {picked && (
-        <label className="wizard-field">
-          <span className="wizard-field-label">
-            API key{!picked.needsKey && <span className="wizard-optional"> — not needed for this one</span>}
-          </span>
+      {picked?.needsKey && (
+        <div className="wizard-field">
+          <div className="wizard-field-head">
+            <label className="wizard-field-label" htmlFor={keyId}>
+              {picked.label} API key
+            </label>
+            {picked.keyUrl && (
+              <a className="wizard-key-link" href={picked.keyUrl} target="_blank" rel="noreferrer">
+                Get a key ↗
+              </a>
+            )}
+          </div>
           <Input
+            id={keyId}
             className="wizard-input mono"
             type="password"
+            autoComplete="off"
             value={key}
-            placeholder={picked.needsKey ? keyPlaceholder : 'leave blank'}
+            placeholder={keyPlaceholder}
             onChange={ev => {
               setKey(ev.target.value)
               publish(picked, ev.target.value)
             }}
           />
-        </label>
-      )}
-
-      {picked && (
-        <div className="wizard-probe">
-          <Button type="button" onClick={test} disabled={!baseUrl || probe.state === 'testing'}>
-            {probe.state === 'testing' ? 'Checking…' : 'Test connection'}
-          </Button>
-          {probe.state !== 'idle' && probe.state !== 'testing' && (
-            <span className={`wizard-probe-msg ${probe.state}`}>{probe.message}</span>
-          )}
+          <p className="wizard-field-hint">Kept on this machine only. It never appears in a backup or an export.</p>
         </div>
       )}
     </>

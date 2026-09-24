@@ -202,6 +202,9 @@ export interface EndpointOption {
   needsKey: boolean
   servesEmbeddings: boolean
   note: string
+  keyUrl?: string
+  // False for a provider on this machine, on the lite image.
+  available: boolean
   defaults: { llm: string; embed: string; vision: string }
 }
 

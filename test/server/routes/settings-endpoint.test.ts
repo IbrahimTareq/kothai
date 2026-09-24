@@ -7,7 +7,7 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { _reset, initProvider } from '../../../server/ai/index.ts'
+import { _reset, initProvider, localSupported } from '../../../server/ai/index.ts'
 import type { Residency } from '../../../server/ai/roles.ts'
 import type { ProviderKind } from '../../../server/ai/routing.ts'
 import type { ModelSelection } from '../../../server/ai/providers/types.ts'
@@ -138,6 +138,40 @@ test('GET /api/settings says whether this image could run models locally', async
   const { res, sent } = mockRes()
   await handleGetSettings(res)
   assert.ok('localSupported' in sent.json(), 'Settings needs it to know whether to offer the switch')
+})
+
+// Greyed rather than hidden, beside first run's own "On this machine": a
+// lone pair of hosted tiles read as the only way Kothai can run.
+test('on the lite image a provider on this machine is offered but unavailable', async () => {
+  await initProvider('remote', {}, { load, localAvailable: false })
+  // What the lite image's import of the on-device provider throws. The probe
+  // caches its answer, so handleGetSettings reads this one.
+  await localSupported(() => {
+    throw Object.assign(new Error('absent'), { code: 'ERR_MODULE_NOT_FOUND' })
+  })
+  const { res, sent } = mockRes()
+  await handleGetSettings(res)
+  const offered = sent.json().endpoints as { id: string; available: boolean }[]
+  assert.equal(offered.find(e => e.id === 'ollama-local')?.available, false)
+  assert.equal(offered.find(e => e.id === 'openai')?.available, true, 'a hosted provider is unaffected by the image')
+})
+
+// The wizard's Continue used to send a blank key for OpenAI, and first run
+// moved on to naming models for an endpoint that could answer none of them.
+test('a provider that needs a key is refused without one, and the working one survives', async () => {
+  const d = dir()
+  writeCredentials({ baseUrl: A, apiKey: 'good' }, d)
+  setAiCredentials(readCredentials(d))
+  await settings.save({ configured: true })
+  await initProvider('remote', {}, { load, localAvailable: false })
+
+  const { res, sent } = mockRes()
+  await handleSaveEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: A, apiKey: ' ' } }), res, {
+    dir: d,
+    load,
+  })
+  assert.equal(sent.code, 400)
+  assert.deepEqual(readCredentials(d), { baseUrl: A, apiKey: 'good', providerId: null })
 })
 
 // Disconnecting moved the roles back on paper and left them dead in practice.

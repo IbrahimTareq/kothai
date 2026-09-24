@@ -5,12 +5,9 @@
 import { useState } from 'react'
 import { Icon } from '../components/icons'
 import { EndpointPicker, type EndpointChoice } from '../components/EndpointPicker'
+import { API } from '../data/api'
 import type { EndpointOption } from '../types'
 import { Button } from '../ui/Button'
-
-// The wizard's answer is exactly what the shared picker produces; the alias
-// keeps Onboarding's import stable.
-export type WizardResult = EndpointChoice
 
 export function SetupWizard({
   endpoints,
@@ -28,11 +25,28 @@ export function SetupWizard({
   // False on the lite image, where @qvac/sdk is absent.
   localSupported: boolean
   onLocal: () => void
-  onConnected: (r: WizardResult) => void
+  // Rejects with a message to show if the endpoint could not be saved.
+  onConnected: (r: EndpointChoice) => Promise<void>
   onSkip: () => void
 }) {
   const [connecting, setConnecting] = useState(Boolean(preselect))
-  const [choice, setChoice] = useState<WizardResult | null>(null)
+  const [choice, setChoice] = useState<EndpointChoice | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  // Success unmounts this screen, so busy is only ever cleared on failure.
+  const connect = async () => {
+    if (!choice || busy) return
+    setBusy(true)
+    setErr(null)
+    try {
+      await API.checkEndpoint(choice.baseUrl, choice.apiKey)
+      await onConnected(choice)
+    } catch (e) {
+      setErr((e as Error).message || 'Could not connect.')
+      setBusy(false)
+    }
+  }
 
   // Step 1 — where.
   if (!connecting) {
@@ -87,23 +101,43 @@ export function SetupWizard({
           </span>
           <h1>Connect a service</h1>
           <p className="onboarding-lede">
-            Pick where your models run. Your key is stored on this machine only, and never appears in a backup or an
-            export.
+            What you save is sent to this service to be read and filed. You can switch any time in Settings.
           </p>
         </header>
 
-        <EndpointPicker endpoints={endpoints} preselect={preselect} onChange={setChoice} />
+        <EndpointPicker
+          endpoints={endpoints}
+          preselect={preselect}
+          onChange={c => {
+            setChoice(c)
+            setErr(null)
+          }}
+        />
 
+        {err && (
+          <p className="conn-err" role="alert">
+            {err}
+          </p>
+        )}
+
+        {/* Back beside the button it undoes, where every other wizard keeps
+            it, not as a link under the card that read as leaving setup. */}
         <footer className="onboarding-foot">
-          <span className="onboarding-size mono"></span>
-          <Button tone="solid" size="lg" onClick={() => choice && onConnected(choice)} disabled={!choice}>
-            Continue
+          {!preselect && (
+            <Button size="lg" onClick={() => setConnecting(false)} disabled={busy}>
+              Back
+            </Button>
+          )}
+          <Button tone="solid" size="lg" onClick={connect} disabled={!choice || busy}>
+            {busy ? 'Connecting…' : 'Connect'}
           </Button>
         </footer>
 
-        <button className="onboarding-skip" onClick={() => (preselect ? onSkip() : setConnecting(false))}>
-          {preselect ? 'Skip for now — run without AI.' : 'Back'}
-        </button>
+        {preselect && (
+          <button className="onboarding-skip" onClick={onSkip}>
+            Skip for now — run without AI.
+          </button>
+        )}
       </div>
     </div>
   )

@@ -10,7 +10,7 @@ import { json, readBody } from '../lib/http.ts'
 import { demoLimits, visibleTo } from './demo.ts'
 import { getAiConfig, setAiCredentials, SETUP_PROVIDER } from '../config.ts'
 import { writeCredentials, clearCredentials } from '../data/credentials.ts'
-import { ENDPOINTS } from '../ai/endpoints.ts'
+import { ENDPOINTS, findEndpoint } from '../ai/endpoints.ts'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Capabilities } from '../ai/routing.ts'
 import type { Policy, Role } from '../ai/roles.ts'
@@ -102,6 +102,7 @@ function endpointInfo() {
 
 export async function handleGetSettings(res: ServerResponse): Promise<void> {
   const caps = ai.capabilities()
+  const localSupported = await ai.localSupported()
   json(res, 200, {
     current: settings.get(),
     remote: settings.getRemote(),
@@ -109,15 +110,14 @@ export async function handleGetSettings(res: ServerResponse): Promise<void> {
     presets: await ai.listModels(),
     capabilities: caps,
     endpoint: ROLES.some(r => caps.roles[r] === 'remote') ? endpointInfo() : { configured: false, host: null },
-    // Static catalogue, so the wizard can render provider tiles without a
-    // second request. Contains no credentials — it is public reference data.
-    endpoints: ENDPOINTS,
+    // Static and credential-free, so the wizard needs no second request. `available`: see onThisMachine.
+    endpoints: ENDPOINTS.map(e => ({ ...e, available: localSupported || !e.onThisMachine })),
     // What the installer already asked. An id only; null when nobody asked.
     setup: { providerId: SETUP_PROVIDER },
     // Whether this image COULD run models on-device — false on lite, where
     // @qvac/sdk is absent. Settings offers "run on this machine" only when it
     // is true, rather than offering a switch that cannot work.
-    localSupported: await ai.localSupported(),
+    localSupported,
     // On-device presets with sizes, even while an endpoint serves every role —
     // `presets` above reports the endpoint's catalogue then, so it cannot say
     // what switching back would cost or offer anything to pick.
@@ -201,6 +201,7 @@ async function applyEndpointFromSetup(
   }
   const apiKey = typeof fields.apiKey === 'string' && fields.apiKey.trim() ? fields.apiKey.trim() : null
   const providerId = typeof fields.providerId === 'string' ? fields.providerId : null
+  if (findEndpoint(providerId)?.needsKey && !apiKey) return { error: 'This service needs an API key.' }
   const creds = writeCredentials({ baseUrl, apiKey, providerId }, opts.dir)
   setAiCredentials(creds)
 

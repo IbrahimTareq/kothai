@@ -120,18 +120,17 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
           // Apply it NOW rather than at submit. The picker below asks about
           // each role in the shape its provider needs, and connecting an
           // endpoint is what decides which provider that is — so the server
-          // has to know before we re-read capabilities and draw it.
-          try {
-            await API.applyEndpoint({ providerId: r.providerId, baseUrl: r.baseUrl, apiKey: r.apiKey }, r.defaults)
-            const fresh = await API.settings()
-            setCfg(fresh)
-            setSel({ ...fresh.current })
-            // Seed the endpoint's model fields from the provider's defaults so
-            // the next screen is filled in rather than three empty boxes.
-            setRemoteSel({ ...fresh.remote, ...r.defaults })
-          } catch (e) {
-            setErr((e as Error).message || 'Could not save that endpoint.')
-          }
+          // has to know before we re-read capabilities and draw it. A failure
+          // rejects back to the wizard, which shows it beside the key; moving
+          // on regardless left the model picker drawn for an endpoint that
+          // was never saved.
+          await API.applyEndpoint({ providerId: r.providerId, baseUrl: r.baseUrl, apiKey: r.apiKey }, r.defaults)
+          const fresh = await API.settings()
+          setCfg(fresh)
+          setSel({ ...fresh.current })
+          // Seed the endpoint's model fields from the provider's defaults so
+          // the next screen is filled in rather than three empty boxes.
+          setRemoteSel({ ...fresh.remote, ...r.defaults })
           setWizardDone(true)
         }}
       />
