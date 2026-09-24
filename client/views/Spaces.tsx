@@ -43,16 +43,25 @@ function SpaceCover({ covers = [] }: { covers?: UIItem[] }) {
 export function SpacesView({ collections, createCollection, navigate }: SpacesViewProps) {
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
-  const spent = useDemo()?.spacesLeft === 0 // the demo's daily few (server/routes/demo.ts)
+  const [tags, setTags] = useState('')
+  const demo = useDemo()
+  const spent = demo?.spacesLeft === 0 // the demo's daily few (server/routes/demo.ts)
 
   const cancel = () => {
     setName('')
+    setTags('')
     setCreating(false)
   }
   const submit = async () => {
     const nm = name.trim()
     if (!nm) return
-    const c = await createCollection(nm, [])
+    const c = await createCollection(
+      nm,
+      tags
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean),
+    )
     cancel()
     navigate(`space:${c.id}`)
   }
@@ -105,8 +114,26 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
                       if (e.key === 'Enter') submit()
                       if (e.key === 'Escape') cancel()
                     }}
-                    onBlur={() => !name.trim() && cancel()}
+                    onBlur={e => !name.trim() && !e.currentTarget.parentElement?.contains(e.relatedTarget) && cancel()}
                   />
+                  {/* The demo hides the rule picker inside a space (shell.css), and
+                      "Add to space" with it, so a visitor's space was left with no
+                      way to fill it. Here, its rules can still be set once. */}
+                  {demo && (
+                    <Input
+                      compact
+                      className="mono"
+                      aria-label="Smart tags"
+                      placeholder="Smart tags, comma-separated"
+                      enterKeyHint="done"
+                      value={tags}
+                      onChange={e => setTags(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') submit()
+                        if (e.key === 'Escape') cancel()
+                      }}
+                    />
+                  )}
                 </div>
               </div>
             )}
