@@ -1,5 +1,5 @@
 /* capture.css — image attach + global quick-capture modal
-   Part of the Kothai design system. Loaded via style.css. */
+   Part of the Kothai design system. Loaded via index.css. */
 /* ── image attach + captured images ──────────────────────────────────────── */
 .input-shell .attach-preview{position:relative;flex-shrink:0;width:42px;height:42px;
   border-radius:var(--radius);overflow:hidden;align-self:center;border:1px solid var(--line)}

@@ -1,5 +1,5 @@
 /* primitives.css — shared primitives
-   Part of the Kothai design system. Loaded via style.css, before the per-view
+   Part of the Kothai design system. Loaded via index.css, before the per-view
    sheets so those can still override.
 
    .btn is the button, rendered only by <Button> in client/ui/Button.tsx —

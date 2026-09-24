@@ -1,5 +1,5 @@
 /* spaces.css — spaces, collections, add-to-space popover
-   Part of the Kothai design system. Loaded via style.css. */
+   Part of the Kothai design system. Loaded via index.css. */
 /* ---- Spaces landing ---- */
 .spaces-view { display: flex; flex-direction: column; height: 100%; overflow: hidden; padding-top: var(--topbar-h); }
 .spaces-scroll { flex: 1; overflow-y: auto; padding: var(--space-20) var(--space-28) var(--space-22); }

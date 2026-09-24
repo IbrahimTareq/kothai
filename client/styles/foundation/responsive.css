@@ -1,5 +1,5 @@
 /* responsive.css — responsive / small screens
-   Part of the Kothai design system. Loaded via style.css. */
+   Part of the Kothai design system. Loaded via index.css. */
 /* ─────────────────────── responsive / small screens ──────────────────────── */
 /* The board's own column count lives in layout/masonry.ts's columnCount — the
    layout is computed, not CSS grid, so it can't be expressed here. It does NOT

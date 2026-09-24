@@ -12,16 +12,16 @@
    imports only with a reason.
    ============================================================================ */
 
-@import "./styles/foundation/tokens.css";
-@import "./styles/foundation/base.css";
-@import "./styles/components/primitives.css";
-@import "./styles/views/shell.css";
-@import "./styles/views/core.css";
-@import "./styles/views/gallery.css";
-@import "./styles/views/settings.css";
-@import "./styles/components/card.css";
-@import "./styles/components/capture.css";
-@import "./styles/views/expanded.css";
-@import "./styles/views/spaces.css";
-@import "./styles/views/canvas.css";
-@import "./styles/foundation/responsive.css";
+@import "./foundation/tokens.css";
+@import "./foundation/base.css";
+@import "./components/primitives.css";
+@import "./views/shell.css";
+@import "./views/core.css";
+@import "./views/gallery.css";
+@import "./views/settings.css";
+@import "./components/card.css";
+@import "./components/capture.css";
+@import "./views/expanded.css";
+@import "./views/spaces.css";
+@import "./views/canvas.css";
+@import "./foundation/responsive.css";

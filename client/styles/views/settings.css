@@ -1,5 +1,5 @@
 /* settings.css — settings view
-   Part of the Kothai design system. Loaded via style.css. */
+   Part of the Kothai design system. Loaded via index.css. */
 /* ─────────────────────────── settings ────────────────────────────────────── */
 .settings-view{padding:var(--topbar-h) var(--space-32) var(--space-28);max-width:760px;width:100%;margin:0 auto;
   overflow-y:auto;height:100%}

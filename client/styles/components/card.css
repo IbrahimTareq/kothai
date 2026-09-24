@@ -1,5 +1,5 @@
 /* card.css — item card, toast, fab, scrollbars
-   Part of the Kothai design system. Loaded via style.css. */
+   Part of the Kothai design system. Loaded via index.css. */
 /* ─────────────────────────── item card ───────────────────────────────────── */
 .item-card.openable{cursor:pointer}
 /* chromeless by default — media bleeds edge to edge, cards float on the bg */

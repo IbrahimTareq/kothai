@@ -1,5 +1,5 @@
 /* shell.css — app shell, topbar/nav, rail, main scaffold
-   Part of the Kothai design system. Loaded via style.css. */
+   Part of the Kothai design system. Loaded via index.css. */
 /* ─────────────────────────── shell ───────────────────────────────────────── */
 #root{position:relative;z-index:var(--z-raised);height:100%}
 .app{position:relative;height:100%}

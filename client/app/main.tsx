@@ -2,7 +2,7 @@
 import { createRoot } from 'react-dom/client'
 import { lazy, Suspense } from 'react'
 import App from './App'
-import '../style.css'
+import '../styles/index.css'
 
 // /ui is the primitives playground (views/Playground.tsx), and only in
 // development: import.meta.env.DEV is false in the production build, so this

@@ -1,5 +1,5 @@
 /* gallery.css — gallery / everything board
-   Part of the Kothai design system. Loaded via style.css. */
+   Part of the Kothai design system. Loaded via index.css. */
 /* ─────────────────────────── gallery ─────────────────────────────────────── */
 .gallery-view{height:100%;display:flex;flex-direction:column;overflow:hidden;padding-top:var(--topbar-h)}
 /* search is the Everything page's action, and the one that should grow: it
