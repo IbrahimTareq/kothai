@@ -1,5 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import {
   checkFile,
   measure,
@@ -8,6 +12,7 @@ import {
   checkGovernance,
   nextGovernance,
   checkAgainstHead,
+  sourceFiles,
 } from '../../scripts/lint-shape.ts'
 
 const BUDGET = { lines: 400, exports: 12 }
@@ -251,4 +256,22 @@ test('checkAgainstHead fails a widened _governance field the same as a widened f
   const r = checkAgainstHead(working, head)
   assert.equal(r.length, 1)
   assert.match(r[0], /_governance/)
+})
+
+// A split creates new files, and --update ran before they were committed. The
+// measured set came from plain `git ls-files`, so the new modules' exports
+// were invisible and --update "tightened" the export total from 506 to 500
+// while the real count was 511 (5d38056, 9d2f987). Untracked files count;
+// ignored ones still don't.
+test('sourceFiles measures new, uncommitted files but not ignored ones', () => {
+  const root = mkdtempSync(join(tmpdir(), 'shape-'))
+  const git = (...args: string[]) => execFileSync('git', args, { cwd: root, stdio: 'pipe' })
+  git('init', '-q')
+  mkdirSync(join(root, 'server'))
+  writeFileSync(join(root, '.gitignore'), 'server/ignored.ts\n')
+  writeFileSync(join(root, 'server', 'tracked.ts'), 'export const a = 1\n')
+  git('add', '.')
+  writeFileSync(join(root, 'server', 'new.ts'), 'export const b = 1\n')
+  writeFileSync(join(root, 'server', 'ignored.ts'), 'export const c = 1\n')
+  assert.deepEqual(sourceFiles(root).sort(), ['server/new.ts', 'server/tracked.ts'])
 })

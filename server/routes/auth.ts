@@ -48,7 +48,7 @@ type GateRequest = IncomingMessage & { socket: { encrypted?: boolean } }
 // nearly free, and a 15-minute self-healing lockout is the worst case.
 const clientKey = (req: IncomingMessage) => req.socket?.remoteAddress || 'unknown'
 
-export function hasSession(req: IncomingMessage, password: string): boolean {
+function hasSession(req: IncomingMessage, password: string): boolean {
   return verifySession(parseCookies(req.headers.cookie)[COOKIE_NAME], password)
 }
 

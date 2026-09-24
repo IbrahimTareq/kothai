@@ -32,7 +32,7 @@ type Embedder = (text: string) => Promise<number[]>
 const rowTag = (v: SQLOutputValue): TagVocabRow['tag'] => String(v)
 const rowEmbedding = (v: SQLOutputValue): TagVocabRow['embedding'] | null => (v instanceof Uint8Array ? v : null)
 
-export const THRESHOLD = 0.88
+const THRESHOLD = 0.88
 
 let registry = new Map<string, Vector>() // canonical tag -> embedding vector
 let loaded = false

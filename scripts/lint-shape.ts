@@ -114,8 +114,15 @@ export function nextBaseline(
 // `.js` is deliberately absent: client/ and server/ are wholly TypeScript, and
 // matching it would silently re-admit a .js file to the measured set — the one
 // thing the CI guard in ci.yml exists to make impossible.
-const sourceFiles = () =>
-  execFileSync('git', ['ls-files', 'client', 'server'], { cwd: ROOT, encoding: 'utf8' })
+//
+// Untracked files count too. A split creates new modules, and --update runs
+// before they are committed: measuring only tracked files let 5d38056 and
+// 9d2f987 record an export total of 500 while the real one was 511.
+export const sourceFiles = (root: string = ROOT) =>
+  execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', 'client', 'server'], {
+    cwd: root,
+    encoding: 'utf8',
+  })
     .split('\n')
     .filter(f => /\.(ts|tsx)$/.test(f))
 

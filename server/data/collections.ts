@@ -83,7 +83,7 @@ function norm(tags: string[] | null | undefined) {
 }
 
 // Does an item with `noteTags` satisfy a `ruleTags` rule (match ANY)?
-export function matchesRule(noteTags: string[] | null | undefined, ruleTags: string[] | null | undefined) {
+function matchesRule(noteTags: string[] | null | undefined, ruleTags: string[] | null | undefined) {
   if (!ruleTags || ruleTags.length === 0) return false
   const rule = new Set(norm(ruleTags))
   return norm(noteTags).some(t => rule.has(t))
