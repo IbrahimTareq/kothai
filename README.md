@@ -44,7 +44,7 @@ One service on ~300 MB of RAM, pointed at an inference endpoint you bring — Op
 
 Want nothing leaving your project? **[Kothai + Ollama](https://railway.com/deploy/kothai-w-ollama?referralCode=kothai)** deploys an Ollama service alongside it on the private network: no API key, no third party. Budget ~8 GB of RAM and a few minutes on first boot while it pulls the models. Inference is CPU-only there, so image captioning stays off.
 
-**Next steps:** [Configuration](https://getkothai.com/docs/getting-started/configuration) · [Remote access](https://getkothai.com/docs/running-it/remote-access) · [Backups](https://getkothai.com/docs/running-it/backups) · [More ways to start](https://getkothai.com/docs/getting-started/more-ways-to-start)
+**Next steps:** [Configuration](https://getkothai.com/docs/getting-started/configuration) · [Remote access](https://getkothai.com/docs/running-it/remote-access) · [Backups](https://getkothai.com/docs/running-it/backups) · [Build from source](https://getkothai.com/docs/getting-started/self-hosting#build-from-source)
 
 ## How it works
 
@@ -58,10 +58,10 @@ Read more: [Architecture](https://getkothai.com/docs/how-it-works/architecture) 
 git clone https://github.com/IbrahimTareq/kothai.git
 cd kothai && corepack enable && pnpm install
 pnpm dev    # server on :5173, Vite HMR on :5174
-pnpm test   # 1142 tests, ~5s
+pnpm test   # the full gate, ~5s
 ```
 
-See the full [Development guide](https://getkothai.com/docs/getting-started/development).
+See the full [Development guide](docs/development.md).
 
 ## Contributing
 

@@ -24,7 +24,7 @@ Node **22** is pinned in [`.nvmrc`](../.nvmrc) and matched by CI and the Dockerf
 | `pnpm start` | Full build, then serve on `:5173`. What production does. |
 | `pnpm dev:site` | The docs site alone on `:5175`. |
 | `pnpm build` | Biome → token lint → typecheck → Vite build. |
-| `pnpm test` | Biome → token lint → shape lint → 1142 tests. ~5s. |
+| `pnpm test` | Biome → token lint → shape lint → the test suite. ~5s. |
 | `pnpm typecheck` | `tsc --noEmit` over both projects. |
 | `pnpm lint` | Biome check alone. |
 | `pnpm format` | Apply formatting. Biome decides style. |
@@ -52,7 +52,7 @@ There is **no build step on the server**. `node server/index.ts` runs the source
 
 ## The test suite
 
-1142 tests, `node:test`, about five seconds, no browser and no running server.
+Plain `node:test`, about five seconds, no browser and no running server.
 
 ```bash
 pnpm test                                     # everything

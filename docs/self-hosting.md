@@ -28,3 +28,21 @@ docker compose up -d
 
 > [!IMPORTANT]
 > **There is no login until you set `KOTHAI_PASSWORD`.** Anyone who can reach the port can read and write everything. On your own machine or a home LAN that's fine and is the default. Set a password before Kothai is reachable from anywhere else (a public hostname, a VPS, a forwarded port) and put TLS in front of it. [security.md](security.md) has the threat model.
+
+## Build from source
+
+Instead of pulling the published image, uncomment `build: .` in `docker-compose.yml`, then:
+
+```bash
+docker compose up -d --build
+```
+
+## Without Docker
+
+```bash
+git clone https://github.com/IbrahimTareq/kothai.git
+cd kothai
+corepack enable          # provides the pnpm version pinned in package.json
+pnpm install
+pnpm start
+```

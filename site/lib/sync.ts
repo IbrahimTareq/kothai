@@ -23,7 +23,7 @@ const SECTIONS = [
     title: 'Getting started',
     description: 'Install it and set it up',
     icon: 'Rocket',
-    pages: ['what-is-kothai', 'self-hosting', 'more-ways-to-start', 'configuration', 'development'],
+    pages: ['what-is-kothai', 'self-hosting', 'configuration'],
   },
   {
     dir: 'running-it',
@@ -53,7 +53,7 @@ const SECTIONS = [
 
 // Docs kept in /docs for contributors but not published on the site.
 // Links to them are pointed at GitHub instead of left to 404.
-const UNPUBLISHED = new Set(['design-system'])
+const UNPUBLISHED = new Set(['design-system', 'development'])
 
 type PageEntry = string | { folder: string; title: string; pages: string[] }
 function flattenPages(section: string, pages: PageEntry[]): [string, string][] {
