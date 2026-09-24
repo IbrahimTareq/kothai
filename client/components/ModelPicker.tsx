@@ -8,6 +8,7 @@ import type { ModelPreset, Residency } from '../types'
 import { relevantModels } from '../domain/modelRelevance'
 import { Button } from '../ui/Button'
 import { Segmented } from '../ui/Segmented'
+import { Input } from '../ui/Input'
 
 export type Role = 'llm' | 'embed' | 'vision'
 
@@ -225,7 +226,8 @@ export function RemoteModelField({
   return (
     <div className="remote-model" ref={box}>
       <div className="remote-model-box">
-        <input
+        <Input
+          compact
           className="remote-model-input mono"
           value={draft}
           disabled={busy}

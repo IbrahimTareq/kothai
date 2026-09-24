@@ -61,16 +61,10 @@
   color: var(--ink-dim);
 }
 
-/* Every field on this surface is one box. They differ only where they must:
-   .danger-input focuses red because it sits in the red confirm, and the
-   combobox stays --text-xs because it lists seventy model ids at a time. */
-.wizard-input,
-.remote-model-input,
-.danger-input{padding:var(--space-8) var(--space-12);font-size:var(--text-sm);color:var(--ink);
-  background:var(--panel-3);border:1px solid var(--line);border-radius:var(--radius-md)}
+/* Every field here is an <Input> (client/ui/Input.tsx) — the box this surface
+   first defined. What is left is layout: the danger confirm's field focuses
+   red and the combobox is compact, both as props, not as rules here. */
 .wizard-input{width:100%}
-.wizard-input:focus,
-.remote-model-input:focus{border-color:var(--line-focus);outline:none}
 
 .settings-loading{font-family:var(--font-mono);color:var(--ink-faint);font-size:var(--text-xs);
   letter-spacing:var(--tracking-mono);padding:var(--space-32) 0}
@@ -292,24 +286,14 @@
 }
 .danger-confirm > label b { color: var(--ink); font-weight: var(--fw-medium); }
 .danger-confirm-row { display: flex; flex-wrap: wrap; gap: var(--space-8); }
-.danger-input {
-  flex: 1 1 140px;
-  min-width: 0;
-  background: var(--bg);
-}
-.danger-input:focus { outline: none; border-color: var(--danger); }
-.danger-input::placeholder { color: var(--ink-faint); }
+.danger-input { flex: 1 1 140px; }
 
 /* Endpoint model field — a combobox, not a native datalist. The browser's own
    dropdown cannot be styled, renders differently everywhere, and offered all
    seventy of an endpoint's models for every role. */
 .remote-model { position: relative; padding: var(--space-12) 0; }
 .remote-model-box { display: flex; align-items: center; gap: var(--space-4); }
-.remote-model-input {
-  flex: 1;
-  font-size: var(--text-xs);
-}
-.remote-model-input:disabled { opacity: 0.5; }
+.remote-model-input { flex: 1; }
 /* .btn--icon supplies the square box; it keeps the field's own --panel-3 fill
    because it is attached to the input rather than sitting on the card. */
 .remote-model-toggle { color: var(--ink-faint); background: var(--panel-3); }

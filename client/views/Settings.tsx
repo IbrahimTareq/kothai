@@ -22,6 +22,7 @@ import type { Residency, SettingsResponse, VaultStatus } from '../types'
 import { Button } from '../ui/Button'
 import { PageHeader } from '../ui/PageHeader'
 import { Segmented } from '../ui/Segmented'
+import { Input } from '../ui/Input'
 
 export function SettingsView({
   vault,
@@ -458,7 +459,8 @@ export function SettingsView({
                         Type <b>{WIPE_TOKEN}</b> to confirm.
                       </label>
                       <div className="danger-confirm-row">
-                        <input
+                        <Input
+                          danger
                           id="wipe-confirm"
                           className="danger-input mono"
                           value={wipeConfirm}

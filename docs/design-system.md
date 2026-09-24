@@ -77,6 +77,16 @@ distinct components with their own box, but each is still a raw `<button>` a
 view drew. They sit on a ratchet
 (below) until each becomes `<Button>` or its own primitive in `client/ui/`.
 
+**Boxed text fields are `<Input>` and `<Textarea>`** (`client/ui/Input.tsx`):
+Settings' field box, made the box for every surface. `compact` for fields that
+list many short values (the model combobox, the rule-tag filter); `danger`
+focuses red inside a destructive confirm. Seven boxed fields had drifted into
+five backgrounds, three focus colours, three paddings and two radii, two with
+no focus style at all; every one now reaches 44px on touch, not only the erase
+confirm. In-place editors — a canvas note, a chat or space rename, a tag pill,
+the composers, Everything's underline search — take the shape of what they edit
+and stay raw fields on the ratchet below.
+
 **Every page opens with `<PageHeader>`** (`client/ui/`). Two rows: identity
 (`lead`, `title`, a mono `meta` count, `actions` on the right) over a toolbar
 of `filters` on the left — what is shown — and `display` on the right — how
@@ -158,9 +168,10 @@ a dashed add affordance.
 The markup half of the same rule: outside `client/ui/`, any `className`
 carrying `btn` or `btn--*` fails. It has no escape hatch — use `<Button>`.
 
-And a raw `<button>` outside `client/ui/` is debt on a ratchet.
-`scripts/button-baseline.json` records each file's count (65 across 14 files
-when it landed), and a count must match it exactly: one above is new debt, one
+And a raw `<button>` or raw field (`<input>`, `<textarea>`, `<select>`)
+outside `client/ui/` is debt on a ratchet. `scripts/raw-controls-baseline.json`
+records each file's counts (65 buttons across 14 files when it landed; fields
+joined at 11), and a count must match it exactly: one above is new debt, one
 below means the baseline has to be lowered to record the payment. A new control
 is a `<Button>` or a new primitive in `client/ui/`, never a fresh box in a view.
 The baseline is diffed against `HEAD` like the shape ratchet's, so raising a

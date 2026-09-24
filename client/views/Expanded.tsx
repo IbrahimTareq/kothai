@@ -13,6 +13,7 @@ import { useScrollEdges } from '../layout/useScrollEdges'
 import type { Collection, UIItem } from '../types'
 import { Button } from '../ui/Button'
 import { Menu } from '../ui/Menu'
+import { Textarea } from '../ui/Input'
 
 function openUrl(url?: string | null) {
   if (url) window.open(url, '_blank')
@@ -472,7 +473,7 @@ export function ExpandedView({
 
             <section className="exp-sec">
               <div className="exp-sec-h">Notes</div>
-              <textarea
+              <Textarea
                 className="exp-note"
                 placeholder="Type here to add a note…"
                 value={note}

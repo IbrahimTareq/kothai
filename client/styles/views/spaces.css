@@ -4,7 +4,6 @@
 .spaces-view { display: flex; flex-direction: column; height: 100%; overflow: hidden; padding-top: var(--topbar-h); }
 .spaces-scroll { flex: 1; overflow-y: auto; padding: var(--space-20) var(--space-28) var(--space-22); }
 .space-form { display: flex; gap: var(--space-8); padding: var(--space-20) var(--space-28) 0; flex-wrap: wrap; }
-.space-form-name, .space-form-tags { background: var(--panel); border: 1px solid var(--line); color: var(--ink); border-radius: var(--radius-md); padding: var(--space-10) var(--space-12); font-size:var(--text-sm); }
 .space-form-name { min-width: 200px; }
 .space-form-tags { flex: 1; min-width: 220px; }
 .spaces-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-14); }
@@ -64,8 +63,7 @@
    each row is a real tag with its live item-count (the rule's reach). */
 .coll-ruleadd { display: inline-flex; }
 .rulepop-hint { margin: 0; font-size:var(--text-xs); line-height: 1.45; color: var(--ink-dim); }
-.rulepop-input { width: 100%; box-sizing: border-box; background: transparent; border: 1px solid var(--line); color: var(--ink); border-radius: var(--radius-md); padding: var(--space-6) var(--space-10); font-size:var(--text-xs); }
-.rulepop-input:focus { outline: none; border-color: var(--ink-dim); }
+.rulepop-input { width: 100%; }
 .rulepop-list { display: flex; flex-direction: column; gap: var(--space-2); max-height: 210px; overflow-y: auto; }
 .rulepop-item { display: flex; align-items: center; justify-content: space-between; gap: var(--space-10); background: transparent; border: 0; color: var(--ink); font: inherit; font-size:var(--text-sm); text-align: left; padding: var(--space-8) var(--space-8); border-radius: var(--radius); cursor: pointer; } /* token-lint-ignore: rule-tag popover list item — not a standalone button */
 .rulepop-item:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }

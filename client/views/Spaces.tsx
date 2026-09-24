@@ -15,6 +15,7 @@ import { Button } from '../ui/Button'
 import { PageHeader } from '../ui/PageHeader'
 import { Segmented } from '../ui/Segmented'
 import { Popover } from '../ui/Popover'
+import { Input } from '../ui/Input'
 
 interface SpacesViewProps {
   collections: Collection[]
@@ -62,7 +63,7 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
 
       {creating && (
         <div className="space-form">
-          <input
+          <Input
             className="space-form-name"
             autoFocus
             placeholder="Space name…"
@@ -73,7 +74,7 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
               if (e.key === 'Escape') setCreating(false)
             }}
           />
-          <input
+          <Input
             className="space-form-tags mono"
             placeholder="smart tags (comma-separated, optional)"
             value={tags}
@@ -359,7 +360,8 @@ export function CollectionView({
                 trigger={<button className={`chip coll-addtag${addingTag ? ' on' : ''}`}>+ rule tag</button>}
               >
                 <p className="rulepop-hint">Items tagged with any of these automatically join this space.</p>
-                <input
+                <Input
+                  compact
                   className="rulepop-input mono"
                   value={tagDraft}
                   placeholder="filter or add a tag…"

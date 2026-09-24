@@ -74,16 +74,21 @@ const COMMENTS = /(?<=^|[\s{])(?:\/\*[\s\S]*?\*\/|\/\/.*$)/gm
 /** Raw <button> tags in a component — each one a box <Button> did not draw. */
 export const countRawButtons = (tsx: string) => (tsx.replace(COMMENTS, '').match(/<button(?=[\s>/])/g) || []).length
 
-/** Compare per-file raw button counts against the ratchet's baseline. It must
- *  match exactly: a count above it is new debt, and one below it is paid-down
- *  debt the baseline has to record, or the room would be spent again later. */
-export function checkRawButtons(counts: Record<string, number>, baseline: Record<string, number>) {
+/** Raw <input>, <textarea> and <select> tags — fields <Input> did not draw. */
+export const countRawFields = (tsx: string) =>
+  (tsx.replace(COMMENTS, '').match(/<(?:input|textarea|select)(?=[\s>/])/g) || []).length
+
+/** Compare per-file raw counts of one control against the ratchet's baseline.
+ *  It must match exactly: a count above it is new debt, and one below it is
+ *  paid-down debt the baseline has to record, or the room would be spent again
+ *  later. `what` names the control in the report. */
+export function checkRaw(counts: Record<string, number>, baseline: Record<string, number>, what: string) {
   const failures: string[] = []
   for (const [file, n] of Object.entries(counts)) {
     const base = baseline[file] ?? 0
-    if (n > base) failures.push(`${file}: ${n} raw <button>, baseline is ${base}`)
+    if (n > base) failures.push(`${file}: ${n} raw ${what}, baseline is ${base}`)
     else if (n < base)
-      failures.push(`${file}: down to ${n} — ${n ? `lower ${file} to ${n}` : `remove ${file}`} in the baseline`)
+      failures.push(`${file}: down to ${n} — lower ${file} to ${n} in the baseline`)
   }
   for (const [file, base] of Object.entries(baseline))
     if (!(file in counts) && base > 0) failures.push(`${file}: no longer counted — remove ${file} from the baseline`)

@@ -15,7 +15,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { join, dirname, basename, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { checkRawButtons, countRawButtons, findBtnClass, findButtonChrome } from './button-chrome.ts'
+import { checkRaw, countRawButtons, countRawFields, findBtnClass, findButtonChrome } from './button-chrome.ts'
 import { checkAgainstHead } from './lint-shape.ts'
 
 const CLIENT = join(dirname(fileURLToPath(import.meta.url)), '..', 'client')
@@ -203,27 +203,31 @@ for (const full of walk(CLIENT)) {
   }
 }
 
-/* ── raw <button>, on a ratchet ────────────────────────────────────────────
+/* ── raw controls, on a ratchet ────────────────────────────────────────────
  * The check above keeps .btn's spelling in <Button>; it cannot stop a raw
  * <button> with a class of its own, which is how every other button box in
- * the app began. Those are counted per file in button-baseline.json and the
- * count may only fall. A new control is a <Button>, or a new primitive in
- * client/ui/ — never a fresh box in a view.
+ * the app began — and fields drifted the same way, seven boxed ones into five
+ * backgrounds and three focus colours. Raw <button>s and raw fields (<input>,
+ * <textarea>, <select>) are counted per file in raw-controls-baseline.json and
+ * each count may only fall. A new control is a <Button>, an <Input>, or a new
+ * primitive in client/ui/ — never a fresh box in a view.
  *
  * Raising a count by hand is what an agent reaches for when this fails, so
  * the baseline is also diffed against HEAD, exactly as lint-shape's is: a
  * higher number cannot pass until it has been committed. */
-const BUTTON_BASELINE = join(dirname(fileURLToPath(import.meta.url)), 'button-baseline.json')
-const buttonCounts = Object.fromEntries(
-  walk(CLIENT)
-    .filter(f => !f.startsWith(`${join(CLIENT, 'ui')}/`))
-    .map(f => [relative(join(CLIENT, '..'), f), countRawButtons(readFileSync(f, 'utf8'))]),
-)
-const buttonBaseline: Record<string, { buttons: number }> = JSON.parse(readFileSync(BUTTON_BASELINE, 'utf8'))
-let buttonHead = {}
+const CONTROLS_BASELINE = join(dirname(fileURLToPath(import.meta.url)), 'raw-controls-baseline.json')
+const RAW_CONTROLS = [
+  { key: 'buttons', what: '<button>', count: countRawButtons, use: '<Button>' },
+  { key: 'fields', what: 'field', count: countRawFields, use: '<Input> or <Textarea>' },
+]
+const viewSources = walk(CLIENT)
+  .filter(f => !f.startsWith(`${join(CLIENT, 'ui')}/`))
+  .map(f => [relative(join(CLIENT, '..'), f), readFileSync(f, 'utf8')])
+const controlsBaseline: Record<string, Record<string, number>> = JSON.parse(readFileSync(CONTROLS_BASELINE, 'utf8'))
+let controlsHead = {}
 try {
-  buttonHead = JSON.parse(
-    execFileSync('git', ['show', 'HEAD:scripts/button-baseline.json'], {
+  controlsHead = JSON.parse(
+    execFileSync('git', ['show', 'HEAD:scripts/raw-controls-baseline.json'], {
       cwd: join(CLIENT, '..'),
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
@@ -232,14 +236,16 @@ try {
 } catch {
   // not committed yet — every entry then reads as new, and fails below
 }
-const buttonFailures = [
-  ...checkRawButtons(buttonCounts, Object.fromEntries(Object.entries(buttonBaseline).map(([f, v]) => [f, v.buttons]))),
-  ...checkAgainstHead(buttonBaseline, buttonHead),
-]
-for (const f of buttonFailures) {
-  report.push(
-    `  ${f}  [raw-button]\n      use <Button>, or add a primitive to client/ui/ — scripts/button-baseline.json`,
-  )
+for (const raw of RAW_CONTROLS) {
+  const counts = Object.fromEntries(viewSources.map(([f, src]) => [f, raw.count(src)]))
+  const base = Object.fromEntries(Object.entries(controlsBaseline).map(([f, v]) => [f, v[raw.key] ?? 0]))
+  for (const f of checkRaw(counts, base, raw.what)) {
+    report.push(`  ${f}  [raw-${raw.key}]\n      use ${raw.use}, or add a primitive to client/ui/`)
+    failures++
+  }
+}
+for (const f of checkAgainstHead(controlsBaseline, controlsHead)) {
+  report.push(`  ${f}  [raw-controls]\n      a count in scripts/raw-controls-baseline.json may only fall`)
   failures++
 }
 

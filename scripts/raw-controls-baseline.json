@@ -2,8 +2,12 @@
   "client/app/App.tsx": {
     "buttons": 6
   },
+  "client/components/Canvas.tsx": {
+    "fields": 2
+  },
   "client/components/Capture.tsx": {
-    "buttons": 3
+    "buttons": 3,
+    "fields": 2
   },
   "client/components/Cards.tsx": {
     "buttons": 3
@@ -12,22 +16,29 @@
     "buttons": 1
   },
   "client/components/Chats.tsx": {
-    "buttons": 2
+    "buttons": 2,
+    "fields": 1
   },
   "client/components/EndpointPicker.tsx": {
     "buttons": 1
+  },
+  "client/components/ImportSection.tsx": {
+    "fields": 1
   },
   "client/components/ModelPicker.tsx": {
     "buttons": 4
   },
   "client/views/Core.tsx": {
-    "buttons": 9
+    "buttons": 9,
+    "fields": 2
   },
   "client/views/Expanded.tsx": {
-    "buttons": 5
+    "buttons": 5,
+    "fields": 1
   },
   "client/views/Gallery.tsx": {
-    "buttons": 4
+    "buttons": 4,
+    "fields": 1
   },
   "client/views/Onboarding.tsx": {
     "buttons": 1
@@ -36,6 +47,7 @@
     "buttons": 4
   },
   "client/views/Spaces.tsx": {
-    "buttons": 6
+    "buttons": 6,
+    "fields": 1
   }
 }

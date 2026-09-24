@@ -7,6 +7,7 @@ import { SettingsGroup, SettingsRow, RowStatus } from './SettingsRow'
 import { API, apiError } from '../data/api'
 import type { TelegramState } from '../types'
 import { Button } from '../ui/Button'
+import { Input } from '../ui/Input'
 
 export function TelegramSection() {
   const [state, setState] = useState<TelegramState | null>(null)
@@ -83,7 +84,7 @@ export function TelegramSection() {
               </Button>
             ) : (
               <>
-                <input
+                <Input
                   type="password"
                   className="wizard-input mono"
                   value={token}

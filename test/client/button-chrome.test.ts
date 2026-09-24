@@ -7,7 +7,7 @@
 // which is exactly how .conn-btn and .wizard-test came to exist.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { checkRawButtons, countRawButtons, findBtnClass, findButtonChrome } from '../../scripts/button-chrome.ts'
+import { checkRaw, countRawButtons, countRawFields, findBtnClass, findButtonChrome } from '../../scripts/button-chrome.ts'
 
 test('flags a rule that builds a whole button box', () => {
   const css = `.my-btn{padding:var(--space-8) var(--space-14);border-radius:var(--radius-md);
@@ -90,22 +90,35 @@ test('does not count <Button> or a <button> named in a comment', () => {
 })
 
 test('fails a file whose raw buttons rose, or a new file with any', () => {
-  const fails = checkRawButtons({ 'a.tsx': 3, 'b.tsx': 1 }, { 'a.tsx': 2 })
+  const fails = checkRaw({ 'a.tsx': 3, 'b.tsx': 1 }, { 'a.tsx': 2 }, '<button>')
   assert.equal(fails.length, 2)
   assert.match(fails[0], /a\.tsx: 3 raw <button>, baseline is 2/)
   assert.match(fails[1], /b\.tsx: 1 raw <button>, baseline is 0/)
 })
 
 test('fails a baseline left looser than the file, so the ratchet stays tight', () => {
-  assert.match(checkRawButtons({ 'a.tsx': 1 }, { 'a.tsx': 2 })[0], /lower a\.tsx to 1/)
-  assert.match(checkRawButtons({}, { 'gone.tsx': 2 })[0], /remove gone\.tsx/)
+  assert.match(checkRaw({ 'a.tsx': 1 }, { 'a.tsx': 2 }, '<button>')[0], /lower a\.tsx to 1/)
+  assert.match(checkRaw({}, { 'gone.tsx': 2 }, '<button>')[0], /remove gone\.tsx/)
 })
 
 test('passes when every count matches its baseline', () => {
-  assert.deepEqual(checkRawButtons({ 'a.tsx': 2, 'b.tsx': 0 }, { 'a.tsx': 2 }), [])
+  assert.deepEqual(checkRaw({ 'a.tsx': 2, 'b.tsx': 0 }, { 'a.tsx': 2 }, '<button>'), [])
 })
 
 test('a /* inside a string does not open a comment', () => {
   // Core.tsx's accept="image/*" once swallowed the attach button after it.
   assert.equal(countRawButtons(`<input accept="image/*" />\n<button>a</button>\n{/* note */}`), 1)
+})
+
+// Fields drifted the way buttons did — seven boxed ones in five backgrounds —
+// so raw <input>, <textarea> and <select> go on the same ratchet, beside
+// <Input> and <Textarea> in client/ui/.
+
+test('counts raw fields of all three kinds, not their client/ui components', () => {
+  const src = `<input value={a} />\n<textarea\n  value={b}\n/>\n<select>{o}</select>\n<Input /><Textarea />`
+  assert.equal(countRawFields(src), 3)
+})
+
+test('names the tag it is ratcheting in its report', () => {
+  assert.match(checkRaw({ 'a.tsx': 2 }, { 'a.tsx': 1 }, 'field')[0], /a\.tsx: 2 raw field, baseline is 1/)
 })

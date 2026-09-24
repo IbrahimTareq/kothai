@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { API } from '../data/api'
 import type { EndpointOption } from '../types'
 import { Button } from '../ui/Button'
+import { Input } from '../ui/Input'
 
 export interface EndpointChoice {
   providerId: string
@@ -94,7 +95,7 @@ export function EndpointPicker({
           <span className="wizard-field-label">
             API key{!picked.needsKey && <span className="wizard-optional"> — not needed for this one</span>}
           </span>
-          <input
+          <Input
             className="wizard-input mono"
             type="password"
             value={key}
