@@ -15,6 +15,7 @@ import {
   findBtnClass,
   findEyebrowChrome,
   findButtonChrome,
+  findUnreducedMotion,
 } from '../../scripts/button-chrome.ts'
 
 test('flags a rule that builds a whole button box', () => {
@@ -164,4 +165,31 @@ test('flags a rule that sets small text in caps', () => {
 test('leaves caps at control size alone, and small text that is not in caps', () => {
   assert.deepEqual(findEyebrowChrome(`.cta{font-size:var(--text-xs);text-transform:uppercase}`), [])
   assert.deepEqual(findEyebrowChrome(`.meta{font-size:var(--text-2xs);color:var(--ink-faint)}`), [])
+})
+
+// The rule the fab's reduced-motion block states — keep the state change, drop
+// the movement — was honoured in four places and missed in five, so the capture
+// modal still slid and scaled for someone who had asked their system not to.
+
+const MOVE = `@keyframes rise{from{transform:translateY(8px)}to{transform:none}}`
+const FADE = `@keyframes fade{from{opacity:0}to{opacity:1}}`
+
+test('flags a rule that animates movement with no reduced-motion counterpart', () => {
+  const hits = findUnreducedMotion([{ file: 'a.css', css: `${MOVE}\n.panel{animation:rise .3s}` }])
+  assert.deepEqual(
+    hits.map(h => `${h.file}:${h.line} ${h.selector} ${h.keyframes}`),
+    ['a.css:2 .panel rise'],
+  )
+})
+
+test('passes when a reduced-motion block names the selector, in any sheet', () => {
+  const sheets = [
+    { file: 'a.css', css: `${MOVE}\n.panel{animation:rise .3s}` },
+    { file: 'b.css', css: '@media (prefers-reduced-motion:reduce){.panel{animation-name:fade}}' },
+  ]
+  assert.deepEqual(findUnreducedMotion(sheets), [])
+})
+
+test('leaves an animation that only fades alone', () => {
+  assert.deepEqual(findUnreducedMotion([{ file: 'a.css', css: `${FADE}\n.panel{animation:fade .3s}` }]), [])
 })

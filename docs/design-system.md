@@ -48,6 +48,13 @@ the right move is to use the nearest step, not to add one.
 **Spacing above 48px is layout, not rhythm** — mobile composer clearance, hero
 padding. Those stay literal and the linter ignores them.
 
+**Reduced motion keeps the state change and drops the movement.** Under
+`prefers-reduced-motion: reduce` a fade stays and a slide, scale or sweep does
+not: the capture modal fades instead of rising, the loading shimmer holds still,
+the thinking dots pulse without bouncing. `lint:tokens` fails any rule that
+animates `transform` or `background-position` without a rule for the same
+selector in a reduced-motion block.
+
 **Motion at or above .5s is choreography, not feedback** — the thinking dots,
 caret blink, skeleton sheen, fab ring. Those stay bespoke in their `@keyframes`
 and are deliberately off the duration scale.

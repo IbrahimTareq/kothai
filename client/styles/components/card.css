@@ -176,6 +176,9 @@
     color-mix(in srgb, var(--ink) 4%, transparent) 60%);
   background-size:200% 100%;animation:skeleton-sheen 1.4s ease infinite}
 @keyframes skeleton-sheen{to{background-position:-200% 0}}
+/* Reduced motion: the skeleton still says "loading" by its shape; the sheen
+   sweeping across it is movement, so it holds still. */
+@media (prefers-reduced-motion:reduce){.card-skeleton{animation:none}}
 /* The same skeleton, shaped to a tile whose row exists but whose caption and
    picture haven't arrived: one media box plus two caption lines. Height is set
    inline from phHeight so the tile does not resize when its picture lands. */

@@ -23,6 +23,7 @@ import {
   findBtnClass,
   findButtonChrome,
   findEyebrowChrome,
+  findUnreducedMotion,
 } from './button-chrome.ts'
 import { checkAgainstHead } from './lint-shape.ts'
 
@@ -153,6 +154,21 @@ for (const file of files) {
     )
     failures++
   }
+}
+
+/* ── motion with no reduced-motion counterpart ─────────────────────────────
+ * The fab's reduced-motion block states the rule: keep the state change, drop
+ * the movement. It was honoured for the fab, the view swap and Ask's mode
+ * change, and missed for the capture modal, the loading shimmer, the thinking
+ * dots and the detect chip — which still slid, scaled and swept for someone
+ * who had asked their system not to. An animation that moves now needs a rule
+ * for the same selector inside a prefers-reduced-motion block. */
+for (const hit of findUnreducedMotion(files.map(f => ({ file: f, css: readFileSync(join(STYLES, f), 'utf8') })))) {
+  report.push(
+    `  ${hit.file}:${hit.line}  [reduced-motion] ${hit.selector} moves (${hit.keyframes}) with no reduced-motion rule` +
+      `\n      add it to a @media (prefers-reduced-motion:reduce) block: keep any fade, drop the movement`,
+  )
+  failures++
 }
 
 /* ── inline styles in components ──────────────────────────────────────────

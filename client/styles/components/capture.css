@@ -28,6 +28,11 @@
 /* exit: replay in reverse before unmount (driven by the `closing` class) */
 .cap-overlay.closing{animation:cap-fade-out var(--dur-fast) ease forwards}
 .cap-overlay.closing .cap-modal{animation:cap-out var(--dur-fast) ease forwards}
+/* Reduced motion: the modal still fades in and out; it no longer rises and scales. */
+@media (prefers-reduced-motion:reduce){
+  .cap-modal{animation-name:exp-fade}
+  .cap-overlay.closing .cap-modal{animation-name:cap-fade-out}
+}
 @keyframes cap-fade-out{from{opacity:1}to{opacity:0}}
 @keyframes cap-out{from{opacity:1;transform:none}to{opacity:0;transform:translateY(10px) scale(.985)}}
 /* Elevated, opaque field so it reads clearly against the dark scrim in both themes */

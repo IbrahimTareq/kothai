@@ -114,3 +114,35 @@ export function findEyebrowChrome(css: string) {
   }
   return found
 }
+
+/** Rules that animate movement (a keyframes block changing transform or
+ *  background-position) with no rule for the same selector inside any
+ *  prefers-reduced-motion block. Reduced motion keeps the state change and
+ *  drops the movement, so a fade is left alone. */
+export function findUnreducedMotion(sheets: { file: string; css: string }[]) {
+  const clean = sheets.map(s => ({ file: s.file, css: s.css.replace(COMMENT, m => m.replace(/[^\n]/g, ' ')) }))
+  const moving = new Set<string>()
+  const reduced = new Set<string>()
+  const norm = (sel: string) => sel.trim().replace(/\s+/g, ' ')
+  for (const { css } of clean) {
+    for (const m of css.matchAll(/@keyframes\s+([\w-]+)\s*\{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/g))
+      if (/transform|background-position/.test(m[2])) moving.add(m[1])
+    for (const m of css.matchAll(/@media[^{]*prefers-reduced-motion[^{]*\{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/g))
+      for (const r of m[1].matchAll(/([^{}]+)\{[^{}]*\}/g)) for (const sel of r[1].split(',')) reduced.add(norm(sel))
+  }
+  const found: { file: string; line: number; selector: string; keyframes: string }[] = []
+  for (const { file, css } of clean) {
+    const outside = css
+      .replace(/@keyframes[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, m => m.replace(/[^\n]/g, ' '))
+      .replace(/@media[^{]*prefers-reduced-motion[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, m => m.replace(/[^\n]/g, ' '))
+    for (const m of outside.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const anim = m[2].match(/animation(?:-name)?\s*:\s*([^;]*)/)
+      const name = anim && anim[1].split(/[\s,]+/).find(w => moving.has(w))
+      if (!name) continue
+      const line = css.slice(0, m.index + m[1].length - m[1].trimStart().length).split('\n').length
+      for (const sel of m[1].split(','))
+        if (!reduced.has(norm(sel))) found.push({ file, line, selector: norm(sel), keyframes: name })
+    }
+  }
+  return found
+}
