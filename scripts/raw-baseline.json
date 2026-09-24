@@ -81,8 +81,11 @@
   "client/views/SetupWizard.tsx": {
     "buttons": 4
   },
-  "client/views/Spaces.tsx": {
-    "buttons": 3,
+  "client/views/Space.tsx": {
+    "buttons": 2,
     "fields": 1
+  },
+  "client/views/Spaces.tsx": {
+    "buttons": 1
   }
 }

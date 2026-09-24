@@ -53,7 +53,7 @@ export function matchesLocal(item: UIItem, query: PagerQuery): boolean {
   // "is this unknown note newer than what's loaded" check would treat any
   // vault-wide change as belonging to the open collection and leak unrelated
   // items into its board. Members added while a Space is open show up next
-  // full fetch instead (Spaces.tsx's CollectionView already handles removal
+  // full fetch instead (Space.tsx's CollectionView already handles removal
   // locally via removeLocal, so this only affects the addition path).
   if (query.collection) return false
   // Mirrors applyFilters' OR-within-a-facet: a note matches if it is ANY of the

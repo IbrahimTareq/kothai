@@ -31,10 +31,6 @@
     "lines": 535,
     "exports": 1
   },
-  "client/views/Spaces.tsx": {
-    "lines": 471,
-    "exports": 2
-  },
   "server/ai/enrich.ts": {
     "lines": 856,
     "exports": 13
@@ -82,7 +78,7 @@
   "_governance": {
     "claudeMdLines": 45,
     "cleanCodeRulesLines": 41,
-    "baselineEntries": 20,
+    "baselineEntries": 19,
     "exportTotal": 528
   }
 }
