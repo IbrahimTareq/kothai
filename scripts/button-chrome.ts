@@ -64,3 +64,28 @@ export function findBtnClass(tsx: string) {
   }
   return lines
 }
+
+// Comments are stripped first: prose explaining why something is not a
+// <button> is not one. A comment must open after whitespace or `{`, so the
+// `/*` in accept="image/*" and the `//` in a URL are left alone — the former
+// once swallowed Core.tsx's attach button up to the next `*/`.
+const COMMENTS = /(?<=^|[\s{])(?:\/\*[\s\S]*?\*\/|\/\/.*$)/gm
+
+/** Raw <button> tags in a component — each one a box <Button> did not draw. */
+export const countRawButtons = (tsx: string) => (tsx.replace(COMMENTS, '').match(/<button(?=[\s>/])/g) || []).length
+
+/** Compare per-file raw button counts against the ratchet's baseline. It must
+ *  match exactly: a count above it is new debt, and one below it is paid-down
+ *  debt the baseline has to record, or the room would be spent again later. */
+export function checkRawButtons(counts: Record<string, number>, baseline: Record<string, number>) {
+  const failures: string[] = []
+  for (const [file, n] of Object.entries(counts)) {
+    const base = baseline[file] ?? 0
+    if (n > base) failures.push(`${file}: ${n} raw <button>, baseline is ${base}`)
+    else if (n < base)
+      failures.push(`${file}: down to ${n} — ${n ? `lower ${file} to ${n}` : `remove ${file}`} in the baseline`)
+  }
+  for (const [file, base] of Object.entries(baseline))
+    if (!(file in counts) && base > 0) failures.push(`${file}: no longer counted — remove ${file} from the baseline`)
+  return failures
+}

@@ -12,9 +12,11 @@
  * imagery, brand colours, letterbox backgrounds — and always say why.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { join, dirname, basename } from 'node:path'
+import { execFileSync } from 'node:child_process'
+import { join, dirname, basename, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { findBtnClass, findButtonChrome } from './button-chrome.ts'
+import { checkRawButtons, countRawButtons, findBtnClass, findButtonChrome } from './button-chrome.ts'
+import { checkAgainstHead } from './lint-shape.ts'
 
 const CLIENT = join(dirname(fileURLToPath(import.meta.url)), '..', 'client')
 const STYLES = join(CLIENT, 'styles')
@@ -117,7 +119,7 @@ for (const file of files) {
   for (const hit of findButtonChrome(readFileSync(join(STYLES, file), 'utf8'))) {
     report.push(
       `  ${file}:${hit.line}  [button-chrome] ${hit.selector} builds a button box` +
-        `\n      use .btn plus a size (--xs/--sm/--lg) and a tone (--solid/--ghost/--icon/--danger)`,
+        `\n      use <Button> (client/ui/Button.tsx) with its size/tone/danger props`,
     )
     failures++
   }
@@ -201,6 +203,46 @@ for (const full of walk(CLIENT)) {
   }
 }
 
+/* ── raw <button>, on a ratchet ────────────────────────────────────────────
+ * The check above keeps .btn's spelling in <Button>; it cannot stop a raw
+ * <button> with a class of its own, which is how every other button box in
+ * the app began. Those are counted per file in button-baseline.json and the
+ * count may only fall. A new control is a <Button>, or a new primitive in
+ * client/ui/ — never a fresh box in a view.
+ *
+ * Raising a count by hand is what an agent reaches for when this fails, so
+ * the baseline is also diffed against HEAD, exactly as lint-shape's is: a
+ * higher number cannot pass until it has been committed. */
+const BUTTON_BASELINE = join(dirname(fileURLToPath(import.meta.url)), 'button-baseline.json')
+const buttonCounts = Object.fromEntries(
+  walk(CLIENT)
+    .filter(f => !f.startsWith(`${join(CLIENT, 'ui')}/`))
+    .map(f => [relative(join(CLIENT, '..'), f), countRawButtons(readFileSync(f, 'utf8'))]),
+)
+const buttonBaseline: Record<string, { buttons: number }> = JSON.parse(readFileSync(BUTTON_BASELINE, 'utf8'))
+let buttonHead = {}
+try {
+  buttonHead = JSON.parse(
+    execFileSync('git', ['show', 'HEAD:scripts/button-baseline.json'], {
+      cwd: join(CLIENT, '..'),
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }),
+  )
+} catch {
+  // not committed yet — every entry then reads as new, and fails below
+}
+const buttonFailures = [
+  ...checkRawButtons(buttonCounts, Object.fromEntries(Object.entries(buttonBaseline).map(([f, v]) => [f, v.buttons]))),
+  ...checkAgainstHead(buttonBaseline, buttonHead),
+]
+for (const f of buttonFailures) {
+  report.push(
+    `  ${f}  [raw-button]\n      use <Button>, or add a primitive to client/ui/ — scripts/button-baseline.json`,
+  )
+  failures++
+}
+
 /* ── tokens nobody uses ───────────────────────────────────────────────────
  * Every rule above pushes values *into* tokens.css. Nothing pushed back, so
  * the file only ever grew: a --font/--mono alias pair whose comment claimed
@@ -254,7 +296,7 @@ if (failures) {
   console.error(report.join('\n'))
   console.error('\nAdd the value to tokens.css, or annotate the line with')
   console.error('/* token-lint-ignore: why this cannot be a token */\n')
-  console.error('For a button, use .btn and its modifiers instead of a new class.\n')
+  console.error('For a button, use <Button> from client/ui/ instead of a new class.\n')
   process.exit(1)
 }
 console.log(`design token check passed — ${files.length} stylesheets and all component inline styles clean`)

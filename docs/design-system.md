@@ -71,10 +71,11 @@ so the scale describes the app. There are no per-view aliases of `.btn` left —
 `.row-btn` and `.spaces-new-btn` were grouped straight into these rules, and
 `.conn-btn`/`.wizard-test`/`.chat-confirm`/`.onboarding-start`/`.space-form-go`
 each hand-rolled the same box separately; all are gone now, and
-`npm run lint:tokens` fails any new one. (This doesn't cover every button-shaped
-class in the app — `.seg-btn`, `.residency-btn`, `.rail-btn`, and the
-composer's `.send-btn`/`.attach-btn` are distinct components with their own
-box, not `.btn` wearing another name, so they're untouched.)
+`npm run lint:tokens` fails any new one. The other button-shaped classes —
+`.seg-btn`, `.residency-btn`, `.rail-btn`, the composer's
+`.send-btn`/`.attach-btn` and the rest — are distinct components with their own
+box, but each is still a raw `<button>` a view drew. They sit on a ratchet
+(below) until each becomes `<Button>` or its own primitive in `client/ui/`.
 
 A view may still pass a `className` for genuine layout, the way `.mf-delete`
 pins itself right. What it may not do is rebuild the box. (`.chat-more`,
@@ -130,6 +131,14 @@ toolbar — annotated as deferred future migrations, not permanent exceptions).
 
 The markup half of the same rule: outside `client/ui/`, any `className`
 carrying `btn` or `btn--*` fails. It has no escape hatch — use `<Button>`.
+
+And a raw `<button>` outside `client/ui/` is debt on a ratchet.
+`scripts/button-baseline.json` records each file's count (65 across 14 files
+when it landed), and a count must match it exactly: one above is new debt, one
+below means the baseline has to be lowered to record the payment. A new control
+is a `<Button>` or a new primitive in `client/ui/`, never a fresh box in a view.
+The baseline is diffed against `HEAD` like the shape ratchet's, so raising a
+number by hand fails until it is committed.
 
 To allow a value that genuinely cannot be a token, annotate the line and say why:
 
