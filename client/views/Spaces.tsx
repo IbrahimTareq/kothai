@@ -330,19 +330,18 @@ export function CollectionView({
         }
         meta={renaming ? null : `${collItems.length} item${collItems.length === 1 ? '' : 's'}`}
         actions={
-          !renaming && (
+          renaming ? null : armed ? (
+            // Alone while it asks: beside rename, it squeezed a phone's title to 0px.
+            <Confirm inline danger confirmLabel="Delete space" onConfirm={del} onCancel={() => setArmed(false)} />
+          ) : (
             <>
               <Button size="icon" tone="ghost" title="Rename space" aria-label="Rename space" onClick={startRename}>
                 <Icon name="edit" size={14} />
               </Button>
-              {armed ? (
-                <Confirm inline danger confirmLabel="Delete space" onConfirm={del} onCancel={() => setArmed(false)} />
-              ) : (
-                // Arms before it fires: one click on a bare icon should not lose a space.
-                <Button size="icon" tone="ghost" title="Delete space" aria-label="Delete space" onClick={arm}>
-                  <Icon name="trash" size={16} />
-                </Button>
-              )}
+              {/* Arms before it fires: one click on a bare icon should not lose a space. */}
+              <Button size="icon" tone="ghost" title="Delete space" aria-label="Delete space" onClick={arm}>
+                <Icon name="trash" size={16} />
+              </Button>
             </>
           )
         }
