@@ -21,7 +21,7 @@
 .msg-img{display:block;max-width:220px;border-radius:var(--radius);margin-bottom:var(--space-8);border:1px solid var(--line)}
 /* global quick-capture modal (FAB target) */
 .cap-overlay{position:fixed;inset:0;z-index:var(--z-overlay);display:flex;align-items:center;justify-content:center;
-  padding:var(--space-24);background:rgba(0,0,0,.82);backdrop-filter:blur(6px);animation:exp-fade var(--dur-fast) ease}  /* token-lint-ignore: modal scrim, deliberately heavier than --overlay */
+  padding:var(--space-24);background:rgba(0,0,0,.82);backdrop-filter:blur(6px);animation:exp-fade var(--dur-fast) ease}  /* token-lint-ignore: modal scrim, deliberately heavier than --scrim */
 .cap-modal{position:relative;width:min(680px,100%);display:flex;flex-direction:column;align-items:center;gap:var(--space-22);
   animation:cap-in var(--dur-mid) var(--ease-out)}
 @keyframes cap-in{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}

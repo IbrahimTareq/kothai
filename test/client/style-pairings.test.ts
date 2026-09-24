@@ -40,10 +40,10 @@ const PERCEPTIBLE = 2
 // disabled glyphs. design-tokens.test.ts already pins its own floor against the
 // page. Anything inked with it is recessive by construction.
 const RECESSIVE_INK = new Set(['--ink-faint'])
-// --overlay is a scrim over user media, so compositing it over --bg (which is
+// --scrim is the glass over user media, so compositing it over --bg (which is
 // what pairContrast does) models a backdrop that is not really there. The
 // design system lists content overlays as a standing exception.
-const MEDIA_BACKDROP = new Set(['--overlay'])
+const MEDIA_BACKDROP = new Set(['--scrim', '--scrim-hover'])
 
 const walk = (dir: string): string[] =>
   readdirSync(dir, { withFileTypes: true }).flatMap(e =>

@@ -70,6 +70,18 @@
      neither of which had a single consumer — the theme-aware --bg/--ink tokens
      had covered those jobs for a long time. */
   --color-white:#fff;
+  /* The dark glass that a control, badge or label sits on over user imagery,
+     under --color-white. Theme-invariant for the same reason: its backdrop is
+     the photo, not a themed surface. Nine such scrims were literals that had
+     drifted across .42, .45, .5 and .55, and the tile play badge used a themed
+     overlay token (.35 on light), so it paled there while the rest held. */
+  --scrim:rgba(0,0,0,.5);
+  --scrim-hover:rgba(0,0,0,.72);
+  /* Danger for a glyph on the scrim. The themed --danger is a dark red on the
+     light theme, and a delete reddening on hover sat at 1.43:1 on the scrim —
+     under the 3:1 floor, gone. The scrim does not follow the theme, so the red
+     on it cannot either: this is the dark theme's --danger, in both. */
+  --scrim-danger:#ff6a7a;
 
   --bg:#0a0a0a;
   --bg-2:#0d0d0d;          /* raised rows */
@@ -92,8 +104,6 @@
   --line-2:rgba(255,255,255,.06);
   --line-hover:rgba(255,255,255,.22);
   --line-focus:rgba(255,255,255,.28);
-
-  --overlay:rgba(0,0,0,.5);
 
   /* Popover surface. Previously three of the four popovers used --panel (~3%
      opacity), so they rendered near-transparent and unreadable over content
@@ -244,8 +254,6 @@
   --line-2:rgba(0,0,0,.07);
   --line-hover:rgba(0,0,0,.20);
   --line-focus:rgba(0,0,0,.26);
-
-  --overlay:rgba(0,0,0,.35);
 
   --accent:#141414;
   --on-accent:#ffffff;

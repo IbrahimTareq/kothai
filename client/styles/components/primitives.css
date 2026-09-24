@@ -159,12 +159,12 @@
    a photograph, a flat field or an excerpt, in either theme. */
 .tile-plate{position:absolute;top:var(--space-6);left:var(--space-6);z-index:var(--z-content);
   min-width:18px;height:18px;padding:0 var(--space-4);display:grid;place-items:center;
-  border-radius:var(--radius-sm);background:rgba(0,0,0,.55);color:#fff;  /* token-lint-ignore: corner mark floats over user imagery, not over a themed surface */
+  border-radius:var(--radius-sm);background:var(--scrim);color:var(--color-white);
   font-family:var(--font-mono);font-size:var(--text-2xs);letter-spacing:normal}
 .tile-plate.right{left:auto;right:var(--space-6)}
 .tile-play{position:absolute;right:var(--space-8);bottom:var(--space-8);
   width:22px;height:22px;display:grid;place-items:center;
-  border-radius:var(--radius-full);background:var(--overlay);color:var(--color-white)}
+  border-radius:var(--radius-full);background:var(--scrim);color:var(--color-white)}
 
 /* A text save has no picture, so the slot carries the text itself; the top
    padding is the room the corner mark needs in the same corner. */

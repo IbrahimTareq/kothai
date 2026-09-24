@@ -143,10 +143,13 @@ Three things sit outside the system on purpose. Don't "fix" them.
   `--leading-chat`, `--chat-*`, `--shadow-*`) ported from the ai-sdk chatbot
   reference — 13px at 1.65 with soft shadows instead of hairlines. Its *type*
   treatment was promoted to the app-wide default; its *surfaces* remain local.
-- **Content overlays.** Controls and badges that float over user imagery or
-  video use literal black scrims and white glyphs, because their backdrop is the
-  media, not a themed surface. Same for letterbox backgrounds and the dark code
-  block. Each is annotated with `token-lint-ignore` and a reason.
+- **Content overlays.** Controls, badges and labels that float over user
+  imagery or video sit on `--scrim` (`--scrim-hover` when pressed) with a
+  `--color-white` glyph — tokens that are the same in both themes, because
+  their backdrop is the media, not a themed surface. They were literals that
+  had drifted across four alphas, and one used a themed overlay token and paled
+  on light. Letterbox backgrounds and the dark code block are still literal,
+  each annotated with `token-lint-ignore` and a reason.
 
 ## The guardrail
 
@@ -216,7 +219,7 @@ with `--accent-ink` — a legacy alias that resolved to the accent itself — an
 on white in dark, near-black on near-black in light, passing both other layers.
 Every rule declaring `color` and `background` as plain `var()` references is now
 checked in both themes, at 3:1 for controls and a bare perceptibility floor for
-the deliberately recessive ones (`--ink-faint` inks, `--overlay` backdrops).
+the deliberately recessive ones (`--ink-faint` inks, `--scrim` backdrops).
 
 All three read the stylesheets rather than a browser, so they are deterministic
 across machines — unlike pixel screenshots, whose baselines differ between macOS
