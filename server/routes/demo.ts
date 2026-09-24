@@ -35,7 +35,7 @@ export const DEMO = ['1', 'true'].includes((process.env.KOTHAI_DEMO || '').toLow
 // later must not reach the public demo because nobody remembered to list it.
 const ALLOWED: Record<string, RegExp[]> = {
   GET: [
-    /^\/api\/(notes|notes\/delta|status|settings|chats|collections|enrich\/backlog|models\/files)$/,
+    /^\/api\/(notes|notes\/delta|tags|status|settings|chats|collections|enrich\/backlog|models\/files)$/,
     /^\/api\/(notes|chats)\/[^/]+$/,
   ],
   POST: [/^\/api\/(save|ask|collections)$/],

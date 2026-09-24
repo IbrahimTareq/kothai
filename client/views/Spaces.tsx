@@ -1,11 +1,13 @@
 // Spaces.tsx — the Spaces landing: a card for every space, and the draft card
 // that makes a new one. One space's own view is Space.tsx.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Icon } from '../components/icons'
 import type { Collection, UIItem } from '../types'
 import { Button } from '../ui/Button'
 import { PageHeader } from '../ui/PageHeader'
 import { Input } from '../ui/Input'
+import { Chip } from '../ui/Chip'
+import { API } from '../data/api'
 import { useDemo } from '../components/Demo'
 
 interface SpacesViewProps {
@@ -46,6 +48,16 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
   const [tags, setTags] = useState('')
   const demo = useDemo()
   const spent = demo?.spacesLeft === 0 // the demo's daily few (server/routes/demo.ts)
+  // The library's tags, so smart tags are picked rather than typed blind: one
+  // that matches nothing made a space as empty as having none.
+  const [pool, setPool] = useState<{ tag: string; count: number }[]>([])
+  useEffect(() => {
+    if (creating && demo) API.tags().then(setPool)
+  }, [creating, !!demo])
+  const entered = tags.split(',').map(t => t.trim().toLowerCase())
+  const partial = entered.pop() ?? '' // the entry still being typed
+  const offered = pool.filter(t => !entered.includes(t.tag) && t.tag.includes(partial)).slice(0, 4)
+  const pick = (tag: string) => setTags([...entered.filter(Boolean), tag, ''].join(', '))
 
   const cancel = () => {
     setName('')
@@ -133,6 +145,17 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
                         if (e.key === 'Escape') cancel()
                       }}
                     />
+                  )}
+                  {demo && offered.length > 0 && (
+                    <div className="space-draft-tags">
+                      {offered.map(t => (
+                        // mousedown is held back so the field being typed in keeps focus
+                        <Chip key={t.tag} compact add onMouseDown={e => e.preventDefault()} onClick={() => pick(t.tag)}>
+                          {t.tag}
+                          <span className="fc-count">{t.count}</span>
+                        </Chip>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>

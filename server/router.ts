@@ -9,6 +9,7 @@ import {
   handleNotes,
   handleNotesDelta,
   handleGetNote,
+  handleTags,
   handleNoteSlides,
   handleUpdateNote,
   handleDeleteNote,
@@ -74,6 +75,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     if (req.method === 'POST' && p === '/api/ask') return await handleAsk(req, res, viewer)
     if (req.method === 'GET' && p === '/api/notes/delta') return handleNotesDelta(res, url, viewer)
     if (req.method === 'GET' && p === '/api/notes') return handleNotes(res, url, viewer)
+    if (req.method === 'GET' && p === '/api/tags') return handleTags(res, viewer)
     if (req.method === 'GET' && /^\/api\/notes\/[^/]+$/.test(p))
       return handleGetNote(res, decodeURIComponent(p.slice(11)), viewer)
     if (req.method === 'GET' && p === '/api/chats') return handleChats(res, url.searchParams, viewer)

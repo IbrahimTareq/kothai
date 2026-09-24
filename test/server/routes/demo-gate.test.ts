@@ -69,6 +69,7 @@ for (const [method, p] of REFUSED) {
 
 test('the demo still serves the library', async () => {
   assert.equal((await call('GET', '/api/notes')).status, 200)
+  assert.equal((await call('GET', '/api/tags')).status, 200, 'a new space’s tag suggestions')
 })
 
 test('the demo lets a save and a question through to their handlers', async () => {
