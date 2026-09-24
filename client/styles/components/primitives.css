@@ -279,10 +279,6 @@
   border:1px solid var(--line);border-radius:var(--radius-md);
   outline:none;  /* token-lint-ignore: focus is the border brightening to --line-focus below. A field matches :focus-visible on a click too, since it is typed into, so the ring would draw on every click */
   color:var(--ink);font-size:var(--text-sm);transition:border-color var(--dur-fast)}
-/* Fields do not inherit the page's font on their own. Inherit it at zero
-   specificity: a bare .field rule loads after base.css and would beat .mono,
-   dropping Geist Mono from the key, token and model-id fields. */
-:where(.field){font-family:inherit}
 .field::placeholder{color:var(--ink-faint)}
 .field:focus{border-color:var(--line-focus)}
 .field:disabled{opacity:.5}

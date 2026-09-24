@@ -35,9 +35,11 @@
    fill the space and the controls that view it. The rail is the way back
    to Spaces. */
 .coll-name { cursor: pointer; }
-/* renaming swaps the name for a field that takes the rest of the row */
+/* renaming swaps the name for a field that takes the rest of the row. It
+   inherits the title's size, weight and tracking, which a field never takes
+   from its parent: the name used to drop from 600 to 400 when you began. */
 .page-title:has(> .coll-name-input) { flex: 1; }
-.coll-name-input { width: 100%; box-sizing: border-box; min-width: 0; font-size:var(--text-xl); background: var(--panel); border: 1px solid var(--line); color: var(--ink); border-radius: var(--radius-md); padding: var(--space-4) var(--space-10); margin: 0; }
+.coll-name-input { width: 100%; box-sizing: border-box; min-width: 0; font: inherit; letter-spacing: inherit; background: var(--panel); border: 1px solid var(--line); color: var(--ink); border-radius: var(--radius-md); padding: var(--space-4) var(--space-10); margin: 0; }
 .coll-rule { flex: 1; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-6); }
 /* Scrolled rather than wrapped on phones (see foundation/responsive.css); the
    edge with rules behind it fades, the same way the Everything filter bar

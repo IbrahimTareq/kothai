@@ -47,6 +47,12 @@ h1,h2,h3,h4{font-weight:var(--fw-heading);letter-spacing:var(--tracking-heading)
 .mono{font-family:var(--font-mono);letter-spacing:var(--tracking-mono)}
 .dim{color:var(--ink-dim)}
 button{font-family:inherit;letter-spacing:inherit}
+/* Fields get the page's face too; left alone, an input or select falls back to
+   the browser's Arial and a textarea to its monospace. The rename field of a
+   space did exactly that, and its name changed typeface the moment you began
+   editing it. Element specificity on purpose, so .mono still wins on the key,
+   token and model-id fields. */
+input,textarea,select{font-family:inherit}
 a{color:inherit}
 ::selection{background:var(--selection);color:var(--ink)}
 /* The one focus ring. :focus-visible, so a Tab draws it and a click does not;
