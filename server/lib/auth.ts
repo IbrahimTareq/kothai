@@ -61,6 +61,25 @@ export function passwordMatches(input: unknown, password: unknown): boolean {
   return timingSafeEqual(digest(input), digest(password))
 }
 
+// ---- capture token ------------------------------------------------------
+
+// Only the digest is ever stored, so a copied data/ folder does not hand over
+// a working token. No salt or slow hash: the token is 32 random bytes, not a
+// human-chosen password, so there is no dictionary to slow down.
+export function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex')
+}
+
+// Takes the raw Authorization header: anything but `Bearer <token>` is no token.
+export function bearerMatches(header: unknown, storedHash: string | null): boolean {
+  const supplied = typeof header === 'string' ? /^Bearer\s+(\S+)$/i.exec(header.trim())?.[1] : undefined
+  if (!supplied || !storedHash) return false
+  const expected = Buffer.from(storedHash, 'hex')
+  const actual = Buffer.from(hashToken(supplied), 'hex')
+  // A corrupt stored hash decodes short; timingSafeEqual would throw on it.
+  return expected.length === actual.length && timingSafeEqual(expected, actual)
+}
+
 // ---- cookies ------------------------------------------------------------
 
 export function parseCookies(header: unknown): Record<string, string> {

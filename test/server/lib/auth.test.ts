@@ -13,6 +13,8 @@ import {
   clearedCookie,
   isSecureRequest,
   createThrottle,
+  bearerMatches,
+  hashToken,
 } from '../../../server/lib/auth.ts'
 
 const PW = 'correct horse battery staple'
@@ -91,6 +93,29 @@ test('passwordMatches: a length mismatch is compared, not thrown on (timingSafeE
   // would leak the length through the error path.
   assert.doesNotThrow(() => passwordMatches('x', PW))
   assert.equal(passwordMatches('x', PW), false)
+})
+
+// ---- the capture token --------------------------------------------------
+
+test('bearerMatches: accepts the token its hash was made from and rejects a near miss', () => {
+  const hash = hashToken('abc123')
+  assert.equal(bearerMatches('Bearer abc123', hash), true)
+  assert.equal(bearerMatches('bearer abc123', hash), true)
+  assert.equal(bearerMatches('Bearer abc124', hash), false)
+  assert.equal(bearerMatches('Bearer ', hash), false)
+})
+
+test('bearerMatches: only a Bearer header carries the token', () => {
+  const hash = hashToken('abc123')
+  assert.equal(bearerMatches('abc123', hash), false)
+  assert.equal(bearerMatches('Basic abc123', hash), false)
+  for (const junk of [undefined, null, 42, {}]) assert.equal(bearerMatches(junk, hash), false)
+})
+
+test('bearerMatches: no stored token, or a corrupt one, matches nothing', () => {
+  assert.equal(bearerMatches('Bearer abc123', null), false)
+  assert.doesNotThrow(() => bearerMatches('Bearer abc123', 'not-a-hash'))
+  assert.equal(bearerMatches('Bearer abc123', 'not-a-hash'), false)
 })
 
 // ---- Set-Cookie ---------------------------------------------------------

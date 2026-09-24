@@ -7,6 +7,7 @@ import { clockTime } from '../util/format'
 import { ChatRow } from '../components/Chats'
 import { CitedCard, PreviewCard } from '../components/Cards'
 import { parseMarkdown } from '../util/markdown'
+import { writeClipboard } from '../util/clipboard'
 import type { Inline } from '../util/markdown'
 import type { ChatSummary, ThreadMsg, UIItem } from '../types'
 import { Button } from '../ui/Button'
@@ -420,32 +421,6 @@ function AiAnswer({ m, jumpTo }: { m: ThreadMsg; jumpTo: (item: UIItem) => void 
       )}
     </>
   )
-}
-
-// The async clipboard needs a secure origin and an ungranted permission that
-// some contexts simply refuse. Falling back to the old selection-based copy is
-// the difference between a button that works and one that silently does
-// nothing, which is how this first shipped.
-async function writeClipboard(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text)
-    return true
-  } catch {
-    /* try the fallback */
-  }
-  try {
-    const ta = document.createElement('textarea')
-    ta.value = text
-    ta.setAttribute('readonly', '')
-    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none'
-    document.body.appendChild(ta)
-    ta.select()
-    const ok = document.execCommand('copy')
-    document.body.removeChild(ta)
-    return ok
-  } catch {
-    return false
-  }
 }
 
 // Copy the answer as the model wrote it — the Markdown source, not the

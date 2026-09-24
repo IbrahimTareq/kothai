@@ -228,6 +228,14 @@ export interface TelegramState {
   pairingCode: string | null
 }
 
+export interface CaptureTokenState {
+  exists: boolean
+  /** Whether KOTHAI_PASSWORD is set — without it /api/save needs no token. */
+  gated: boolean
+  /** Present only in the response that created it; never sent again. */
+  token?: string
+}
+
 // One entry in the model download cache — a weights file, or a companion-set
 // directory. `usedBy` is the role whose current selection needs it; the server
 // refuses to delete anything with one (server/routes/models.ts).

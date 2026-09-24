@@ -15,6 +15,7 @@ import { SettingsGroup, SettingsRow, RowStatus } from '../components/settings/Se
 import { ConnectionPanel } from '../components/settings/ConnectionPanel'
 import { ImportSection } from '../components/settings/ImportSection'
 import { TelegramSection } from '../components/settings/TelegramSection'
+import { CaptureTokenSection } from '../components/settings/CaptureTokenSection'
 import { AvailabilityRow } from '../components/settings/AvailabilityRow'
 import { ModelFilesRow } from '../components/settings/ModelFilesRow'
 import { API, apiError } from '../data/api'
@@ -335,6 +336,8 @@ export function SettingsView({
           <ImportSection />
 
           <TelegramSection />
+
+          <CaptureTokenSection />
 
           <SettingsGroup label="YOUR DATA">
             <div className="settings-rows">

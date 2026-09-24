@@ -7,8 +7,10 @@
 import path from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { json, readBody } from '../lib/http.ts'
+import { readCaptureTokenHash } from '../data/capture-token.ts'
 import {
   COOKIE_NAME,
+  bearerMatches,
   clearedCookie,
   createThrottle,
   isSecureRequest,
@@ -132,6 +134,19 @@ export async function authGate(
   }
 
   if (hasSession(req, password)) return false
+  // The capture token opens this one route and no other. A token pasted into
+  // a Shortcut or a script can leak, and a leak should cost junk links in the
+  // library, not the library itself — so it cannot read, export, wipe, or
+  // reach /api/capture-token to mint its own replacement. One fixed route, not
+  // an allowlist: a list is what goes stale when a route is added. No throttle
+  // either: 256 random bits cannot be guessed, and a throttle keyed on the
+  // shared proxy address would only let a stranger lock the owner out.
+  if (
+    req.method === 'POST' &&
+    pathname === '/api/save' &&
+    bearerMatches(req.headers.authorization, readCaptureTokenHash())
+  )
+    return false
   if (req.method === 'GET' && PUBLIC_ASSET.test(pathname)) return false
   if (req.method === 'GET' && isNavigation(pathname)) {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' })

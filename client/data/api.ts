@@ -5,6 +5,7 @@ import type {
   Chat,
   ChatMessage,
   ChatSummary,
+  CaptureTokenState,
   Collection,
   ModelFilesResponse,
   ModelStatus,
@@ -321,6 +322,10 @@ export const API = {
   telegram: (): Promise<TelegramState> => apiGet<TelegramState>('/api/telegram'),
   saveTelegram: (botToken: string): Promise<TelegramState> => apiPost<TelegramState>('/api/telegram', { botToken }),
   clearTelegram: (): Promise<TelegramState> => apiDel<TelegramState>('/api/telegram'),
+  // capture token — the response to create is the only one that carries it
+  captureToken: (): Promise<CaptureTokenState> => apiGet<CaptureTokenState>('/api/capture-token'),
+  createCaptureToken: (): Promise<CaptureTokenState> => apiPost<CaptureTokenState>('/api/capture-token'),
+  clearCaptureToken: (): Promise<CaptureTokenState> => apiDel<CaptureTokenState>('/api/capture-token'),
   // first-run: commit the chosen models and kick off their initial download
   // Throws if the endpoint refuses the key; providerId lets it check one /models would take from anyone.
   async checkEndpoint(providerId: string, baseUrl: string, apiKey: string): Promise<void> {

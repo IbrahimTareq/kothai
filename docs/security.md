@@ -8,6 +8,10 @@ Set `KOTHAI_PASSWORD` and the app requires login. Unset, there's no auth at all.
 
 Sessions are 30-day tokens signed with a key derived from the password. Changing the password invalidates all sessions. Login is rate-limited.
 
+## The capture token
+
+An optional token lets a script or a Shortcut save links without signing in. It opens `POST /api/save` and nothing else, so a leaked token costs you junk links, not your library. Only its SHA-256 hash is stored, in `data/capture-token.json` rather than the database, so it never leaves in a backup. Regenerate it in Settings to revoke the old one.
+
 ## The SSRF guard
 
 Every URL Kothai fetches for a link preview is attacker-influenced. The SSRF guard resolves the hostname and blocks private/loopback ranges.

@@ -411,3 +411,5 @@
    like the rest of the row. */
 .telegram-pairing-code{display:inline-block;font-size:var(--text-2xl);letter-spacing:var(--tracking-mono);
   padding:var(--space-8) var(--space-12);background:var(--panel-3);border-radius:var(--radius-md);color:var(--ink)}
+
+.capture-token-actions{display:flex;gap:var(--space-8)}

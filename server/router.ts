@@ -22,6 +22,7 @@ import { handleCheckpoint } from './routes/checkpoint.ts'
 import { handleWipe } from './routes/wipe.ts'
 import { handleModelFiles, handleDeleteModelFile } from './routes/models.ts'
 import { handleAsk } from './routes/ask.ts'
+import { handleGetCaptureToken, handleCreateCaptureToken, handleClearCaptureToken } from './routes/capture-token.ts'
 import { handleChats, handleChat, handleRenameChat, handleDeleteChat } from './routes/chats.ts'
 import {
   handleCollections,
@@ -93,6 +94,11 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       if (req.method === 'GET') return handleGetTelegram(res)
       if (req.method === 'POST') return await handleSaveTelegram(req, res)
       if (req.method === 'DELETE') return handleClearTelegram(res)
+    }
+    if (p === '/api/capture-token') {
+      if (req.method === 'GET') return handleGetCaptureToken(res)
+      if (req.method === 'POST') return handleCreateCaptureToken(res)
+      if (req.method === 'DELETE') return handleClearCaptureToken(res)
     }
     if (req.method === 'POST' && p === '/api/import') return await handleImport(req, res)
     if (req.method === 'GET' && p === '/api/export') return handleExport(res)
