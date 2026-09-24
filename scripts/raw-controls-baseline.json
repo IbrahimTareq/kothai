@@ -1,6 +1,6 @@
 {
   "client/app/App.tsx": {
-    "buttons": 6
+    "buttons": 1
   },
   "client/components/Canvas.tsx": {
     "fields": 2
@@ -27,6 +27,9 @@
   },
   "client/components/ModelPicker.tsx": {
     "buttons": 4
+  },
+  "client/components/RailButton.tsx": {
+    "buttons": 1
   },
   "client/views/Core.tsx": {
     "buttons": 9,

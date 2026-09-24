@@ -19,6 +19,7 @@ import { CoreView } from '../views/Core'
 import { GalleryView } from '../views/Gallery'
 import { SpacesView, CollectionView } from '../views/Spaces'
 import type { UIItem, ViewMode } from '../types'
+import { RailButton } from '../components/RailButton'
 
 // The type ids the board understands, taken from the icon catalogue so the two
 // cannot drift. boardQuery takes it as an argument rather than importing
@@ -377,45 +378,44 @@ export default function App() {
             className={`rail-group rail-tabs${tabIndex >= 0 ? ' has-active' : ''}`}
             style={{ '--tab': lastTab.current } as React.CSSProperties}
           >
-            <button
-              className={`rail-btn${nav === 'all' ? ' active' : ''}`}
+            <RailButton
+              label="Everything"
+              icon="all"
+              active={nav === 'all'}
               onClick={() => {
                 navigate('all')
                 setSearch('')
               }}
-            >
-              <Icon name="all" size={20} />
-              <span className="rail-tip">Everything</span>
-            </button>
-            <button className={`rail-btn${nav === 'core' ? ' active' : ''}`} onClick={goAsk}>
-              <Icon name="ask" size={20} />
-              <span className="rail-tip">Ask</span>
-            </button>
-            <button
-              className={`rail-btn${navTab === 'spaces' ? ' active' : ''}`}
+            />
+            <RailButton label="Ask" icon="ask" active={nav === 'core'} onClick={goAsk} />
+            <RailButton
+              label="Spaces"
+              icon="spaces"
+              active={navTab === 'spaces'}
               onClick={() => {
                 navigate('spaces')
                 setSearch('')
               }}
-            >
-              <Icon name="spaces" size={20} />
-              <span className="rail-tip">Spaces</span>
-            </button>
+            />
             {/* Settings is a page like the three above it, so it rides the same
                 marker. On phones it is the bar's fourth tab; on the desktop
                 rail it is the last of the destinations, above the divider. */}
-            <button className={`rail-btn${nav === 'settings' ? ' active' : ''}`} onClick={toggleSettings}>
-              <Icon name="settings" size={21} />
-              <span className="rail-tip">Settings</span>
-            </button>
+            <RailButton
+              label="Settings"
+              icon="settings"
+              size={21}
+              active={nav === 'settings'}
+              onClick={toggleSettings}
+            />
           </div>
           {/* Appearance, not a destination. Hidden on phones, where the theme
               switch lives at the bottom of Settings instead. */}
           <div className="rail-group">
-            <button className="rail-btn" onClick={() => setTheme(v => (v === 'dark' ? 'light' : 'dark'))}>
-              <Icon name="theme" size={20} />
-              <span className="rail-tip">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
-            </button>
+            <RailButton
+              label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              icon="theme"
+              onClick={() => setTheme(v => (v === 'dark' ? 'light' : 'dark'))}
+            />
           </div>
         </nav>
 

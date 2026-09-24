@@ -87,8 +87,7 @@ export function checkRaw(counts: Record<string, number>, baseline: Record<string
   for (const [file, n] of Object.entries(counts)) {
     const base = baseline[file] ?? 0
     if (n > base) failures.push(`${file}: ${n} raw ${what}, baseline is ${base}`)
-    else if (n < base)
-      failures.push(`${file}: down to ${n} — lower ${file} to ${n} in the baseline`)
+    else if (n < base) failures.push(`${file}: down to ${n} — lower ${file} to ${n} in the baseline`)
   }
   for (const [file, base] of Object.entries(baseline))
     if (!(file in counts) && base > 0) failures.push(`${file}: no longer counted — remove ${file} from the baseline`)

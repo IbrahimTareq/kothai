@@ -245,3 +245,16 @@
 .field--compact{min-height:var(--control-sm);padding:var(--space-6) var(--space-10);font-size:var(--text-xs)}
 .field--danger:focus{border-color:var(--danger)}
 textarea.field{resize:vertical;line-height:var(--leading-normal)}
+
+/* ── tooltip ───────────────────────────────────────────────────────────────
+   What <Tooltip> in client/ui/ draws, portaled on --z-portal. The rail's and
+   Expanded's labels were the same mono chip written twice; the smart-space
+   explainer was a third box with a title and a sentence. One surface now, in
+   two weights: a mono label, or a label over a sentence in the text face. */
+.tip{z-index:var(--z-portal);padding:var(--space-6) var(--space-10);
+  background:var(--surface-popover);border:1px solid var(--line);border-radius:var(--radius);
+  color:var(--ink);font-size:var(--text-xs);white-space:nowrap;pointer-events:none}
+.tip--detail{display:flex;flex-direction:column;gap:var(--space-4);max-width:216px;
+  padding:var(--space-10) var(--space-12);border-radius:var(--radius-lg);box-shadow:var(--shadow-popover);
+  color:var(--ink-dim);line-height:var(--leading-snug);white-space:normal}
+.tip--detail b{color:var(--ink);font-weight:var(--fw-heading)}

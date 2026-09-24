@@ -158,16 +158,10 @@ a.exp-src:hover{color:var(--ink);text-decoration:underline;text-underline-offset
    which is layout. Only the delete's hover tint is local — .btn--danger would
    colour it red at rest, and this row reads as four equal actions until you
    reach for one. */
-.exp-side-actions .btn{position:relative}
 .exp-side-actions .btn.del:hover:not(:disabled){color:var(--danger)}
-/* hover label, same chip as the rail's — above the row rather than beside it,
-   since these sit on the sidebar's bottom edge */
-.exp-tip{position:absolute;left:50%;bottom:calc(100% + var(--space-8));transform:translateX(-50%) translateY(4px);
-  background:var(--bg-raise);border:1px solid var(--line);color:var(--ink);font-size:var(--text-xs);
-  font-family:var(--font-mono);letter-spacing:var(--tracking-mono);padding:var(--space-6) var(--space-10);
-  border-radius:var(--radius);white-space:nowrap;opacity:0;pointer-events:none;
-  transition:var(--dur-fast);z-index:var(--z-sticky)}
-.exp-side-actions button:hover .exp-tip{opacity:1;transform:translateX(-50%) translateY(0)}
+/* Expanded's action tips hang on this wrapper: Re-tag is disabled while a
+   retag runs, and a disabled button fires no pointer events */
+.exp-tip-wrap{display:inline-flex}
 
 @media (max-width:820px){
   .exp-overlay{padding:0}

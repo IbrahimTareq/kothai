@@ -52,8 +52,8 @@
     "exports": 25
   },
   "server/ai/providers/remote.ts": {
-    "lines": 441,
-    "exports": 14
+    "lines": 415,
+    "exports": 1
   },
   "server/config.ts": {
     "lines": 136,
@@ -83,6 +83,6 @@
     "claudeMdLines": 45,
     "cleanCodeRulesLines": 41,
     "baselineEntries": 20,
-    "exportTotal": 509
+    "exportTotal": 511
   }
 }

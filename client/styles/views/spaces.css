@@ -47,11 +47,8 @@
    wipe control — not a .btn box */
 .coll-del:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
 .coll-del.armed { padding: 0 var(--space-12); color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
-.coll-smart { position: relative; display: inline-flex; flex: none; color: var(--ink-mute); cursor: help; }
+.coll-smart { display: inline-flex; flex: none; color: var(--ink-mute); cursor: help; }
 .coll-smart:hover, .coll-smart:focus-visible { color: var(--ink); outline: none; }
-.coll-smart-pop { position: absolute; top: calc(100% + 8px); left: 0; z-index:var(--z-popover-nested); width: 216px; display: flex; flex-direction: column; gap: var(--space-4); background: var(--surface-popover); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-10) var(--space-12); box-shadow: var(--shadow-popover); font-size:var(--text-xs); line-height: 1.45; color: var(--ink-dim); opacity: 0; visibility: hidden; transform: translateY(-3px); transition: opacity var(--dur-fast) ease, transform var(--dur-fast) ease, visibility var(--dur-fast); pointer-events: none; }
-.coll-smart-pop b { color: var(--ink); font-size:var(--text-xs); font-weight: var(--fw-heading); }
-.coll-smart:hover .coll-smart-pop, .coll-smart:focus-visible .coll-smart-pop { opacity: 1; visibility: visible; transform: translateY(0); }
 .coll-tag { gap: var(--space-6); }
 .coll-tag-x { color: var(--ink-faint); }
 .coll-tag:hover .coll-tag-x { color: var(--danger); }

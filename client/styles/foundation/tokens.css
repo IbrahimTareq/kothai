@@ -188,9 +188,7 @@
   --z-content:3;          /* controls layered on a card or thumbnail */
   --z-sticky:5;           /* close buttons pinned inside a surface */
   --z-float:30;           /* floating action button */
-  --z-backdrop:40;        /* click-catchers behind a popover */
   --z-popover:41;         /* popovers and menus */
-  --z-popover-nested:42;  /* a popover opened from inside a popover */
   --z-docked:45;          /* mobile docked composer */
   --z-topbar:50;
   --z-overlay:80;         /* capture overlay */

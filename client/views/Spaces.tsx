@@ -16,6 +16,7 @@ import { PageHeader } from '../ui/PageHeader'
 import { Segmented } from '../ui/Segmented'
 import { Popover } from '../ui/Popover'
 import { Input } from '../ui/Input'
+import { Tooltip } from '../ui/Tooltip'
 
 interface SpacesViewProps {
   collections: Collection[]
@@ -294,13 +295,15 @@ export function CollectionView({
         lead={
           !renaming &&
           collection.tags.length > 0 && (
-            <span className="coll-smart" tabIndex={0} aria-label="Smart space">
-              <Icon name="spark" size={13} />
-              <span className="coll-smart-pop" role="tooltip">
-                <b>Smart space</b>
-                Any item tagged with a rule below joins this space automatically.
+            <Tooltip
+              label="Smart space"
+              detail="Any item tagged with a rule below joins this space automatically."
+              side="bottom"
+            >
+              <span className="coll-smart" tabIndex={0} aria-label="Smart space">
+                <Icon name="spark" size={13} />
               </span>
-            </span>
+            </Tooltip>
           )
         }
         title={

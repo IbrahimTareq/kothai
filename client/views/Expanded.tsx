@@ -14,6 +14,7 @@ import type { Collection, UIItem } from '../types'
 import { Button } from '../ui/Button'
 import { Menu } from '../ui/Menu'
 import { Textarea } from '../ui/Input'
+import { Tooltip } from '../ui/Tooltip'
 
 function openUrl(url?: string | null) {
   if (url) window.open(url, '_blank')
@@ -523,42 +524,42 @@ export function ExpandedView({
           </div>
 
           <div className="exp-side-actions">
-            <Button
-              size="icon"
-              tone="ghost"
-              aria-label="Copy link"
-              onClick={() => item.url && navigator.clipboard?.writeText(item.url)}
-            >
-              <Icon name="copy" size={16} />
-              <span className="exp-tip">Copy link</span>
-            </Button>
-            <Button size="icon" tone="ghost" aria-label="Open original" onClick={() => openUrl(item.url)}>
-              <Icon name="external" size={16} />
-              <span className="exp-tip">Open original</span>
-            </Button>
-            <Button
-              size="icon"
-              tone="ghost"
-              aria-label={item.pending ? 'Retagging…' : 'Re-tag'}
-              disabled={item.pending}
-              onClick={() => onRetag(item.id)}
-            >
-              <Icon name="retag" size={16} />
-              <span className="exp-tip">{item.pending ? 'Retagging…' : 'Re-tag'}</span>
-            </Button>
-            <Button
-              size="icon"
-              tone="ghost"
-              className="del"
-              aria-label="Delete"
-              onClick={() => {
-                onDelete(item.id)
-                onClose()
-              }}
-            >
-              <Icon name="trash" size={16} />
-              <span className="exp-tip">Delete</span>
-            </Button>
+            {/* Tips hang on a wrapper: a disabled button fires no pointer events,
+                and while a retag runs "Retagging…" is the only sign it took. */}
+            {[
+              { label: 'Copy link', icon: 'copy', onClick: () => item.url && navigator.clipboard?.writeText(item.url) },
+              { label: 'Open original', icon: 'external', onClick: () => openUrl(item.url) },
+              {
+                label: item.pending ? 'Retagging…' : 'Re-tag',
+                icon: 'retag',
+                disabled: item.pending,
+                onClick: () => onRetag(item.id),
+              },
+              {
+                label: 'Delete',
+                icon: 'trash',
+                className: 'del',
+                onClick: () => {
+                  onDelete(item.id)
+                  onClose()
+                },
+              },
+            ].map(a => (
+              <Tooltip key={a.icon} label={a.label}>
+                <span className="exp-tip-wrap">
+                  <Button
+                    size="icon"
+                    tone="ghost"
+                    className={a.className}
+                    aria-label={a.label}
+                    disabled={a.disabled}
+                    onClick={a.onClick}
+                  >
+                    <Icon name={a.icon} size={16} />
+                  </Button>
+                </span>
+              </Tooltip>
+            ))}
           </div>
         </aside>
       </div>

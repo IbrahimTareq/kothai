@@ -42,7 +42,6 @@
     -webkit-backdrop-filter:blur(18px) saturate(140%);
     backdrop-filter:blur(18px) saturate(140%)}
   .rail-spacer{display:none}
-  .exp-tip{display:none}
 
   /* Destinations own the bar and split it evenly. The explicit height is
      what .rail-btn's own `height:100%` resolves against — .rail centres its
@@ -88,13 +87,6 @@
     transition:transform var(--dur-mid) var(--ease-out),
       opacity var(--dur-fast) ease}
   .rail-tabs.has-active::before{opacity:1}
-  /* Hidden from sight but kept in the accessibility tree — the label is the
-     button's only accessible name, so display:none would leave every tab
-     announcing nothing at all. */
-  .rail-tip{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
-    border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;
-    background:transparent}
-  .rail-btn:hover .rail-tip{transform:none}
   /* the sliding pill marks the active tab now — the desktop edge marker would
      only read as a stray line on top of it */
   .rail-btn.active::before{display:none}

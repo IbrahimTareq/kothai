@@ -87,6 +87,14 @@ confirm. In-place editors — a canvas note, a chat or space rename, a tag pill,
 the composers, Everything's underline search — take the shape of what they edit
 and stay raw fields on the ratchet below.
 
+**A glyph is named by `<Tooltip>`** (`client/ui/`, on Radix): a mono `label`,
+or a `label` over a `detail` sentence in the text face for a tip that explains.
+It shows on hover and on keyboard focus, closes on Escape, and is portaled on
+`--z-portal`. It is never the accessible name — the trigger carries its own
+`aria-label`, which the rail's buttons need on a phone, where they are tabs and
+no tip shows. It replaced three hand-rolled tips (the rail's, Expanded's actions,
+a smart space's spark) that answered to the mouse only.
+
 **Every page opens with `<PageHeader>`** (`client/ui/`). Two rows: identity
 (`lead`, `title`, a mono `meta` count, `actions` on the right) over a toolbar
 of `filters` on the left — what is shown — and `display` on the right — how
