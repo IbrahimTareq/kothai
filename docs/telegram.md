@@ -8,7 +8,7 @@ Message a bot from your phone and it becomes a note. Kothai long-polls Telegram'
 2. Paste the token into Settings → **TELEGRAM** and click **Connect**.
 3. Restart Kothai. Polling only starts at boot, so the bot won't respond to anything until you do.
 4. Settings now shows a six-character pairing code. Send exactly that, as a message, to your bot.
-5. The bot replies "Connected. Anything you send here is saved to Kothai." — from then on, anything you send it is saved.
+5. The bot replies "🔗 Connected. Anything you send here is saved to Kothai." — from then on, anything you send it is saved.
 
 ## What gets saved
 

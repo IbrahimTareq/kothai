@@ -29,13 +29,13 @@ export interface IngestIO {
 function droppedAttachmentReply(saved: boolean, unsupportedType: boolean, photoFailed: boolean): string | null {
   if (unsupportedType) {
     return saved
-      ? 'Saved the caption. Only links, text and photos are supported — other files are dropped.'
-      : "Didn't save that — only links, text and photos are supported."
+      ? '⚠️ Saved the caption. Only links, text and photos are supported — other files are dropped.'
+      : "🚫 Didn't save that — only links, text and photos are supported."
   }
   if (photoFailed) {
     return saved
-      ? 'Saved the caption, but the photo failed to download.'
-      : "Couldn't download that photo — nothing saved."
+      ? '⚠️ Saved the caption, but the photo failed to download.'
+      : "❌ Couldn't download that photo — nothing saved."
   }
   return null
 }
@@ -62,7 +62,7 @@ export async function ingestUpdate(
   if (state.boundChatId === null) {
     if (!state.pairingCode || text !== state.pairingCode) return
     io.bind(chatId)
-    await io.sendMessage(chatId, 'Connected. Anything you send here is saved to Kothai.')
+    await io.sendMessage(chatId, '🔗 Connected. Anything you send here is saved to Kothai.')
     return
   }
 
@@ -98,5 +98,5 @@ export async function ingestUpdate(
   }
 
   await io.saveCapture({ text, image })
-  await io.sendMessage(chatId, droppedAttachmentReply(true, unsupportedType, photoFailed) ?? 'Saved.')
+  await io.sendMessage(chatId, droppedAttachmentReply(true, unsupportedType, photoFailed) ?? '✅ Saved.')
 }
