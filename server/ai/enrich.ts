@@ -382,6 +382,28 @@ export function queueMetaBackfill() {
       queueEnrich(n.id, n.content)
     }
   }
+
+  // `pending` is on disk, but the enrichNote job that clears it lives only in
+  // the in-memory chain, so a restart mid-import dropped every job still
+  // queued and nothing looked at `pending` again: on a real install 1,596 of
+  // 1,885 notes (an Instagram import and a TikTok one) stayed flagged for a
+  // month, and the client polled for them every 15s the whole time. A loop of
+  // its own, after the one above: that one's Instagram arm `continue`s past
+  // everything below it for any post without a siteTitle — nearly all of them.
+  //
+  // A note still owed classify or embed gets the pass its import promised. One
+  // owed only a thumbnail description is cleared instead: it already has its
+  // title, tags and embedding, and one vision pass per note at boot is the
+  // hours-long stall stepsFor's comment refuses. That work stays in the
+  // Settings backlog.
+  const residency = settings.getResidency()
+  for (const n of store.allNotes()) {
+    if (!n.pending) continue
+    if (stepsFor(n, residency).some(s => s !== 'thumbVision')) queueEnrich(n.id, n.content)
+    else void store.updateNote(n.id, { pending: false }, { persist: false })
+  }
+  // One write for however many notes were cleared, as retagAll does.
+  store.flush().catch(e => console.error('[enrich] clearing stale pending failed:', e instanceof Error ? e.message : e))
 }
 
 // Enrich one note under the current residency: each step runs only if its
