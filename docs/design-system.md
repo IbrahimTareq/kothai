@@ -256,7 +256,11 @@ and CI.
 Together those cover the bug class that produced every defect found during the
 sweep: a value that was correct in one theme and broken in the other.
 
-What is still **not** covered is composition — layout, overlap, whether spacing
-reads well. There are no visual regression tests. Any change to spacing, size or
-layout needs checking in a browser in **both themes**, and on mobile if it
-touches the composer or rail.
+What is still **not** covered automatically is composition — layout, overlap,
+whether spacing reads well. There are no visual regression tests. The place to
+look is `/ui` on the dev server (`pnpm dev`, port 5174): every primitive in
+`client/ui/` in each of its states, with a theme switch, and dev-only — the
+production build drops it. `test/client/playground.test.ts` fails if a primitive
+is missing from it. Any change to spacing, size or layout still needs checking
+there and in the app, in **both themes**, and on mobile if it touches the
+composer or rail.
