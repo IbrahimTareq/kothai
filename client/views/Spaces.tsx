@@ -1,8 +1,8 @@
-// Spaces.tsx — the Spaces landing: a card for every space, and the inline
-// form that makes a new one. One space's own view is Space.tsx.
+// Spaces.tsx — the Spaces landing: a card for every space, and the draft card
+// that makes a new one. One space's own view is Space.tsx.
 import { useState } from 'react'
 import { Icon } from '../components/icons'
-import type { Collection } from '../types'
+import type { Collection, UIItem } from '../types'
 import { Button } from '../ui/Button'
 import { PageHeader } from '../ui/PageHeader'
 import { Input } from '../ui/Input'
@@ -13,102 +13,117 @@ interface SpacesViewProps {
   navigate: (next: string) => void
 }
 
-// The Spaces landing: a grid of collection cards + an inline "new collection"
-// form. A collection's cover is its first few members' thumbnails, resolved
-// server-side (collections.ts's withCovers) — no client-side item lookup needed.
+// A space's cover is a set, not a picture: its newest three members (withCovers
+// in server/data/collections.ts), one large beside two stacked. One thumbnail
+// made a space look like an item, and threw away two covers the server sent.
+function SpaceCover({ covers = [] }: { covers?: UIItem[] }) {
+  return (
+    <div className={`tile-media${covers.length ? ' space-cover' : ''}`} data-n={covers.length}>
+      {covers.length ? (
+        covers.map(it => (
+          <div key={it.id} className="space-cover-cell">
+            {it.thumb ? (
+              <img src={it.thumb} alt="" loading="lazy" />
+            ) : (
+              <span className="tile-excerpt">{it.title || it.note}</span>
+            )}
+          </div>
+        ))
+      ) : (
+        <Icon name="spaces" size={22} />
+      )}
+    </div>
+  )
+}
+
+// The Spaces landing. A new space starts as a draft card where it will live and
+// asks only for a name: rules are added inside it, from the picker that shows
+// each tag's reach — the comma-separated field this replaced was typed blind.
 export function SpacesView({ collections, createCollection, navigate }: SpacesViewProps) {
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
-  const [tags, setTags] = useState('')
 
+  const cancel = () => {
+    setName('')
+    setCreating(false)
+  }
   const submit = async () => {
     const nm = name.trim()
     if (!nm) return
-    const tagList = tags
-      .split(',')
-      .map(t => t.trim())
-      .filter(Boolean)
-    const c = await createCollection(nm, tagList)
-    setName('')
-    setTags('')
-    setCreating(false)
+    const c = await createCollection(nm, [])
+    cancel()
     navigate(`space:${c.id}`)
   }
-
-  const coverFor = (c: Collection): string | null => {
-    for (const it of c.covers ?? []) if (it.thumb) return it.thumb
-    return null
-  }
+  // The plus is the icon Capture and the item view's "Add to space" draw; a
+  // full-width ＋ character sat on a different baseline beside them.
+  const newSpace = (
+    <Button onClick={() => setCreating(true)}>
+      <Icon name="plus" size={14} /> New space
+    </Button>
+  )
 
   return (
     <div className="spaces-view">
       <PageHeader
         title="Spaces"
         meta={`${collections.length} space${collections.length === 1 ? '' : 's'}`}
-        actions={<Button onClick={() => setCreating(v => !v)}>＋ New space</Button>}
+        actions={newSpace}
       />
-
-      {creating && (
-        <div className="space-form">
-          <Input
-            className="space-form-name"
-            autoFocus
-            placeholder="Space name…"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') submit()
-              if (e.key === 'Escape') setCreating(false)
-            }}
-          />
-          <Input
-            className="space-form-tags mono"
-            placeholder="smart tags (comma-separated, optional)"
-            value={tags}
-            onChange={e => setTags(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') submit()
-              if (e.key === 'Escape') setCreating(false)
-            }}
-          />
-          <Button tone="solid" onClick={submit}>
-            Create
-          </Button>
-        </div>
-      )}
 
       <div className="spaces-scroll">
         {collections.length === 0 && !creating ? (
           <div className="empty">
             <img src="/empty.svg" alt="" width={60} height={60} />
-            <p>NO SPACES ADDED YET</p>
+            <p>NO SPACES YET</p>
+            {newSpace}
           </div>
         ) : (
           <div className="spaces-grid">
-            {collections.map(c => {
-              const cover = coverFor(c)
-              return (
-                // The same .tile the Ask thread's citations use — a space
-                // card and a citation card are both a cover, a name and a
-                // line of small print, so they share one shape.
-                <button key={c.id} className="tile space-card" onClick={() => navigate(`space:${c.id}`)}>
-                  <div className="tile-media" style={cover ? { backgroundImage: `url(${cover})` } : undefined}>
-                    {!cover && <Icon name="spark" size={26} />}
+            {creating && (
+              // Dashed like every other "add one" slot (.chip--add, the item
+              // view's add-to-space): a place for a space, not yet a space.
+              <div className="tile space-card space-draft">
+                <SpaceCover />
+                <div className="tile-cap">
+                  <Input
+                    compact
+                    autoFocus
+                    aria-label="Space name"
+                    placeholder="Name this space"
+                    enterKeyHint="done"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') submit()
+                      if (e.key === 'Escape') cancel()
+                    }}
+                    onBlur={() => !name.trim() && cancel()}
+                  />
+                </div>
+              </div>
+            )}
+            {collections.map(c => (
+              // The same .tile the Ask thread's citations use — a space
+              // card and a citation card are both a cover, a name and a
+              // line of small print, so they share one shape.
+              <button key={c.id} className="tile space-card" onClick={() => navigate(`space:${c.id}`)}>
+                <SpaceCover covers={c.covers} />
+                <div className="tile-cap">
+                  <span className="tile-title">{c.name}</span>
+                  {/* The smart mark sits in the small print, not on the
+                      cover: a badge over a photograph was the loudest thing
+                      on the card and said the least. */}
+                  <span className="tile-meta space-meta">
                     {c.tags.length > 0 && (
-                      <span className="tile-plate right" title="Smart space">
-                        <Icon name="spark" size={11} />
+                      <span className="space-smart" title="Smart space">
+                        <Icon name="spark" size={10} />
                       </span>
                     )}
-                  </div>
-                  <div className="tile-cap">
-                    <span className="tile-title">{c.name}</span>
-                    <span className="tile-meta">
-                      {c.count} item{c.count === 1 ? '' : 's'}
-                    </span>
-                  </div>
-                </button>
-              )
-            })}
+                    {c.count} item{c.count === 1 ? '' : 's'}
+                  </span>
+                </div>
+              </button>
+            ))}
           </div>
         )}
       </div>

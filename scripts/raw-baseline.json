@@ -62,7 +62,7 @@
     "sizes": 4
   },
   "client/styles/views/spaces.css": {
-    "sizes": 3
+    "sizes": 1
   },
   "client/views/Core.tsx": {
     "buttons": 9,

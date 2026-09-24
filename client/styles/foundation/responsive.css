@@ -117,7 +117,6 @@
      can still be read and tapped */
   .gal-scroll{padding:var(--under-head) var(--space-14) calc(var(--navbar-h) + var(--space-40))}
   .spaces-scroll{padding:var(--under-head) var(--space-14) calc(var(--navbar-h) + var(--space-24))}
-  .space-form{padding:var(--space-16) var(--space-14) 0}
   /* .settings-view is its own scroller and had only the desktop --space-28
      bottom padding, so its last row ("Erase all data") sat under the bar */
   .settings-view{padding:var(--topbar-h) var(--space-14)

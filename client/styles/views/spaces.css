@@ -3,9 +3,6 @@
 /* ---- Spaces landing ---- */
 .spaces-view { display: flex; flex-direction: column; height: 100%; overflow: hidden; padding-top: var(--topbar-h); }
 .spaces-scroll { flex: 1; overflow-y: auto; padding: var(--under-head) var(--space-28) var(--space-22); }
-.space-form { display: flex; gap: var(--space-8); padding: var(--space-20) var(--space-28) 0; flex-wrap: wrap; }
-.space-form-name { min-width: 200px; }
-.space-form-tags { flex: 1; min-width: 220px; }
 .spaces-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-14); }
 /* The card itself is the shared .tile (primitives.css). All that is left here
    is scale: these run about half again as wide as an Ask citation, so the name
@@ -14,9 +11,22 @@
 .space-card .tile-cap { padding: var(--space-10) var(--space-12) var(--space-12); }
 .space-card .tile-title { font-size: var(--text-sm); }
 .space-card .tile-meta { font-size: var(--text-xs); }
-
-/* ---- Add-to-space trigger (grid card); its menu is <Menu> ---- */
-.card-act-plus { font-size:var(--text-base); line-height: var(--leading-none); }
+/* The cover mosaic: the newest member large, the next two stacked beside it.
+   The gutters are the page showing through, so the three read as separate
+   things gathered together rather than one picture cut into pieces. */
+.space-cover { place-items: stretch; grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; gap: var(--space-2); background: var(--bg); }
+.space-cover-cell { position: relative; overflow: hidden; background: var(--panel-2); }
+.space-cover-cell:first-child { grid-row: 1 / -1; }
+.space-cover[data-n="1"] .space-cover-cell { grid-column: 1 / -1; }
+.space-cover[data-n="2"] .space-cover-cell:last-child { grid-row: 1 / -1; }
+.space-cover-cell .tile-excerpt { display: -webkit-box; padding: var(--space-10); }
+.space-meta { display: flex; align-items: center; gap: var(--space-6); }
+.space-smart { display: inline-flex; color: var(--ink-mute); }
+/* The draft card is a slot: dashed and unfilled, like .chip--add. It is not a
+   button, so it takes none of the tile's hover. */
+.space-draft, .space-draft:hover { cursor: default; border-style: dashed; border-color: var(--line); background: transparent; }
+.space-draft .tile-media { background: transparent; }
+.space-draft .field { width: 100%; }
 
 /* ---- Collection detail ---- */
 .collection-view { display: flex; flex-direction: column; height: 100%; padding-top: var(--topbar-h); }

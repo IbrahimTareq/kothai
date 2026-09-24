@@ -212,7 +212,7 @@ export function ItemCard({
                 onClick={e => e.stopPropagation()}
                 onKeyDown={e => e.stopPropagation()}
               >
-                <span className="card-act-plus">＋</span>
+                <Icon name="plus" size={14} />
               </button>
             }
             items={collections!.map(c => {
