@@ -58,3 +58,11 @@ test('saveCapture: an image is stored and the note carries its web path', async 
   assert.equal(queued[0].args.hasImage, true)
   assert.equal(queued[0].args.absPath, '/tmp/x.png')
 })
+
+test('saveCapture: a demo visitor’s link is stamped as theirs, and an ordinary save is not', async () => {
+  added.length = 0
+  await saveCapture({ text: 'https://example.com/b', visitor: 'v1' })
+  await saveCapture({ text: 'https://example.com/c' })
+  assert.equal(added[0].visitor, 'v1')
+  assert.ok(!('visitor' in added[1]), 'an ordinary install must write notes exactly as before')
+})

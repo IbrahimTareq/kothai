@@ -8,7 +8,15 @@ import * as enrich from './ai/enrich.ts'
 import { saveImage } from './lib/http.ts'
 import type { PublicNote } from './data/notes.ts'
 
-export async function saveCapture({ text, image }: { text: string; image?: string | null }): Promise<PublicNote> {
+export async function saveCapture({
+  text,
+  image,
+  visitor = null,
+}: {
+  text: string
+  image?: string | null
+  visitor?: string | null
+}): Promise<PublicNote> {
   const img = await saveImage(image)
   const isUrl = ai.isLikelyUrl(text)
   const note = await store.addNote({
@@ -18,6 +26,7 @@ export async function saveCapture({ text, image }: { text: string; image?: strin
     url: isUrl ? text : null,
     image: img?.webPath || null,
     pending: true,
+    ...(visitor ? { visitor } : {}),
   })
   enrich.queueEnrich(note.id, { absPath: img?.absPath, text, isUrl, hasImage: !!img })
   return note

@@ -3,6 +3,7 @@ import * as store from '../data/notes.ts'
 import * as collections from '../data/collections.ts'
 import { json, readBody } from '../lib/http.ts'
 import { sanitizeCanvas } from '../lib/canvas.ts'
+import { visibleTo } from './demo.ts'
 import type { CollectionPatch } from '../data/collections.ts'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
@@ -14,8 +15,8 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 // ---- collections (Spaces) ----------------------------------------------
-export function handleCollections(res: ServerResponse) {
-  json(res, 200, { collections: collections.all() })
+export function handleCollections(res: ServerResponse, viewer: string | null) {
+  json(res, 200, { collections: collections.all(visibleTo(viewer)) })
 }
 
 export async function handleCreateCollection(req: IncomingMessage, res: ServerResponse) {

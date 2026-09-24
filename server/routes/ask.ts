@@ -6,6 +6,7 @@ import * as settings from '../data/settings.ts'
 import * as prompts from '../ai/prompts.ts'
 import type { ServerNote } from '../types.ts'
 import { json, readBody, saveImage } from '../lib/http.ts'
+import { demoLimits, visibleTo } from './demo.ts'
 
 // readBody hands back `unknown`: the body is whatever the client posted and
 // nothing has checked it. Narrowed at each use below rather than annotated.
@@ -42,7 +43,8 @@ function openStream(res: ServerResponse) {
   }
 }
 
-export async function handleAsk(req: IncomingMessage, res: ServerResponse): Promise<void> {
+// `viewer` is the demo visitor (routes/demo.ts), null on an ordinary install.
+export async function handleAsk(req: IncomingMessage, res: ServerResponse, viewer: string | null): Promise<void> {
   const body: unknown = await readBody(req)
   const fields: Record<string, unknown> = isRecord(body) ? body : {}
   const wantsStream = /text\/event-stream/.test(req.headers.accept || '')
@@ -50,8 +52,11 @@ export async function handleAsk(req: IncomingMessage, res: ServerResponse): Prom
   const imageData = fields.image
   // A chat id is a uuid string (see chats.ts). Anything else matched no chat
   // before this narrowing either, and started a new one — which is what null
-  // does, so the two agree.
-  const chatId = typeof fields.chatId === 'string' ? fields.chatId : null
+  // does, so the two agree. Another demo visitor's chat is treated the same
+  // way: continuing it would read their questions into this one's prompt.
+  const visible = visibleTo(viewer)
+  const asked = typeof fields.chatId === 'string' ? chats.get(fields.chatId) : null
+  const chatId = asked && visible(asked) ? asked.id : null
   if (!question && !imageData) return json(res, 400, { error: 'Ask a question.' })
 
   const residency = settings.getResidency()
@@ -77,6 +82,15 @@ export async function handleAsk(req: IncomingMessage, res: ServerResponse): Prom
     (imageData && snap.roles.vision.state === 'loading')
   ) {
     return json(res, 503, { error: 'Models are still loading — try again in a moment.' })
+  }
+  if (viewer) {
+    // On the demo an image question would send a stranger's upload through the
+    // vision model, and a long question is a long prompt on the operator's key.
+    if (imageData) return json(res, 400, { error: 'The demo answers text questions only.', code: 'demo_text_only' })
+    if (question.length > 500) return json(res, 400, { error: 'Keep it under 500 characters.', code: 'demo_too_long' })
+    if (!demoLimits.ask.take(viewer)) {
+      return json(res, 429, { error: 'That’s all the demo answers in a day. Try again tomorrow.', code: 'demo_limit' })
+    }
   }
 
   // Stopping the answer stops the model: the client aborts its fetch, which
@@ -106,6 +120,7 @@ export async function handleAsk(req: IncomingMessage, res: ServerResponse): Prom
       chatId,
       { role: 'user', text: question, image },
       { role: 'ai', text: answer, sources },
+      viewer,
     )
     if (out) {
       out.send('done', { chatId: chat.id })
@@ -159,13 +174,14 @@ export async function handleAsk(req: IncomingMessage, res: ServerResponse): Prom
     // literal tokens, keyword loses every paraphrase — so one strong signal
     // is enough for a note to surface. With the embed role off there is no
     // query embedding and the fusion degrades to keyword-only.
-    const sources =
+    const queryEmbedding =
       residency.embed !== 'off'
         ? // A question is embedded as a query, not as a document — see
           // prompts.ts's embedInput. The two are different kinds of text and a
           // prompt-instructed model encodes them differently.
-          store.hybridSearch(await ai.embedText(queryText, { mode: 'query' }), queryText)
-        : store.textSearch(queryText)
+          await ai.embedText(queryText, { mode: 'query' })
+        : null
+    const sources = store.hybridSearch(queryEmbedding, queryText, visible)
     // The cards can render while the prose is still arriving, so the sources
     // go out as soon as retrieval has them rather than with the answer.
     if (wantsStream) {

@@ -118,8 +118,11 @@ export async function clearAll() {
   return removed
 }
 
-export function all() {
-  return collections.map(withCovers)
+// `keep` hides another demo visitor's links (routes/demo.ts) from a space's
+// count and, above all, from its cover previews.
+export function all(keep: (n: { visitor?: string }) => boolean = () => true) {
+  const hidden = new Set(notesStore.allNotes().flatMap(n => (keep(n) ? [] : [n.id])))
+  return collections.map(c => withCovers({ ...c, itemIds: c.itemIds.filter(id => !hidden.has(id)) }))
 }
 
 export function get(id: string) {

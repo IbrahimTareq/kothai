@@ -17,6 +17,7 @@ const enrich = await import('./ai/enrich.ts')
 const collections = await import('./data/collections.ts')
 const tagvocab = await import('./data/tagvocab.ts')
 const telegram = await import('./telegram/index.ts')
+const demo = await import('./routes/demo.ts')
 
 const server = createServer()
 
@@ -24,6 +25,12 @@ await store.load()
 await chats.load()
 await settings.load()
 await collections.load()
+// At boot as well as daily: a restart must not hand yesterday's visitors'
+// links to today's, and the daily timer starts over with every deploy.
+if (demo.DEMO) {
+  await demo.resetDemo()
+  setInterval(() => demo.resetDemo().catch(e => console.error('[demo] reset failed:', e)), 24 * 60 * 60 * 1000).unref()
+}
 // After the stores are open: an update can arrive and be saved within
 // milliseconds of the first poll returning.
 const telegramActive = telegram.startTelegramCapture()
@@ -63,6 +70,7 @@ server.listen(PORT, () => {
   // Stated on every boot, both ways round: "no password" is the historical
   // default and safe on a LAN, but it is exactly the thing you want to notice
   // before pointing a public hostname at this.
+  if (demo.DEMO) console.log('  Demo: read-only apart from links and questions; visitors reset daily\n')
   if (PASSWORD) console.log('  Auth: password required (KOTHAI_PASSWORD is set)\n')
   else
     console.log(

@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import * as chats from '../data/chats.ts'
 import { json, readBody } from '../lib/http.ts'
+import { visibleTo } from './demo.ts'
 
 // readBody hands back `unknown` — the body is whatever the client posted, and
 // nothing has checked it. Narrowed here rather than annotated away.
@@ -10,15 +11,15 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 const MAX_PAGE = 200
 
-export function handleChats(res: ServerResponse, query: URLSearchParams): void {
+export function handleChats(res: ServerResponse, query: URLSearchParams, viewer: string | null): void {
   const num = (v: string | null, fallback: number) => (/^\d+$/.test(v ?? '') ? Number(v) : fallback)
   const offset = num(query?.get('offset'), 0)
   const limit = Math.min(num(query?.get('limit'), 0) || MAX_PAGE, MAX_PAGE)
-  json(res, 200, chats.list({ offset, limit }))
+  json(res, 200, chats.list({ offset, limit, keep: visibleTo(viewer) }))
 }
-export function handleChat(res: ServerResponse, id: string) {
+export function handleChat(res: ServerResponse, id: string, viewer: string | null) {
   const chat = chats.get(id)
-  return chat ? json(res, 200, { chat }) : json(res, 404, { error: 'chat not found' })
+  return chat && visibleTo(viewer)(chat) ? json(res, 200, { chat }) : json(res, 404, { error: 'chat not found' })
 }
 export async function handleRenameChat(req: IncomingMessage, res: ServerResponse, id: string): Promise<void> {
   const body: unknown = await readBody(req)

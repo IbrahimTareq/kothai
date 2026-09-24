@@ -42,6 +42,11 @@ export interface ServerNote {
   slides?: string[]
   description?: string
   score?: number
+  // Set only on the public demo (server/routes/demo.ts): the visitor who saved
+  // this link, and so the only one shown it. Absent on every note of an
+  // ordinary install and on the demo's shared library, which is what makes
+  // those visible to everyone.
+  visitor?: string
   // Held server-side only — stripped before transport, which is why it has no
   // counterpart in client/types.ts.
   //

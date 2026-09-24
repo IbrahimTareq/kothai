@@ -392,9 +392,9 @@ const SIM_FLOOR = 0.44
 export function search(
   queryEmbedding: Embedding,
   k = TOP_K,
-  { floor = SIM_FLOOR }: { floor?: number } = {},
+  { floor = SIM_FLOOR, list = notes }: { floor?: number; list?: NoteRecord[] } = {},
 ): ScoredNote[] {
-  const scored = notes
+  const scored = list
     .filter(n => n.embedding?.length) // Float32Array off disk, plain Array fresh from the model
     .map(n => ({ note: n, score: cosine(queryEmbedding, n.embedding) }))
     .filter(s => s.score >= floor)
@@ -463,13 +463,13 @@ export function reciprocalRankFusion<T extends { id: string }>(
   return [...fused.values()].sort((a, b) => b.score - a.score).map(({ item, score }) => ({ ...item, score }))
 }
 
-// What Ask actually calls when an embedding model is available. Falls back to
-// keyword-only results when there is no query embedding, so a caller never
-// has to branch.
-export function hybridSearch(queryEmbedding: Embedding, query: string, k = TOP_K): ScoredNote[] {
-  const depth = k * CANDIDATE_DEPTH
-  const lists = [queryEmbedding ? search(queryEmbedding, depth) : [], textSearch(query, depth)]
-  return reciprocalRankFusion(lists).slice(0, k)
+// What Ask calls; keyword-only when there is no query embedding. `keep` narrows
+// the library BEFORE ranking, so a demo visitor's top k is all theirs to see.
+export function hybridSearch(queryEmbedding: Embedding, query: string, keep = (_n: NoteRecord) => true): ScoredNote[] {
+  const depth = TOP_K * CANDIDATE_DEPTH
+  const list = notes.filter(keep)
+  const lists = [queryEmbedding ? search(queryEmbedding, depth, { list }) : [], textSearch(query, depth, list)]
+  return reciprocalRankFusion(lists).slice(0, TOP_K)
 }
 
 // English function words, stripped from a query before scoring.

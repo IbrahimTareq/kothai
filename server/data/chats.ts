@@ -25,6 +25,8 @@ export interface Chat {
   createdAt: string
   updatedAt: string
   messages: ChatMessage[]
+  // The demo visitor who asked it — see ServerNote.visitor.
+  visitor?: string
 }
 
 export interface ChatSummary {
@@ -104,13 +106,22 @@ export function all(): Chat[] {
 // page shows a first screenful and loads the rest only when asked. `chats` is
 // already newest-first (appendExchange moves a chat to the front), so a slice
 // is the whole of it.
-export function list({ offset = 0, limit = null }: { offset?: number; limit?: number | null } = {}): {
+export function list({
+  offset = 0,
+  limit = null,
+  keep = () => true,
+}: {
+  offset?: number
+  limit?: number | null
+  keep?: (c: Chat) => boolean
+} = {}): {
   total: number
   chats: ChatSummary[]
 } {
-  const page = limit === null ? chats.slice(offset) : chats.slice(offset, offset + limit)
+  const shown = chats.filter(keep)
+  const page = limit === null ? shown.slice(offset) : shown.slice(offset, offset + limit)
   return {
-    total: chats.length,
+    total: shown.length,
     chats: page.map(c => ({
       id: c.id,
       title: c.title,
@@ -143,7 +154,12 @@ export function recentMessages(
 
 // Append a question/answer pair, creating the chat when chatId is null.
 // Returns the chat (most recently used chats float to the top).
-export async function appendExchange(chatId: string | null, userMsg: ChatMessage, aiMsg: ChatMessage): Promise<Chat> {
+export async function appendExchange(
+  chatId: string | null,
+  userMsg: ChatMessage,
+  aiMsg: ChatMessage,
+  visitor: string | null = null,
+): Promise<Chat> {
   const now = new Date().toISOString()
   let chat = chatId ? chats.find(c => c.id === chatId) : null
   if (!chat) {
@@ -153,6 +169,7 @@ export async function appendExchange(chatId: string | null, userMsg: ChatMessage
       updatedAt: now,
       title: (userMsg.text || 'Image question').slice(0, 80),
       messages: [],
+      ...(visitor ? { visitor } : {}),
     }
     chats.unshift(chat)
   }

@@ -48,9 +48,13 @@ mock.module('../../../server/data/notes.ts', {
 // `T | undefined` for the rest of the file.
 const { handleAsk } = await import('../../../server/routes/ask.ts')
 const chats = await import('../../../server/data/chats.ts')
+const { demoLimits } = await import('../../../server/routes/demo.ts')
 
+// x-viewer stands in for the demo's visitor cookie, which the router resolves
+// before handleAsk ever sees the request.
 const server = createServer((req, res) => {
-  handleAsk(req, res).catch(() => {
+  const viewer = req.headers['x-viewer']
+  handleAsk(req, res, typeof viewer === 'string' ? viewer : null).catch(() => {
     if (!res.writableEnded) res.end()
   })
 })
@@ -63,6 +67,7 @@ after(async () => {
 
 beforeEach(() => {
   chats._reset()
+  demoLimits.ask.reset()
   answerBehaviour = async ({ onToken }) => {
     for (const chunk of CHUNKS) onToken?.(chunk)
     return ANSWER
@@ -225,4 +230,44 @@ test('without the event-stream Accept header the response is still plain JSON', 
   assert.equal(d.answer, ANSWER)
   assert.deepEqual(d.sources, SOURCES)
   assert.ok(d.chatId)
+})
+
+test('on the demo, another visitor’s chat is never continued, and the new one is the asker’s', async () => {
+  const theirs = await chats.appendExchange(null, { role: 'user', text: 'secret' }, { role: 'ai', text: 'x' }, 'b')
+  const { frames } = await askStream(
+    { question: 'and tea?', chatId: theirs.id },
+    { headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', 'x-viewer': 'a' } },
+  )
+  const id = frames[frames.length - 1].data.chatId
+  assert.ok(typeof id === 'string')
+  assert.notEqual(id, theirs.id)
+  assert.equal(chats.get(id)?.visitor, 'a')
+  assert.equal(chats.get(theirs.id)?.messages.length, 2, 'their chat must be left untouched')
+})
+
+// A demo visitor's question, answered with plain JSON so a refusal's code can
+// be read (askStream has already consumed the body by the time it returns).
+async function askAs(viewer: string, body: Record<string, unknown>) {
+  const r = await fetch(base, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-viewer': viewer },
+    body: JSON.stringify(body),
+  })
+  return { status: r.status, body: await jsonBody(r) }
+}
+
+test('the demo answers text questions only, and short ones', async () => {
+  const image = await askAs('a', { question: 'what is this?', image: 'data:image/png;base64,AAAA' })
+  assert.equal(image.status, 400)
+  assert.equal(image.body.code, 'demo_text_only')
+  const long = await askAs('a', { question: 'x'.repeat(501) })
+  assert.equal(long.status, 400)
+  assert.equal(long.body.code, 'demo_too_long')
+})
+
+test('a demo visitor gets thirty questions a day, and then hears why not', async () => {
+  for (let i = 0; i < 30; i++) assert.equal((await askAs('a', { question: 'q' })).status, 200)
+  const over = await askAs('a', { question: 'q' })
+  assert.equal(over.status, 429)
+  assert.equal(over.body.code, 'demo_limit')
 })

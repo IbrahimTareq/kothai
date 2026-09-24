@@ -3,6 +3,7 @@ import http from 'node:http'
 import { json, serveStatic } from './lib/http.ts'
 import { PASSWORD } from './config.ts'
 import { authGate } from './routes/auth.ts'
+import { DEMO, demoGate, visitorOf } from './routes/demo.ts'
 import {
   handleSave,
   handleNotes,
@@ -60,15 +61,22 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     // it lives here rather than being repeated per handler. No-op when
     // KOTHAI_PASSWORD is unset.
     if (PASSWORD && (await authGate(req, res, p, { password: PASSWORD }))) return
+    // Below auth so a demo that also sets a password still asks for it first,
+    // and above every route for the same reason the auth gate is: one check
+    // here, not one per handler. No-op unless KOTHAI_DEMO is set.
+    if (DEMO && demoGate(req, res, p)) return
+    // Who is looking, on the demo: each visitor's own links and chats are shown
+    // to them alone. Null on an ordinary install, which shows everything.
+    const viewer = DEMO ? visitorOf(req, res) : null
 
-    if (req.method === 'POST' && p === '/api/save') return await handleSave(req, res)
-    if (req.method === 'POST' && p === '/api/ask') return await handleAsk(req, res)
-    if (req.method === 'GET' && p === '/api/notes/delta') return handleNotesDelta(res, url)
-    if (req.method === 'GET' && p === '/api/notes') return handleNotes(res, url)
+    if (req.method === 'POST' && p === '/api/save') return await handleSave(req, res, viewer)
+    if (req.method === 'POST' && p === '/api/ask') return await handleAsk(req, res, viewer)
+    if (req.method === 'GET' && p === '/api/notes/delta') return handleNotesDelta(res, url, viewer)
+    if (req.method === 'GET' && p === '/api/notes') return handleNotes(res, url, viewer)
     if (req.method === 'GET' && /^\/api\/notes\/[^/]+$/.test(p))
-      return handleGetNote(res, decodeURIComponent(p.slice(11)))
-    if (req.method === 'GET' && p === '/api/chats') return handleChats(res, url.searchParams)
-    if (req.method === 'GET' && p.startsWith('/api/chats/')) return handleChat(res, p.split('/').pop() ?? '')
+      return handleGetNote(res, decodeURIComponent(p.slice(11)), viewer)
+    if (req.method === 'GET' && p === '/api/chats') return handleChats(res, url.searchParams, viewer)
+    if (req.method === 'GET' && p.startsWith('/api/chats/')) return handleChat(res, p.split('/').pop() ?? '', viewer)
     if (req.method === 'PATCH' && p.startsWith('/api/chats/'))
       return await handleRenameChat(req, res, p.split('/').pop() ?? '')
     if (req.method === 'DELETE' && p.startsWith('/api/chats/'))
@@ -105,7 +113,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     if (req.method === 'POST' && p === '/api/enrich/backlog') return handleEnrichBacklog(res)
     if (req.method === 'POST' && p === '/api/enrich/prioritize') return await handlePrioritize(req, res)
     if (p === '/api/collections') {
-      if (req.method === 'GET') return handleCollections(res)
+      if (req.method === 'GET') return handleCollections(res, viewer)
       if (req.method === 'POST') return await handleCreateCollection(req, res)
     }
     if (p.startsWith('/api/collections/')) {
