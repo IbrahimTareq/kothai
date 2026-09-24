@@ -33,9 +33,9 @@ import {
   isStuckInstagramNote,
   setCaptionHandler,
   _igQueueState,
-} from '../links/ig-queue.ts'
+} from '../links/instagram-queue.ts'
 
-// The Instagram lane moved to ../links/ig-queue.ts. Re-exported here because the
+// The Instagram lane moved to ../links/instagram-queue.ts. Re-exported here because the
 // routes and its tests address it through this module, and where the queue
 // lives is not their business.
 export {
@@ -104,7 +104,7 @@ function pumpMeta() {
   // Dequeue first and break on empty rather than testing metaQueue.length in
   // the loop head: Array.shift() is declared possibly-undefined and the job
   // goes straight to runMetaJob. Same dequeue order and same stopping point —
-  // a shift on an empty queue neither mutates nor loops. ig-queue.ts's pumpIg
+  // a shift on an empty queue neither mutates nor loops. instagram-queue.ts's pumpIg
   // restructured its own loop head for exactly this reason.
   while (metaActive < META_CONCURRENCY) {
     const job = metaQueue.shift()

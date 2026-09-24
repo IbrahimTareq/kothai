@@ -21,7 +21,7 @@ import { encodeEmbedding, decodeEmbedding, cosine } from './embedding.ts'
 // below); `ai`, `article` and `thumbDescription` are written by ai/enrich.ts
 // and read here — the first to gate the enrichment backlog, the other two
 // because textSearch's haystack covers them; the three after those are
-// ig-queue.ts's retry budget for a failed Instagram fetch and carousel mark.
+// instagram-queue.ts's retry budget for a failed Instagram fetch and carousel mark.
 //
 // Extended here rather than in types.ts because ServerNote describes what
 // crosses the HTTP boundary and none of them do.

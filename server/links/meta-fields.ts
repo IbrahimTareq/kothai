@@ -2,7 +2,7 @@
 // them to a pending patch.
 //
 // This list was spelled out at four call sites — the fast meta lane, the
-// backfill job, enrichNote's applyLinkMeta and ig-queue's own lane — in four
+// backfill job, enrichNote's applyLinkMeta and instagram-queue.ts's own lane — in four
 // byte-identical loops, so adding a field to fetchLinkMeta meant remembering
 // all four.
 //
