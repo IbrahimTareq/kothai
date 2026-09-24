@@ -13,6 +13,7 @@ import {
   columnWidth,
   clampScrollTop,
   HeightBook,
+  onScreen,
   OVERSCAN,
   GAP,
 } from '../../client/layout/masonry.ts'
@@ -305,4 +306,26 @@ test('HeightBook.avg averages across everything measured, with a floor default',
   hb.set('a', 300, 'video')
   hb.set('b', 100, 'link')
   assert.equal(hb.avg(), 200)
+})
+
+// --- onScreen: where a result swap animates from -------------------------
+//
+// A filter change also returns the board to the top, so a card's old BOARD
+// position is the wrong place to animate from: a card seen 200px down the
+// screen at scrollTop 4800 would fly up from 5000px. Its place on screen is
+// where the eye last saw it.
+
+test('onScreen reports positions relative to the viewport, not the board', () => {
+  const boxes = [{ id: 'a', col: 1, top: 5000, height: 200 }]
+  assert.deepEqual(onScreen(boxes, 4800, 744, 100), new Map([['a', { x: 100 + GAP, y: 200 }]]))
+})
+
+test('onScreen keeps cards partly in view and drops overscan nobody saw', () => {
+  const boxes = [
+    { id: 'partTop', col: 0, top: 900, height: 200 },
+    { id: 'partBottom', col: 0, top: 1700, height: 200 },
+    { id: 'above', col: 1, top: 700, height: 200 },
+    { id: 'below', col: 1, top: 1744, height: 200 },
+  ]
+  assert.deepEqual([...onScreen(boxes, 1000, 744, 100).keys()], ['partTop', 'partBottom'])
 })

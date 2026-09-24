@@ -54,3 +54,21 @@
    only the visible cards are mounted. */
 .board{position:relative}
 .masonry-cell{position:absolute;top:0;left:0;min-width:0;will-change:transform}
+/* A result swap (Board.tsx): a card in both sets glides from where it sat on
+   screen (--glide-from) to its inline transform, the keyframe's implied end —
+   so a re-pack mid-glide retargets it rather than snapping at the finish. New
+   cards scale up in; departing ones fade where they were. The scale sits on the
+   card, not the cell, whose transform is its position. */
+.masonry-cell.glide{animation:cell-glide var(--dur-slow) var(--ease-out)}
+@keyframes cell-glide{from{transform:var(--glide-from)}}  /* token-lint-ignore: per-card origin, set inline by Board.tsx */
+.masonry-cell.enter > *{animation:cell-in var(--dur-slow) var(--ease-entrance)}
+@keyframes cell-in{from{opacity:0;transform:scale(.96)}}
+.masonry-cell.leave{pointer-events:none}
+.masonry-cell.leave > *{animation:cell-out var(--dur-mid) var(--ease-out) forwards}
+@keyframes cell-out{to{opacity:0;transform:scale(.96)}}
+/* Reduced motion keeps the change of set, as a fade, and drops the movement. */
+@media (prefers-reduced-motion:reduce){
+  .masonry-cell.glide{animation:none}
+  .masonry-cell.enter > *{animation-name:exp-fade}
+  .masonry-cell.leave > *{animation-name:exp-fade;animation-direction:reverse}
+}

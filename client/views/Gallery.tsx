@@ -1,6 +1,6 @@
 // Gallery.tsx — the Everything grid: search box, type/source filter chips,
 // column toggle, item board, and capture FAB.
-import { useLayoutEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { Icon, CAT } from '../components/icons'
 import { ItemCard } from '../components/Cards'
 import { WindowedBoard } from '../components/Board'
@@ -73,14 +73,6 @@ export function GalleryView({
   const cat = CAT[nav as NoteType] || VIEW_CAT[nav] || { label: nav, glyph: 'all' }
 
   const scrollRef = useRef<HTMLDivElement>(null)
-  // A new filter's results start at the top. That used to happen by accident:
-  // the board emptied to zero height on every chip click, which clamped the
-  // scroll to 0. The old results now stay up until the new ones land (see
-  // beginQuery in data/pager.ts), so this does it on purpose — before paint,
-  // so the new results never flash at the old scroll offset.
-  useLayoutEffect(() => {
-    if (ready) scrollRef.current?.scrollTo({ top: 0 })
-  }, [ready])
 
   // Chips are multi-select: each one toggles, and "All" is simply the empty
   // selection rather than a chip of its own that has to be deselected.
@@ -215,6 +207,7 @@ export function GalleryView({
             view={view}
             scroller={scrollRef}
             onWindow={onWindow}
+            ready={ready}
             renderItem={it => (
               <ItemCard
                 item={it}

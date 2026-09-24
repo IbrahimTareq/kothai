@@ -3,7 +3,16 @@
 // other way gets no layout at all (see test/board-layout.test.ts).
 import { useLayoutEffect, useRef, useState, useEffect, useMemo } from 'react'
 import type { UIItem, ViewMode } from '../types'
-import { columnCount, packColumns, visibleBoxes, columnWidth, clampScrollTop, HeightBook, GAP } from '../layout/masonry'
+import {
+  columnCount,
+  packColumns,
+  visibleBoxes,
+  columnWidth,
+  clampScrollTop,
+  onScreen,
+  HeightBook,
+  GAP,
+} from '../layout/masonry'
 import { isPlaceholder } from '../data/pager'
 import type { Slot } from '../data/pager'
 
@@ -23,12 +32,16 @@ export function WindowedBoard({
   scroller,
   renderItem,
   onWindow,
+  ready,
 }: {
   items: Slot[]
   view: ViewMode
   scroller: React.RefObject<HTMLDivElement | null>
   renderItem: (item: UIItem) => React.ReactNode
   onWindow?: (first: number, last: number) => void
+  /** The query's readiness (data/useNotes.ts). The render where it turns true
+   *  swaps in a new result set, which the board animates. */
+  ready?: boolean
 }) {
   const boardRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
@@ -110,6 +123,49 @@ export function WindowedBoard({
     [boxes, total, scrollTop, viewportH, colW],
   )
 
+  // A filter change swaps the whole result set in one render (beginQuery in
+  // data/pager.ts), which read as a hard cut: every card gone, a new board in
+  // its place. Instead, cards in both sets glide from where they sat on
+  // screen, new ones fade in, and departing ones fade out where they were.
+  // `shown` is the last committed board — the one the swap replaces.
+  const shown = useRef({ visible, byId, scrollTop })
+  const [swap, setSwap] = useState<{
+    from: Map<string, { x: number; y: number }>
+    leaving: { id: string; x: number; y: number; slot: UIItem }[]
+  } | null>(null)
+  const [wasReady, setWasReady] = useState(ready)
+  if (ready !== wasReady) {
+    setWasReady(ready)
+    const was = shown.current
+    const from = ready ? onScreen(was.visible, was.scrollTop, viewportH, colW) : new Map()
+    if (from.size > 0) {
+      const leaving: { id: string; x: number; y: number; slot: UIItem }[] = []
+      for (const [id, at] of from) {
+        const slot = was.byId.get(id)
+        if (!byId.has(id) && slot && !isPlaceholder(slot)) leaving.push({ id, ...at, slot })
+      }
+      setSwap({ from, leaving })
+    }
+  }
+  useLayoutEffect(() => {
+    shown.current = { visible, byId, scrollTop }
+  })
+  // A new filter's results start at the top. That used to happen by accident:
+  // the board emptied to zero height on every chip click, which clamped the
+  // scroll to 0. The old results now stay up until the new ones land, so it
+  // happens here on purpose, before paint. The origins in `swap.from` are
+  // screen positions on that promise — one frame painted at the old offset
+  // would show every card displaced by it.
+  useLayoutEffect(() => {
+    if (!swap) return
+    scroller.current?.scrollTo({ top: 0 })
+    setScrollTop(0)
+    // Only clears the classes and the faded-out leavers; outlasts the
+    // longest of the animations (--dur-slow in gallery.css).
+    const id = window.setTimeout(() => setSwap(null), 400)
+    return () => clearTimeout(id)
+  }, [swap, scroller])
+
   // Report the slot-index range currently covered by the visible window, so
   // the data layer can fetch whatever pages that range touches. Keyed off
   // `visible` + `items` identity, not scrollTop directly — `visible` already
@@ -175,6 +231,17 @@ export function WindowedBoard({
 
   return (
     <div ref={boardRef} className={`board ${view}`} style={{ height: total }}>
+      {swap?.leaving.map(l => (
+        // Same key as the card it was, so React keeps that element (and its
+        // loaded thumbnail) rather than mounting a copy to fade out.
+        <div
+          key={l.id}
+          className="masonry-cell leave"
+          style={{ transform: `translate3d(${l.x}px, ${l.y}px, 0)`, width: colW }}
+        >
+          {renderItem(l.slot)}
+        </div>
+      ))}
       {visible.map(b => {
         const slot = byId.get(b.id)
         if (!slot) return null
@@ -191,16 +258,23 @@ export function WindowedBoard({
             </div>
           )
         }
+        const from = swap?.from.get(b.id)
         return (
           <div
             key={b.id}
-            className="masonry-cell"
+            className={`masonry-cell${swap ? (from ? ' glide' : ' enter') : ''}`}
             data-note-id={b.id}
             ref={el => {
               if (el) cellRefs.current.set(b.id, el)
               else cellRefs.current.delete(b.id)
             }}
-            style={{ transform: `translate3d(${b.col * (colW + GAP)}px, ${b.top}px, 0)`, width: colW }}
+            style={
+              {
+                transform: `translate3d(${b.col * (colW + GAP)}px, ${b.top}px, 0)`,
+                width: colW,
+                '--glide-from': from && `translate3d(${from.x}px, ${from.y}px, 0)`,
+              } as React.CSSProperties
+            }
           >
             {renderItem(slot)}
           </div>

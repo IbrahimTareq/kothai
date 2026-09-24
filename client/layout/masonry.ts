@@ -121,6 +121,25 @@ export function visibleBoxes(boxes: Box[], scrollTop: number, viewportH: number)
   return boxes.filter(b => b.top + b.height >= top && b.top <= bottom)
 }
 
+// Where each card in view sat on SCREEN, for a result swap to animate from
+// (Board.tsx). The swap also returns the board to the top, so a card's old
+// board position is the wrong origin: one seen 200px down the screen at
+// scrollTop 4800 would fly up from 5000px. Overscan cards are left out —
+// nobody saw them, so there is nowhere to glide or fade them from.
+export function onScreen(
+  boxes: Box[],
+  scrollTop: number,
+  viewportH: number,
+  colW: number,
+): Map<string, { x: number; y: number }> {
+  const seen = new Map<string, { x: number; y: number }>()
+  for (const b of boxes) {
+    const y = b.top - scrollTop
+    if (y + b.height > 0 && y < viewportH) seen.set(b.id, { x: b.col * (colW + GAP), y })
+  }
+  return seen
+}
+
 // Height guess for a card we haven't measured yet. Only ever used for cards
 // that have never been on screen; once a card mounts, its real measured
 // height replaces this in the cache. Rough is fine — being wrong just means
