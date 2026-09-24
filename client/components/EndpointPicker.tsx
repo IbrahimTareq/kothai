@@ -38,7 +38,7 @@ export function EndpointPicker({
 
   // Every catalogue entry carries its own URL — there is no hand-typed
   // endpoint here. Someone pointing at their own server uses --endpoint or
-  // STASH_AI_BASE_URL, which win over anything set in the app.
+  // KOTHAI_AI_BASE_URL, which win over anything set in the app.
   const baseUrl = (picked?.baseUrl || '').trim()
 
   const publish = (next: EndpointOption | null, nextKey = key, models = probe.models) => {

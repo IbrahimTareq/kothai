@@ -254,7 +254,7 @@ export function SettingsView({
                         .filter(isRemote)
                         .map(r => ROLE_META[r].title.toLowerCase())
                         .join(' and ')} `
-                }runs on a remote endpoint${cfg.endpoint.host ? ` (${cfg.endpoint.host})` : ''}. The endpoint and its key were set during setup and are stored on this machine only; STASH_AI_BASE_URL and STASH_AI_API_KEY override them.`
+                }runs on a remote endpoint${cfg.endpoint.host ? ` (${cfg.endpoint.host})` : ''}. The endpoint and its key were set during setup and are stored on this machine only; KOTHAI_AI_BASE_URL and KOTHAI_AI_API_KEY override them.`
               ) : (
                 <>
                   Idle ≈ <b>{idleGB || '0.0 GB'}</b> · Peak ≈ <b>{peakGB || '0.0 GB'}</b> of RAM, from each model's

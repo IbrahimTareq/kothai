@@ -175,7 +175,7 @@ button:disabled{opacity:.5;cursor:default}
 <body>
 <form id="f">
   <h1>Kothai</h1>
-  <p>This stash is password protected.</p>
+  <p>This archive is password protected.</p>
   <label for="password">Password</label>
   <input id="password" name="password" type="password" autocomplete="current-password" autofocus required>
   <button type="submit">Unlock</button>
