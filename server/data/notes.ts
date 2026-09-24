@@ -8,13 +8,12 @@ import path from 'node:path'
 import { readdir, rm } from 'node:fs/promises'
 import type { DatabaseSync, SQLOutputValue } from 'node:sqlite'
 import { UPLOAD_DIR } from '../config.ts'
-import { deriveAiMarkers } from '../ai/backlog.ts'
 import type { AiMarkers } from '../ai/backlog.ts'
-import { deriveAccountFromTitle } from '../import/instagram.ts'
 import type { ServerNote } from '../types.ts'
 import { getDb, _resetDb } from './db.ts'
 import type { NoteRow } from './db.ts'
 import { encodeEmbedding, decodeEmbedding, cosine } from './embedding.ts'
+import { upgradeLegacyNote } from './legacy-notes.ts'
 
 // The record as it lives in the in-memory array: the wire shape plus the
 // fields that never reach a client. `_rev` is delta-sync bookkeeping (see
@@ -149,14 +148,8 @@ export async function load(): Promise<void> {
     else if (note.embedding?.length) legacy.push(note)
     return note
   })
-  // Migrate pre-residency notes: infer which AI steps already ran so the
-  // enrichment backlog counts only genuinely missing work.
-  for (const n of notes) {
-    n.ai = deriveAiMarkers(n)
-    // Migrate notes imported before `account` was a first-class field: the
-    // poster username only ever landed inside the title string.
-    if (!n.account) n.account = deriveAccountFromTitle(n.title)
-  }
+  // Older rows, brought up to the current shape (see legacy-notes.ts).
+  for (const n of notes) upgradeLegacyNote(n)
   if (legacy.length) migrateEmbeddings(db, legacy)
   loaded = true
 }

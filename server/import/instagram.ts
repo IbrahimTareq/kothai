@@ -522,15 +522,3 @@ export function deriveNote(item: ImportItem) {
     // route hands this object straight to store.addNote.
   } satisfies Partial<ServerNote>
 }
-
-// One-time migration for notes imported before `account` was a first-class
-// field: the poster username only ever landed inside the title string
-// (`@handle · Reel`/`@handle · Post`, see deriveNote above). Anchored to the
-// exact shape deriveNote produces so it can't misfire on an unrelated title
-// that merely starts with "@something". Used by notes.ts's load() migration,
-// mirroring backlog.ts's deriveAiMarkers pattern.
-const TITLE_ACCOUNT_RE = /^@(\S+) · (?:Reel|Post)$/
-export function deriveAccountFromTitle(title: unknown): string | null {
-  const m = TITLE_ACCOUNT_RE.exec(String(title || ''))
-  return m ? m[1] : null
-}

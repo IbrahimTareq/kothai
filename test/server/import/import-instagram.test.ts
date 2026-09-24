@@ -1,13 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {
-  sniff,
-  parse,
-  parseSavedPosts,
-  parseCollections,
-  deriveNote,
-  deriveAccountFromTitle,
-} from '../../../server/import/instagram.ts'
+import { sniff, parse, parseSavedPosts, parseCollections, deriveNote } from '../../../server/import/instagram.ts'
 import { findImporter } from '../../../server/import/index.ts'
 
 const SAVED = JSON.stringify({
@@ -699,16 +692,4 @@ test('deriveNote: no poster means no account (not the "instagram" title fallback
   const note = deriveNote({ url: 'https://www.instagram.com/p/ABC123/', poster: '', savedAt: 0 })
   assert.equal(note.account, null)
   assert.equal(note.title, '@instagram · Post') // title fallback is unchanged
-})
-
-test('deriveAccountFromTitle: extracts the handle from a legacy note title', () => {
-  assert.equal(deriveAccountFromTitle('@chefsteps · Reel'), 'chefsteps')
-  assert.equal(deriveAccountFromTitle('@natgeo · Post'), 'natgeo')
-})
-
-test('deriveAccountFromTitle: returns null for anything that does not match the exact import title shape', () => {
-  assert.equal(deriveAccountFromTitle('Untitled'), null)
-  assert.equal(deriveAccountFromTitle('@partial · '), null)
-  assert.equal(deriveAccountFromTitle(''), null)
-  assert.equal(deriveAccountFromTitle(null), null)
 })

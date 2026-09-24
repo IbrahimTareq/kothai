@@ -60,12 +60,12 @@
     "exports": 14
   },
   "server/data/notes.ts": {
-    "lines": 686,
+    "lines": 684,
     "exports": 23
   },
   "server/import/instagram.ts": {
-    "lines": 535,
-    "exports": 9
+    "lines": 525,
+    "exports": 8
   },
   "server/routes/import.ts": {
     "lines": 481,
