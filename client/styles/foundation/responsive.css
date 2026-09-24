@@ -185,8 +185,10 @@
      two — including the renaming and confirming states, which share the box. */
   .chat-row{min-height:80px}
 
-  /* Ask: composer buttons, and the rename/delete pair on a chat history row */
-  .core .attach-btn,.core .send-btn{width:44px;height:44px}
+  /* Both composers' buttons, and the rename/delete pair on a chat history row.
+     Scoped to .core alone, this left quick capture's attach and save — the same
+     buttons — at 40px on a phone. */
+  .attach-btn,.send-btn,.core .attach-btn,.core .send-btn{width:44px;height:44px}
   .core .chat-row .card-del{width:var(--control-md);height:var(--control-md)}
 
   /* The canonical buttons size to their content, so they had no floor at all:
