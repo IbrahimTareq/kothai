@@ -41,12 +41,6 @@
 .coll-rule.fade-l.fade-r{
   -webkit-mask-image:linear-gradient(to right,transparent,#000 var(--space-32),#000 calc(100% - var(--space-32)),transparent);  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
   mask-image:linear-gradient(to right,transparent,#000 var(--space-32),#000 calc(100% - var(--space-32)),transparent)}
-/* Delete is the quietest thing in the header until you reach for it, and it arms
-   before it fires — one click on a bare icon should not lose a space. */
-.coll-del { display: grid; place-items: center; height: var(--control-md); min-width: var(--control-md); padding: 0; background: transparent; border: 0; border-radius: var(--radius-md); color: var(--ink-faint); font: inherit; font-size:var(--text-xs); cursor: pointer; transition: var(--dur-fast); } /* token-lint-ignore: icon-only delete with a two-step armed state, like the
-   wipe control — not a .btn box */
-.coll-del:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
-.coll-del.armed { padding: 0 var(--space-12); color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
 .coll-smart { display: inline-flex; flex: none; color: var(--ink-mute); cursor: help; }
 .coll-smart:hover, .coll-smart:focus-visible { color: var(--ink); outline: none; }
 /* dashed, like the expanded sidebar's "add to space" — a slot, not a value */

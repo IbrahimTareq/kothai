@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Icon } from './icons'
 import { relTime } from '../util/format'
 import type { ChatSummary } from '../types'
-import { Button } from '../ui/Button'
+import { Confirm } from '../ui/Confirm'
 
 interface RowProps {
   chat: ChatSummary
@@ -77,13 +77,15 @@ export function ChatRow({ chat, active, open, rename, remove }: RowProps) {
     return (
       <div className="chat-row confirming">
         <Icon name="trash" size={14} />
-        <span className="chat-title">Delete “{chat.title}”?</span>
-        <Button size="xs" danger onClick={() => remove(chat.id)}>
-          Delete
-        </Button>
-        <Button size="xs" onClick={() => setMode('idle')}>
-          Cancel
-        </Button>
+        <Confirm
+          inline
+          compact
+          danger
+          question={`Delete “${chat.title}”?`}
+          confirmLabel="Delete"
+          onConfirm={() => remove(chat.id)}
+          onCancel={() => setMode('idle')}
+        />
       </div>
     )
   }

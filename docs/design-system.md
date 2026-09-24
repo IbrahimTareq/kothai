@@ -111,6 +111,13 @@ stack, and returns focus to what opened it. Both were plain divs with none of
 that: Tab walked out of the item view into the board, and closing one dropped
 focus on `<body>`.
 
+**The second step of an irreversible action is `<Confirm>`** (`client/ui/`): a
+question, a filled confirm, and Cancel — boxed under a settings row, or
+`inline` in a row or header; `danger` when it destroys something, `guard` for a
+word to type first. It moves focus to the decision when it appears, and Escape
+cancels. It replaced six hand-built confirms, of which two answered Escape, one
+moved focus, and one — the chat row's — confirmed with an outline button.
+
 **Every page opens with `<PageHeader>`** (`client/ui/`). Two rows: identity
 (`lead`, `title`, a mono `meta` count, `actions` on the right) over a toolbar
 of `filters` on the left — what is shown — and `display` on the right — how
@@ -190,9 +197,9 @@ It also fails any rule outside `primitives.css` that declares a whole button box
 rule that keeps `.btn` the default. It keys on the chrome rather than the class
 name, because a name-shaped rule would be satisfied by calling the next
 hand-rolled button `.wizard-test`, which is precisely how the last one happened.
-Eight controls are annotated exceptions: a floating action circle, a segment,
-an inline citation ref, a scroll affordance, two combobox list rows, an armed
-icon-delete, and a dashed add affordance.
+Seven controls are annotated exceptions: a floating action circle, a segment,
+an inline citation ref, a scroll affordance, two combobox list rows, and a
+dashed add affordance.
 
 The markup half of the same rule: outside `client/ui/`, any `className`
 carrying `btn` or `btn--*` fails. It has no escape hatch — use `<Button>`.

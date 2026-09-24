@@ -49,7 +49,7 @@
     "buttons": 4
   },
   "client/views/Spaces.tsx": {
-    "buttons": 4,
+    "buttons": 3,
     "fields": 1
   }
 }

@@ -18,6 +18,7 @@ import { Segmented } from '../ui/Segmented'
 import { Popover } from '../ui/Popover'
 import { Input } from '../ui/Input'
 import { Tooltip } from '../ui/Tooltip'
+import { Confirm } from '../ui/Confirm'
 
 interface SpacesViewProps {
   collections: Collection[]
@@ -175,6 +176,7 @@ export function CollectionView({
   const [addingTag, setAddingTag] = useState(false)
   const [board, setBoard] = useState(false) // false = grid, true = canvas
   const [armed, setArmed] = useState(false)
+  const arm = () => setArmed(true)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Self-fetch this collection's members — enabled only once we know which
@@ -333,18 +335,14 @@ export function CollectionView({
               <Button size="icon" tone="ghost" title="Rename space" aria-label="Rename space" onClick={startRename}>
                 <Icon name="edit" size={14} />
               </Button>
-              <button
-                className={`coll-del${armed ? ' armed' : ''}`}
-                aria-label={armed ? 'Confirm delete space' : 'Delete space'}
-                title={armed ? '' : 'Delete space'}
-                onClick={() => (armed ? del() : setArmed(true))}
-                onBlur={() => setArmed(false)}
-                onKeyDown={e => {
-                  if (e.key === 'Escape') setArmed(false)
-                }}
-              >
-                {armed ? 'Delete space?' : <Icon name="trash" size={16} />}
-              </button>
+              {armed ? (
+                <Confirm inline danger confirmLabel="Delete space" onConfirm={del} onCancel={() => setArmed(false)} />
+              ) : (
+                // Arms before it fires: one click on a bare icon should not lose a space.
+                <Button size="icon" tone="ghost" title="Delete space" aria-label="Delete space" onClick={arm}>
+                  <Icon name="trash" size={16} />
+                </Button>
+              )}
             </>
           )
         }

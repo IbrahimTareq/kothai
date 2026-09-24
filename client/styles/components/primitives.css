@@ -282,3 +282,22 @@ textarea.field{resize:vertical;line-height:var(--leading-normal)}
 .dialog-title{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;
   overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 [role="dialog"]:focus{outline:none}
+
+/* ── confirm ───────────────────────────────────────────────────────────────
+   What <Confirm> in client/ui/ draws: the erase row's red-bordered panel,
+   which the re-tag and link-removal confirms had copied under two more names,
+   made the one box — neutral unless it destroys something. Inline, the same
+   question and buttons sit in a row or header with no box. */
+.confirm{padding:var(--space-14) var(--space-16);border:1px solid var(--line);
+  border-radius:var(--radius-lg);background:var(--panel)}
+.confirm--danger{border-color:var(--danger)}
+.confirm-q{display:block;margin-bottom:var(--space-10);color:var(--ink-dim);
+  font-size:var(--text-sm);letter-spacing:var(--tracking-tight)}
+.confirm-q b{color:var(--ink);font-weight:var(--fw-medium)}
+.confirm-actions{display:flex;flex-wrap:wrap;gap:var(--space-8)}
+.confirm-guard{flex:1 1 140px}
+.confirm--inline{display:flex;align-items:center;gap:var(--space-8);min-width:0;
+  padding:0;border:0;background:none}
+.confirm--inline .confirm-q{flex:1;min-width:0;margin:0;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.confirm--inline .confirm-actions{flex:none;flex-wrap:nowrap}

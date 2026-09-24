@@ -19,6 +19,7 @@ import { fileLabel, fmtSize, storageSummary } from '../domain/modelFiles'
 import { ROLE_META } from './ModelPicker'
 import type { ModelFilesResponse } from '../types'
 import { Button } from '../ui/Button'
+import { Confirm } from '../ui/Confirm'
 
 export function ModelFilesRow() {
   const [data, setData] = useState<ModelFilesResponse | null>(null)
@@ -98,14 +99,16 @@ export function ModelFilesRow() {
                     In use · {f.usedBy ? ROLE_META[f.usedBy].title.toLowerCase() : 'selected'}
                   </span>
                 ) : pending === f.name ? (
-                  <span className="mf-confirm">
-                    <Button danger tone="solid" onClick={() => remove(f.name)} disabled={deleting === f.name}>
-                      {deleting === f.name ? 'Deleting…' : `Delete ${fmtSize(f.sizeBytes)}`}
-                    </Button>
-                    <Button onClick={() => setPending(null)} disabled={deleting === f.name}>
-                      Cancel
-                    </Button>
-                  </span>
+                  <Confirm
+                    inline
+                    danger
+                    className="mf-confirm"
+                    confirmLabel={`Delete ${fmtSize(f.sizeBytes)}`}
+                    busyLabel="Deleting…"
+                    busy={deleting === f.name}
+                    onConfirm={() => remove(f.name)}
+                    onCancel={() => setPending(null)}
+                  />
                 ) : (
                   <Button
                     danger

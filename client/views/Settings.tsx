@@ -22,7 +22,7 @@ import type { Residency, SettingsResponse, VaultStatus } from '../types'
 import { Button } from '../ui/Button'
 import { PageHeader } from '../ui/PageHeader'
 import { Segmented } from '../ui/Segmented'
-import { Input } from '../ui/Input'
+import { Confirm } from '../ui/Confirm'
 
 export function SettingsView({
   vault,
@@ -47,7 +47,6 @@ export function SettingsView({
   const [retagQueued, setRetagQueued] = useState<number | null>(null)
   const [retagError, setRetagError] = useState<string | null>(null)
   const [wipeArmed, setWipeArmed] = useState(false)
-  const [wipeConfirm, setWipeConfirm] = useState('')
   const [wiping, setWiping] = useState(false)
   const [wipeResult, setWipeResult] = useState<Awaited<ReturnType<typeof API.wipeAll>> | null>(null)
   const [wipeError, setWipeError] = useState<string | null>(null)
@@ -170,14 +169,14 @@ export function SettingsView({
   const WIPE_TOKEN = 'DELETE'
 
   const wipeAll = async () => {
-    if (wipeConfirm !== WIPE_TOKEN || wiping) return
+    // <Confirm> only calls this once DELETE has been typed.
+    if (wiping) return
     setWiping(true)
     setWipeError(null)
     try {
-      const result = await API.wipeAll(wipeConfirm)
+      const result = await API.wipeAll(WIPE_TOKEN)
       setWipeResult(result)
       setWipeArmed(false)
-      setWipeConfirm('')
       // Everything on screen that came from the store is now gone; re-read
       // the backlog so the enrich banner doesn't keep offering to enrich
       // notes that no longer exist.
@@ -395,27 +394,28 @@ export function SettingsView({
               >
                 {retagArmed && (
                   <div className="settings-row-extra">
-                    <div className="danger-confirm retag-confirm">
-                      <label>
-                        Re-tag{' '}
-                        {noteCount === null ? (
-                          'every saved note'
-                        ) : (
-                          <>
-                            all <b>{noteCount}</b> note{noteCount === 1 ? '' : 's'}
-                          </>
-                        )}
-                        ? It can't be stopped once it starts.
-                      </label>
-                      <div className="danger-confirm-row">
-                        <Button tone="solid" onClick={retagAll} disabled={retagging}>
-                          {retagging ? 'Starting…' : 'Yes, re-tag everything'}
-                        </Button>
-                        <Button onClick={() => setRetagArmed(false)} disabled={retagging}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
+                    {/* Neutral, not danger: it rebuilds derived metadata rather
+                        than destroying anything. */}
+                    <Confirm
+                      question={
+                        <>
+                          Re-tag{' '}
+                          {noteCount === null ? (
+                            'every saved note'
+                          ) : (
+                            <>
+                              all <b>{noteCount}</b> note{noteCount === 1 ? '' : 's'}
+                            </>
+                          )}
+                          ? It can't be stopped once it starts.
+                        </>
+                      }
+                      confirmLabel="Yes, re-tag everything"
+                      busyLabel="Starting…"
+                      busy={retagging}
+                      onConfirm={retagAll}
+                      onCancel={() => setRetagArmed(false)}
+                    />
                   </div>
                 )}
                 {retagQueued !== null && (
@@ -454,44 +454,20 @@ export function SettingsView({
               >
                 {wipeArmed && (
                   <div className="settings-row-extra">
-                    <div className="danger-confirm">
-                      <label htmlFor="wipe-confirm">
-                        Type <b>{WIPE_TOKEN}</b> to confirm.
-                      </label>
-                      <div className="danger-confirm-row">
-                        <Input
-                          danger
-                          id="wipe-confirm"
-                          className="danger-input mono"
-                          value={wipeConfirm}
-                          autoFocus
-                          disabled={wiping}
-                          spellCheck={false}
-                          autoComplete="off"
-                          placeholder={WIPE_TOKEN}
-                          onChange={e => setWipeConfirm(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') wipeAll()
-                            if (e.key === 'Escape') {
-                              setWipeArmed(false)
-                              setWipeConfirm('')
-                            }
-                          }}
-                        />
-                        <Button danger tone="solid" onClick={wipeAll} disabled={wipeConfirm !== WIPE_TOKEN || wiping}>
-                          {wiping ? 'Erasing…' : 'Erase everything'}
-                        </Button>
-                        <Button
-                          onClick={() => {
-                            setWipeArmed(false)
-                            setWipeConfirm('')
-                          }}
-                          disabled={wiping}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
+                    <Confirm
+                      danger
+                      guard={WIPE_TOKEN}
+                      question={
+                        <>
+                          Type <b>{WIPE_TOKEN}</b> to confirm.
+                        </>
+                      }
+                      confirmLabel="Erase everything"
+                      busyLabel="Erasing…"
+                      busy={wiping}
+                      onConfirm={wipeAll}
+                      onCancel={() => setWipeArmed(false)}
+                    />
                   </div>
                 )}
                 {wipeResult && <RowStatus>{summarizeWipe(wipeResult)}</RowStatus>}

@@ -325,3 +325,6 @@
   .core .core-prompt,.core.has-thread .thread-wrap,
   .core.has-thread .mode-toggle{animation:none}
 }
+
+/* the delete confirm takes the row the title had */
+.chat-row .confirm{flex:1}

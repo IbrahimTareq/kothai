@@ -264,24 +264,6 @@
 }
 .onboarding-skip:hover { color: var(--ink); }
 
-/* Danger zone (irreversible content wipe) — the confirm step that expands
-   inside the erase row once it's armed. */
-.danger-confirm {
-  padding: var(--space-14) var(--space-16);
-  border: 1px solid var(--danger);
-  border-radius: var(--radius-lg);
-  background: var(--panel);
-}
-.danger-confirm > label {
-  display: block;
-  margin-bottom: var(--space-10);
-  color: var(--ink-dim);
-  font-size: var(--text-sm);
-  letter-spacing: var(--tracking-tight);
-}
-.danger-confirm > label b { color: var(--ink); font-weight: var(--fw-medium); }
-.danger-confirm-row { display: flex; flex-wrap: wrap; gap: var(--space-8); }
-.danger-input { flex: 1 1 140px; }
 
 /* Endpoint model field — a combobox, not a native datalist. The browser's own
    dropdown cannot be styled, renders differently everywhere, and offered all
@@ -323,12 +305,6 @@
 }
 .remote-model-more:hover { color: var(--ink-dim); }
 .remote-model-desc { margin-top: var(--space-6); }
-
-/* Re-tag everything — the same arm/confirm shape as the danger zone, but in
-   the neutral tone: this rebuilds derived metadata rather than destroying
-   anything, so its confirm is .btn--solid where the wipe's is --danger--solid.
-   Layout is shared with .danger-confirm; only the accent differs. */
-.danger-confirm.retag-confirm { border-color: var(--line); }
 
 /* The remove button sits under the scan result rather than in the row's action
    slot: it only exists once a scan has found something, and it is destructive,

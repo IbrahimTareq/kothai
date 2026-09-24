@@ -11,6 +11,7 @@ import { useState } from 'react'
 import { SettingsRow, RowStatus } from './SettingsRow'
 import { API, apiError } from '../data/api'
 import { Button } from '../ui/Button'
+import { Confirm } from '../ui/Confirm'
 
 type Scan = Awaited<ReturnType<typeof API.scanAvailability>>
 
@@ -108,20 +109,20 @@ export function AvailabilityRow() {
       )}
       {armed && scan && (
         <div className="settings-row-extra">
-          <div className="danger-confirm">
-            <label>
-              Permanently delete <b>{scan.unavailable}</b> saved item{scan.unavailable === 1 ? '' : 's'} whose content
-              is gone? This can't be undone.
-            </label>
-            <div className="danger-confirm-row">
-              <Button danger tone="solid" onClick={remove} disabled={removing}>
-                {removing ? 'Removing…' : 'Yes, remove them'}
-              </Button>
-              <Button onClick={() => setArmed(false)} disabled={removing}>
-                Cancel
-              </Button>
-            </div>
-          </div>
+          <Confirm
+            danger
+            question={
+              <>
+                Permanently delete <b>{scan.unavailable}</b> saved item{scan.unavailable === 1 ? '' : 's'} whose content
+                is gone? This can't be undone.
+              </>
+            }
+            confirmLabel="Yes, remove them"
+            busyLabel="Removing…"
+            busy={removing}
+            onConfirm={remove}
+            onCancel={() => setArmed(false)}
+          />
         </div>
       )}
       {removed !== null && (
