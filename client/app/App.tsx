@@ -5,7 +5,7 @@ import { API } from '../data/api'
 import { useNotes } from '../data/useNotes'
 import { boardQuery } from '../domain/boardQuery'
 import { useCollections } from '../data/useCollections'
-import { useVaultStatus } from '../data/useVaultStatus'
+import { useStatusPoll } from '../data/useStatusPoll'
 import { useChat } from '../data/useChat'
 import type { NoteSource } from '../data/useNotes'
 import { isPlaceholder } from '../data/pager'
@@ -28,7 +28,7 @@ import { DemoBanner } from '../components/Demo'
 const KNOWN_TYPES = new Set(Object.keys(CAT))
 
 export default function App() {
-  const { vault, llmOff, llmWarming, needsSetup, setNeedsSetup } = useVaultStatus()
+  const { modelLoad, llmOff, llmWarming, needsSetup, setNeedsSetup } = useStatusPoll()
   const {
     collections,
     createCollection,
@@ -362,7 +362,7 @@ export default function App() {
         <span className="mono">BOOTING…</span>
       </div>
     )
-  if (needsSetup) return <Onboarding vault={vault} onComplete={() => setNeedsSetup(false)} />
+  if (needsSetup) return <Onboarding modelLoad={modelLoad} onComplete={() => setNeedsSetup(false)} />
 
   return (
     <div className="app">
@@ -436,7 +436,7 @@ export default function App() {
               }}
             />
           ) : nav === 'settings' ? (
-            <SettingsView vault={vault} theme={theme} setTheme={setTheme} />
+            <SettingsView modelLoad={modelLoad} theme={theme} setTheme={setTheme} />
           ) : nav === 'spaces' ? (
             <SpacesView {...{ collections, createCollection, navigate }} />
           ) : nav.startsWith('space:') ? (

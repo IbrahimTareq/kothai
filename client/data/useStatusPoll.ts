@@ -11,14 +11,14 @@
 import { useEffect, useState } from 'react'
 import { API } from './api'
 import { setDemo } from '../components/Demo'
-import type { VaultStatus } from '../types'
+import type { ModelLoad } from '../types'
 
 const TICK_LOADING_MS = 1300
 const TICK_READY_MS = 4000
 const TICK_ERROR_MS = 2200
 
-export interface VaultSource {
-  vault: VaultStatus
+export interface StatusPoll {
+  modelLoad: ModelLoad
   llmOff: boolean
   llmWarming: string
   // First-run gate: null until the first poll resolves; true shows the model
@@ -29,8 +29,8 @@ export interface VaultSource {
   setNeedsSetup: (v: boolean) => void
 }
 
-export function useVaultStatus(): VaultSource {
-  const [vault, setVault] = useState<VaultStatus>({ state: 'loading', txt: 'BOOTING', pct: 0 })
+export function useStatusPoll(): StatusPoll {
+  const [modelLoad, setModelLoad] = useState<ModelLoad>({ state: 'loading', txt: 'BOOTING', pct: 0 })
   const [llmOff, setLlmOff] = useState(false)
   const [llmWarming, setLlmWarming] = useState('')
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null)
@@ -51,15 +51,15 @@ export function useVaultStatus(): VaultSource {
         // message under a text answer that isn't waiting on that role at all.
         setLlmWarming(s.roles.llm.state === 'loading' ? s.roles.llm.message || 'Warming up the language model…' : '')
         const a = s.aggregate
-        if (a.state === 'error') setVault({ state: 'error', txt: 'FAULT', pct: a.progress || 0, msg: a.message })
+        if (a.state === 'error') setModelLoad({ state: 'error', txt: 'FAULT', pct: a.progress || 0, msg: a.message })
         else if (a.state === 'loading')
-          setVault({
+          setModelLoad({
             state: 'loading',
             txt: `LOADING ${a.progress || 0}%`,
             pct: a.progress || 0,
             msg: a.message,
           })
-        else setVault({ state: 'ready', txt: 'ONLINE', pct: 100, msg: '' })
+        else setModelLoad({ state: 'ready', txt: 'ONLINE', pct: 100, msg: '' })
         if (!stop) window.setTimeout(tick, a.state === 'loading' ? TICK_LOADING_MS : TICK_READY_MS)
       } catch {
         if (!stop) window.setTimeout(tick, TICK_ERROR_MS)
@@ -71,5 +71,5 @@ export function useVaultStatus(): VaultSource {
     }
   }, [])
 
-  return { vault, llmOff, llmWarming, needsSetup, setNeedsSetup }
+  return { modelLoad, llmOff, llmWarming, needsSetup, setNeedsSetup }
 }

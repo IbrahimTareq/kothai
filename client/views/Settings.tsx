@@ -18,7 +18,7 @@ import { TelegramSection } from '../components/TelegramSection'
 import { AvailabilityRow } from '../components/AvailabilityRow'
 import { ModelFilesRow } from '../components/ModelFilesRow'
 import { API, apiError } from '../data/api'
-import type { Residency, SettingsResponse, VaultStatus } from '../types'
+import type { Residency, SettingsResponse, ModelLoad } from '../types'
 import { Button } from '../ui/Button'
 import { PageHeader } from '../ui/PageHeader'
 import { Segmented } from '../ui/Segmented'
@@ -26,11 +26,11 @@ import { Confirm } from '../ui/Confirm'
 import { DemoSettings, useDemo } from '../components/Demo'
 
 export function SettingsView({
-  vault,
+  modelLoad,
   theme,
   setTheme,
 }: {
-  vault: VaultStatus
+  modelLoad: ModelLoad
   theme: 'dark' | 'light'
   setTheme: (t: 'dark' | 'light') => void
 }) {
@@ -42,7 +42,7 @@ export function SettingsView({
   const [enriching, setEnriching] = useState(false)
   const [enrichError, setEnrichError] = useState(false)
   // Note count for the re-tag confirmation. It lives on /api/status rather
-  // than on the VaultStatus prop, which is only the model-loading view of it.
+  // than on the ModelLoad prop, which is only the model-loading view of it.
   const [noteCount, setNoteCount] = useState<number | null>(null)
   const [retagArmed, setRetagArmed] = useState(false)
   const [retagging, setRetagging] = useState(false)
@@ -64,7 +64,7 @@ export function SettingsView({
       .catch(() => {})
   }, [])
 
-  const switching = vault.state === 'loading'
+  const switching = modelLoad.state === 'loading'
   useEffect(() => {
     if (!switching) setPendingRole(null)
   }, [switching])
@@ -224,9 +224,9 @@ export function SettingsView({
       {switching && (
         <div className="settings-progress">
           <div className="settings-progress-track">
-            <div className="settings-progress-bar" style={{ width: `${vault.pct || 0}%` }}></div>
+            <div className="settings-progress-bar" style={{ width: `${modelLoad.pct || 0}%` }}></div>
           </div>
-          <span className="settings-progress-msg mono">{vault.msg || vault.txt}</span>
+          <span className="settings-progress-msg mono">{modelLoad.msg || modelLoad.txt}</span>
         </div>
       )}
 
@@ -314,7 +314,7 @@ export function SettingsView({
                   onPolicy={p => pickPolicy(role, p)}
                   busy={busyRole !== null || switching}
                   switching={switching && pendingRole === role}
-                  pct={vault.pct || 0}
+                  pct={modelLoad.pct || 0}
                   defaultOpen={switching && pendingRole === role}
                   onPick={key => pick(role, key)}
                 />

@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react'
 import { Icon } from '../components/icons'
 import { RoleAccordion, RemoteModelField, ROLE_META, fmtGB, type Role } from '../components/ModelPicker'
 import { API } from '../data/api'
-import type { SettingsResponse, VaultStatus } from '../types'
+import type { SettingsResponse, ModelLoad } from '../types'
 import { SetupWizard } from './SetupWizard'
 import { Button } from '../ui/Button'
 
@@ -18,7 +18,7 @@ import { Button } from '../ui/Button'
 // below, so a mixed install only asks about the ones it will fetch.
 const UPFRONT: Role[] = ['llm', 'embed', 'vision']
 
-export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComplete: () => void }) {
+export function Onboarding({ modelLoad, onComplete }: { modelLoad: ModelLoad; onComplete: () => void }) {
   const [cfg, setCfg] = useState<SettingsResponse | null>(null)
   const [sel, setSel] = useState<Record<Role, string> | null>(null)
   const [remoteSel, setRemoteSel] = useState<Record<Role, string> | null>(null)
@@ -40,8 +40,8 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
 
   // The models start loading once we submit; when they're ready, enter the app.
   useEffect(() => {
-    if (submitted && vault.state === 'ready') onComplete()
-  }, [submitted, vault.state, onComplete])
+    if (submitted && modelLoad.state === 'ready') onComplete()
+  }, [submitted, modelLoad.state, onComplete])
 
   const pick = (role: Role, key: string) => setSel(s => (s ? { ...s, [role]: key } : s))
   const pickRemote = (role: Role, id: string) => setRemoteSel(s => (s ? { ...s, [role]: id } : s))
@@ -175,10 +175,12 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
         ) : submitted ? (
           <div className="onboarding-progress">
             <div className="settings-progress-track">
-              <div className="settings-progress-bar" style={{ width: `${vault.pct || 0}%` }}></div>
+              <div className="settings-progress-bar" style={{ width: `${modelLoad.pct || 0}%` }}></div>
             </div>
             <span className="settings-progress-msg mono">
-              {vault.state === 'error' ? vault.msg || 'Model load failed' : vault.msg || 'Downloading models…'}
+              {modelLoad.state === 'error'
+                ? modelLoad.msg || 'Model load failed'
+                : modelLoad.msg || 'Downloading models…'}
             </span>
           </div>
         ) : (

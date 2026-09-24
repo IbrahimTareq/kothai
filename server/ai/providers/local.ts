@@ -255,7 +255,7 @@ export async function warmCache(residency: Residency) {
 // by idle/ready roles reading as a static 100). An error only dominates the
 // aggregate when it's on an `always` role — an `ondemand` role's failure is
 // scoped to its own next use (it retries on the next acquire()) and
-// shouldn't paint the whole status vault as broken, mirroring how the
+// shouldn't paint the whole status as broken, mirroring how the
 // pre-residency code always tracked vision's state separately from the main
 // boot status.
 export function computeAggregate(roles: Record<Role, RoleStatus>, policies: Record<Role, Policy>): Aggregate {

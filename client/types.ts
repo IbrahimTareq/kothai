@@ -108,8 +108,8 @@ export interface DemoAllowance {
   asksLeft: number
 }
 
-// Derived, UI-facing status of the model "vault".
-export interface VaultStatus {
+// Derived, UI-facing view of /api/status: how far the models are through loading.
+export interface ModelLoad {
   state: 'loading' | 'ready' | 'error'
   txt: string
   pct: number
