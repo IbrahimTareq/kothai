@@ -28,3 +28,34 @@ test('a title not in the exact import shape yields no account', async () => {
     assert.equal((await loadRow({ type: 'link', title }))?.account, null, `title ${JSON.stringify(title)}`)
   }
 })
+
+// ---- types retired by links-only -------------------------------------------
+// Notes saved before Kothai kept links only (4c6d41f) can carry a type no card
+// renders: the old classifier answered "image" for Instagram reels and posts,
+// and "text" for articles it judged to be prose. Each one reached the board as
+// an empty zero-height card — seven of the first seventeen in one space.
+
+test('a legacy "image" note loads with the type a fresh save of its URL gets', async () => {
+  const url = 'https://www.instagram.com/reel/DbEewfgTeDk/'
+  const note = await loadRow({ type: 'image', url, content: url, title: 'Kaaba at dawn' })
+  assert.equal(note?.type, 'link')
+})
+
+test('a legacy "text" note with a video URL loads as a video', async () => {
+  const url = 'https://www.youtube.com/watch?v=abc'
+  const note = await loadRow({ type: 'text', url, content: url })
+  assert.equal(note?.type, 'video')
+})
+
+test('a legacy note with no URL falls back to its content', async () => {
+  const note = await loadRow({ type: 'text', url: null, content: 'This is a note about myself' })
+  assert.equal(note?.type, 'link')
+})
+
+test('a current type is left as it is', async () => {
+  // An Instagram reel the importer typed as a video; the URL heuristic alone
+  // would call it a link, so re-deriving every type would demote it.
+  const url = 'https://www.instagram.com/reel/DbEewfgTeDk/'
+  const note = await loadRow({ type: 'video', url, content: url })
+  assert.equal(note?.type, 'video')
+})
