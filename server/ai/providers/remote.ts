@@ -10,8 +10,6 @@
 // they are the user's choice and vary per endpoint.
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
-import { getAiConfig } from '../../config.ts'
-import { findEndpoint } from '../endpoints.ts'
 import { FeatureDisabledError, ROLES } from '../roles.ts'
 import type { Role, RoleStatus } from '../roles.ts'
 import type { Aggregate, ProviderStatus } from '../routing.ts'
@@ -37,8 +35,6 @@ import type {
   ModelOption,
   ModelSelection,
   Provider,
-  ProviderConfig,
-  ProviderModule,
   ValidationResult,
 } from './types.ts'
 
@@ -74,8 +70,8 @@ const MIME: Record<string, string> = {
 }
 
 // Factory rather than module-level state so tests can drive several
-// independent instances against a throwaway server. The module's default
-// export set (bottom of file) is the singleton the facade resolves.
+// independent instances against a throwaway server. The one instance the
+// facade resolves lives in remote-singleton.ts.
 interface RemoteProviderOptions {
   // '' rather than null for "no endpoint configured". Every read of it here is
   // a truthiness check, and one falsy spelling is what keeps the postJson calls
@@ -416,64 +412,3 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
     },
   } satisfies Provider
 }
-
-// ---- module singleton, what the facade resolves --------------------------
-let singleton: Provider | null = null
-
-export function capabilities() {
-  return (singleton || boot({})).capabilities()
-}
-export function roleEnabled(role: Role) {
-  return (singleton || boot({})).roleEnabled(role)
-}
-export function available() {
-  return (singleton || boot({})).available()
-}
-export function validateModel(role: Role, key: string) {
-  return (singleton || boot({})).validateModel(role, key)
-}
-export function statusSnapshot() {
-  return (singleton || boot({})).statusSnapshot()
-}
-export const listModels = (...a: Parameters<Provider['listModels']>) => (singleton || boot({})).listModels(...a)
-export const applySettings = (...a: Parameters<Provider['applySettings']>) =>
-  (singleton || boot({})).applySettings(...a)
-export const classify = (...a: Parameters<Provider['classify']>) => (singleton || boot({})).classify(...a)
-export const embedText = (...a: Parameters<Provider['embedText']>) => (singleton || boot({})).embedText(...a)
-export const describeImage = (...a: Parameters<Provider['describeImage']>) =>
-  (singleton || boot({})).describeImage(...a)
-export const answer = (...a: Parameters<Provider['answer']>) => (singleton || boot({})).answer(...a)
-export const shutdown = async () => {
-  if (singleton) await singleton.shutdown()
-}
-
-function boot(models: ModelSelection): Provider {
-  // Read at boot, not at import: this is what makes re-pointing the endpoint a
-  // matter of calling init() again rather than restarting the container.
-  const { baseUrl, apiKey, providerId } = getAiConfig()
-  singleton = createRemoteProvider({
-    // '' is this provider's spelling of "no endpoint configured" — see
-    // RemoteProviderOptions.
-    baseUrl: baseUrl || '',
-    apiKey,
-    // Per-provider quirks live in the catalogue, not in this transport.
-    embeddingsPath: findEndpoint(providerId)?.embeddingsPath || '',
-    models: { llm: models.llm || '', embed: models.embed || '', vision: models.vision || '' },
-  })
-  return singleton
-}
-
-// Config arrives as { local, remote } — both selections, since the caller
-// resolves settings before it knows which provider was chosen. This provider
-// reads only the remote half.
-export async function init({ remote = {} }: ProviderConfig = {}) {
-  // boot() returns the singleton it just installed, so this is the same object
-  // the module-level forwarders above will resolve.
-  await boot(remote).init()
-}
-
-// See types.ts: the module's own exports, checked against the contract. This is
-// the object server/ai/index.ts resolves — the factory above is asserted
-// separately, because the cross-provider contract test drives an instance of it
-// rather than this namespace.
-export type RemoteProvider = ProviderModule<typeof import('./remote.ts')>

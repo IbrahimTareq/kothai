@@ -93,7 +93,7 @@ function L(): Provider | null {
 }
 
 export async function _selectProvider(kind: ProviderKind, load: ProviderLoader | null = null): Promise<Provider> {
-  if (kind === 'remote') return await (load ? load() : import('./providers/remote.ts'))
+  if (kind === 'remote') return load ? await load() : (await import('./providers/remote-singleton.ts')).remoteProvider
   try {
     return await (load ? load() : import('./providers/local.ts'))
   } catch (e) {
