@@ -265,8 +265,8 @@ test('the demo answers text questions only, and short ones', async () => {
   assert.equal(long.body.code, 'demo_too_long')
 })
 
-test('a demo visitor gets thirty questions a day, and then hears why not', async () => {
-  for (let i = 0; i < 30; i++) assert.equal((await askAs('a', { question: 'q' })).status, 200)
+test('a demo visitor gets ten questions a day, and then hears why not', async () => {
+  for (let i = 0; i < 10; i++) assert.equal((await askAs('a', { question: 'q' })).status, 200)
   const over = await askAs('a', { question: 'q' })
   assert.equal(over.status, 429)
   assert.equal(over.body.code, 'demo_limit')

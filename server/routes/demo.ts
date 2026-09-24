@@ -102,7 +102,7 @@ function allowance(perVisitor: number, perDay: number) {
 
 // 300 questions is about 30 cents a day on a gpt-4o-mini-class model at ~4k
 // tokens each; a save costs one classify and one embed.
-export const demoLimits = { save: allowance(5, 200), ask: allowance(30, 300) }
+export const demoLimits = { save: allowance(5, 200), ask: allowance(10, 300) }
 
 // ---- nightly reset ----------------------------------------------------------
 // Everything a visitor added goes; the shared library, which carries no
