@@ -186,7 +186,8 @@ async function open(): Promise<DatabaseSync> {
   ensureColumns(db, 'notes', { embedding: 'BLOB' })
   // Idempotent and safe to run every boot: each legacy file this has already
   // consumed was renamed out of the way, so a repeat call just does five
-  // cheap existsSync checks and returns. See migrate.ts for why it's safe to
+  // cheap existsSync checks and one notes scan that matches nothing once
+  // clean (stripThumbThinking). See migrate.ts for why it's safe to
   // re-run after an interrupted migration too.
   await migrateLegacyJson(db)
   return db

@@ -166,3 +166,18 @@ test('a crash-interrupted migration is safe to retry: already-inserted ids are s
   await assert.doesNotReject(migrateLegacyJson(db))
   assert.equal(rowOf(db.prepare('SELECT COUNT(*) AS n FROM notes').get()).n, 1)
 })
+
+test('a thumbDescription stored with a <think> block keeps only the answer; the rest of the note is untouched', async () => {
+  const db = freshDb()
+  const note = { id: 'thumb', title: 'Eggs', embedding: [0.1, 0.2] }
+  db.prepare('INSERT INTO notes (id, data) VALUES (?, ?)').run(
+    'thumb',
+    JSON.stringify({
+      ...note,
+      thumbDescription: '<think>\nSetting: a kitchen.\nActivity: cooking.\n</think>\n\nEggs.',
+    }),
+  )
+  await migrateLegacyJson(db)
+  const data = JSON.parse(textOf(rowOf(db.prepare('SELECT data FROM notes WHERE id = ?').get('thumb')).data))
+  assert.deepEqual(data, { ...note, thumbDescription: 'Eggs.' })
+})

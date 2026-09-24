@@ -13,6 +13,10 @@
 // the end of the AUTOINCREMENT sequence rather than its original position,
 // so a crash at exactly the wrong moment could reorder a note or two. Not
 // worth more machinery for how rare and low-stakes that is.)
+//
+// It also carries one in-place repair to rows already in SQLite
+// (stripThumbThinking), because this is the boot step that already runs
+// before any store reads a row.
 import path from 'node:path'
 import { existsSync } from 'node:fs'
 import { rename } from 'node:fs/promises'
@@ -23,6 +27,7 @@ import type { Role, SavedSettings } from '../ai/roles.ts'
 import { ROLES, resolveResidency } from '../ai/roles.ts'
 import { DEFAULTS } from '../ai/presets.ts'
 import { encodeEmbedding } from './embedding.ts'
+import { stripThinking } from '../ai/normalise.ts'
 
 // readJson returns `unknown` deliberately — a generic <T> there would have
 // told this one caller that a file an old install left on disk has the shape
@@ -64,6 +69,24 @@ export async function migrateLegacyJson(db: DatabaseSync): Promise<void> {
   await migrateChats(db)
   await migrateSettings(db)
   await migrateTagVocab(db)
+  stripThumbThinking(db)
+}
+
+// Thumbnail descriptions stored before describeImage stripped the vision
+// model's <think> block (45 of 89 on a real install). describeThumb never
+// revisits a note that has a description, so "Re-tag everything" fed the
+// reasoning's "Setting: / Activity:" headings to classify, which came back as
+// the tags "setting" and "activity". Idempotent: once stripped, nothing matches.
+function stripThumbThinking(db: DatabaseSync) {
+  const rows = db.prepare(`SELECT id, data FROM notes WHERE json_extract(data, '$.thumbDescription') LIKE '%<think>%'`)
+  const update = db.prepare('UPDATE notes SET data = ? WHERE id = ?')
+  inTransaction(db, () => {
+    for (const row of rows.all()) {
+      const note = JSON.parse(String(row.data))
+      note.thumbDescription = stripThinking(note.thumbDescription)
+      update.run(JSON.stringify(note), String(row.id))
+    }
+  })
 }
 
 // notes.json / collections.json are arrays with the most-recently-added item
