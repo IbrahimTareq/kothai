@@ -342,8 +342,7 @@
   letter-spacing: var(--tracking-tight);
   text-transform: lowercase;
 }
-.mf-delete { flex: none; }
-.mf-confirm { display: flex; flex: none; gap: var(--space-8); }
+.mf-delete, .mf-confirm { flex: none; }
 
 /* Phone: the name gets the full width and its controls drop beneath it, rather
    than three things fighting over 375px. Same --bp-sm as the row above it, so
