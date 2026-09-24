@@ -4,7 +4,7 @@
    Expanded item view — full-screen overlay (main stage + sidebar)
    ============================================================ */
 .exp-overlay{position:fixed;inset:0;z-index:var(--z-modal);display:flex;align-items:center;justify-content:center;
-  padding:var(--space-20);background:rgba(0,0,0,.66);backdrop-filter:blur(6px);animation:exp-fade var(--dur-fast) ease}  /* token-lint-ignore: modal scrim, deliberately heavier than --scrim */
+  padding:var(--space-20);background:var(--backdrop);backdrop-filter:blur(6px);animation:exp-fade var(--dur-fast) ease}
 @keyframes exp-fade{from{opacity:0}to{opacity:1}}
 .exp-shell{position:relative;display:flex;width:min(1320px,100%);height:min(820px,100%);
   background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-xl);overflow:hidden;
@@ -59,7 +59,7 @@
 /* vertical media / reel */
 .exp-media{display:flex;align-items:center;justify-content:center;height:100%;cursor:pointer}
 .exp-media-frame{position:relative;width:auto;height:100%;aspect-ratio:9/16;max-width:100%;
-  border-radius:var(--radius-lg);overflow:hidden;background:#000}  /* token-lint-ignore: video letterbox — must stay black in both themes */
+  border-radius:var(--radius-lg);overflow:hidden;background:var(--letterbox)}
 .exp-media-frame img{width:100%;height:100%;object-fit:cover;display:block;
   transition:filter var(--dur-slow) ease,transform var(--dur-slow) ease}
 /* The thumbnail stands in for a deck that hasn't arrived yet, so it is held
@@ -191,7 +191,7 @@ a.exp-src:hover{color:var(--ink);text-decoration:underline;text-underline-offset
 .carousel-stage{position:relative;height:calc(100% - 30px);max-width:100%;
   touch-action:pan-y;cursor:grab;user-select:none}
 .carousel-stage.dragging{cursor:grabbing}
-.carousel-slide{position:absolute;inset:0;border-radius:var(--radius-lg);overflow:hidden;background:#000;  /* token-lint-ignore: carousel letterbox — must stay black in both themes */
+.carousel-slide{position:absolute;inset:0;border-radius:var(--radius-lg);overflow:hidden;background:var(--letterbox);
   box-shadow:0 18px 50px rgba(0,0,0,.45);transition:transform var(--dur-slow) var(--ease-entrance),opacity var(--dur-slow) ease}
 .carousel-stage.dragging .carousel-slide{transition:none}
 .carousel-slide img{width:100%;height:100%;object-fit:cover;display:block;-webkit-user-drag:none;
@@ -199,7 +199,7 @@ a.exp-src:hover{color:var(--ink);text-decoration:underline;text-underline-offset
 /* A slide whose image hasn't decoded yet: the same sheen the card skeletons
    use, so an empty frame reads as loading rather than as a black slide. */
 .carousel-slide.loading img{opacity:0}
-.carousel-slide.loading{background:linear-gradient(100deg,#000 35%,rgba(255,255,255,.08) 50%,#000 65%);  /* token-lint-ignore: sheen over the carousel's black letterbox, both themes */
+.carousel-slide.loading{background:linear-gradient(100deg,var(--letterbox) 35%,color-mix(in srgb, var(--color-white) 8%, var(--letterbox)) 50%,var(--letterbox) 65%);
   background-size:200% 100%;animation:skeleton-sheen 1.4s ease infinite}
 .carousel-dots{display:flex;align-items:center;gap:var(--space-8);height:16px}
 .carousel-dot{width:7px;height:7px;padding:0;border:0;border-radius:var(--radius-full);

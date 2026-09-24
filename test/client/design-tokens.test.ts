@@ -68,14 +68,15 @@ for (const [themeName, theme] of THEMES) {
     )
   })
 
-  test(`${themeName}: popover surfaces are opaque`, () => {
+  test(`${themeName}: popover and modal surfaces are opaque`, () => {
     // Three popovers once used --panel and rendered see-through over content.
-    const surface = resolve('--surface-popover', theme)
-    assert.ok(surface, `--surface-popover did not resolve in ${themeName}`)
-    assert.ok(
-      surface![3] >= 0.95,
-      `--surface-popover has alpha ${surface![3]} in ${themeName} — content will show through`,
-    )
+    // The capture modal's field floats over the dark backdrop in both themes,
+    // and was a literal dark/light pair until it moved onto tokens.
+    for (const name of ['--surface-popover', '--surface-modal', '--surface-modal-focus']) {
+      const surface = resolve(name, theme)
+      assert.ok(surface, `${name} did not resolve in ${themeName}`)
+      assert.ok(surface![3] >= 0.95, `${name} has alpha ${surface![3]} in ${themeName} — content will show through`)
+    }
   })
 
   test(`${themeName}: accent hover stays visible against the page`, () => {

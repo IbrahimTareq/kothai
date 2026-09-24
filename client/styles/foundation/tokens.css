@@ -82,6 +82,21 @@
      under the 3:1 floor, gone. The scrim does not follow the theme, so the red
      on it cannot either: this is the dark theme's --danger, in both. */
   --scrim-danger:#ff6a7a;
+  /* The dim behind a dialog: the expanded item and quick capture. Theme-
+     invariant like --scrim, since it darkens whatever page sits behind. The two
+     were literals at .66 and .82 for the same job; they share the heavier one,
+     which capture had been tuned to so its bare field reads with no chrome
+     around it. The expanded item has its own opaque shell and loses only a
+     little of the page behind. */
+  --backdrop:rgba(0,0,0,.82);
+  /* Behind media that may not fill its frame: a photo, a fetched thumbnail, a
+     video, a carousel slide. Black in both themes, because it frames the
+     picture rather than the page. It was #050505 in two places and #000 in
+     three; #000 matches the bars a video carries itself, so no seam shows. */
+  --letterbox:#000;
+  /* Code keeps a dark surface in both themes, like an editor. */
+  --code-surface:#050505;
+  --code-ink:rgba(255,255,255,.82);
 
   --bg:#0a0a0a;
   --bg-2:#0d0d0d;          /* raised rows */
@@ -110,6 +125,17 @@
      while only .coll-pop was opaque. One token now covers all of them. */
   --surface-popover:var(--bg-raise);
   --shadow-popover:0 8px 28px rgba(0,0,0,.28);
+  /* Quick capture's field floats over --backdrop, which is dark in both
+     themes, so it is opaque and a step lighter than the page. It was a literal
+     dark pair plus two light-only rules restating it as white. */
+  --surface-modal:#1e1e21;
+  --surface-modal-focus:#232327;
+
+  /* Webkit scrollbar thumb. The literal was white-on-transparent, invisible
+     against a pale track until a light-only rule restated it. */
+  --scrollbar-thumb:rgba(255,255,255,.1);
+  --scrollbar-thumb-hover:rgba(255,255,255,.2);
+  --selection:rgba(255,255,255,.16);
 
   /* "accent" is pure white — CTAs invert (white bg / dark ink), like Behold's
      "Download on iOS" pill. Ink on an accent fill is --on-accent.
@@ -254,6 +280,12 @@
   --line-hover:rgba(0,0,0,.20);
   --line-focus:rgba(0,0,0,.26);
 
+  --surface-modal:#ffffff;
+  --surface-modal-focus:#ffffff;
+  --scrollbar-thumb:rgba(0,0,0,.14);
+  --scrollbar-thumb-hover:rgba(0,0,0,.28);
+  --selection:rgba(0,0,0,.14);
+
   --accent:#141414;
   --on-accent:#ffffff;
 
@@ -274,7 +306,6 @@
   --warn:#92400e;
   --ok:#15803d;
 }
-:root[data-theme="light"] ::selection{background:rgba(0,0,0,.14);color:#0a0a0a}
 :root[data-theme="light"] #bg-fx::before{
   background:radial-gradient(140% 90% at 50% -20%, rgba(0,0,0,.03), transparent 60%);
 }

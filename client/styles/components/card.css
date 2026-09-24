@@ -96,7 +96,7 @@
 .code-dot{width:7px;height:7px;border-radius:var(--radius-circle);background:var(--line);border:1px solid var(--line)}
 .code-lang{margin-left:auto}
 .code-block{margin:0;font-family:var(--font-mono);font-size:var(--text-xs);line-height:var(--leading-normal);
-  color:rgba(255,255,255,.82);background:#050505;border:1px solid var(--line);  /* token-lint-ignore: code blocks keep a dark surface in both themes, like an editor */
+  color:var(--code-ink);background:var(--code-surface);border:1px solid var(--line);
   border-radius:var(--radius);padding:var(--space-12) var(--space-12);overflow-x:auto;white-space:pre;
   scrollbar-width:thin}
 .type-code .card-content{gap:var(--space-6)}
@@ -161,12 +161,9 @@
 
 /* scrollbars */
 *::-webkit-scrollbar{width:9px;height:9px}
-*::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:var(--radius-full);  /* token-lint-ignore: scrollbar track, paired with the light-theme rule below */
+*::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:var(--radius-full);
   border:2px solid transparent;background-clip:content-box}
-*::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.2);background-clip:content-box}  /* token-lint-ignore: scrollbar thumb, paired with the light-theme rule below */
-/* light mode: the thumb above is white-on-transparent, invisible against a pale track */
-:root[data-theme="light"] *::-webkit-scrollbar-thumb{background:rgba(0,0,0,.14);background-clip:content-box}  /* token-lint-ignore: scrollbar thumb hover, paired with the light-theme rule below */
-:root[data-theme="light"] *::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.28);background-clip:content-box}  /* token-lint-ignore: explicit light-theme scrollbar thumb */
+*::-webkit-scrollbar-thumb:hover{background:var(--scrollbar-thumb-hover);background-clip:content-box}
 
 /* Placeholder card for a not-yet-loaded slot in the windowed board. */
 .card-skeleton{border-radius:var(--radius-lg);

@@ -181,8 +181,9 @@ Three things sit outside the system on purpose. Don't "fix" them.
   `--color-white` glyph — tokens that are the same in both themes, because
   their backdrop is the media, not a themed surface. They were literals that
   had drifted across four alphas, and one used a themed overlay token and paled
-  on light. Letterbox backgrounds and the dark code block are still literal,
-  each annotated with `token-lint-ignore` and a reason.
+  on light. The same holds for `--letterbox` behind media that does not fill
+  its frame, `--backdrop` behind a dialog, and the code block's
+  `--code-surface`/`--code-ink`: one value in both themes, on purpose.
 
 ## The guardrail
 
