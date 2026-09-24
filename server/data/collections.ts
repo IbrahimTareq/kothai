@@ -13,13 +13,14 @@ import { normalizeTag } from './tags.ts'
 import type { CanvasDoc } from '../lib/canvas.ts'
 import * as notesStore from './notes.ts'
 
+type NewCollection = { name: string; tags?: string[]; visitor?: string } // visitor: see ServerNote.visitor
+
 // The stored document. `canvas` is optional rather than nullable because
 // update() below DELETES the key to clear a board — the route sends null, and
 // the absence is what a reader tests for.
-interface Collection {
+interface Collection extends NewCollection {
   id: string
   createdAt: string
-  name: string
   tags: string[]
   itemIds: string[]
   removedIds: string[]
@@ -118,11 +119,11 @@ export async function clearAll() {
   return removed
 }
 
-// `keep` hides another demo visitor's links (routes/demo.ts) from a space's
-// count and, above all, from its cover previews.
+// `keep` hides another demo visitor's spaces (routes/demo.ts), and their links
+// from a space's count and, above all, from its cover previews.
 export function all(keep: (n: { visitor?: string }) => boolean = () => true) {
   const hidden = new Set(notesStore.allNotes().flatMap(n => (keep(n) ? [] : [n.id])))
-  return collections.map(c => withCovers({ ...c, itemIds: c.itemIds.filter(id => !hidden.has(id)) }))
+  return collections.filter(keep).map(c => withCovers({ ...c, itemIds: c.itemIds.filter(id => !hidden.has(id)) }))
 }
 
 export function get(id: string) {
@@ -160,7 +161,7 @@ export function backfill(c: Collection, notes: TaggedNote[]) {
 }
 
 // Create a collection. `notes` (optional) backfills a smart rule at creation.
-export async function create({ name, tags = [] }: { name: string; tags?: string[] }, notes: TaggedNote[] = []) {
+export async function create({ name, tags = [], visitor }: NewCollection, notes: TaggedNote[] = []) {
   const c: Collection = {
     id: randomUUID(),
     createdAt: new Date().toISOString(),
@@ -168,6 +169,7 @@ export async function create({ name, tags = [] }: { name: string; tags?: string[
     tags: norm(tags),
     itemIds: [],
     removedIds: [],
+    visitor,
   }
   collections.unshift(c)
   if (c.tags.length) backfill(c, notes)

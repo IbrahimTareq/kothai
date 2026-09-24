@@ -82,7 +82,7 @@ export function handleStatus(res: ServerResponse, viewer: string | null): void {
     count: store.allNotes().filter(visibleTo(viewer)).length,
     capabilities: caps,
     // Polled every few seconds, so the demo banner's allowance stays current.
-    demo: viewer ? { savesLeft: demoLimits.save.left(viewer), asksLeft: demoLimits.ask.left(viewer) } : null,
+    demo: viewer ? demoLimits.leftFor(viewer) : null,
   })
 }
 

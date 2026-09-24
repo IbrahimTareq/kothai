@@ -178,7 +178,7 @@ export function CollectionView({
   const { suggestions, canAddNew, poolSize } = suggestTags(collItems, collection.tags, tagDraft)
 
   return (
-    <div className="collection-view">
+    <div className="collection-view" data-mine={collection.visitor ? '' : undefined}>
       {/* The count belongs to the name, so it sits against it. Rename and
           delete are what you do to the SPACE, so they sit on its identity row
           — delete used to be on the view toolbar with only a hairline between
@@ -228,7 +228,14 @@ export function CollectionView({
             <Confirm inline danger confirmLabel="Delete space" onConfirm={del} onCancel={() => setArmed(false)} />
           ) : (
             <>
-              <Button size="icon" tone="ghost" title="Rename space" aria-label="Rename space" onClick={startRename}>
+              <Button
+                className="coll-rename"
+                size="icon"
+                tone="ghost"
+                title="Rename space"
+                aria-label="Rename space"
+                onClick={startRename}
+              >
                 <Icon name="edit" size={14} />
               </Button>
               {/* Arms before it fires: one click on a bare icon should not lose a space. */}

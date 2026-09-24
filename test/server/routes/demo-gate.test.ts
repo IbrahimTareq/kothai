@@ -52,7 +52,9 @@ const REFUSED: [string, string][] = [
   ['PATCH', '/api/notes/abc'],
   ['DELETE', '/api/notes/abc'],
   ['POST', '/api/notes/abc/retag'],
-  ['POST', '/api/collections'],
+  ['PATCH', '/api/collections/abc'],
+  ['POST', '/api/collections/abc/items'],
+  ['DELETE', '/api/collections/abc/items/x'],
   ['DELETE', '/api/chats/abc'],
   ['DELETE', '/api/models/files/x.gguf'],
 ]
@@ -74,6 +76,13 @@ test('the demo lets a save and a question through to their handlers', async () =
   // request on without making either one do any work.
   assert.equal((await call('POST', '/api/save')).status, 400)
   assert.equal((await call('POST', '/api/ask')).status, 400)
+})
+
+test('the demo lets a visitor make a space and delete one', async () => {
+  // Both reach their handlers: an empty body is creation's own 400, and whose
+  // space it is — here, nobody's — is the delete handler's own 404.
+  assert.equal((await call('POST', '/api/collections')).status, 400)
+  assert.equal((await call('DELETE', '/api/collections/abc')).status, 404)
 })
 
 test('the demo still answers the healthcheck', async () => {

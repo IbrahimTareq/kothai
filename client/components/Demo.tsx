@@ -18,7 +18,12 @@ const listeners = new Set<() => void>()
 // Called with every status poll. An unchanged allowance is dropped, or every
 // control reading it would re-render every few seconds for nothing.
 export function setDemo(next: DemoAllowance | null) {
-  if (current?.savesLeft === next?.savesLeft && current?.asksLeft === next?.asksLeft) return
+  if (
+    current?.savesLeft === next?.savesLeft &&
+    current?.asksLeft === next?.asksLeft &&
+    current?.spacesLeft === next?.spacesLeft
+  )
+    return
   current = next
   // On the root, not on .app: the item view and capture render in portals
   // outside it, and shell.css hides their write controls by this.
@@ -74,7 +79,7 @@ export function DemoSettings() {
         <div className="settings-rows">
           <SettingsRow
             title="Settings are off in the demo"
-            desc="The library here is shared by every visitor, so the demo lets you save a few links and ask a few questions a day, and change nothing else."
+            desc="The library here is shared by every visitor, so the demo lets you save a few links, ask a few questions and make a few spaces a day, and change nothing else."
             action={
               <Button asChild tone="solid">
                 <a href={GET_YOUR_OWN} target="_blank" rel="noreferrer">

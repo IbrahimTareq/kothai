@@ -3,7 +3,7 @@ import * as store from '../data/notes.ts'
 import * as collections from '../data/collections.ts'
 import { json, readBody } from '../lib/http.ts'
 import { sanitizeCanvas } from '../lib/canvas.ts'
-import { visibleTo } from './demo.ts'
+import { demoLimits, visibleTo } from './demo.ts'
 import type { CollectionPatch } from '../data/collections.ts'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
@@ -19,14 +19,20 @@ export function handleCollections(res: ServerResponse, viewer: string | null) {
   json(res, 200, { collections: collections.all(visibleTo(viewer)) })
 }
 
-export async function handleCreateCollection(req: IncomingMessage, res: ServerResponse) {
+// `viewer` is the demo visitor (routes/demo.ts), null on an ordinary install.
+export async function handleCreateCollection(req: IncomingMessage, res: ServerResponse, viewer: string | null) {
   const body = await readBody(req)
   const fields = isRecord(body) ? body : {}
   const name = String(fields.name || '').trim()
   if (!name) return json(res, 400, { error: 'name required' })
+  if (viewer && !demoLimits.space.take(viewer)) {
+    return json(res, 429, { error: 'That’s all the demo spaces in a day. Try again tomorrow.', code: 'demo_limit' })
+  }
+  // A smart rule fills only from what the maker can see: the reads would hide
+  // another visitor's links anyway, but they would still be stored in the space.
   const c = await collections.create(
-    { name: name.slice(0, 120), tags: normalizeTags(fields.tags, { max: 40 }) },
-    store.allNotes(),
+    { name: name.slice(0, 120), tags: normalizeTags(fields.tags, { max: 40 }), visitor: viewer ?? undefined },
+    store.allNotes().filter(visibleTo(viewer)),
   )
   json(res, 200, { collection: c })
 }
@@ -70,7 +76,10 @@ export async function handleRemoveItem(res: ServerResponse, id: string, itemId: 
   json(res, 200, { collection: c })
 }
 
-export async function handleDeleteCollection(res: ServerResponse, id: string) {
+export async function handleDeleteCollection(res: ServerResponse, id: string, viewer: string | null) {
+  // On the demo, only a space the visitor made. A shared one, or another
+  // visitor's, answers exactly like a missing one.
+  if (viewer && collections.get(id)?.visitor !== viewer) return json(res, 404, { ok: false })
   const ok = await collections.remove(id)
   return json(res, ok ? 200 : 404, { ok })
 }

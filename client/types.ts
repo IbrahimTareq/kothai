@@ -106,6 +106,7 @@ export interface ModelStatus {
 export interface DemoAllowance {
   savesLeft: number
   asksLeft: number
+  spacesLeft: number
 }
 
 // Derived, UI-facing view of /api/status: how far the models are through loading.
@@ -264,6 +265,7 @@ export interface Collection {
   count: number // resolved by the server (= itemIds.length)
   covers?: UIItem[] // tile preview — first few members, newest-first; absent on endpoints that don't join it
   canvas?: CanvasDoc // the space's freeform board; absent until first saved
+  visitor?: string // on the demo, the visitor who made it; only ever the viewer's own
 }
 
 // ── Space canvas ────────────────────────────────────────────────────────────

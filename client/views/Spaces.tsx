@@ -6,6 +6,7 @@ import type { Collection, UIItem } from '../types'
 import { Button } from '../ui/Button'
 import { PageHeader } from '../ui/PageHeader'
 import { Input } from '../ui/Input'
+import { useDemo } from '../components/Demo'
 
 interface SpacesViewProps {
   collections: Collection[]
@@ -42,6 +43,7 @@ function SpaceCover({ covers = [] }: { covers?: UIItem[] }) {
 export function SpacesView({ collections, createCollection, navigate }: SpacesViewProps) {
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
+  const spent = useDemo()?.spacesLeft === 0 // the demo's daily few (server/routes/demo.ts)
 
   const cancel = () => {
     setName('')
@@ -57,8 +59,14 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
   // The plus is the icon Capture and the item view's "Add to space" draw; a
   // full-width ＋ character sat on a different baseline beside them.
   const newSpace = (
-    <Button onClick={() => setCreating(true)}>
-      <Icon name="plus" size={14} /> New space
+    <Button disabled={spent} onClick={() => setCreating(true)}>
+      {spent ? (
+        'No more spaces today'
+      ) : (
+        <>
+          <Icon name="plus" size={14} /> New space
+        </>
+      )}
     </Button>
   )
 

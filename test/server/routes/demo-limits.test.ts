@@ -17,6 +17,8 @@ mock.module('../../../server/capture.ts', {
 })
 
 const { handleSave } = await import('../../../server/routes/notes.ts')
+const { handleCreateCollection } = await import('../../../server/routes/collections.ts')
+const collections = await import('../../../server/data/collections.ts')
 const { demoLimits } = await import('../../../server/routes/demo.ts')
 const { mockReq, mockRes } = await import('../../helpers/http.ts')
 
@@ -60,4 +62,22 @@ test('what a visitor has left is also capped by the day’s total', async () => 
   assert.equal(demoLimits.save.left('fresh'), 0)
   demoLimits.save.reset()
   assert.equal(demoLimits.save.left('fresh'), 5)
+})
+
+// A space costs no inference, only a row, so this bounds clutter rather than the
+// bill: what one visitor can leave behind before the nightly reset.
+test('a visitor can make three spaces a day, and a refused one does not count', async () => {
+  collections._reset()
+  demoLimits.space.reset()
+  const create = async (viewer: string | null, name: string) => {
+    const { res, sent } = mockRes()
+    await handleCreateCollection(mockReq({ method: 'POST', body: JSON.stringify({ name }) }), res, viewer)
+    return sent
+  }
+  assert.equal((await create('a', '')).code, 400)
+  for (let i = 0; i < 3; i++) assert.equal((await create('a', `Space ${i}`)).code, 200)
+  const fourth = await create('a', 'Space 4')
+  assert.equal(fourth.code, 429)
+  assert.equal(fourth.json().code, 'demo_limit')
+  assert.equal((await create(null, 'Plain')).code, 200, 'an ordinary install has no limit')
 })

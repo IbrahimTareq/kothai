@@ -1,5 +1,5 @@
 // The demo resets every night (and at boot): every visitor's links and chats
-// go, the shared library stays, and every allowance starts again.
+// and spaces go, the shared library stays, and every allowance starts again.
 //
 // The data dir is a temp one, set before the dynamic imports because
 // server/config.ts freezes it at import time: the reset deletes upload files,
@@ -18,7 +18,7 @@ const { demoLimits, resetDemo } = await import('../../../server/routes/demo.ts')
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-test('the reset removes every visitor’s links, files and chats, and keeps the library', async () => {
+test('the reset removes every visitor’s links, files, chats and spaces, and keeps the library', async () => {
   store._reset()
   chats._reset()
   collections._reset()
@@ -35,6 +35,7 @@ test('the reset removes every visitor’s links, files and chats, and keeps the 
   })
   const space = await collections.create({ name: 'Reading' })
   await collections.addItems(space.id, [seed.id, theirs.id])
+  await collections.create({ name: 'Theirs', visitor: 'a' })
   await chats.appendExchange(null, { role: 'user', text: 'shared' }, { role: 'ai', text: 'x' })
   await chats.appendExchange(null, { role: 'user', text: 'theirs' }, { role: 'ai', text: 'x' }, 'a')
 
@@ -44,7 +45,11 @@ test('the reset removes every visitor’s links, files and chats, and keeps the 
     store.allNotes().map(n => n.id),
     [seed.id],
   )
-  assert.deepEqual(collections.all()[0].itemIds, [seed.id], 'the space must not keep a dangling id')
+  assert.deepEqual(
+    collections.all().map(c => [c.name, c.itemIds]),
+    [['Reading', [seed.id]]],
+    'the shared space stays, without a dangling id',
+  )
   assert.equal(existsSync(thumb), false, 'a visitor’s files must not pile up on disk night after night')
   assert.deepEqual(
     chats.all().map(c => c.messages[0].text),
@@ -54,8 +59,12 @@ test('the reset removes every visitor’s links, files and chats, and keeps the 
 
 test('the reset gives every visitor their allowance back', async () => {
   demoLimits.save.reset()
+  demoLimits.space.reset()
   for (let i = 0; i < 5; i++) demoLimits.save.take('a')
+  for (let i = 0; i < 3; i++) demoLimits.space.take('a')
   assert.equal(demoLimits.save.take('a'), false)
+  assert.equal(demoLimits.space.take('a'), false)
   await resetDemo()
   assert.equal(demoLimits.save.take('a'), true)
+  assert.equal(demoLimits.space.take('a'), true)
 })

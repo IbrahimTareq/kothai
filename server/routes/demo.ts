@@ -4,8 +4,9 @@
 // visitor. Left writable, a visitor could wipe it, re-point the inference
 // endpoint, switch to an expensive model, or re-tag the whole library on the
 // operator's key, and /api/setup/test would fetch any URL they typed from
-// inside the host's network. So the demo is read-only apart from the two
-// things it exists to show: saving a link and asking a question.
+// inside the host's network. So the demo is read-only apart from the things
+// it exists to show: saving a link, asking a question, and making a space of
+// your own (and deleting it again; routes/collections.ts checks it is yours).
 import { randomUUID } from 'node:crypto'
 import { cp, mkdir, readFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
@@ -15,6 +16,7 @@ import * as store from '../data/notes.ts'
 import type { NoteRecord } from '../data/notes.ts'
 import * as tagvocab from '../data/tagvocab.ts'
 import * as chats from '../data/chats.ts'
+import * as collections from '../data/collections.ts'
 import { removeNote } from '../data/remove.ts'
 import * as settings from '../data/settings.ts'
 import { saveCapture } from '../capture.ts'
@@ -36,7 +38,8 @@ const ALLOWED: Record<string, RegExp[]> = {
     /^\/api\/(notes|notes\/delta|status|settings|chats|collections|enrich\/backlog|models\/files)$/,
     /^\/api\/(notes|chats)\/[^/]+$/,
   ],
-  POST: [/^\/api\/(save|ask)$/],
+  POST: [/^\/api\/(save|ask|collections)$/],
+  DELETE: [/^\/api\/collections\/[^/]+$/],
 }
 
 // True when it has answered the request itself. Only /api/ is gated: the app
@@ -112,8 +115,19 @@ function allowance(perVisitor: number, perDay: number) {
 }
 
 // 300 questions is about 30 cents a day on a gpt-4o-mini-class model at ~4k
-// tokens each; a save costs one classify and one embed.
-export const demoLimits = { save: allowance(5, 200), ask: allowance(10, 300) }
+// tokens each; a save costs one classify and one embed. A space costs no
+// inference, only a row, so its limit bounds clutter rather than the bill.
+export const demoLimits = {
+  save: allowance(5, 200),
+  ask: allowance(10, 300),
+  space: allowance(3, 300),
+  // What this visitor has left today, as /api/status reports it to the client.
+  leftFor: (visitor: string) => ({
+    savesLeft: demoLimits.save.left(visitor),
+    asksLeft: demoLimits.ask.left(visitor),
+    spacesLeft: demoLimits.space.left(visitor),
+  }),
+}
 
 // ---- nightly reset ----------------------------------------------------------
 // Everything a visitor added goes; the shared library, which carries no
@@ -121,8 +135,10 @@ export const demoLimits = { save: allowance(5, 200), ask: allowance(10, 300) }
 export async function resetDemo(): Promise<void> {
   for (const n of store.allNotes()) if (n.visitor) await removeNote(n.id)
   for (const c of chats.all()) if (c.visitor) await chats.remove(c.id)
+  for (const c of collections.all()) if (c.visitor) await collections.remove(c.id)
   demoLimits.save.reset()
   demoLimits.ask.reset()
+  demoLimits.space.reset()
 }
 
 // ---- a fresh deploy -----------------------------------------------------------

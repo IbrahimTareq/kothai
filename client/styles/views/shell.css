@@ -19,9 +19,11 @@
 /* What the demo leaves out rather than locks: controls whose writes the server
    refuses (server/routes/demo.ts) and that a visitor would meet only to be told
    no. display:none rather than pointer-events, so they leave the tab order too.
-   On :root because the item view and capture render in portals outside .app. */
+   On :root because the item view and capture render in portals outside .app.
+   A space the visitor made ([data-mine]) keeps its delete, which the server
+   allows them; rename it still refuses. */
 :root[data-demo] :is(.card-actions, .chat-row .card-del, .attach-btn, .exp-tags .chip--add, .chip-x, .exp-coll-x,
-  .exp-coll-plus, .spaces-view .page-actions, .collection-view .page-actions){display:none}
+  .exp-coll-plus, .collection-view:not([data-mine]) .page-actions, .coll-rename){display:none}
 /* A space's rule tags go too, being nothing but removable chips and their add
    (the spark still marks a smart space), and so does the canvas: every drag
    and every first open of it autosaves. The view-mode switch is the page's

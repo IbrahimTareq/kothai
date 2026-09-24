@@ -120,7 +120,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     if (req.method === 'POST' && p === '/api/enrich/prioritize') return await handlePrioritize(req, res)
     if (p === '/api/collections') {
       if (req.method === 'GET') return handleCollections(res, viewer)
-      if (req.method === 'POST') return await handleCreateCollection(req, res)
+      if (req.method === 'POST') return await handleCreateCollection(req, res, viewer)
     }
     if (p.startsWith('/api/collections/')) {
       const seg = p.split('/').filter(Boolean)
@@ -130,7 +130,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
         if (req.method === 'DELETE' && seg.length === 5) return await handleRemoveItem(res, id, seg[4])
       } else if (seg.length === 3) {
         if (req.method === 'PATCH') return await handleUpdateCollection(req, res, id)
-        if (req.method === 'DELETE') return await handleDeleteCollection(res, id)
+        if (req.method === 'DELETE') return await handleDeleteCollection(res, id, viewer)
       }
     }
     if (req.method === 'POST' && p === '/api/enrich/retag-all') return await handleRetagAll(res)

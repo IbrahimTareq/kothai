@@ -71,17 +71,18 @@ test('names written DURING first run do not end it', () => {
   assert.equal(firstRunComplete({ downloadsWeights: false }, false, false), false)
 })
 
-// The demo's banner and its capture box both read these, so a visitor sees how
-// many links and questions they have left before a refusal tells them.
+// The demo's banner, its capture box and its New space button read these, so a
+// visitor sees what they have left before a refusal tells them.
 test('on the demo, status tells a visitor what they have left today', async () => {
   _reset()
   await initProvider('local', {})
   demoLimits.save.reset()
   demoLimits.ask.reset()
+  demoLimits.space.reset()
   demoLimits.save.take('a')
   const { res, sent } = mockRes()
   handleStatus(res, 'a')
-  assert.deepEqual(sent.json().demo, { savesLeft: 4, asksLeft: 10 })
+  assert.deepEqual(sent.json().demo, { savesLeft: 4, asksLeft: 10, spacesLeft: 3 })
   const plain = mockRes()
   handleStatus(plain.res, null)
   assert.equal(plain.sent.json().demo, null, 'an ordinary install is not a demo')
