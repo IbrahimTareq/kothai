@@ -28,3 +28,32 @@ test('isJunkTag: a real topic word is never treated as junk', () => {
   assert.equal(isJunkTag('travel'), false)
   assert.equal(isJunkTag(normalizeTag('social justice')), false) // contains "social" but is not the junk concept
 })
+
+test('isJunkTag: frame-description words and echoed prompt labels are junk', () => {
+  // Real library, 1,885 notes: the top tags included "setting" (206),
+  // "man" (200), "white" (193), "wooden" (152), "activity" (99), "object" (73).
+  // They came from the thumbnail vision description, which classify reads
+  // alongside the caption — and whose "Setting: / People: / Objects: /
+  // Activity:" headings (DESCRIBE_THUMB_PROMPT asks for exactly those) the
+  // model copied straight into tags. None says what a save is about.
+  for (const t of [
+    'setting',
+    'activity',
+    'object',
+    'person',
+    'text',
+    'background',
+    'man',
+    'woman',
+    'white',
+    'wooden',
+  ]) {
+    assert.equal(isJunkTag(t), true, t)
+  }
+})
+
+test('isJunkTag: topic words that sit next to the frame words are kept', () => {
+  for (const t of ['home', 'interior', 'woodworking', 'calligraphy', 'mens-health']) {
+    assert.equal(isJunkTag(t), false, t)
+  }
+})

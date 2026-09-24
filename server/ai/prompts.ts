@@ -91,7 +91,8 @@ export function classifySystemPrompt({
     '"category" is a short topical label (1-2 words, Title Case) like "Tech", "Recipes", "Work", "Finance", "Health".',
     '"title" is a concise human title (max ~8 words).',
     '"summary" is one sentence describing the item for later search.',
-    '"tags" is 6-10 lowercase keywords — never fewer than 6 — naming the SPECIFIC subject — products, brands, places, people, materials, topics, activities, settings. Favour concrete nouns over vague ones; if you are short of specific nouns, add a second-order concept (mood, occasion, genre) rather than stopping early.',
+    // Frame clause: richText ends with the vision description, unlabelled, and top tags became "man", "white", "wooden".
+    '"tags" is 6-10 lowercase keywords — never fewer than 6 — naming what the item is ABOUT: its topic, domain and use — products, brands, places, named people, techniques, subjects. Favour specific nouns over vague ones; if you are short of specific nouns, add a second-order concept (occasion, genre, audience) rather than stopping early. The item text may end with a machine description of a video\'s cover frame: use it only as evidence of the topic, and never tag or title what is merely visible in it (colours, materials, furniture, backgrounds, generic people like man or woman) unless that thing is itself the subject.',
     'Never use platform names (instagram, tiktok, youtube, reel), engagement/meta words (fyp, viral, trending, giveaway, packingorders, ad), or filler (info, article, content, misc, general).',
     'If the item is not in English, translate the meaning and tag the concepts in English.',
     ...(vocab.length

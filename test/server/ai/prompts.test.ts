@@ -230,3 +230,15 @@ test('retrievalQuery returns the question unchanged for the first turn of a chat
   assert.equal(retrievalQuery('q', []), 'q')
   assert.equal(retrievalQuery('q', [{ role: 'ai', text: 'only an answer' }]), 'q')
 })
+
+test('classifySystemPrompt asks for what an item is about, not what its image shows', () => {
+  // The tag line used to invite "people, materials, settings, activities",
+  // and the classify input carries the thumbnail vision description unlabelled
+  // after the caption — so a men's mental health reel was tagged "man",
+  // "wooden", "setting" off its cover frame and titled "Man at Nighttime
+  // Picnic Table".
+  const sys = classifySystemPrompt({ now: 'x' })
+  assert.doesNotMatch(sys, /settings/)
+  assert.match(sys, /ABOUT/)
+  assert.match(sys, /cover frame: use it only as evidence of the topic/)
+})

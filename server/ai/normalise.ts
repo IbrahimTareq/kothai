@@ -79,6 +79,22 @@ const JUNK_TAGS = new Set([
   'stuff',
   'random',
   'update',
+  // Frame-description words. The thumbnail vision description reaches
+  // classify, and its "Setting: / People: / Objects: / Activity:" headings
+  // (DESCRIBE_THUMB_PROMPT names exactly those) were copied into tags
+  // verbatim: in a 1,885-note library "setting" sat on 206 notes, "man" on
+  // 200, "white" on 193, "wooden" on 152. None says what a save is about.
+  'setting',
+  'activity',
+  'object',
+  'person',
+  'text',
+  'background',
+  'man',
+  'woman',
+  'white',
+  'black',
+  'wooden',
 ])
 
 // normalizeTag always hyphenates whitespace ("social media" -> "social-media"),
