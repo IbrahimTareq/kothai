@@ -179,7 +179,10 @@ export function CollectionView({
   // Self-fetch this collection's members — enabled only once we know which
   // collection to fetch (must be called unconditionally, before the
   // not-found guard below, per the rules of hooks).
-  const notes = useNotes({ collection: collection?.id }, !!collection)
+  // Membership changes under this same query — a rule tag's backfill showed
+  // none of its members until the space was reopened — so the count refetches.
+  // Grid only: the canvas would unmount while they load and lose its view.
+  const notes = useNotes({ collection: collection?.id }, !!collection, board ? undefined : collection?.itemIds.length)
   // /api/notes?collection=X just filters by membership — it doesn't preserve
   // itemIds order (newest-added-first). Re-sort here so the board matches the
   // Spaces-grid cover tile, which resolves order from itemIds via withCovers.
@@ -210,9 +213,10 @@ export function CollectionView({
   // Collections are bounded (unlike Everything), so load every page up front
   // rather than fetching on scroll. The board still windows what it MOUNTS —
   // that's the shared layout — this just means it never renders a skeleton.
+  // `ready` too: a refetch of the same total must reload every page after its first.
   useEffect(() => {
     if (notes.total > 0) notes.ensure(0, notes.total - 1)
-  }, [notes.total])
+  }, [notes.total, notes.ready])
 
   useEffect(() => {
     setArmed(false)
@@ -450,6 +454,7 @@ export function CollectionView({
               items={collItems}
               view={view}
               scroller={scrollRef}
+              ready={notes.ready}
               renderItem={it => (
                 <ItemCard
                   item={it}

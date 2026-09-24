@@ -20,7 +20,10 @@ export interface NoteSource {
   patchLocal: (id: string, patch: Partial<UIItem>) => void
 }
 
-export function useNotes(query: PagerQuery, enabled = true): NoteSource {
+// `members` is for results that change server-side under an unchanged query —
+// a space's membership. A new count refetches; undefined holds off until the
+// caller can take a refetch again.
+export function useNotes(query: PagerQuery, enabled = true, members?: number): NoteSource {
   const pager = useRef(new NotePager())
   // Ids already pinged this session — avoids re-sending a priority hint for
   // a note the user has already scrolled past once (server-side promote is
@@ -74,13 +77,22 @@ export function useNotes(query: PagerQuery, enabled = true): NoteSource {
   // (see beginQuery in pager.ts), but `ready` still drops: it means "these
   // slots are the CURRENT query's", and Spaces' canvas relies on that to know
   // every member has loaded before it reconciles and autosaves.
-  useEffect(() => {
-    if (!enabled) return
+  const restart = () => {
     pager.current.beginQuery()
     setReady(false)
     fetchPage(0)
+  }
+  useEffect(() => {
+    if (enabled) restart()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, enabled])
+  const seenMembers = useRef(members)
+  useEffect(() => {
+    if (members === undefined || members === seenMembers.current) return
+    if (seenMembers.current !== undefined && enabled) restart()
+    seenMembers.current = members
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [members])
 
   // Poll "what changed since rev X" while enrichment is landing
   // server-side, instead of refetching whole loaded pages on a timer.
