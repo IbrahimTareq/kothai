@@ -23,11 +23,11 @@ test('every base URL parses and carries no credential', () => {
   }
 })
 
-// Vision used to be required here too. It no longer is: ollama-railway is
-// served by an Ollama the template stocks itself, on CPU-only hardware where
-// captioning is impractical, so it pulls no vision model — and a default
-// naming one anyway would seed the field with a 404 at the first image
-// instead of a role that is simply off. Language and embedding stay required,
+// Vision used to be required here too, and was relaxed for the (since
+// retired) Ollama-on-Railway entry: CPU-only hardware where captioning is
+// impractical, so it pulled no vision model — and a default naming one anyway
+// would seed the field with a 404 at the first image instead of a role that is
+// simply off. That still holds for any endpoint serving no vision model. Language and embedding stay required,
 // because an empty default there is a first run that does nothing.
 test('a provider that serves embeddings offers a language and an embedding default', () => {
   for (const e of ENDPOINTS.filter(x => x.servesEmbeddings)) {
@@ -64,18 +64,6 @@ test('openai is the one provider that needs no on-device fallback', () => {
   assert.ok(openai, 'openai must be in the catalogue')
   assert.equal(openai.servesEmbeddings, true)
   assert.equal(openai.needsKey, true)
-})
-
-test('the Railway entry addresses the private network and claims no vision model', () => {
-  const railway = findEndpoint('ollama-railway')
-  assert.ok(railway, 'ollama-railway must be in the catalogue')
-  assert.equal(railway.needsKey, false)
-  assert.equal(
-    new URL(railway.baseUrl).hostname,
-    'ollama.railway.internal',
-    'the template reaches Ollama over Railway private networking, never a public host',
-  )
-  assert.equal(railway.defaults.vision, '', 'the template pulls no vision model')
 })
 
 test('a provider reachable without a key is marked so', () => {

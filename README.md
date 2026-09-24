@@ -42,7 +42,7 @@ Or deploy to Railway:
 
 One service on ~300 MB of RAM, pointed at an inference endpoint you bring — OpenAI, OpenRouter, anything OpenAI-compatible that also serves embeddings.
 
-Want nothing leaving your project? **[Kothai + Ollama](https://railway.com/deploy/kothai-w-ollama?referralCode=kothai)** deploys an Ollama service alongside it on the private network: no API key, no third party. Budget ~8 GB of RAM and a few minutes on first boot while it pulls the models. Inference is CPU-only there, so image captioning stays off.
+Want nothing leaving your own machines? Self-host with the install script above and point Kothai at Ollama on the same hardware. Railway has no GPUs, so a model hosted there is too slow to be useful.
 
 **Next steps:** [Configuration](https://getkothai.com/docs/getting-started/configuration) · [Remote access](https://getkothai.com/docs/running-it/remote-access) · [Backups](https://getkothai.com/docs/running-it/backups) · [Build from source](https://getkothai.com/docs/getting-started/self-hosting#build-from-source)
 

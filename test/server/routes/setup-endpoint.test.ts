@@ -93,20 +93,19 @@ test('GET /api/settings offers the catalogue so the wizard can render tiles', as
   assert.ok(endpoints.some(e => e.id === 'openai'))
 })
 
-test('the Railway tile is offered on Railway and withheld everywhere else', async () => {
-  // ollama.railway.internal resolves only inside the project the template
-  // deploys, so the tile is a dead end on a laptop or a VPS install.
+// The tile used to be offered on Railway, pointing at an Ollama the
+// "Kothai + Ollama" template deployed beside the app. Retired: Railway has no
+// GPUs, and on its shared CPU llama3.2:3b took 41-84s to classify one note
+// against a 60s budget, with captioning off entirely. A hosted endpoint is
+// what Railway gets now; Ollama belongs on the user's own hardware.
+test('a Railway install is not offered an Ollama on Railway', async () => {
   await initProvider('local', {}, { load, localAvailable: true })
-  const offered = async () => {
-    const { res, sent } = mockRes()
-    await handleGetSettings(res)
-    return records(sent.json().endpoints).some(e => e.id === 'ollama-railway')
-  }
-  assert.equal(await offered(), false, 'a non-Railway install must not be offered it')
-
   process.env.RAILWAY_ENVIRONMENT = 'production'
   try {
-    assert.equal(await offered(), true, 'the template deploys with this set')
+    const { res, sent } = mockRes()
+    await handleGetSettings(res)
+    const ids = records(sent.json().endpoints).map(e => e.id)
+    assert.ok(!ids.includes('ollama-railway'), `offered: ${ids.join(', ')}`)
   } finally {
     delete process.env.RAILWAY_ENVIRONMENT
   }
