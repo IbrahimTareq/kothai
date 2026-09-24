@@ -67,8 +67,6 @@
 
 .settings-loading{font-family:var(--font-mono);color:var(--ink-faint);font-size:var(--text-xs);
   letter-spacing:var(--tracking-mono);padding:var(--space-32) 0}
-/* The demo's stand-in for the whole page (Settings.tsx). */
-.settings-demo{margin:0;max-width:52ch;color:var(--ink-dim);font-size:var(--text-sm);line-height:var(--leading-normal)}
 .settings-progress{display:flex;align-items:center;gap:var(--space-14);margin-top:var(--space-14);padding:var(--space-12) var(--space-14);
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg)}
 .settings-progress-track{flex:1;height:5px;border-radius:var(--radius-full);

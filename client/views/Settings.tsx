@@ -23,7 +23,7 @@ import { Button } from '../ui/Button'
 import { PageHeader } from '../ui/PageHeader'
 import { Segmented } from '../ui/Segmented'
 import { Confirm } from '../ui/Confirm'
-import { useDemo } from '../components/Demo'
+import { DemoSettings, useDemo } from '../components/Demo'
 
 export function SettingsView({
   vault,
@@ -234,10 +234,7 @@ export function SettingsView({
           greyed controls leaves gaps a fieldset cannot close: import takes a
           dropped file, and export and backup are plain links. */}
       {demo ? (
-        <p className="settings-demo">
-          Settings are where your own Kothai connects its AI, imports your saves, links Telegram and backs up your
-          library. They are switched off in the demo.
-        </p>
+        <DemoSettings />
       ) : !cfg ? (
         <div className="settings-loading mono">LOADING…</div>
       ) : (
@@ -485,38 +482,41 @@ export function SettingsView({
               </SettingsRow>
             </div>
           </SettingsGroup>
-
-          {/* Phone-only, and hidden above --bp-md by settings.css: this
-                exists because the phone tab bar has no room for a theme
-                switch and the topbar it used to sit in was given back to
-                content. The desktop rail still carries its own button, so
-                showing this there would be two controls for one setting. */}
-          <SettingsGroup label="APPEARANCE" className="settings-appearance">
-            <div className="settings-rows">
-              <SettingsRow
-                title="Theme"
-                desc={
-                  <>
-                    Light or dark. Remembered on this device, not in your vault, so each device you open Kothai on keeps
-                    its own.
-                  </>
-                }
-                action={
-                  <Segmented
-                    label="Theme"
-                    value={theme}
-                    onChange={setTheme}
-                    options={[
-                      { value: 'light', label: 'Light' },
-                      { value: 'dark', label: 'Dark' },
-                    ]}
-                  />
-                }
-              />
-            </div>
-          </SettingsGroup>
         </div>
       )}
+
+      {/* Phone-only, and hidden above --bp-md by settings.css: this
+          exists because the phone tab bar has no room for a theme
+          switch and the topbar it used to sit in was given back to
+          content. The desktop rail still carries its own button, so
+          showing this there would be two controls for one setting.
+          Outside the demo branch above: inside it, a demo visitor on a
+          phone had no theme switch anywhere, and the theme is this
+          device's alone, so the demo has no reason to refuse it. */}
+      <SettingsGroup label="APPEARANCE" className="settings-appearance">
+        <div className="settings-rows">
+          <SettingsRow
+            title="Theme"
+            desc={
+              <>
+                Light or dark. Remembered on this device, not in your vault, so each device you open Kothai on keeps its
+                own.
+              </>
+            }
+            action={
+              <Segmented
+                label="Theme"
+                value={theme}
+                onChange={setTheme}
+                options={[
+                  { value: 'light', label: 'Light' },
+                  { value: 'dark', label: 'Dark' },
+                ]}
+              />
+            }
+          />
+        </div>
+      </SettingsGroup>
     </div>
   )
 }
