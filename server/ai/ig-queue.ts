@@ -16,7 +16,8 @@
 // and the two cannot form a cycle.
 import * as store from '../data/notes.ts'
 import type { NoteRecord } from '../data/notes.ts'
-import { fetchLinkMeta, fetchInstagramSlides, isInstagramPost } from './meta.ts'
+import { fetchLinkMeta } from './meta.ts'
+import { fetchInstagramSlides, isInstagramPost } from '../links/instagram.ts'
 import { applyMeta } from './meta-fields.ts'
 
 // A queued fetch. `slides` picks the carousel job over the thumbnail one;

@@ -8,10 +8,9 @@ import {
   describeMissingPieces,
   nextIgFetchDelay,
   withLocation,
-  mergeSiteDesc,
   parseInstagramCarousel,
   unescapeEmbedUrl,
-} from '../../../server/ai/meta.ts'
+} from '../../../server/links/instagram.ts'
 
 test('isInstagramPost: matches post/reel/tv URLs on instagram.com only', () => {
   assert.equal(isInstagramPost('https://www.instagram.com/reel/DEF456/'), true)
@@ -94,13 +93,6 @@ test('withLocation: prepends the location to siteDesc, re-capped at 2000 chars',
   })
   const capped = withLocation({ siteDesc: 'y'.repeat(3000) }, 'Loc')
   assert.equal(capped.siteDesc.length, 2000)
-})
-
-test('mergeSiteDesc: real og:description wins position, oEmbed author still kept; either alone still works', () => {
-  assert.equal(mergeSiteDesc('the real video description', 'by MrBeast'), 'the real video description\n\nby MrBeast')
-  assert.equal(mergeSiteDesc('the real video description', null), 'the real video description')
-  assert.equal(mergeSiteDesc(null, 'by MrBeast'), 'by MrBeast')
-  assert.equal(mergeSiteDesc(null, null), null)
 })
 
 // Meta rewrites this markup often; a naive `class="EmbeddedMediaImage"`

@@ -2,7 +2,7 @@
 // Pure (html string in, string|null out), so no network or fetch mocking.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { extractArticle, fetchLinkMeta } from '../../../server/ai/meta.ts'
+import { extractArticle, fetchLinkMeta, mergeSiteDesc } from '../../../server/ai/meta.ts'
 
 // Readability needs a real-ish document: a <title>, and enough prose in a
 // single container to beat the nav/footer noise around it.
@@ -99,4 +99,11 @@ test('fetchLinkMeta: skips extraction when the response is not html', async t =>
   t.after(restore)
   const meta = await fetchLinkMeta('https://example.com/data', 'note-2')
   assert.equal(meta.article, null)
+})
+
+test('mergeSiteDesc: real og:description wins position, oEmbed author still kept; either alone still works', () => {
+  assert.equal(mergeSiteDesc('the real video description', 'by MrBeast'), 'the real video description\n\nby MrBeast')
+  assert.equal(mergeSiteDesc('the real video description', null), 'the real video description')
+  assert.equal(mergeSiteDesc(null, 'by MrBeast'), 'by MrBeast')
+  assert.equal(mergeSiteDesc(null, null), null)
 })
