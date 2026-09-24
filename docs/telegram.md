@@ -30,7 +30,7 @@ Only one process can long-poll a bot's token at a time. If Telegram sees a secon
 
 ## The privacy tradeoff
 
-Kothai's data never leaves your machine unless you say so. Connecting Telegram is you saying so — anything you send the bot passes through Telegram's servers before it reaches Kothai. Only turn this on if that's a path you're fine with for whatever you plan to send it.
+Kothai's data never leaves your machine unless you say so. Connecting Telegram is you saying so. Chats with a bot are ordinary Telegram cloud chats, not end-to-end encrypted, so anything you send it is stored on Telegram's servers — and stays in the chat history there after Kothai has saved it. Only turn this on if you're fine with Telegram holding a copy of whatever you plan to send it.
 
 ## While Kothai is down
 

@@ -1,6 +1,6 @@
 # Quick start
 
-One container, no database server, no account. Run the models on your own hardware and you don't need an API key either. Point it at a hosted endpoint instead and the only thing that leaves your machine is the inference.
+One container, no database server, no account. Run the models on your own hardware and you don't need an API key either. Point it at a hosted endpoint instead and the inference leaves your machine, as does anything you send through [Telegram capture](telegram.md) once you connect it.
 
 ```bash
 curl -fsSL https://getkothai.com/install.sh | sh
