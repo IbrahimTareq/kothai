@@ -46,6 +46,13 @@ test('a specific var beats KOTHAI_HOME; unset siblings still derive from it', ()
   assert.equal(c.CONFIG_PATH, '/data/qvac.config.json')
 })
 
+test('the QVAC config path always derives from the root, never from its own var', () => {
+  assert.equal(
+    resolveConfig({ KOTHAI_CONFIG_PATH: '/elsewhere.json' }, ROOT).CONFIG_PATH,
+    path.join(ROOT, 'qvac.config.json'),
+  )
+})
+
 test('relative env values resolve against the root; absolute ones are kept', () => {
   const c = resolveConfig({ KOTHAI_DATA_DIR: 'notes', KOTHAI_MODELS_DIR: '/mnt/w' }, ROOT)
   assert.equal(c.DATA_DIR, path.join(ROOT, 'notes'))

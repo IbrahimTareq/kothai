@@ -41,7 +41,9 @@ export function resolveConfig(env: NodeJS.ProcessEnv = process.env, root: string
     DATA_DIR,
     UPLOAD_DIR: path.join(DATA_DIR, 'uploads'),
     MODELS_DIR: pick('KOTHAI_MODELS_DIR', 'models'),
-    CONFIG_PATH: pick('KOTHAI_CONFIG_PATH', 'qvac.config.json'),
+    // No env override: the server writes this file itself at boot, so there is
+    // nothing for an operator to point it at.
+    CONFIG_PATH: path.join(home ?? root, 'qvac.config.json'),
     // Which provider serves the embedding role when AI_PROVIDER is 'remote'.
     // Unset means "on-device if this image has a local provider" — see
     // ai/routing.js's resolveRoleProviders, which is also where an
