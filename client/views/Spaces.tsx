@@ -13,6 +13,7 @@ import { isPlaceholder } from '../data/pager'
 import type { CanvasDoc, Collection, UIItem, ViewMode } from '../types'
 import { Button } from '../ui/Button'
 import { PageHeader } from '../ui/PageHeader'
+import { Chip } from '../ui/Chip'
 import { Segmented } from '../ui/Segmented'
 import { Popover } from '../ui/Popover'
 import { Input } from '../ui/Input'
@@ -350,17 +351,16 @@ export function CollectionView({
         filters={
           <div className={`coll-rule${ruleFade}`} ref={ruleRef}>
             {collection.tags.map(t => (
-              <button key={t} className="chip coll-tag" title="Remove rule tag" onClick={() => removeTag(t)}>
+              <Chip removable key={t} title="Remove rule tag" onClick={() => removeTag(t)}>
                 {t}
-                <span className="coll-tag-x">×</span>
-              </button>
+              </Chip>
             ))}
             <div className="coll-ruleadd">
               <Popover
                 label="Add rule tag"
                 open={addingTag}
                 onOpenChange={open => (open ? setAddingTag(true) : closeRuleAdd())}
-                trigger={<button className={`chip coll-addtag${addingTag ? ' on' : ''}`}>+ rule tag</button>}
+                trigger={<Chip add>+ rule tag</Chip>}
               >
                 <p className="rulepop-hint">Items tagged with any of these automatically join this space.</p>
                 <Input

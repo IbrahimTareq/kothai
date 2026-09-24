@@ -205,7 +205,7 @@
   /* Expanded view */
   .exp-close-m{width:44px;height:44px}
   .exp-side-actions button{width:44px;height:44px}
-  .exp-tag,.exp-addtag{min-height:var(--control-md)}
+  .chip--compact,.exp-tag-input{height:var(--control-md)}
   .exp-coll-plus{min-height:var(--control-md)}
 
   /* ── hit pads: box unchanged, target extended ── */

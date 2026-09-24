@@ -138,17 +138,9 @@ a.exp-src:hover{color:var(--ink);text-decoration:underline;text-underline-offset
 .exp-sec-n{display:grid;place-items:center;min-width:15px;height:15px;padding:0 var(--space-4);border-radius:var(--radius-full);
   background:var(--panel-2);color:var(--ink-mute);font-size:var(--text-2xs)}
 .exp-tags{display:flex;flex-wrap:wrap;gap:var(--space-8)}
-.exp-addtag{display:inline-flex;align-items:center;padding:var(--space-6) var(--space-12);border:0;border-radius:var(--radius-full);
-  background:var(--accent);color:var(--on-accent);font-size:var(--text-xs);cursor:pointer;transition:var(--dur-fast)} /* token-lint-ignore: filled pill; belongs on .chip, deferred — .chip is a fixed
-   --control-md height and this is padding-sized */
-.exp-addtag:hover{opacity:.85}
-.exp-tag{display:inline-flex;align-items:center;gap:var(--space-6);padding:var(--space-6) var(--space-12);border:1px solid var(--line);
-  border-radius:var(--radius-full);background:var(--panel-2);color:var(--ink-dim);font-size:var(--text-xs);
-  cursor:pointer;transition:var(--dur-fast)} /* token-lint-ignore: tag pill — .chip's family, not .btn's */
-.exp-tag:hover{border-color:var(--danger);color:var(--ink)}
-.exp-tag-x{color:var(--ink-faint);font-size:var(--text-sm);line-height:1}
-.exp-tag:hover .exp-tag-x{color:var(--danger)}
-.exp-tag-input{width:96px;padding:var(--space-6) var(--space-12);border:1px solid var(--ink-faint);border-radius:var(--radius-full);
+/* the in-place tag editor sits level with the compact chips around it */
+.exp-tag-input{box-sizing:border-box;width:96px;height:var(--control-sm);padding:0 var(--space-12);
+  border:1px solid var(--ink-faint);border-radius:var(--radius-full);
   background:transparent;color:var(--ink);font-size:var(--text-xs);outline:none}
 .exp-note{width:100%;min-height:92px}
 .exp-side-actions{display:flex;align-items:center;justify-content:center;gap:var(--space-22);padding:var(--space-16);

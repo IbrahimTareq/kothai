@@ -36,11 +36,10 @@
     "fields": 2
   },
   "client/views/Expanded.tsx": {
-    "buttons": 5,
+    "buttons": 3,
     "fields": 1
   },
   "client/views/Gallery.tsx": {
-    "buttons": 4,
     "fields": 1
   },
   "client/views/Onboarding.tsx": {
@@ -50,7 +49,7 @@
     "buttons": 4
   },
   "client/views/Spaces.tsx": {
-    "buttons": 6,
+    "buttons": 4,
     "fields": 1
   }
 }

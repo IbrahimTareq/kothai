@@ -95,6 +95,14 @@ It shows on hover and on keyboard focus, closes on Escape, and is portaled on
 no tip shows. It replaced three hand-rolled tips (the rail's, Expanded's actions,
 a smart space's spark) that answered to the mouse only.
 
+**Pills are `<Chip>`** (`client/ui/`): Everything's filters, a space's rule
+tags, an item's tags. `on` for an applied filter (it sets `aria-pressed`),
+`compact` in a list rather than on a toolbar, `add` for the dashed "+ …", and
+`removable` for a pill whose click takes it away — an ×, red on hover. It
+absorbed Expanded's own tag pills, whose annotation had deferred exactly this,
+and settled "add one" on the dashed, quiet pill: "+ Add tag" had been a filled
+accent in the same sidebar as a dashed "Add to space".
+
 **Every page opens with `<PageHeader>`** (`client/ui/`). Two rows: identity
 (`lead`, `title`, a mono `meta` count, `actions` on the right) over a toolbar
 of `filters` on the left — what is shown — and `display` on the right — how
@@ -168,10 +176,9 @@ It also fails any rule outside `primitives.css` that declares a whole button box
 rule that keeps `.btn` the default. It keys on the chrome rather than the class
 name, because a name-shaped rule would be satisfied by calling the next
 hand-rolled button `.wizard-test`, which is precisely how the last one happened.
-Ten controls are annotated exceptions: a floating action circle, a segment, an
-inline citation ref, a scroll affordance, two tag pills (one annotated as a
-deferred move onto `.chip`), two combobox list rows, an armed icon-delete, and
-a dashed add affordance.
+Eight controls are annotated exceptions: a floating action circle, a segment,
+an inline citation ref, a scroll affordance, two combobox list rows, an armed
+icon-delete, and a dashed add affordance.
 
 The markup half of the same rule: outside `client/ui/`, any `className`
 carrying `btn` or `btn--*` fails. It has no escape hatch — use `<Button>`.

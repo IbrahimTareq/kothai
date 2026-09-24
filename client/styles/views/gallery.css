@@ -29,8 +29,8 @@
   -webkit-mask-image:linear-gradient(to right,transparent,#000 var(--space-32),#000 calc(100% - var(--space-32)),transparent);  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
   mask-image:linear-gradient(to right,transparent,#000 var(--space-32),#000 calc(100% - var(--space-32)),transparent)}  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
 .fc-count{font-family:var(--font-mono);font-size:var(--text-2xs);color:var(--ink-faint)}
-.filter-chip:hover .fc-count{color:var(--ink-mute)}
-.filter-chip.on .fc-count{color:var(--on-accent);opacity:.55}
+.chip:hover .fc-count{color:var(--ink-mute)}
+.chip.on .fc-count{color:var(--on-accent);opacity:.55}
 .fc-dot{width:7px;height:7px;border-radius:var(--radius-circle);flex-shrink:0}
 .fc-ico{display:inline-flex;flex-shrink:0;color:currentColor}
 .fc-ico svg{display:block}

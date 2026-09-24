@@ -12,6 +12,7 @@ import { lockAxis, shouldDismiss, navDirection, type Axis } from '../layout/swip
 import { useScrollEdges } from '../layout/useScrollEdges'
 import type { Collection, UIItem } from '../types'
 import { Button } from '../ui/Button'
+import { Chip } from '../ui/Chip'
 import { Menu } from '../ui/Menu'
 import { Textarea } from '../ui/Input'
 import { Tooltip } from '../ui/Tooltip'
@@ -443,14 +444,13 @@ export function ExpandedView({
                 Tags <span className="exp-sec-n">{tags.length}</span>
               </div>
               <div className="exp-tags">
-                <button className="exp-addtag" onClick={() => setAdding(true)}>
+                <Chip compact add onClick={() => setAdding(true)}>
                   + Add tag
-                </button>
+                </Chip>
                 {tags.map(t => (
-                  <button key={t} className="exp-tag" title="Remove tag" onClick={() => removeTag(t)}>
+                  <Chip compact removable key={t} title="Remove tag" onClick={() => removeTag(t)}>
                     {t}
-                    <span className="exp-tag-x">×</span>
-                  </button>
+                  </Chip>
                 ))}
                 {adding && (
                   <input

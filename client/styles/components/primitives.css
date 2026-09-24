@@ -82,10 +82,11 @@
 
 /* ── chip ──────────────────────────────────────────────────────────────────
    The pill that says "this is one of a set you can pick or drop": Everything's
-   type/source filters and a space's rule tags. They were two components with
-   two heights (32 and 28) and two type sizes, sitting on bars that otherwise
-   agree, so they are one primitive now with two callers. Toolbar-tall, like
-   every other box on a control bar. */
+   type/source filters, a space's rule tags and an item's tags, all drawn by
+   <Chip> in client/ui/. The first two were two components with two heights
+   (32 and 28) and two type sizes, sitting on bars that otherwise agree, so
+   they became one primitive; Toolbar-tall, like every other box on a control
+   bar. */
 .chip{display:inline-flex;align-items:center;gap:var(--space-8);flex-shrink:0;
   height:var(--control-md);box-sizing:border-box;padding:0 var(--space-14);
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-full);
@@ -93,6 +94,17 @@
   white-space:nowrap;cursor:pointer;transition:var(--dur-fast)}
 .chip:hover{color:var(--ink);border-color:var(--line-hover)}
 .chip.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+/* The states <Chip> composes. An item's tags sit in a list, not on a toolbar,
+   so they take the compact height; "add one" is the dashed, quiet pill the
+   rule tags and "Add to space" already used, where "+ Add tag" had been a
+   filled accent; removing reddens the pill, not only its ×. */
+.chip--compact{height:var(--control-sm);gap:var(--space-6);padding:0 var(--space-12);font-size:var(--text-xs)}
+.chip--add{color:var(--ink-mute);border-style:dashed}
+.chip--add[data-state="open"]{background:var(--panel);color:var(--ink);border-color:var(--line-hover)}
+.chip--removable{gap:var(--space-6)}
+.chip-x{color:var(--ink-faint)}
+.chip--removable:hover{border-color:var(--danger)}
+.chip--removable:hover .chip-x{color:var(--danger)}
 
 /* ── segmented control ────────────────────────────────────────────────────
    What <Segmented> in client/ui/ draws, and the one box for every "pick one of

@@ -8,6 +8,7 @@ import type { Collection, UIItem, UIType, ViewMode } from '../types'
 import type { Slot } from '../data/pager'
 import { useScrollEdges } from '../layout/useScrollEdges'
 import { PageHeader } from '../ui/PageHeader'
+import { Chip } from '../ui/Chip'
 import { Segmented } from '../ui/Segmented'
 
 interface GalleryViewProps {
@@ -107,34 +108,21 @@ export function GalleryView({
         filters={
           nav === 'all' && (typeChips.length > 0 || sourceChips.length > 0 || unavailableCount > 0) ? (
             <div className={`gal-filters${filtersFade}`} ref={filtersRef}>
-              <button
-                className={`chip filter-chip${galFilter.length === 0 ? ' on' : ''}`}
-                onClick={() => setGalFilter([])}
-              >
+              <Chip on={galFilter.length === 0} onClick={() => setGalFilter([])}>
                 All
-              </button>
+              </Chip>
               {typeChips.map(c => (
-                <button
-                  key={c.key}
-                  className={`chip filter-chip${on(c.key) ? ' on' : ''}`}
-                  aria-pressed={on(c.key)}
-                  onClick={() => toggle(c.key)}
-                >
+                <Chip on={on(c.key)} key={c.key} onClick={() => toggle(c.key)}>
                   <span className="fc-ico">
                     <Icon name={c.glyph} size={13} />
                   </span>
                   {c.label}
                   <span className="fc-count">{c.count}</span>
-                </button>
+                </Chip>
               ))}
               {sourceChips.length > 0 && <span className="filter-sep" />}
               {sourceChips.map(c => (
-                <button
-                  key={c.key}
-                  className={`chip filter-chip${on(c.key) ? ' on' : ''}`}
-                  aria-pressed={on(c.key)}
-                  onClick={() => toggle(c.key)}
-                >
+                <Chip on={on(c.key)} key={c.key} onClick={() => toggle(c.key)}>
                   {c.glyph ? (
                     <span className="fc-ico">
                       <Icon name={c.glyph} size={13} />
@@ -144,7 +132,7 @@ export function GalleryView({
                   )}
                   {c.label}
                   <span className="fc-count">{c.count}</span>
-                </button>
+                </Chip>
               ))}
               {/* Last, and only once a check has found something: this is a
                   state the library is in, not a kind of thing in it, and an
@@ -152,9 +140,8 @@ export function GalleryView({
               {unavailableCount > 0 && (
                 <>
                   <span className="filter-sep" />
-                  <button
-                    className={`chip filter-chip${on('unavailable') ? ' on' : ''}`}
-                    aria-pressed={on('unavailable')}
+                  <Chip
+                    on={on('unavailable')}
                     title="Saved links whose content no longer exists"
                     onClick={() => toggle('unavailable')}
                   >
@@ -162,7 +149,7 @@ export function GalleryView({
                       <Icon name="trash" size={13} />
                     </span>
                     Unavailable<span className="fc-count">{unavailableCount}</span>
-                  </button>
+                  </Chip>
                 </>
               )}
             </div>

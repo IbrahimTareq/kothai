@@ -49,12 +49,7 @@
 .coll-del.armed { padding: 0 var(--space-12); color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
 .coll-smart { display: inline-flex; flex: none; color: var(--ink-mute); cursor: help; }
 .coll-smart:hover, .coll-smart:focus-visible { color: var(--ink); outline: none; }
-.coll-tag { gap: var(--space-6); }
-.coll-tag-x { color: var(--ink-faint); }
-.coll-tag:hover .coll-tag-x { color: var(--danger); }
 /* dashed, like the expanded sidebar's "add to space" — a slot, not a value */
-.coll-addtag { color: var(--ink-mute); border-style: dashed; }
-.coll-addtag.on { background: var(--panel); color: var(--ink); border-color: var(--line-hover); }
 
 /* Rule builder — turns "add a rule tag" into a contextual pick from the vault:
    each row is a real tag with its live item-count (the rule's reach). */
