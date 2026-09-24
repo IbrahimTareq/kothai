@@ -100,6 +100,24 @@ export class NotePager {
   // Same shape as awaitingThumb: id -> expiry, bounded so a note stuck
   // behind a long queue can't pin the fast cadence on forever.
   private watching = new Map<string, number>() // id -> expiry (epoch ms)
+  // Which query's pages are current. A query switch used to reset() on the
+  // spot, which emptied facets as well as slots: Everything's chip strip is
+  // built from facets, so it unmounted along with every card until the new
+  // page arrived — a full blink of the page on each chip click. Now the old
+  // results stay on screen and the first page of the new query replaces them.
+  private gen = 0
+  private replacing = false
+
+  get generation(): number {
+    return this.gen
+  }
+
+  beginQuery(): number {
+    this.gen++
+    this.replacing = true
+    this.inflight.clear()
+    return this.gen
+  }
 
   reset(): void {
     this.total = 0
@@ -126,7 +144,16 @@ export class NotePager {
     this.inflight.delete(offset)
   }
 
-  applyPage(p: NotesPage): void {
+  // False when the page was dropped, so the caller does not mark a query
+  // ready on the strength of another query's results.
+  applyPage(p: NotesPage, gen = this.gen): boolean {
+    // Two quick chip clicks can land the first query's page after the second
+    // has begun; applying it would show the wrong filter's results.
+    if (gen !== this.gen) return false
+    if (this.replacing) {
+      this.reset()
+      this.replacing = false
+    }
     this.total = p.total
     this.facets = p.facets
     this.pendingTotal = p.pendingTotal
@@ -149,6 +176,7 @@ export class NotePager {
       this.idToIndex.set((this.arr[idx] as UIItem).id, idx)
     })
     this.slotCache = null
+    return true
   }
 
   slots(): Slot[] {
@@ -167,6 +195,9 @@ export class NotePager {
   // Page-aligned offsets needed to cover [first, last], excluding pages
   // already loaded or in flight. `first`/`last` are slot indices.
   neededPages(first: number, last: number): number[] {
+    // The slots on screen still belong to the old query, so its total and
+    // loaded indices say nothing about which of the new query's pages exist.
+    if (this.replacing) return []
     if (this.total === 0 && this.arr.length === 0 && !this.inflight.has(0)) return [0]
     const out: number[] = []
     const from = Math.max(0, Math.floor(first / PAGE) * PAGE)

@@ -5,6 +5,7 @@
 // inline token styles so it adds nothing to the app's stylesheet, and
 // test/client/playground.test.ts fails if a primitive is missing from it.
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { applyTheme } from '../app/theme'
 import { Icon } from '../components/icons'
 import { Button } from '../ui/Button'
 import { Chip } from '../ui/Chip'
@@ -44,7 +45,7 @@ export function Playground() {
   // The app keeps the theme in localStorage; this page flips it on the root
   // only, so looking at the other theme here never changes the user's choice.
   useEffect(() => {
-    document.documentElement.dataset.theme = theme
+    applyTheme(document, theme)
   }, [theme])
 
   const toggle = (s: string) => setSpaces(v => (v.includes(s) ? v.filter(x => x !== s) : [...v, s]))

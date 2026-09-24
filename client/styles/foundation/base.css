@@ -31,6 +31,14 @@ body{
   overflow:hidden;
 }
 
+/* Theme switch crossfade (app/theme.ts). The browser default is a quick .25s
+   fade that reads as a cut between black and white; slower and symmetric, it
+   reads as the room dimming. Reduced motion keeps the switch, drops the fade. */
+::view-transition-old(root),::view-transition-new(root){
+  animation-duration:var(--dur-slower);animation-timing-function:var(--ease-in-out)}
+@media (prefers-reduced-motion:reduce){
+  ::view-transition-old(root),::view-transition-new(root){animation:none}}
+
 /* Headings: semibold, lightly tightened — the Ask landing headline's treatment,
    adopted app-wide. */
 h1,h2,h3,h4{font-weight:var(--fw-heading);letter-spacing:var(--tracking-heading);

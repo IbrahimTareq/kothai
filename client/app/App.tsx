@@ -14,6 +14,7 @@ import { SettingsView } from '../views/Settings'
 import { Onboarding } from '../views/Onboarding'
 import { CaptureModal } from '../components/Capture'
 import { pathToRoute, routeToPath, chatPath } from './router'
+import { applyTheme } from './theme'
 import { SOURCES, SOURCE_BY_KEY, sourceGlyph } from '../domain/source'
 import { CoreView } from '../views/Core'
 import { GalleryView } from '../views/Gallery'
@@ -74,7 +75,7 @@ export default function App() {
   const spaceNotesRef = useRef<NoteSource | null>(null)
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme
+    applyTheme(document, theme)
     try {
       localStorage.setItem('kothai-theme', theme)
     } catch {
@@ -440,7 +441,9 @@ export default function App() {
           ) : nav === 'spaces' ? (
             <SpacesView {...{ collections, createCollection, navigate }} />
           ) : nav.startsWith('space:') ? (
+            // Keyed: a reused pager would show the last Space's cards under this one's name.
             <CollectionView
+              key={nav}
               {...{
                 collection: collections.find(c => c.id === nav.slice(6)) || null,
                 view,

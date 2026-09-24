@@ -55,21 +55,29 @@ export function useNotes(query: PagerQuery, enabled = true): NoteSource {
 
   const fetchPage = (offset: number) => {
     const q = JSON.parse(key) as PagerQuery
+    const gen = pager.current.generation
     pager.current.markInflight(offset)
     API.page({ offset, limit: PAGE, ...q })
       .then(p => {
-        pager.current.applyPage(p)
+        if (!pager.current.applyPage(p, gen)) return
         setReady(true)
         rerender()
       })
-      .catch(() => pager.current.clearInflight(offset)) // next scroll tick retries
+      .catch(() => {
+        // A superseded query's failure must not clear the current query's
+        // in-flight mark at the same offset.
+        if (gen === pager.current.generation) pager.current.clearInflight(offset) // next scroll tick retries
+      })
   }
 
+  // The old results stay on screen until the new query's first page lands
+  // (see beginQuery in pager.ts), but `ready` still drops: it means "these
+  // slots are the CURRENT query's", and Spaces' canvas relies on that to know
+  // every member has loaded before it reconciles and autosaves.
   useEffect(() => {
     if (!enabled) return
-    pager.current.reset()
+    pager.current.beginQuery()
     setReady(false)
-    rerender()
     fetchPage(0)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, enabled])

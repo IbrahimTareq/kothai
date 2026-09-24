@@ -89,6 +89,57 @@ test('reset clears state for a new query', () => {
   assert.deepEqual(p.neededPages(0, 10), [0])
 })
 
+const pageOf = (ids: string[], types: Record<string, number>) => ({
+  offset: 0,
+  total: ids.length,
+  facets: { types, sources: {} },
+  pendingTotal: 0,
+  notes: ids.map(id => item(id)),
+})
+
+test('a new query keeps the old results on screen until its first page lands', () => {
+  // Emptying on the click unmounted Everything's chip strip (built from
+  // facets) and blanked the board for a whole round-trip: the "blink".
+  const p = new NotePager()
+  p.applyPage(pageOf(['a', 'b', 'c'], { link: 3 }))
+  p.beginQuery()
+  assert.deepEqual(
+    p.slots().map(s => (s as UIItem).id),
+    ['a', 'b', 'c'],
+  )
+  assert.deepEqual(p.facets.types, { link: 3 })
+  p.applyPage(pageOf(['v'], { video: 1 }))
+  assert.deepEqual(
+    p.slots().map(s => (s as UIItem).id),
+    ['v'],
+  )
+  assert.deepEqual(p.facets.types, { video: 1 })
+})
+
+test('a page from a superseded query is dropped, not applied over the current one', () => {
+  // Two quick chip clicks: the first query's page can land after the second
+  // query has started.
+  const p = new NotePager()
+  const first = p.beginQuery()
+  const second = p.beginQuery()
+  p.applyPage(pageOf(['old'], {}), first)
+  p.applyPage(pageOf(['new'], {}), second)
+  p.applyPage(pageOf(['old'], {}), first)
+  assert.deepEqual(
+    p.slots().map(s => (s as UIItem).id),
+    ['new'],
+  )
+})
+
+test('while a new query is pending, no further pages are requested against the old window', () => {
+  // The old query's total and loaded indices would otherwise decide which of
+  // the NEW query's pages to fetch.
+  const p = new NotePager()
+  p.applyPage(page(0, PAGE, PAGE * 3))
+  p.beginQuery()
+  assert.deepEqual(p.neededPages(PAGE, PAGE * 2), [])
+})
+
 test('applyDelta patches known ids, prepends fresh newest, ignores unloaded, removes deleted', () => {
   const p = new NotePager()
   p.applyPage({
