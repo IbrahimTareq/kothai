@@ -1,4 +1,4 @@
-// Unit tests for the additive-column migration helper. db.js has only ever
+// Unit tests for the additive-column migration helper. db.ts has only ever
 // run CREATE TABLE IF NOT EXISTS, which silently does nothing to an existing
 // table — so adding a column to an install that already has data needs this.
 import { test } from 'node:test'

@@ -5,7 +5,7 @@
 // its cover frame looked at. It now runs from enrichNote for any note carrying
 // a thumb. These tests pin the gating (residency, idempotency marker, presence
 // of a thumb) and that the description reaches classify, embed and the note —
-// the same harness shape as test/enrich-article.test.js, so no network and no
+// the same harness shape as test/enrich-article.test.ts, so no network and no
 // model are involved.
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'

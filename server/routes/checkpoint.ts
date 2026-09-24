@@ -5,7 +5,7 @@
 // first, and two things would otherwise make their snapshot quietly lossy:
 //
 //   - Batched writes ({ persist: false }, used by the enrichment sweeps in
-//     ai/enrich.js) are queued in memory and exist in no file until flushed.
+//     ai/enrich.ts) are queued in memory and exist in no file until flushed.
 //   - WAL mode leaves committed data in kothai.db-wal, so kothai.db by itself
 //     is an older version of the database.
 //
@@ -19,7 +19,7 @@ import { isImportInProgress, IMPORT_BUSY } from '../data/import-lock.ts'
 import { json } from '../lib/http.ts'
 
 export async function handleCheckpoint(res: ServerResponse): Promise<void> {
-  // import.js holds a batch of notes in memory and commits them as one
+  // import.ts holds a batch of notes in memory and commits them as one
   // transaction at the end, with a rollback path if that fails. Flushing
   // underneath it would commit whatever half of the batch is queued so far and
   // put those rows beyond that rollback — so a scheduled backup firing

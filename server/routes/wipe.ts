@@ -40,7 +40,7 @@ export async function handleWipe(req: IncomingMessage, res: ServerResponse) {
   if (!isRecord(body) || body.confirm !== CONFIRM_TOKEN) {
     return json(res, 400, { error: `Type ${CONFIRM_TOKEN} to confirm.`, code: 'confirm_required' })
   }
-  // An import writes notes in a batch it holds in memory (see import.js) — a
+  // An import writes notes in a batch it holds in memory (see import.ts) — a
   // wipe landing mid-import would clear the table and then have that batch
   // flushed on top of it, leaving exactly the notes the user asked to erase.
   if (isImportInProgress()) {

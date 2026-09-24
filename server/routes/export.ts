@@ -1,10 +1,10 @@
 // GET /api/export — a full backup of your data as one downloadable JSON file:
-// notes, spaces, chats, and model settings. The mirror image of import.js,
+// notes, spaces, chats, and model settings. The mirror image of import.ts,
 // minus the format-detection/ZIP-reading machinery (there's only one shape
 // to write here: our own).
 //
 // Note embeddings and the tag-vocab registry are both derived/regenerable
-// (from content and from tags, respectively — see tagvocab.js), so they're
+// (from content and from tags, respectively — see tagvocab.ts), so they're
 // left out to keep the file small and human-readable; a restore just re-runs
 // enrichment.
 import * as store from '../data/notes.ts'

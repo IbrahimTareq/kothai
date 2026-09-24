@@ -256,7 +256,7 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
     // because the endpoint may well be serving EmbeddingGemma — but keyed on
     // the configured model NAME, since it may equally be serving nomic, bge
     // or an OpenAI text-embedding-*, none of which want the prefix. See
-    // prompts.js's embedInput.
+    // prompts.ts's embedInput.
     async embedText(text: string, { mode = 'document' }: EmbedOptions = {}): Promise<number[]> {
       guard('embed')
       const clean = embedInput(clipToTokens(text), { mode, model: modelFor('embed') }) || ' '

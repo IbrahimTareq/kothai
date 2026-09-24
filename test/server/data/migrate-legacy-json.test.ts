@@ -1,7 +1,7 @@
 // Tests for server/data/migrate.ts — importing the old flat-JSON store
 // (data/*.json) into SQLite the first time data/kothai.db is created.
 // KOTHAI_DATA_DIR is pointed at a scratch temp dir BEFORE any server module
-// is imported (config.js resolves it once, at import time), so this exercises
+// is imported (config.ts resolves it once, at import time), so this exercises
 // the real DATA_DIR/readJson path rather than a stubbed one.
 import { test, after } from 'node:test'
 import assert from 'node:assert/strict'

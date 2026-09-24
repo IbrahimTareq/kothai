@@ -115,7 +115,7 @@ test('a wedged teardown frees the model anyway rather than holding it forever', 
   assert.ok(waited < 3000, `should give up rather than hold the model, waited ${waited}ms`)
 })
 
-// @qvac/sdk permits one completion per model. roles.js's acquire() is a
+// @qvac/sdk permits one completion per model. roles.ts's acquire() is a
 // refcount that keeps the weights resident — it never ordered callers — so a
 // second completion reaching the model while the first was still winding down
 // came back "rejected by registry concurrency policy". The queue below is what

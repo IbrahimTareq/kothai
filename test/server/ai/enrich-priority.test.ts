@@ -1,10 +1,10 @@
 // Tests for the viewport-priority Instagram meta queue: the deque that
-// replaced enrich.js's old igChain promise chain (queueIgMeta/promoteIgMeta),
+// replaced enrich.ts's old igChain promise chain (queueIgMeta/promoteIgMeta),
 // plus the POST /api/enrich/prioritize route that lets the scrolling client
 // bump on-screen notes to the front.
 //
-// The queue-ordering tests run against the REAL enrich.js with the pump
-// suspended via _igQueueState.pause() (see enrich.js) so they exercise the
+// The queue-ordering tests run against the REAL enrich.ts with the pump
+// suspended via _igQueueState.pause() (see enrich.ts) so they exercise the
 // actual queue/dedup/promote logic without ever touching fetch/model code.
 // The route tests reuse that same real, paused queue (queueIgMeta only ever
 // pushes onto an array while paused — no network involved) and mock just

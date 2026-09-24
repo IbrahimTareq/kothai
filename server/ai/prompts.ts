@@ -153,7 +153,7 @@ export function isPromptedEmbedModel(model: string | null | undefined): boolean 
 }
 
 // Bump when anything about how a note becomes a vector changes — the prefix
-// scheme here, or which fields enrich.js feeds in. Notes record the recipe
+// scheme here, or which fields enrich.ts feeds in. Notes record the recipe
 // they were embedded under, and a mismatch triggers the same full re-embed a
 // model swap does (see enrich.reembedAll). Without it, a library ends up
 // holding two incompatible sets of vectors and retrieval silently degrades
@@ -213,7 +213,7 @@ export function answerSystemPrompt(): string {
 
 // ---- answer context ------------------------------------------------------
 // A note's EMBEDDING is built from title + summary + content + siteTitle +
-// siteDesc + article + thumbnail description + tags (see enrich.js's richText
+// siteDesc + article + thumbnail description + tags (see enrich.ts's richText
 // and toEmbed assembly). This block must show the answer model the SAME
 // fields, or retrieval and answering disagree: a saved reel is found on the
 // strength of its caption or its thumbnail description, and the model that
@@ -222,7 +222,7 @@ export function answerSystemPrompt(): string {
 // between what was embedded and what is shown is the entire point of this
 // function.
 //
-// Budgets are chars, sized against the LLM's 8192-token ctx (see local.js's
+// Budgets are chars, sized against the LLM's 8192-token ctx (see local.ts's
 // ctx_size): ~4 chars/token puts a full CONTEXT_CHARS block at roughly 3k
 // tokens, leaving the system prompt, history, question and the generated
 // answer comfortable room. Per note the budget shrinks as k grows so a large

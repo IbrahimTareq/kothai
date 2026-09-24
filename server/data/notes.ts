@@ -18,7 +18,7 @@ import { encodeEmbedding, decodeEmbedding, cosine } from './embedding.ts'
 
 // The record as it lives in the in-memory array: the wire shape plus the
 // fields that never reach a client. `_rev` is delta-sync bookkeeping (see
-// below); `ai`, `article` and `thumbDescription` are written by ai/enrich.js
+// below); `ai`, `article` and `thumbDescription` are written by ai/enrich.ts
 // and read here — the first to gate the enrichment backlog, the other two
 // because textSearch's haystack covers them; the last three are ig-queue.ts's
 // retry budget for a failed Instagram meta fetch plus its carousel-checked mark.
@@ -98,7 +98,7 @@ export function _setTombstoneCap(n: number): void {
 
 // Writes queued by a { persist: false } call, run as one transaction on the
 // next flush() — see addNote's doc comment for why batching matters. Each
-// entry is a closure over the row it writes; import.js's rollback path
+// entry is a closure over the row it writes; import.ts's rollback path
 // (removeMany) never has to touch these because by the time it runs, flush()
 // has already drained (and either committed or discarded) the queue.
 let pendingWrites: ((db: DatabaseSync) => void)[] = []
@@ -430,7 +430,7 @@ const RRF_K = 60
 // context was title + content + URL per note — a few dozen characters for a
 // saved link. Now that a note contributes its caption, article excerpt and
 // thumbnail description, ten is both more useful and still comfortably inside
-// the LLM's context: prompts.js shrinks the per-note budget as k grows, so
+// the LLM's context: prompts.ts shrinks the per-note budget as k grows, so
 // raising this trims each note rather than overflowing.
 const TOP_K = 10
 
@@ -655,7 +655,7 @@ export function textSearch(query: string, k = TOP_K, list: NoteRecord[] = notes)
 }
 
 // test-only: clean in-memory slate against a fresh in-memory database,
-// mirroring collections.js / tagvocab.js's own _reset() helpers.
+// mirroring collections.ts / tagvocab.ts's own _reset() helpers.
 export function _reset({ loaded: isLoaded = true, keepDb = false }: { loaded?: boolean; keepDb?: boolean } = {}): void {
   if (!keepDb) _resetDb()
   notes = []

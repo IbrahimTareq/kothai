@@ -1,7 +1,7 @@
 // Canonical-tag registry: snaps a newly-generated tag to an existing
 // semantically-equivalent tag using embedding similarity, so the corpus
 // converges on one form (e.g. "cooking" → existing "recipes"). Unlike the pure
-// tags.js, this module does embedding I/O (via ai.embedText) and owns a
+// tags.ts, this module does embedding I/O (via ai.embedText) and owns a
 // persisted store (the tag_vocab table), so it is kept separate.
 //
 // Forward-only: existing notes are never rewritten; their tags seed the registry

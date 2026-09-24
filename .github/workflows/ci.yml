@@ -102,7 +102,7 @@ jobs:
           fi
           echo "✅ no JavaScript outside docker/nmtcpp-binding-stub.js"
 
-      # Build BEFORE the tests. server/http.js serves static assets out of
+      # Build BEFORE the tests. server/http.ts serves static assets out of
       # ./dist, and the auth-gate tests drive a real listening server to check
       # the login page can fetch its font — with no dist that 404s. It passed
       # locally only because contributors have a dist lying around from an

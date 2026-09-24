@@ -318,7 +318,7 @@ export function nextIgFetchDelay(now: number, lastFetch: number, jitter = 0): nu
 }
 
 // >=2.5s + jitter between Instagram fetches. Module-level state is fine here:
-// callers (enrich.js's dedicated Instagram meta queue, one job at a time)
+// callers (enrich.ts's dedicated Instagram meta queue, one job at a time)
 // serialize every Instagram fetch onto a single FIFO, so two Instagram
 // fetches never run concurrently and never race this variable.
 let lastIgFetch = 0
@@ -526,7 +526,7 @@ export function joinCaptions(
 // right now". The distinction is what the caller's idempotency marker turns
 // on: a permanent answer is worth recording so the video is never asked
 // about again, while a rate-limit or a network blip must stay retryable —
-// the same false-positive-vs-false-negative call enrich.js's other markers
+// the same false-positive-vs-false-negative call enrich.ts's other markers
 // make, resolved the same way.
 const PERMANENT_CAPTION_ERRORS = [
   YoutubeTranscriptDisabledError,

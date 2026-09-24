@@ -166,7 +166,7 @@ export async function configureModels({ llm, embed: emb, vision }: ModelSelectio
   if (emb && embedSrc) {
     // Remembered because embedText has to know WHICH embedding model is
     // loaded: EmbeddingGemma wants task prefixes and GTE-Large does not (see
-    // prompts.js's embedInput). The RoleManager holds the resolved model
+    // prompts.ts's embedInput). The RoleManager holds the resolved model
     // source, not the preset key, so this is the only place the key is known.
     embedModelKey = emb
     await managers.embed.setModel(embedSrc)
@@ -315,7 +315,7 @@ export async function describeImage({ absPath, prompt }: DescribeImageArgs): Pro
 // ---- embeddings --------------------------------------------------------
 // `mode` is 'document' (a note being indexed) or 'query' (a question being
 // asked). It selects the task prefix for prompt-instructed models; see
-// prompts.js's embedInput for why the two are not the same text.
+// prompts.ts's embedInput for why the two are not the same text.
 //
 // The content is clipped to 4000 chars BEFORE the prefix is applied, so the
 // prefix never eats into the text budget and can never itself be truncated.
@@ -394,7 +394,7 @@ export async function answer({ question, contextNotes, history = [] }: AnswerArg
 const TEARDOWN_GRACE_MS = Number(process.env.KOTHAI_TEARDOWN_GRACE_MS) || 5000
 
 // @qvac/sdk allows one completion per model and rejects the rest outright
-// ("rejected by registry concurrency policy"). The refcount in roles.js does
+// ("rejected by registry concurrency policy"). The refcount in roles.ts does
 // not order callers — it only keeps the weights resident — so completions on a
 // role queue here instead. Without this, a stopped answer whose run is still
 // being torn down poisoned the very next question, and a background classify

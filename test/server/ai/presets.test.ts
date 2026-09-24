@@ -31,7 +31,7 @@ test('every vision preset carries a projection model key', () => {
   for (const p of PRESETS.vision) assert.ok(p.proj, `${p.key} has no proj`)
 })
 
-test('presets.js imports no SDK — it must load in the lite image', () => {
+test('presets.ts imports no SDK — it must load in the lite image', () => {
   const src = readFileSync(new URL('../../../server/ai/presets.ts', import.meta.url), 'utf8')
-  assert.ok(!/@qvac/.test(src), 'presets.js must not reference @qvac')
+  assert.ok(!/@qvac/.test(src), 'presets.ts must not reference @qvac')
 })

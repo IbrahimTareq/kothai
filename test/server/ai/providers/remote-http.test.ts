@@ -26,7 +26,7 @@ after(() => server.close())
 // Every transient status here (429/500/timeout/refused) makes postJson retry
 // with the real exponential backoff by default, which made this file alone
 // cost 68s of the suite's wall time. Injected the same way
-// remote-retry.test.js proves out the retry loop itself.
+// remote-retry.test.ts proves out the retry loop itself.
 const noSleep = async () => {}
 const post = (path: string, body: unknown, opts: RequestOptions = {}) =>
   postJson(base, path, body, { sleep: noSleep, ...opts })

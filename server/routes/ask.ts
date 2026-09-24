@@ -155,14 +155,14 @@ export async function handleAsk(req: IncomingMessage, res: ServerResponse): Prom
     const queryText = prompts.retrievalQuery(question, history)
 
     // Hybrid retrieval: cosine and keyword results fused by reciprocal rank
-    // (see notes.js). They miss in opposite directions — cosine loses rare
+    // (see notes.ts). They miss in opposite directions — cosine loses rare
     // literal tokens, keyword loses every paraphrase — so one strong signal
     // is enough for a note to surface. With the embed role off there is no
     // query embedding and the fusion degrades to keyword-only.
     const sources =
       residency.embed !== 'off'
         ? // A question is embedded as a query, not as a document — see
-          // prompts.js's embedInput. The two are different kinds of text and a
+          // prompts.ts's embedInput. The two are different kinds of text and a
           // prompt-instructed model encodes them differently.
           store.hybridSearch(await ai.embedText(queryText, { mode: 'query' }), queryText)
         : store.textSearch(queryText)

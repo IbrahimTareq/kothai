@@ -3,7 +3,7 @@
 // changed — a spurious re-embed of a large library is expensive.
 //
 // The pure predicate is tested on its own; the queueing function gets the
-// same harness reembed-recipe.test.js uses, because the decisions worth
+// same harness reembed-recipe.test.ts uses, because the decisions worth
 // protecting are the ones about the marker, not the return value. Recording
 // the marker too eagerly strands a library that still owes a sweep; recording
 // it too late (or never) means a later provider flip is measured against the

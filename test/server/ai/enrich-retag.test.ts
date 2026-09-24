@@ -1,6 +1,6 @@
 // Tests for server/ai/enrich.ts's account-tag injection (both classify call
 // sites) and the new retagNote() forced-reclassify path. Uses the same
-// mock.module harness as enrich-instagram-chain.test.js so this runs with
+// mock.module harness as enrich-instagram-chain.test.ts so this runs with
 // zero network I/O and zero real model calls.
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
@@ -94,7 +94,7 @@ const enrich = await import('../../../server/ai/enrich.ts')
 // queueIgMeta is fire-and-forget (it pushes onto its own deque rather than
 // returning a promise a caller can await), so a test that needs the fetch +
 // reclassify to have actually landed must poll instead — same helper as
-// test/enrich-instagram-chain.test.js, for the same reason (see that file's
+// test/enrich-instagram-chain.test.ts, for the same reason (see that file's
 // comment above its own copy of this function).
 async function drainIgQueue(timeoutMs = 2000) {
   const start = Date.now()

@@ -179,7 +179,7 @@ export async function initProvider(
   const localAvailable =
     opts.localAvailable ?? (needsProbe ? await _localAvailable(load ? () => load('local') : null) : kind !== 'remote')
   // `current` is { local, remote } — the endpoint's embedding model name is
-  // what decides whether that role goes out. See routing.js.
+  // what decides whether that role goes out. See routing.ts.
   const roles = resolveRoleProviders({
     provider: kind,
     embedProvider,

@@ -3,7 +3,7 @@
 // Reddit's .json rendering answers 403 to anonymous requests, so a post gets
 // what oEmbed returns and nothing is fetched from the .json route.
 //
-// Mocks are installed before meta.ts is imported; see test/oembed.test.js.
+// Mocks are installed before meta.ts is imported; see test/oembed.test.ts.
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 

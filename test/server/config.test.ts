@@ -89,4 +89,4 @@ test('AI_EMBED_PROVIDER is null unless set, and passes its raw value through', (
 
 // The inference endpoint (base URL, key, provider kind) is no longer part of
 // this frozen resolution — it is resolved on demand so it can change at
-// runtime. Its precedence rules are covered in test/server/config-ai.test.js.
+// runtime. Its precedence rules are covered in test/server/config-ai.test.ts.

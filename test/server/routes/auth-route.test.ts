@@ -71,7 +71,7 @@ test('the login page can load its font, so the gate does not have to be ugly', a
   // So: a 401 is the regression this test exists to catch (drop PUBLIC_ASSET
   // and the gate renders in a fallback face). A 404 is an unbuilt tree, which
   // is a fact about the checkout. serveStatic's own behaviour is covered
-  // against a temp directory in test/server/lib/static-cache.test.js.
+  // against a temp directory in test/server/lib/static-cache.test.ts.
   assert.notEqual(res.status, 401, 'the gate must let the login font through unauthenticated')
 })
 

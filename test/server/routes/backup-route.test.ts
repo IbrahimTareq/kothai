@@ -17,14 +17,14 @@ import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { jsonBody, listenOnLoopback } from '../../helpers/http.ts'
 
-// Its own data directory, set before anything imports config.js (which freezes
+// Its own data directory, set before anything imports config.ts (which freezes
 // its resolution at import time). The route writes a temp snapshot into
 // DATA_DIR, and pointing that at the developer's real ./data would litter it.
 const DATA_DIR = mkdtempSync(path.join(os.tmpdir(), 'kothai-backup-test-'))
 process.env.KOTHAI_DATA_DIR = DATA_DIR
 
 // The backup refuses to run mid-import; mocked so that state can be driven
-// without actually importing anything. Must be installed before router.js
+// without actually importing anything. Must be installed before router.ts
 // pulls the real module in. IMPORT_BUSY is spread through from the real module
 // — the route answers with it, so a mock that dropped it would 409 with
 // undefined rather than the refusal the client matches on.

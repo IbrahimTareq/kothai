@@ -1,7 +1,7 @@
-// Shared filesystem helpers used by the SQLite store (db.js), the legacy-JSON
-// migration (migrate.js), and image uploads. The store modules themselves no
+// Shared filesystem helpers used by the SQLite store (db.ts), the legacy-JSON
+// migration (migrate.ts), and image uploads. The store modules themselves no
 // longer read/write JSON directly — readJson here now exists solely for
-// migrate.js to pull in a pre-SQLite install's flat files.
+// migrate.ts to pull in a pre-SQLite install's flat files.
 import { readFile, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { DATA_DIR, UPLOAD_DIR } from '../config.ts'

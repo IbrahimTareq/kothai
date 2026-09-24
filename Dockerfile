@@ -1,10 +1,11 @@
-# Kothai — multi-arch image (build with --platform linux/arm64 for Raspberry Pi / umbrelOS)
+# Kothai — multi-arch image (build with --platform linux/arm64 for a Raspberry Pi)
 #
 # Two stages:
 #   1. client  — build the TypeScript + Vite frontend into /app/dist (needs devDeps)
 #   2. runtime — plain Node server (+ @qvac/sdk) that serves the built ./dist
 # The build step lives entirely in the throwaway client stage, so the runtime
-# image stays lean. The runtime stage runs as root to repair volume ownership,
+# image stays lean. The runtime stage starts as root to repair volume ownership,
+# then drops to uid 1000 (see docker/entrypoint.ts).
 
 # The Node major every stage builds on. A global ARG (declared before the first
 # FROM) is in scope for all of them. The default is kept in step with .nvmrc and
@@ -25,7 +26,7 @@ WORKDIR /app
 # node_modules — the runtime stage's prebuild pruning walks that layout.
 COPY package.json pnpm-lock.yaml .npmrc ./
 # The Vite build never imports @qvac/sdk or require-asset — they are server-only
-# (see server/ai/providers/local.js), and @qvac ships ~7.6 GB of native prebuilds. Drop
+# (see server/ai/providers/local.ts), and @qvac ships ~7.6 GB of native prebuilds. Drop
 # them before installing so this throwaway build stage doesn't download
 # gigabytes it never uses. Removing deps puts package.json out of sync with the
 # lockfile, hence --no-frozen-lockfile; the committed lockfile is never written
@@ -124,7 +125,7 @@ COPY docker/entrypoint.ts ./docker/entrypoint.ts
 COPY --from=client /app/dist ./dist
 
 # Notes/uploads + downloaded model weights live here — mount both as volumes
-# so they survive container upgrades (server/index.js writes qvac.config.json
+# so they survive container upgrades (server/index.ts writes qvac.config.json
 # pointing the QVAC cache at /app/models on startup).
 VOLUME ["/app/data", "/app/models"]
 

@@ -55,7 +55,7 @@ const snap = (state: RoleStatus['state'], extra: Partial<RoleStatus> = {}): Role
   ...extra,
 })
 
-// Keyed by provider kind exactly as ai/index.js builds these maps — see
+// Keyed by provider kind exactly as ai/index.ts builds these maps — see
 // routing.ts's ByKind.
 const SNAPSHOTS: Record<string, ProviderStatus> = {
   local: {

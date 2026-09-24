@@ -6,7 +6,7 @@
 // and neither is visible to the tool taking it:
 //
 //   1. Batched writes ({ persist: false }, used by the background enrichment
-//      sweeps in ai/enrich.js) sit in an in-memory queue, so they are in no
+//      sweeps in ai/enrich.ts) sit in an in-memory queue, so they are in no
 //      file at all until someone flushes.
 //   2. WAL mode means committed data can live in kothai.db-wal rather than
 //      kothai.db, so the main file alone is an old version of the database.
@@ -87,7 +87,7 @@ test('the WAL is truncated, so kothai.db is not a stale copy of the database', a
 })
 
 test('it refuses while an import is running rather than committing half of one', async () => {
-  // import.js holds a batch of notes in memory and writes them as one
+  // import.ts holds a batch of notes in memory and writes them as one
   // transaction at the end. flush() here would commit whatever half of that
   // batch has been queued so far, and the import's own rollback path could no
   // longer undo it — so a scheduled backup landing mid-import would corrupt the

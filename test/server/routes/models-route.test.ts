@@ -13,7 +13,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { jsonBody, listenOnLoopback, mockRes, records } from '../../helpers/http.ts'
 
-// Set before config.js is imported, which freezes its resolution at import
+// Set before config.ts is imported, which freezes its resolution at import
 // time — the real ./models dir holds multi-GB weights and must never be the
 // thing a delete test points at.
 const MODELS_DIR = mkdtempSync(path.join(os.tmpdir(), 'kothai-models-test-'))

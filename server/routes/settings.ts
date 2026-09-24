@@ -205,7 +205,7 @@ async function applyEndpointFromSetup(
   setAiCredentials(creds)
 
   // Seed the endpoint's model names BEFORE reconfiguring. Which provider serves
-  // the embedding role is decided by whether one is named (see ai/routing.js),
+  // the embedding role is decided by whether one is named (see ai/routing.ts),
   // so reconfiguring first would resolve that role against an empty store and
   // send it on-device — handing someone who just connected OpenAI a 300 MB
   // download for a role their endpoint serves perfectly well.
@@ -315,7 +315,7 @@ export async function handleSetup(req: IncomingMessage, res: ServerResponse, opt
 // told — twice over.
 //
 // While a role was served remotely the facade pinned it 'off' on the local side
-// (localResidency in ai/index.js), which is right at the time and wrong the
+// (localResidency in ai/index.ts), which is right at the time and wrong the
 // moment the role comes back: disconnecting an endpoint returned language and
 // vision to this machine with both still switched off, embedding the only thing
 // working, and the status aggregate reporting Ready over the top of it. The
@@ -439,7 +439,7 @@ export async function handleSaveSettings(req: IncomingMessage, res: ServerRespon
       }
       // A new embedding model speaks a different vector space, so every note is
       // re-embedded in the background (search degrades gracefully meanwhile).
-      // The sweep itself lives in enrich.js so the boot-time recipe check runs
+      // The sweep itself lives in enrich.ts so the boot-time recipe check runs
       // the identical code — see enrich.reembedAll.
       if (embedChanged && residency.embed !== 'off') {
         await enrich.reembedAll(`model → ${models.local.embed}`)

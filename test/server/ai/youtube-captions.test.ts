@@ -1,6 +1,6 @@
 // Tests for the YouTube caption step: the pure URL/segment helpers, the
 // permanent-vs-transient error discrimination that the idempotency marker
-// turns on, and the enrich.js wiring that carries a transcript into classify,
+// turns on, and the enrich.ts wiring that carries a transcript into classify,
 // embed and the stored note.
 //
 // youtube-transcript is mocked at the package specifier, so nothing here
@@ -128,8 +128,8 @@ test('fetchYouTubeCaptions never calls out for a non-YouTube URL', async () => {
   assert.deepEqual(r, { text: null, done: false })
 })
 
-// ---- enrich.js wiring ----------------------------------------------------
-// Same harness shape as test/enrich-article.test.js: every module enrich.js
+// ---- enrich.ts wiring ----------------------------------------------------
+// Same harness shape as test/enrich-article.test.ts: every module enrich.ts
 // touches is stubbed, so this asserts behaviour with no network and no model.
 
 let notes: NoteRecord[] = []

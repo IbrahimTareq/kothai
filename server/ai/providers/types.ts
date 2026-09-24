@@ -1,6 +1,6 @@
 // The provider contract, named.
 //
-// test/server/ai/providers/provider-contract.test.js runs one set of
+// test/server/ai/providers/provider-contract.test.ts runs one set of
 // assertions against both providers because shape drift between them is the
 // primary risk in this design — a note classified on-device and one classified
 // against a remote endpoint must be indistinguishable downstream. That test can

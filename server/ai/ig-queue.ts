@@ -1,7 +1,7 @@
 // The Instagram fetch queue: a single throttled lane, promotable from the
 // client, with a bounded retry budget per note.
 //
-// Split out of enrich.js, where it sat as ~160 lines and six pieces of mutable
+// Split out of enrich.ts, where it sat as ~160 lines and six pieces of mutable
 // module state in the middle of the enrichment pipeline. It is not a variation
 // on the other two lanes in that file — the serial enrichChain and the
 // bounded-concurrency meta lane — it is a third discipline with its own rules:
@@ -12,7 +12,7 @@
 //
 // The queue does not know what enrichment is. Its one tie back to the pipeline
 // is announcing that a caption landed, which arrives here as an injected
-// handler rather than an import — so this module has no edge back to enrich.js
+// handler rather than an import — so this module has no edge back to enrich.ts
 // and the two cannot form a cycle.
 import * as store from '../data/notes.ts'
 import type { NoteRecord } from '../data/notes.ts'
@@ -29,7 +29,7 @@ interface IgJob {
 }
 
 // Called with a noteId once a fetch has produced a caption worth
-// re-classifying on. enrich.js registers the real handler at import; the
+// re-classifying on. enrich.ts registers the real handler at import; the
 // default no-op keeps this module usable (and testable) on its own.
 let onCaptionLanded: (noteId: string) => void = () => {}
 export function setCaptionHandler(fn: (noteId: string) => void) {

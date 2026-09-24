@@ -527,8 +527,8 @@ export function deriveNote(item: ImportItem) {
 // field: the poster username only ever landed inside the title string
 // (`@handle · Reel`/`@handle · Post`, see deriveNote above). Anchored to the
 // exact shape deriveNote produces so it can't misfire on an unrelated title
-// that merely starts with "@something". Used by notes.js's load() migration,
-// mirroring backlog.js's deriveAiMarkers pattern.
+// that merely starts with "@something". Used by notes.ts's load() migration,
+// mirroring backlog.ts's deriveAiMarkers pattern.
 const TITLE_ACCOUNT_RE = /^@(\S+) · (?:Reel|Post)$/
 export function deriveAccountFromTitle(title: unknown): string | null {
   const m = TITLE_ACCOUNT_RE.exec(String(title || ''))

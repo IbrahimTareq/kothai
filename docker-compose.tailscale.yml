@@ -27,7 +27,7 @@ services:
       TS_AUTHKEY: ${TS_AUTHKEY:?set TS_AUTHKEY in .env}
       TS_STATE_DIR: /var/lib/tailscale
       # Without this the app is still reachable on the tailnet, but over plain
-      # HTTP — and auth.js only sets the session cookie's Secure flag when
+      # HTTP — and auth.ts only sets the session cookie's Secure flag when
       # x-forwarded-proto says https, which Serve is what provides.
       TS_SERVE_CONFIG: /config/serve.json
     volumes:

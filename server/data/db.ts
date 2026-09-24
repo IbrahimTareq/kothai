@@ -25,7 +25,7 @@ const DB_FILE = path.join(DATA_DIR, 'kothai.db')
 // - tag_vocab.embedding is a BLOB for the same reason as notes.embedding. It
 //   was the larger of the two by far: on a real 1,686-note install this table
 //   held 2,663 vectors as JSON text, 41.5 MB of a 51.5 MB database. Databases
-//   created before the change declare it TEXT; tagvocab.js rebuilds the table
+//   created before the change declare it TEXT; tagvocab.ts rebuilds the table
 //   on first load (the registry is derived from note tags, so a rebuild risks
 //   nothing that cannot be regenerated).
 // - notes.embedding is the one field deliberately NOT in the JSON blob. A
@@ -35,7 +35,7 @@ const DB_FILE = path.join(DATA_DIR, 'kothai.db')
 //   because a note has no embedding until the embed step runs.
 // - Every OTHER field keeps its full record as one JSON `data` column rather
 //   than one SQL column per field: notes in particular pick up fields over
-//   time from ai/meta.js and ai/enrich.js (siteTitle, thumb, pending, ai
+//   time from ai/meta.ts and ai/enrich.ts (siteTitle, thumb, pending, ai
 //   markers, …), and a fixed column set would silently drop anything future
 //   code adds. settings and tag_vocab are the exception — both have a small,
 //   truly fixed shape, so real columns are simpler there.
@@ -174,19 +174,19 @@ async function open(): Promise<DatabaseSync> {
   // value the other provider's validation rejects.
   ensureColumns(db, 'settings', { remote_llm: 'TEXT', remote_embed: 'TEXT', remote_vision: 'TEXT' })
   // Which embedding recipe the stored vectors were built under — see
-  // prompts.js's EMBED_RECIPE. NULL on an existing install, which is exactly
+  // prompts.ts's EMBED_RECIPE. NULL on an existing install, which is exactly
   // the mismatch that triggers the one-time re-embed.
   ensureColumns(db, 'settings', { embed_recipe: 'TEXT' })
   // Which provider produced the stored vectors. NULL on an install that
   // predates the marker — enrich.embedProviderChanged infers the answer from
   // how that install was configured rather than re-embedding on a guess.
   ensureColumns(db, 'settings', { embed_provider: 'TEXT' })
-  // Existing databases predate the column; notes.js moves each vector out of
+  // Existing databases predate the column; notes.ts moves each vector out of
   // the JSON and into it on first load (see migrateEmbeddings there).
   ensureColumns(db, 'notes', { embedding: 'BLOB' })
   // Idempotent and safe to run every boot: each legacy file this has already
   // consumed was renamed out of the way, so a repeat call just does five
-  // cheap existsSync checks and returns. See migrate.js for why it's safe to
+  // cheap existsSync checks and returns. See migrate.ts for why it's safe to
   // re-run after an interrupted migration too.
   await migrateLegacyJson(db)
   return db

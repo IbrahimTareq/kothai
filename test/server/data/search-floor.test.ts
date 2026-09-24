@@ -4,7 +4,7 @@
 // always returns its top k however bad they are, so an out-of-library
 // question used to fill the answer prompt with ten unrelated notes and the
 // model dutifully described them. The threshold value itself is measured
-// against the live library (see the comment on SIM_FLOOR in notes.js); these
+// against the live library (see the comment on SIM_FLOOR in notes.ts); these
 // tests pin the BEHAVIOUR, using vectors constructed to sit either side of it.
 import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'

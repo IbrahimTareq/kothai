@@ -36,7 +36,7 @@ const sqlLiteral = (value: string) => `'${value.replace(/'/g, "''")}'`
 
 export async function handleBackup(_req: IncomingMessage, res: ServerResponse): Promise<void> {
   // An import holds a batch of notes in memory and writes them at the end (see
-  // import.js). A snapshot taken mid-import captures a library that is neither
+  // import.ts). A snapshot taken mid-import captures a library that is neither
   // the before nor the after, and the flush below would make that worse by
   // committing half of it.
   if (isImportInProgress()) {

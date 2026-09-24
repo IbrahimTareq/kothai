@@ -1,7 +1,7 @@
 // The Import section of Settings: one row per platform Kothai can import
 // from. Sources are separate rows rather than a single "drop your export"
-// box because the platforms genuinely differ — Instagram exports JSON, a
-// Twitter/X archive is .js files, TikTok is one big user_data.json — so each
+// box because the platforms genuinely differ — Instagram exports JSON
+// files, TikTok one big user_data.json — so each
 // needs its own accepted file types, its own "here's where the export button
 // lives" instructions, and its own parser on the server. A shared target
 // would have to accept the union of all of them and then guess.

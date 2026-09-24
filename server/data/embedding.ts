@@ -29,7 +29,7 @@ export function decodeEmbedding(blob: Uint8Array | null | undefined): Float32Arr
 // Cosine similarity of two equal-length vectors; 0 for anything malformed, so
 // a missing or half-written embedding ranks last instead of throwing.
 //
-// notes.js and tagvocab.js each carried a byte-identical private copy of this,
+// notes.ts and tagvocab.ts each carried a byte-identical private copy of this,
 // the second one commented "local copy ... to keep this module self-contained".
 // Both already imported the codec above, so self-containment was not what the
 // copy bought. It lives here with the vectors it compares.

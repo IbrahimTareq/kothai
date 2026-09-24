@@ -1,4 +1,4 @@
-// Tests for enrich.js's Instagram off-chain pipeline: queueIgMeta (its own
+// Tests for enrich.ts's Instagram off-chain pipeline: queueIgMeta (its own
 // FIFO, separate from the main enrichChain) and reclassifyWithCaption (the
 // follow-up classify/embed pass once a caption lands). This is the riskiest
 // new code from the Instagram-import review round — two real bugs
@@ -6,7 +6,7 @@
 // were found here — so these tests reproduce the exact scenarios that
 // exposed them, plus the failure-isolation and no-loop guarantees.
 //
-// Every module enrich.js touches is mocked via node:test's mock.module
+// Every module enrich.ts touches is mocked via node:test's mock.module
 // (requires --experimental-test-module-mocks, wired into `pnpm test`) so
 // this runs with zero network I/O and zero real model calls — classify/embed
 // are just plain stub functions, and the "store" is an in-memory array that
@@ -22,7 +22,7 @@ import type { Classification, ClassifyArgs, DescribeImageArgs } from '../../../s
 
 const IG_URL = 'https://www.instagram.com/p/AAA111/'
 
-// ---- in-memory fake store, mirroring notes.js's real merge semantics ----
+// ---- in-memory fake store, mirroring notes.ts's real merge semantics ----
 let notes: NoteRecord[] = []
 function seedNotes(list: NoteRecord[]) {
   notes = list.map(n => ({ ...n }))
@@ -143,7 +143,7 @@ const enrich = await import('../../../server/ai/enrich.ts')
 
 // queueIgMeta used to return the igChain promise so a test could just await
 // it to know the job had landed. It's now a fire-and-forget push onto a
-// deque (see enrich.js's _igQueueState) — nothing in production awaits it,
+// deque (see enrich.ts's _igQueueState) — nothing in production awaits it,
 // so instead poll until the deque is both empty AND not mid-job. pumpIg()
 // sets `pumping` synchronously before its first await, so there's no race
 // between calling queueIgMeta and this loop observing it as busy.
@@ -401,7 +401,7 @@ test('an IG fetch failure leaves the chain healthy for subsequent jobs (failure 
   const n4 = seeded('n4')
   // A failure no longer permanently sets metaFetched — it records a try
   // count + backoff instead, so a later boot backfill can retry it (see
-  // test/enrich-retry.test.js for the retry-policy unit tests).
+  // test/enrich-retry.test.ts for the retry-policy unit tests).
   assert.equal(n4.metaFetched, undefined, 'a failure must not permanently mark the note as fetched')
   assert.equal(n4.metaTries, 1)
   assert.ok(n4.metaNextTry !== undefined, 'a backoff window was recorded at all')

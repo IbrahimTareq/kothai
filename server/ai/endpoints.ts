@@ -1,5 +1,5 @@
 // Known OpenAI-compatible endpoints — pure data, no imports, in the spirit of
-// presets.js. This is what lets first-run offer "OpenAI" as a tile instead of
+// presets.ts. This is what lets first-run offer "OpenAI" as a tile instead of
 // asking for a base URL and three model ids.
 //
 // `defaults` are SEEDS, not assertions. The endpoint's own /v1/models is the
@@ -8,7 +8,7 @@
 // rejection, so a model id that ages out never blocks setup.
 //
 // `servesEmbeddings` is the one field with teeth. Some hosted endpoints expose
-// no /embeddings route at all (see ai/routing.js), and semantic search needs
+// no /embeddings route at all (see ai/routing.ts), and semantic search needs
 // one — so the installer reads this to decide whether a provider can run on the
 // lite image or needs the full one, where the embedding role stays on-device.
 //

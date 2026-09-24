@@ -1,7 +1,7 @@
 // Proves the extracted article reaches BOTH consumers: the classify/embed
 // input string, and the persisted note. Both are one-line list edits in
-// enrich.js that fail silently if dropped, so they get a behavioural test
-// rather than relying on the meta.js unit tests alone.
+// enrich.ts that fail silently if dropped, so they get a behavioural test
+// rather than relying on the meta.ts unit tests alone.
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { note } from '../../helpers/notes.ts'

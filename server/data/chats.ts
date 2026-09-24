@@ -60,7 +60,7 @@ export async function load(): Promise<void> {
 }
 
 // One higher than every existing seq, so writing it back puts this chat at
-// the front of the next `ORDER BY seq DESC` read — chats.js's equivalent of
+// the front of the next `ORDER BY seq DESC` read — chats.ts's equivalent of
 // the old array's "move to front" splice, since AUTOINCREMENT (used by
 // notes/collections) only ever advances on INSERT, never on UPDATE.
 //
@@ -79,7 +79,7 @@ function upsertRow(db: DatabaseSync, chat: Chat): void {
 }
 
 // test-only: clean in-memory slate against a fresh in-memory database,
-// mirroring notes.js / collections.js / tagvocab.js's own _reset() helpers.
+// mirroring notes.ts / collections.ts / tagvocab.ts's own _reset() helpers.
 export function _reset(): void {
   _resetDb()
   chats = []
@@ -126,7 +126,7 @@ export function get(id: string): Chat | null {
 }
 
 // The tail of a chat's messages, for the answer prompt and the retrieval
-// query (see prompts.js). Returns [] for a new chat or an unknown id, so Ask
+// query (see prompts.ts). Returns [] for a new chat or an unknown id, so Ask
 // never has to branch on whether a conversation exists yet.
 //
 // `sources` is deliberately dropped: each AI message snapshots the notes it

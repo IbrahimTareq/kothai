@@ -16,7 +16,7 @@
 // change to what the app allows, not a tidy-up.
 //
 // It lives in data/ because it is state about the store. It used to be a
-// module-level flag inside routes/import.js, which meant three unrelated
+// module-level flag inside routes/import.ts, which meant three unrelated
 // routes had to import a route to find out about it.
 let importInProgress = false
 

@@ -33,7 +33,7 @@ import {
   _igQueueState,
 } from './ig-queue.ts'
 
-// The Instagram lane moved to ./ig-queue.js. Re-exported here because the
+// The Instagram lane moved to ./ig-queue.ts. Re-exported here because the
 // routes and its tests address it through this module, and where the queue
 // lives is not their business.
 export {
@@ -58,7 +58,7 @@ export function queueJob(fn: () => unknown): Promise<unknown> {
 }
 
 // What one enrichNote pass needs: the shape /api/save posts and enrichArgsFor
-// rebuilds for an existing note. `absPath` is optional because routes/notes.js
+// rebuilds for an existing note. `absPath` is optional because routes/notes.ts
 // passes `img?.absPath` (undefined for a note with no image) where the import
 // route passes null — enrichNote's own `hasImage && absPath` guard covers both.
 interface EnrichArgs {
@@ -215,7 +215,7 @@ async function describeThumb(
 // the note on URL-only metadata forever. Leaving the marker unset just costs
 // a redundant (self-healing) reclassify next time something re-triggers it
 // (the boot sweep in queueMetaBackfill below, or another queueIgMeta call) —
-// this codebase already prefers that tradeoff (see backlog.js's
+// this codebase already prefers that tradeoff (see backlog.ts's
 // deriveAiMarkers comment on the same false-positive-vs-false-negative call).
 async function reclassifyWithCaption(id: string) {
   const residency = settings.getResidency()
@@ -246,7 +246,7 @@ async function reclassifyWithCaption(id: string) {
 
   const patch: Partial<NoteRecord> = {}
   // Persisted, not just folded into richText: Ask's answer prompt builds its
-  // context from the same fields the embedding used (see prompts.js), so a
+  // context from the same fields the embedding used (see prompts.ts), so a
   // reel retrieved on the strength of its thumbnail description is useless
   // if that description only ever existed as a local in this function.
   // textSearch reads it too.
@@ -483,7 +483,7 @@ async function enrichNote(id: string, { absPath, text, isUrl, hasImage }: Enrich
 
   // YouTube captions — the actual content of a saved video, and the one
   // platform that publishes a transcript for the asking (no download, no
-  // speech-to-text; see meta.js). Not a model step, so it is gated on its own
+  // speech-to-text; see meta.ts). Not a model step, so it is gated on its own
   // `ai.captions` marker rather than on residency: a video's transcript is
   // worth having for textSearch and the answer prompt even with every model
   // role off. `done` distinguishes "this video has no captions" (final —
@@ -625,7 +625,7 @@ async function enrichNote(id: string, { absPath, text, isUrl, hasImage }: Enrich
 
   patch.ai = { ...existing?.ai, ...ai }
   // Mirrors reclassifyWithCaption's own guard: if the note was deleted (or,
-  // for an import, never actually persisted — see routes/import.js's flush
+  // for an import, never actually persisted — see routes/import.ts's flush
   // rollback) mid-run, updateNote returns null. Without this check, a ghost
   // id would still reach autoAdd below and land permanently in a smart
   // collection's itemIds — nothing ever calls deleteItemEverywhere for a
@@ -642,8 +642,8 @@ async function enrichNote(id: string, { absPath, text, isUrl, hasImage }: Enrich
 //
 // Two things invalidate the whole vector set: swapping the embedding model
 // (a different model is a different space) and changing the recipe — the task
-// prefixes, or which fields feed the input (see prompts.js's EMBED_RECIPE).
-// Both used to be handled by a loop inlined in routes/settings.js that only
+// prefixes, or which fields feed the input (see prompts.ts's EMBED_RECIPE).
+// Both used to be handled by a loop inlined in routes/settings.ts that only
 // the model-swap path could reach; it lives here now so the boot-time recipe
 // check runs exactly the same code.
 //
@@ -709,7 +709,7 @@ export async function reembedAll(reason = 'settings') {
 
 // Queue a full re-embed when the stored vectors were built under a different
 // recipe than the one this build uses — called once at boot. Returns whether
-// anything was queued, so index.js can say so.
+// anything was queued, so index.ts can say so.
 //
 // Deliberately silent when the embed role is off: with no embedding model
 // there is nothing to re-embed, and recording the new recipe anyway would

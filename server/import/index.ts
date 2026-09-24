@@ -1,7 +1,7 @@
 // Importer registry. Each importer exports { name, sniff(files), parse(files),
-// deriveNote(item) } over a Map<entryName, Buffer> of uploaded files. One
-// entry today; TikTok / Twitter / Pocket importers slot in here without
-// touching the route, and the client's per-source Import sections address
+// deriveNote(item) } over a Map<entryName, Buffer> of uploaded files. Instagram
+// and TikTok today; another importer slots in here without touching the
+// route, and the client's per-source Import sections address
 // them by `name`.
 import type { ServerNote } from '../types.ts'
 import * as instagram from './instagram.ts'
@@ -63,7 +63,7 @@ export function findImporter(files: Map<string, Buffer>) {
     // a future importer's sniff() poking at attacker-controlled names/content
     // could throw on a shape it didn't expect. One misbehaving importer must
     // not take down detection for the whole route — skip it and keep looking,
-    // same posture as parse()'s per-file try/catch in instagram.js.
+    // same posture as parse()'s per-file try/catch in instagram.ts.
     try {
       if (importer.sniff(files)) return importer
     } catch {}

@@ -1,6 +1,6 @@
 // Curated model presets per role — pure data, no SDK import.
 //
-// Kept separate from providers/local.js because the settings store needs
+// Kept separate from providers/local.ts because the settings store needs
 // DEFAULTS even in the lite image, where no local provider exists at all
 // (the settings table's llm/embed/vision columns are NOT NULL).
 //

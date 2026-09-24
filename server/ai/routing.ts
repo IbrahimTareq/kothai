@@ -12,15 +12,15 @@ export type ProviderKind = 'local' | 'remote'
 export type RoleProviders = Record<Role, ProviderKind>
 
 // A lookup keyed by provider kind that is only populated for the kinds
-// actually in use: ai/index.js builds each of these by walking
+// actually in use: ai/index.ts builds each of these by walking
 // kindsInUse(byRole), so a pure-local install has no `remote` entry at all.
 // Deliberately not Record<ProviderKind, T> for that reason — every read below
 // is keyed off the same kindsInUse() list that filled it.
 type ByKind<T> = Record<string, T>
 
 // The single progress/fault signal the client's status bar renders. Each
-// provider derives its own (see providers/local.js's computeAggregate and
-// remote.js's circuit check); mergeStatus picks between them rather than
+// provider derives its own (see providers/local.ts's computeAggregate and
+// remote.ts's circuit check); mergeStatus picks between them rather than
 // re-deriving one.
 export interface Aggregate {
   state: 'ready' | 'loading' | 'error'

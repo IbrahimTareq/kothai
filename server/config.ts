@@ -46,11 +46,11 @@ export function resolveConfig(env: NodeJS.ProcessEnv = process.env, root: string
     CONFIG_PATH: path.join(home ?? root, 'qvac.config.json'),
     // Which provider serves the embedding role when AI_PROVIDER is 'remote'.
     // Unset means "on-device if this image has a local provider" — see
-    // ai/routing.js's resolveRoleProviders, which is also where an
+    // ai/routing.ts's resolveRoleProviders, which is also where an
     // unrecognised value is ignored rather than rejected here.
     AI_EMBED_PROVIDER: env.KOTHAI_AI_EMBED_PROVIDER || null,
     // Which provider the INSTALLER already asked about, so the first-run
-    // screen does not ask again. An id from ai/endpoints.js, or 'local'. Never
+    // screen does not ask again. An id from ai/endpoints.ts, or 'local'. Never
     // a credential — the installer deliberately collects none, because a key
     // typed on a command line lands in shell history.
     SETUP_PROVIDER: env.KOTHAI_SETUP_PROVIDER || null,

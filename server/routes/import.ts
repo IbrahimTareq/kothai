@@ -28,7 +28,7 @@ const BODY_LIMIT = 64 * 1024 * 1024
 const MAX_UPLOADS = 20
 
 export async function handleImport(req: IncomingMessage, res: ServerResponse): Promise<void> {
-  // The flag this takes lives in data/import-lock.js — it is state about the
+  // The flag this takes lives in data/import-lock.ts — it is state about the
   // store, and three other bulk routes have to read it.
   const ran = await runExclusiveImport(() => runImport(req, res))
   if (!ran) {
@@ -152,7 +152,7 @@ async function runImport(req: IncomingMessage, res: ServerResponse): Promise<voi
   // Decompression budget shared across every archive in this request. Left
   // per-call (readZip's own default), N archives would each get the full
   // MAX_TOTAL_BYTES, so splitting one zip bomb into ten uploads would buy
-  // ten times the budget — see server/lib/zip.js.
+  // ten times the budget — see server/lib/zip.ts.
   let zipBudget = MAX_TOTAL_BYTES
   for (const [i, upload] of uploads.entries()) {
     if (!isRecord(upload)) return json(res, 400, { error: 'Invalid file in upload.' })
@@ -311,7 +311,7 @@ async function runImport(req: IncomingMessage, res: ServerResponse): Promise<voi
   // autoAdd has no way to know the id was rolled back — permanently leave a
   // ghost id in a smart collection's itemIds (nothing ever calls
   // deleteItemEverywhere for a note that was never really "deleted", just
-  // never truly there). enrich.js's enrichNote now also guards on
+  // never truly there). enrich.ts's enrichNote now also guards on
   // updateNote returning null as defense in depth, but relying on that
   // alone would still pay the throttled-fetch cost for nothing.
   //
@@ -349,7 +349,7 @@ async function runImport(req: IncomingMessage, res: ServerResponse): Promise<voi
   if (parsedCollections.length) {
     // Hoisted out of the loop: collections.all() is O(collections), and
     // calling it (plus an O(collections) .find()) once per IG collection
-    // name is the same O(names × spaces) shape server/import/instagram.js's
+    // name is the same O(names × spaces) shape server/import/instagram.ts's
     // own parse() was rewritten to avoid for hrefs — do the same here with a
     // lowercase-name index, kept up to date as new Spaces get created below.
     //

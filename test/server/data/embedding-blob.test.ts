@@ -189,7 +189,7 @@ test('a legacy row with no embedding at all is left alone', async () => {
 // ---- the type change's blast radius -------------------------------------
 
 test('deriveAiMarkers still recognises a Float32Array embedding as "embed already ran"', async () => {
-  // The regression this change invites: backlog.js decided embedding had run
+  // The regression this change invites: backlog.ts decided embedding had run
   // with Array.isArray(), which a Float32Array fails. Left unfixed, every note
   // would re-enter the enrichment backlog on every boot and be re-embedded
   // forever.
@@ -248,7 +248,7 @@ test('the same rule holds for batched { persist: false } writes', async () => {
   assert.deepEqual([...decoded(blobOf(db.prepare('SELECT embedding FROM notes WHERE id = ?').get(id)))], [9, 9, 9, 9])
 })
 
-// cosine lives beside the codec in embedding.js. notes.js and tagvocab.js each
+// cosine lives beside the codec in embedding.ts. notes.ts and tagvocab.ts each
 // had a byte-identical private copy; this covers the one they now share.
 test('cosine: identical → 1, orthogonal → 0, mismatched length → 0', () => {
   assert.ok(Math.abs(cosine([1, 0, 0], [1, 0, 0]) - 1) < 1e-9)

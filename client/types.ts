@@ -184,7 +184,7 @@ export interface EndpointInfo {
   host: string | null
 }
 
-// One entry in the server's catalogue of known endpoints (server/ai/endpoints.js).
+// One entry in the server's catalogue of known endpoints (server/ai/endpoints.ts).
 // `defaults` are seeds for the model fields, not a promise that those ids exist.
 export interface EndpointOption {
   id: string
@@ -225,7 +225,7 @@ export interface TelegramState {
 
 // One entry in the model download cache — a weights file, or a companion-set
 // directory. `usedBy` is the role whose current selection needs it; the server
-// refuses to delete anything with one (server/routes/models.js).
+// refuses to delete anything with one (server/routes/models.ts).
 export interface ModelFile {
   name: string
   kind: 'file' | 'dir'

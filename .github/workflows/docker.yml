@@ -49,7 +49,7 @@ jobs:
       packages: write             # push to GHCR with GITHUB_TOKEN, no new secret
     steps:
       # The ubuntu-latest runner ships ~14 GB free on /. This image is far
-      # bigger mid-build: @qvac's native prebuilds are ~7.6 GB, npm ci runs in
+      # bigger mid-build: @qvac's native prebuilds are ~7.6 GB, pnpm install runs in
       # both the client and runtime stages, the amd64 image is loaded into the
       # daemon (load: true), and cache-to mode=max exports every layer — which
       # together overflow the disk (the build fails with "No space left on

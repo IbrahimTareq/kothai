@@ -1,5 +1,5 @@
 // One-time import of the old flat-JSON store (data/*.json) into SQLite, run
-// by db.js right after the schema is created. Each legacy file that's still
+// by db.ts right after the schema is created. Each legacy file that's still
 // present gets copied in, then renamed to `<name>.migrated` — kept, not
 // deleted, so an unexpected shape or a crash mid-migration leaves evidence
 // on disk instead of silently losing data.
@@ -68,7 +68,7 @@ export async function migrateLegacyJson(db: DatabaseSync): Promise<void> {
 
 // notes.json / collections.json are arrays with the most-recently-added item
 // at index 0 (the old unshift()-per-add store). Inserting back-to-front makes
-// AUTOINCREMENT hand out seq ascending from oldest to newest, so notes.js's
+// AUTOINCREMENT hand out seq ascending from oldest to newest, so notes.ts's
 // `ORDER BY seq DESC` read reproduces the exact original order.
 async function migrateNotes(db: DatabaseSync) {
   await withLegacyFile('notes.json', notes => {
@@ -102,7 +102,7 @@ async function migrateCollections(db: DatabaseSync) {
 
 // chats.json is MRU-ordered (most-recently-touched first), not insertion-
 // ordered, so it needs an explicit seq per row rather than relying on
-// AUTOINCREMENT — highest seq = front of the list, same convention chats.js
+// AUTOINCREMENT — highest seq = front of the list, same convention chats.ts
 // uses for a live touch.
 async function migrateChats(db: DatabaseSync) {
   await withLegacyFile('chats.json', chats => {

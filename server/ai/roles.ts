@@ -1,6 +1,6 @@
 // Residency policies and the generic per-role model lifecycle manager.
 // Pure module: the SDK loader and timers are injected, so this is fully
-// unit-testable and providers/local.js stays the only place that touches
+// unit-testable and providers/local.ts stays the only place that touches
 // @qvac/sdk.
 //
 // Policies: 'always'  — loaded at boot, never unloaded.
@@ -154,7 +154,7 @@ export class RoleManager {
   }
 
   // Policy transitions only manage residency — they never start a load
-  // themselves (that's boot()/warmRole() in providers/local.js), so applying
+  // themselves (that's boot()/warmRole() in providers/local.ts), so applying
   // settings stays fast and non-blocking.
   async setPolicy(policy: Policy): Promise<void> {
     if (!POLICIES.includes(policy)) return

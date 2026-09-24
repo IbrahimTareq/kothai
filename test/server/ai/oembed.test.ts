@@ -1,4 +1,4 @@
-// Tests for meta.js's oEmbed provider discovery.
+// Tests for meta.ts's oEmbed provider discovery.
 //
 // Two halves:
 //   - oembedEndpoint() is pure URL math over the REAL @extractus registry.
@@ -12,7 +12,7 @@
 //     the oEmbed lookup goes through the guarded get(), and not through the
 //     package's own extract(), which does its own unguarded fetching.
 //
-// Mocks are installed before meta.js is imported — mock.module only affects
+// Mocks are installed before meta.ts is imported — mock.module only affects
 // modules resolved after it runs, so a static import of the subject at the
 // top of the file would silently bind the real implementation.
 import { test, mock } from 'node:test'

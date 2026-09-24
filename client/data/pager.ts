@@ -94,7 +94,7 @@ export class NotePager {
   // ensure()), each mapped to how long the delta-poll loop should keep
   // checking for their thumbnail before giving up. Bounded rather than
   // indefinite: a note stuck in a multi-hour retry backoff (server/ai/
-  // enrich.js's metaRetryDelay) shouldn't keep the client polling forever —
+  // enrich.ts's metaRetryDelay) shouldn't keep the client polling forever —
   // it'll be picked up whenever the user next revisits or reloads.
   private awaitingThumb = new Map<string, number>() // id -> expiry (epoch ms)
   // Notes the user is actively waiting on — right now, whatever they just

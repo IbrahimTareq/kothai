@@ -14,8 +14,8 @@ import { FeatureDisabledError } from '../../../../server/ai/roles.ts'
 // createRemoteProvider has no sleep hook of its own, so the retry-driven
 // tests below (the dead-endpoint circuit test especially) paid the real
 // exponential backoff on every attempt — 62s of the suite's 68s. Mocking the
-// HTTP layer's own injectable `sleep` (remote-http.js, already proven out by
-// remote-retry.test.js) removes the wait without touching retry semantics.
+// HTTP layer's own injectable `sleep` (remote-http.ts, already proven out by
+// remote-retry.test.ts) removes the wait without touching retry semantics.
 const realRemoteHttp = await import('../../../../server/ai/providers/remote-http.ts')
 const noSleep = async () => {}
 mock.module('../../../../server/ai/providers/remote-http.ts', {
@@ -84,7 +84,7 @@ test('embedText posts to /embeddings and returns the vector', async () => {
 
 test('embedText prefixes query and document differently when the endpoint is serving EmbeddingGemma', async () => {
   // The prefix decision is keyed on the configured model NAME, because a
-  // remote endpoint may be serving anything — see prompts.js's embedInput.
+  // remote endpoint may be serving anything — see prompts.ts's embedInput.
   let seen: Record<string, unknown> = {}
   routes['/embeddings'] = (_req, res, body) => {
     seen = record(body)
@@ -114,7 +114,7 @@ test('embedText leaves input untouched for an endpoint serving a model that is n
 
 test('embedText truncates very long input to a TOKEN budget, the same way the local provider does', async () => {
   // A character cap cannot keep the request inside the model's fixed batch
-  // size, because characters are not tokens — see prompts.js's clipToTokens.
+  // size, because characters are not tokens — see prompts.ts's clipToTokens.
   let seen: Record<string, unknown> = {}
   routes['/embeddings'] = (_req, res, body) => {
     seen = record(body)

@@ -4,7 +4,7 @@
 // server/import/* modules are pure (no disk/network), so only the note store,
 // the collections store, and the enrich queue are stubbed via node:test's
 // mock.module (requires --experimental-test-module-mocks, wired into
-// `pnpm test`) — the same pattern test/enrich-instagram-chain.test.js uses.
+// `pnpm test`) — the same pattern test/enrich-instagram-chain.test.ts uses.
 //
 // The fake note/collections stores below deliberately mirror the REAL
 // stores' semantics (attach() clearing removedIds, create() defaulting
@@ -243,13 +243,13 @@ function post(poster: string, code: string, ts = 1718000000, { path = 'p' }: { p
 }
 
 // parseSavedPosts falls back to ANY usable http(s) href when a row has no
-// Instagram-permalink-shaped one (instagram.js:116) — so a non-Instagram
+// Instagram-permalink-shaped one (instagram.ts:116) — so a non-Instagram
 // link is a real, reachable shape for an "item", not just a theoretical one.
 function nonIgPost(title: string, href: string, ts = 1718000000) {
   return { title, string_map_data: { 'Saved on': { href, timestamp: ts } } }
 }
 
-// Minimal valid stored-mode ZIP builder (mirrors test/zip.test.js's approach)
+// Minimal valid stored-mode ZIP builder (mirrors test/zip.test.ts's approach)
 // so the corrupt-ZIP test can also sanity-check a WELL-formed one without a
 // third-party zip library — deliberately reuses the "PK" sniff the route uses.
 // The memo lives beside the function rather than on it: a property hung off a

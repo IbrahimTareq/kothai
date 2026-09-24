@@ -83,7 +83,7 @@ export function sniff(files: Map<string, Buffer>): boolean {
 }
 
 // Collects every array stored under `key`, at any depth. Depth-bounded for the
-// same reason instagram.js's walks are: JSON.parse is not recursive in V8, so a
+// same reason instagram.ts's walks are: JSON.parse is not recursive in V8, so a
 // maliciously deep document genuinely reaches our own walk and would otherwise
 // overflow the stack. Past the cap we stop descending and report truncation.
 function findLists(node: unknown, key: string, out: unknown[][], depth = 0): boolean {

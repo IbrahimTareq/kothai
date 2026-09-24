@@ -1,6 +1,6 @@
 // Route-level tests for POST /api/notes/:id/retag. The retagNote() pipeline
 // itself (marker-clearing, tag replacement, account tag) is already fully
-// covered by test/enrich-retag.test.js — this only checks the HTTP wiring:
+// covered by test/enrich-retag.test.ts — this only checks the HTTP wiring:
 // status codes and response shape.
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'

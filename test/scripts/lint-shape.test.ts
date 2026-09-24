@@ -37,28 +37,28 @@ test('a new file over budget fails', () => {
 })
 
 test('a baselined file at its recorded size passes', () => {
-  const base = { 'server/ai/meta.js': { lines: 816, exports: 25 } }
-  const r = checkFile('server/ai/meta.js', { lines: 816, exports: 25 }, base, BUDGET, HEADROOM)
+  const base = { 'server/ai/meta.ts': { lines: 816, exports: 25 } }
+  const r = checkFile('server/ai/meta.ts', { lines: 816, exports: 25 }, base, BUDGET, HEADROOM)
   assert.equal(r, null)
 })
 
 test('a baselined file within headroom passes', () => {
-  const base = { 'server/ai/meta.js': { lines: 816, exports: 25 } }
-  const r = checkFile('server/ai/meta.js', { lines: 819, exports: 25 }, base, BUDGET, HEADROOM)
+  const base = { 'server/ai/meta.ts': { lines: 816, exports: 25 } }
+  const r = checkFile('server/ai/meta.ts', { lines: 819, exports: 25 }, base, BUDGET, HEADROOM)
   assert.equal(r, null)
 })
 
 test('a baselined file beyond headroom fails, naming both numbers', () => {
-  const base = { 'server/ai/meta.js': { lines: 816, exports: 25 } }
-  const r = checkFile('server/ai/meta.js', { lines: 822, exports: 25 }, base, BUDGET, HEADROOM)
+  const base = { 'server/ai/meta.ts': { lines: 816, exports: 25 } }
+  const r = checkFile('server/ai/meta.ts', { lines: 822, exports: 25 }, base, BUDGET, HEADROOM)
   assert.ok(r, 'expected a failure message, got null')
   assert.match(r, /822/)
   assert.match(r, /816/)
 })
 
 test('a baselined file that shrinks passes', () => {
-  const base = { 'server/ai/meta.js': { lines: 816, exports: 25 } }
-  const r = checkFile('server/ai/meta.js', { lines: 700, exports: 20 }, base, BUDGET, HEADROOM)
+  const base = { 'server/ai/meta.ts': { lines: 816, exports: 25 } }
+  const r = checkFile('server/ai/meta.ts', { lines: 700, exports: 20 }, base, BUDGET, HEADROOM)
   assert.equal(r, null)
 })
 
@@ -86,17 +86,17 @@ test('exports are ratcheted independently of lines, beyond headroom', () => {
 })
 
 test('--update tightens: a shrunk over-budget file records its lower number', () => {
-  const baseline = { 'server/ai/meta.js': { lines: 816, exports: 25 } }
-  const measurements = { 'server/ai/meta.js': { lines: 700, exports: 20 } }
+  const baseline = { 'server/ai/meta.ts': { lines: 816, exports: 25 } }
+  const measurements = { 'server/ai/meta.ts': { lines: 700, exports: 20 } }
   const next = nextBaseline(baseline, measurements, BUDGET)
-  assert.deepEqual(next['server/ai/meta.js'], { lines: 700, exports: 20 })
+  assert.deepEqual(next['server/ai/meta.ts'], { lines: 700, exports: 20 })
 })
 
 test('--update never loosens: a grown over-budget file keeps its old, smaller number', () => {
-  const baseline = { 'server/ai/meta.js': { lines: 816, exports: 25 } }
-  const measurements = { 'server/ai/meta.js': { lines: 900, exports: 25 } }
+  const baseline = { 'server/ai/meta.ts': { lines: 816, exports: 25 } }
+  const measurements = { 'server/ai/meta.ts': { lines: 900, exports: 25 } }
   const next = nextBaseline(baseline, measurements, BUDGET)
-  assert.deepEqual(next['server/ai/meta.js'], { lines: 816, exports: 25 })
+  assert.deepEqual(next['server/ai/meta.ts'], { lines: 816, exports: 25 })
 })
 
 test('--update adds a new over-budget file at its current values', () => {
@@ -105,10 +105,10 @@ test('--update adds a new over-budget file at its current values', () => {
 })
 
 test('--update drops a baselined file that falls back under the flat budget', () => {
-  const baseline = { 'server/ai/meta.js': { lines: 816, exports: 25 } }
-  const measurements = { 'server/ai/meta.js': { lines: 350, exports: 5 } }
+  const baseline = { 'server/ai/meta.ts': { lines: 816, exports: 25 } }
+  const measurements = { 'server/ai/meta.ts': { lines: 350, exports: 5 } }
   const next = nextBaseline(baseline, measurements, BUDGET)
-  assert.equal(next['server/ai/meta.js'], undefined)
+  assert.equal(next['server/ai/meta.ts'], undefined)
 })
 
 // The four governance ratchets: docs/development.md's Baseline section
@@ -213,17 +213,17 @@ test('--update bootstraps governance numbers when none are recorded yet', () => 
 // anything that grew or is new, so a hand-edit cannot pass until it is
 // itself committed to main (this repo's only stand-in for review).
 test('checkAgainstHead passes when the working file matches HEAD', () => {
-  const head = { 'server/config.js': { lines: 104, exports: 13 } }
-  const working = { 'server/config.js': { lines: 104, exports: 13 } }
+  const head = { 'server/config.ts': { lines: 104, exports: 13 } }
+  const working = { 'server/config.ts': { lines: 104, exports: 13 } }
   assert.deepEqual(checkAgainstHead(working, head), [])
 })
 
 test('checkAgainstHead fails a widened file entry', () => {
-  const head = { 'server/config.js': { lines: 104, exports: 13 } }
-  const working = { 'server/config.js': { lines: 999, exports: 13 } }
+  const head = { 'server/config.ts': { lines: 104, exports: 13 } }
+  const working = { 'server/config.ts': { lines: 999, exports: 13 } }
   const r = checkAgainstHead(working, head)
   assert.equal(r.length, 1)
-  assert.match(r[0], /server\/config\.js/)
+  assert.match(r[0], /server\/config\.ts/)
 })
 
 test('checkAgainstHead fails a brand-new entry not present at HEAD', () => {
@@ -233,13 +233,13 @@ test('checkAgainstHead fails a brand-new entry not present at HEAD', () => {
 })
 
 test('checkAgainstHead allows tightening', () => {
-  const head = { 'server/config.js': { lines: 104, exports: 13 } }
-  const working = { 'server/config.js': { lines: 90, exports: 10 } }
+  const head = { 'server/config.ts': { lines: 104, exports: 13 } }
+  const working = { 'server/config.ts': { lines: 90, exports: 10 } }
   assert.deepEqual(checkAgainstHead(working, head), [])
 })
 
 test('checkAgainstHead allows removing an entry entirely', () => {
-  const head = { 'server/config.js': { lines: 104, exports: 13 } }
+  const head = { 'server/config.ts': { lines: 104, exports: 13 } }
   assert.deepEqual(checkAgainstHead({}, head), [])
 })
 

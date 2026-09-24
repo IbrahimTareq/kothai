@@ -45,7 +45,7 @@ export async function handleSetupTest(req: IncomingMessage, res: ServerResponse)
     const models = rows.map(m => (isRecord(m) ? m.id : null)).filter(Boolean)
     return json(res, 200, { ok: true, models })
   } catch (e) {
-    // e.message is already written for a person — remote-http.js turns a 404
+    // e.message is already written for a person — remote-http.ts turns a 404
     // into "check the model name", a 401 into an auth message, and so on.
     const message = e instanceof Error ? e.message : ''
     return json(res, 200, { ok: false, models: [], error: message || 'Could not reach that endpoint.' })

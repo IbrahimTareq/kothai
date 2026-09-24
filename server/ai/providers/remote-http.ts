@@ -1,6 +1,6 @@
 // HTTP transport for the remote inference provider.
 //
-// Split from remote.js so the error taxonomy can be tested against a real
+// Split from remote.ts so the error taxonomy can be tested against a real
 // throwaway server without pulling in model config or the circuit breaker.
 //
 // Every failure is classified transient or not. Transient failures (network,

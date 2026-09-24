@@ -1,7 +1,7 @@
 // Regression test for the enrichNote step-gating bug: a note missing only
 // one step (per stepsFor) must not have OTHER already-completed steps
 // recomputed. This is exactly the composition enrichNote relies on — full
-// coverage of stepsFor's own logic already lives in test/backlog.test.js;
+// coverage of stepsFor's own logic already lives in test/backlog.test.ts;
 // this test locks in the specific data-loss scenario found in review.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'

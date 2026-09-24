@@ -1,6 +1,6 @@
 // Tests for server/routes/export.ts — GET /api/export bundles notes, spaces,
 // chats, and settings into one downloadable JSON file. Read-only, so unlike
-// import-route.test.js there's no rollback/mutation path to exercise; the
+// import-route.test.ts there's no rollback/mutation path to exercise; the
 // data stores are mocked purely to control what handleExport sees.
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'

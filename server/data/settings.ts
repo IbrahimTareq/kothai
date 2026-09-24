@@ -133,7 +133,7 @@ export function _reset(): void {
   loaded = false
 }
 
-// Which embedding recipe the stored vectors were built under (see prompts.js's
+// Which embedding recipe the stored vectors were built under (see prompts.ts's
 // EMBED_RECIPE). null on an install that predates the marker — indistinguishable
 // from a stale recipe, and treated the same way: re-embed once.
 export function getEmbedRecipe(): string | null {
@@ -154,7 +154,7 @@ export function isConfigured(): boolean {
 
 // Patch model keys and/or the residency map. `patch.residency` may be partial.
 // Callers are expected to validate residency values before calling save()
-// (routes/settings.js does), but an invalid value here is ignored — kept at
+// (routes/settings.ts does), but an invalid value here is ignored — kept at
 // its current value — rather than silently reset to a fresh-install default,
 // which resolveResidency's migration semantics would otherwise produce.
 export async function save(patch: SettingsPatch): Promise<Record<Role, string>> {

@@ -93,7 +93,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     if (req.method === 'POST' && p === '/api/wipe') return await handleWipe(req, res)
     if (req.method === 'GET' && p === '/api/models/files') return await handleModelFiles(res)
     // The parameter is a cache FILENAME, so it arrives percent-encoded and is
-    // decoded here; routes/models.js re-validates it before any path is built
+    // decoded here; routes/models.ts re-validates it before any path is built
     // from it. Anchored so only a direct child name can match — a nested path
     // falls through to the 405 below rather than reaching the handler.
     if (req.method === 'DELETE' && /^\/api\/models\/files\/[^/]+$/.test(p)) {

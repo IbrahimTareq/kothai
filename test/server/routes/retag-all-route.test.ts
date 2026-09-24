@@ -1,5 +1,5 @@
 // Route-level tests for POST /api/enrich/retag-all. The retagAll() pipeline
-// itself is covered by test/retag-all.test.js — this checks only the HTTP
+// itself is covered by test/retag-all.test.ts — this checks only the HTTP
 // wiring, and specifically the two guards that stop a whole-library job from
 // being started when it cannot possibly do useful work.
 import { test, mock } from 'node:test'

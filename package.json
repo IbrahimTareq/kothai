@@ -17,7 +17,7 @@
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.server.json --noEmit",
     "typecheck:server": "tsc -p tsconfig.server.json --noEmit",
-    "test": "biome check . && node scripts/lint-tokens.ts && node scripts/lint-shape.ts && node --experimental-test-module-mocks --test 'test/**/*.test.js' 'test/**/*.test.ts'",
+    "test": "biome check . && node scripts/lint-tokens.ts && node scripts/lint-shape.ts && node --experimental-test-module-mocks --test 'test/**/*.test.ts'",
     "lint:tokens": "node scripts/lint-tokens.ts",
     "lint:shape": "node scripts/lint-shape.ts",
     "format": "biome format --write .",

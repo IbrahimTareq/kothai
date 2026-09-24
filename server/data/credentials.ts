@@ -5,7 +5,7 @@
 // into every backup the user downloads. The guarantee this file exists to
 // keep is that a credential never leaves through a backup or an export; the
 // original env-only design kept the same guarantee a different way, and
-// environment variables still take precedence (see config.js).
+// environment variables still take precedence (see config.ts).
 import { readFileSync, writeFileSync, chmodSync, unlinkSync } from 'node:fs'
 import path from 'node:path'
 import { DATA_DIR } from '../config.ts'

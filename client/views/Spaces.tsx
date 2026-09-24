@@ -20,7 +20,7 @@ interface SpacesViewProps {
 
 // The Spaces landing: a grid of collection cards + an inline "new collection"
 // form. A collection's cover is its first few members' thumbnails, resolved
-// server-side (collections.js's withCovers) — no client-side item lookup needed.
+// server-side (collections.ts's withCovers) — no client-side item lookup needed.
 export function SpacesView({ collections, createCollection, navigate }: SpacesViewProps) {
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')

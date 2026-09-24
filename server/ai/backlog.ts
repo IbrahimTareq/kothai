@@ -11,7 +11,7 @@ export interface AiMarkers {
   classify?: boolean
   embed?: boolean
   thumbVision?: boolean
-  // Written and read by ai/enrich.ts and routes/notes.js; nothing in this file
+  // Written and read by ai/enrich.ts and routes/notes.ts; nothing in this file
   // gates on them. Declared here regardless because `ai` is a single object on
   // disk — omitting them would not make them go away, it would only make every
   // honest write of one a type error at its call site and leave this interface
@@ -83,7 +83,7 @@ export function deriveAiMarkers(note: BacklogNote): AiMarkers {
   if (note.ai) return note.ai
   const ai: AiMarkers = {}
   // Length, not Array.isArray: embeddings load from SQLite as a Float32Array
-  // (see data/notes.js). An isArray check would read every stored vector as
+  // (see data/notes.ts). An isArray check would read every stored vector as
   // absent and re-embed the entire library on every boot, forever.
   if (note.embedding?.length) ai.embed = true
   if (note.image && note.description) ai.vision = true

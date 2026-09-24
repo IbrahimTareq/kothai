@@ -1,5 +1,5 @@
-// Unit tests for server/data/tagvocab.js — the canonical-tag embedding registry.
-// The pure helper nearestTag needs no I/O (cosine moved to embedding.js, and is
+// Unit tests for server/data/tagvocab.ts — the canonical-tag embedding registry.
+// The pure helper nearestTag needs no I/O (cosine moved to embedding.ts, and is
 // covered there). The embedding-coupled paths
 // (canonicalize, rebuildFromNotes) are driven with an injected fake embedder and
 // _reset() so no model or disk is touched.
