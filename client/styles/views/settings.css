@@ -277,25 +277,17 @@
 .remote-model-toggle:hover:not(:disabled) { color: var(--ink); }
 .remote-model-toggle:disabled { opacity: 0.4; }
 
-/* The box, surface and scroll come from <Popover>'s .pop--list. */
+/* The box, surface and scroll come from <Popover>'s .pop--list, and each row
+   is a .menu-item. Unpicked ids stay dim so the current one stands out. */
 .remote-model-list { margin: 0; padding: 0; list-style: none; }
-.remote-model-opt {
-  display: block; width: 100%;
-  padding: var(--space-8) var(--space-10);
-  text-align: left;
-  font-size: var(--text-xs);
-  color: var(--ink-dim);
-  background: none; border: 0;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-} /* token-lint-ignore: combobox list option, not a standalone button */
-.remote-model-opt.active { color: var(--ink); background: var(--panel-3); }
+.remote-model-opt { color: var(--ink-dim); }
+.remote-model-opt.active { color: var(--ink); }
 .remote-model-opt.picked { color: var(--accent); }
-.remote-model-empty { padding: var(--space-8) var(--space-10); font-size: var(--text-xs); color: var(--ink-faint); }
+.remote-model-empty { padding: var(--space-8) var(--space-6); font-size: var(--text-xs); color: var(--ink-faint); }
 .remote-model-more {
   display: block; width: 100%;
   margin-top: var(--space-4);
-  padding: var(--space-8) var(--space-10);
+  padding: var(--space-8) var(--space-6);
   text-align: left;
   font-size: var(--text-xs);
   color: var(--ink-faint);

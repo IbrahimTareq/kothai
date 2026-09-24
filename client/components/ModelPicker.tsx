@@ -264,7 +264,7 @@ export function RemoteModelField({
                 type="button"
                 role="option"
                 aria-selected={id === value}
-                className={`remote-model-opt mono${i === active ? ' active' : ''}${id === value ? ' picked' : ''}`}
+                className={`menu-item remote-model-opt mono${i === active ? ' active' : ''}${id === value ? ' picked' : ''}`}
                 onMouseEnter={() => setActive(i)}
                 // mousedown, not click: the input's blur would otherwise fire
                 // first and close the list out from under the click.

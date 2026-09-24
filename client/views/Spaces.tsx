@@ -376,17 +376,17 @@ export function CollectionView({
                 />
                 <div className="rulepop-list">
                   {suggestions.map(({ tag, count }) => (
-                    <button key={tag} className="rulepop-item" onClick={() => addRule(tag)}>
-                      <span className="rulepop-tag">{tag}</span>
-                      <span className="rulepop-count">
+                    <button key={tag} className="menu-item" onClick={() => addRule(tag)}>
+                      <span className="menu-label">{tag}</span>
+                      <span className="menu-trailing rulepop-count">
                         {count} item{count === 1 ? '' : 's'}
                       </span>
                     </button>
                   ))}
                   {canAddNew && (
-                    <button className="rulepop-item rulepop-new" onClick={() => addRule(q)}>
-                      <span className="rulepop-tag">+ add “{q}”</span>
-                      <span className="rulepop-count">new</span>
+                    <button className="menu-item rulepop-new" onClick={() => addRule(q)}>
+                      <span className="menu-label">+ add “{q}”</span>
+                      <span className="menu-trailing rulepop-count">new</span>
                     </button>
                   )}
                   {!suggestions.length && !canAddNew && (

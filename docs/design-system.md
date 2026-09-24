@@ -213,9 +213,9 @@ It also fails any rule outside `primitives.css` that declares a whole button box
 rule that keeps `.btn` the default. It keys on the chrome rather than the class
 name, because a name-shaped rule would be satisfied by calling the next
 hand-rolled button `.wizard-test`, which is precisely how the last one happened.
-Seven controls are annotated exceptions: a floating action circle, a segment,
-an inline citation ref, a scroll affordance, two combobox list rows, and a
-dashed add affordance.
+Five controls are annotated exceptions: a floating action circle, a segment,
+an inline citation ref, a scroll affordance and a dashed add affordance. Two
+combobox list rows were exceptions too, until both became `.menu-item`.
 
 The markup half of the same rule: outside `client/ui/`, any `className`
 carrying `btn` or `btn--*` fails. It has no escape hatch — use `<Button>`.

@@ -208,11 +208,21 @@
 .menu-title{padding:var(--space-4) var(--space-6) var(--space-6)}
 .menu-empty{padding:var(--space-4) var(--space-6);font-size:var(--text-xs);color:var(--ink-mute)}
 /* --control-md is under a row's natural height on the desktop, so it only
-   bites on touch, where it reaches 44 — the rows measured 37 on a phone. */
-.menu-item{display:flex;align-items:center;gap:var(--space-8);box-sizing:border-box;min-height:var(--control-md);
+   bites on touch, where it reaches 44 — the rows measured 37 on a phone.
+   An explicit min-height also replaces a flex item's content-based minimum:
+   stacked in the rule-tag list's 210px column, ten rows shrank from 37 to 32
+   and spilled their text instead of the list scrolling. Hence flex:none. */
+.menu-item{display:flex;flex:none;align-items:center;gap:var(--space-8);box-sizing:border-box;min-height:var(--control-md);
   padding:var(--space-8) var(--space-6);border-radius:var(--radius-md);font-size:var(--text-sm);cursor:pointer;
   outline:none;user-select:none}
-.menu-item[data-highlighted]{background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.menu-item[data-highlighted],.menu-item.active,.menu-item:where(button):hover{
+  background:color-mix(in srgb,var(--ink) 8%,transparent)}
+/* A combobox's option is the view's own <button>, not a Radix item, so it
+   sheds the native button box here. The rule-tag and endpoint model lists
+   each drew their row by hand instead, as two button-chrome exceptions with
+   their own padding, radius and fill, and stood 37 and 31px tall on touch.
+   :where() holds this at one class, so a view can still tint the text. */
+.menu-item:where(button){width:100%;border:0;background:none;color:inherit;line-height:inherit;text-align:left}
 .menu-check{width:12px;display:inline-flex;justify-content:center}
 .menu-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .menu-trailing{display:inline-flex;color:var(--ink-mute)}
