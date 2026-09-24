@@ -5,7 +5,7 @@
 // normaliseClassification, so a note classified on-device and one classified
 // remotely land in the same shape with the same junk filtering applied.
 import type { NoteType } from '../types.ts'
-import { normalizeTags } from '../lib/tags.ts'
+import { normalizeTags } from '../data/tags.ts'
 
 // The model's raw JSON answer, straight off a completion — every field is
 // whatever came back, which is the reason this module exists at all.

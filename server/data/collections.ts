@@ -9,7 +9,7 @@ import { randomUUID } from 'node:crypto'
 import type { DatabaseSync, SQLOutputValue } from 'node:sqlite'
 import { getDb, _resetDb } from './db.ts'
 import type { CollectionRow } from './db.ts'
-import { normalizeTag } from '../lib/tags.ts'
+import { normalizeTag } from './tags.ts'
 import type { CanvasDoc } from '../lib/canvas.ts'
 import * as notesStore from './notes.ts'
 

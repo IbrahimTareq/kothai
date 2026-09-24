@@ -4,7 +4,7 @@
 // builders so a note classified on-device and one classified against a
 // remote endpoint are asked exactly the same question. Inlining prompts in
 // a provider would guarantee drift the first time one gets tuned.
-import { normalizeTags } from '../lib/tags.ts'
+import { normalizeTags } from '../data/tags.ts'
 
 // The note fields the answer context is built from. Deliberately NOT
 // ServerNote: `article` and `thumbDescription` are enrichment columns with no

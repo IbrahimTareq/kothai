@@ -11,7 +11,7 @@ import type { DatabaseSync, SQLOutputValue } from 'node:sqlite'
 import { getDb, _resetDb } from './db.ts'
 import type { TagVocabRow } from './db.ts'
 import { encodeEmbedding, decodeEmbedding, cosine } from './embedding.ts'
-import { normalizeTags } from '../lib/tags.ts'
+import { normalizeTags } from './tags.ts'
 import * as ai from '../ai/index.ts'
 import type { ServerNote } from '../types.ts'
 

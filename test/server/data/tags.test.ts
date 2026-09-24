@@ -1,4 +1,4 @@
-// Unit tests for server/lib/tags.ts — the pure tag normalization + vocabulary module.
+// Unit tests for server/data/tags.ts — the pure tag normalization + vocabulary module.
 // No filesystem or model access: every function is a pure transform.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -8,7 +8,7 @@ import {
   buildVocabulary,
   extractHashtags,
   withAccountTag,
-} from '../../../server/lib/tags.ts'
+} from '../../../server/data/tags.ts'
 
 test('normalizeTag: lowercases, trims, collapses whitespace to single hyphen', () => {
   assert.equal(normalizeTag('  Machine   Learning '), 'machine-learning')

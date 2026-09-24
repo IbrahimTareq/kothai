@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { normalizeTags } from '../lib/tags.ts'
+import { normalizeTags } from '../data/tags.ts'
 import * as store from '../data/notes.ts'
 import type { NoteRecord, PublicNote } from '../data/notes.ts'
 import type { ServerNote } from '../types.ts'

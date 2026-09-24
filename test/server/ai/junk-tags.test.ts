@@ -5,7 +5,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { isJunkTag } from '../../../server/ai/normalise.ts'
-import { normalizeTag } from '../../../server/lib/tags.ts'
+import { normalizeTag } from '../../../server/data/tags.ts'
 
 test('isJunkTag: matches a junk word already in its compressed (no-hyphen) form', () => {
   assert.equal(isJunkTag('socialmedia'), true)

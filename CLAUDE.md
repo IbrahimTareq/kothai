@@ -26,8 +26,10 @@ misuse that only fails on 22 — switch first.
   auth themselves. Only `/api/health` sits in front of it, and it must stay
   silent about the install — the container healthcheck carries no credentials,
   and a 401 there restart-loops the container forever.
-- `server/lib/` is the security floor (`auth.ts`, `ssrf.ts`, `http.ts`). A
-  change there needs a test that fails without it.
+- `server/lib/` is the security floor: auth, SSRF, and every guard untrusted
+  input passes through (zip caps, canvas limits, model-cache paths). A change
+  there needs a test that fails without it; code that guards nothing lives
+  elsewhere.
 - `client/ui/` is the component layer (`docs/design-system.md`). A menu,
   popover, tooltip or page header comes from there, never from a view's own
   `div`s — three pickers, three tips and four headers were hand-built that way

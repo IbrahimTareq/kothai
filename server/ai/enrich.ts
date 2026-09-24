@@ -9,7 +9,7 @@
 import path from 'node:path'
 import * as store from '../data/notes.ts'
 import type { NoteRecord } from '../data/notes.ts'
-import * as tags from '../lib/tags.ts'
+import * as tags from '../data/tags.ts'
 import * as tagvocab from '../data/tagvocab.ts'
 import * as inference from './index.ts'
 import { fetchLinkMeta, isYouTubeVideo, fetchYouTubeCaptions } from '../links/meta.ts'

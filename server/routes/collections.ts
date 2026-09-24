@@ -1,4 +1,4 @@
-import { normalizeTags } from '../lib/tags.ts'
+import { normalizeTags } from '../data/tags.ts'
 import * as store from '../data/notes.ts'
 import * as collections from '../data/collections.ts'
 import { json, readBody } from '../lib/http.ts'
