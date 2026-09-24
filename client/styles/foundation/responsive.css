@@ -108,9 +108,11 @@
   .core.has-thread{padding-bottom:calc(var(--navbar-h) + var(--space-16))}
   .page-head{gap:var(--space-12);padding:var(--space-16) var(--space-14) 0}
   .page-toolbar{gap:var(--space-10)}
-  /* The search field needs the row more than the total does, and every chip
-     under it already carries its own count. */
-  .gallery-view .page-meta{display:none}
+  /* The search field needs the row more than the total or the title does:
+     every chip under it already carries its own count, and the tab bar's
+     active pill already says this is Everything. The search takes the row. */
+  .gallery-view .page-title,.gallery-view .page-meta{display:none}
+  .gallery-view .page-actions{flex:1;margin-left:0}
   /* clears the tab bar AND the FAB parked above it, so the last row of cards
      can still be read and tapped */
   .gal-scroll{padding:var(--under-head) var(--space-14) calc(var(--navbar-h) + var(--space-40))}
