@@ -10,6 +10,7 @@
 import { useState } from 'react'
 import { SettingsRow, RowStatus } from './SettingsRow'
 import { API, apiError } from '../data/api'
+import { Button } from '../ui/Button'
 
 type Scan = Awaited<ReturnType<typeof API.scanAvailability>>
 
@@ -81,9 +82,9 @@ export function AvailabilityRow() {
         </>
       }
       action={
-        <button className="btn" onClick={run} disabled={scanning || removing}>
+        <Button onClick={run} disabled={scanning || removing}>
           {scanning ? 'Checking…' : 'Check links'}
-        </button>
+        </Button>
       }
     >
       {scan && (
@@ -91,8 +92,8 @@ export function AvailabilityRow() {
           <div>{summary(scan)}</div>
           {!scan.aborted && scan.unavailable > 0 && !armed && (
             <div className="avail-actions">
-              <button
-                className="btn btn--danger"
+              <Button
+                danger
                 onClick={() => {
                   setArmed(true)
                   setError(null)
@@ -100,7 +101,7 @@ export function AvailabilityRow() {
                 disabled={removing}
               >
                 Remove {scan.unavailable} unavailable item{scan.unavailable === 1 ? '' : 's'}…
-              </button>
+              </Button>
             </div>
           )}
         </RowStatus>
@@ -113,12 +114,12 @@ export function AvailabilityRow() {
               is gone? This can't be undone.
             </label>
             <div className="danger-confirm-row">
-              <button className="btn btn--danger btn--solid" onClick={remove} disabled={removing}>
+              <Button danger tone="solid" onClick={remove} disabled={removing}>
                 {removing ? 'Removing…' : 'Yes, remove them'}
-              </button>
-              <button className="btn" onClick={() => setArmed(false)} disabled={removing}>
+              </Button>
+              <Button onClick={() => setArmed(false)} disabled={removing}>
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>

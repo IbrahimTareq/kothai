@@ -15,6 +15,7 @@ import type { ChangeEvent, DragEvent, ReactNode } from 'react'
 import { SettingsGroup, SettingsRow, RowStatus } from './SettingsRow'
 import { API, apiError } from '../data/api'
 import { IMPORT_SOURCES, validateImportFiles, type ImportSource } from '../domain/importFile'
+import { Button } from '../ui/Button'
 
 type ImportResult = Awaited<ReturnType<typeof API.importFile>>
 
@@ -155,10 +156,12 @@ function ImportSourceRow({ source }: { source: ImportSource }) {
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       action={
-        <label className="btn import-pick" aria-disabled={importing}>
-          <input type="file" multiple accept={source.accept} disabled={importing} onChange={onFileChange} />
-          <span aria-live="polite">{importing ? 'Importing…' : dragging ? 'Drop to import' : 'Choose files'}</span>
-        </label>
+        <Button asChild className="import-pick" aria-disabled={importing}>
+          <label>
+            <input type="file" multiple accept={source.accept} disabled={importing} onChange={onFileChange} />
+            <span aria-live="polite">{importing ? 'Importing…' : dragging ? 'Drop to import' : 'Choose files'}</span>
+          </label>
+        </Button>
       }
       hint={<>or drop here</>}
     >

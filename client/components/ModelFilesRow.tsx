@@ -18,6 +18,7 @@ import { API, apiError } from '../data/api'
 import { fileLabel, fmtSize, storageSummary } from '../domain/modelFiles'
 import { ROLE_META } from './ModelPicker'
 import type { ModelFilesResponse } from '../types'
+import { Button } from '../ui/Button'
 
 export function ModelFilesRow() {
   const [data, setData] = useState<ModelFilesResponse | null>(null)
@@ -65,8 +66,7 @@ export function ModelFilesRow() {
       }
       action={
         data && (
-          <button
-            className="btn"
+          <Button
             onClick={() => {
               setOpen(!open)
               setError(null)
@@ -74,7 +74,7 @@ export function ModelFilesRow() {
             aria-expanded={open}
           >
             {open ? 'Hide files' : 'Manage files'}
-          </button>
+          </Button>
         )
       }
     >
@@ -99,20 +99,17 @@ export function ModelFilesRow() {
                   </span>
                 ) : pending === f.name ? (
                   <span className="mf-confirm">
-                    <button
-                      className="btn btn--danger btn--solid"
-                      onClick={() => remove(f.name)}
-                      disabled={deleting === f.name}
-                    >
+                    <Button danger tone="solid" onClick={() => remove(f.name)} disabled={deleting === f.name}>
                       {deleting === f.name ? 'Deleting…' : `Delete ${fmtSize(f.sizeBytes)}`}
-                    </button>
-                    <button className="btn" onClick={() => setPending(null)} disabled={deleting === f.name}>
+                    </Button>
+                    <Button onClick={() => setPending(null)} disabled={deleting === f.name}>
                       Cancel
-                    </button>
+                    </Button>
                   </span>
                 ) : (
-                  <button
-                    className="btn btn--danger mf-delete"
+                  <Button
+                    danger
+                    className="mf-delete"
                     onClick={() => {
                       setPending(f.name)
                       setError(null)
@@ -120,7 +117,7 @@ export function ModelFilesRow() {
                     }}
                   >
                     Delete
-                  </button>
+                  </Button>
                 )}
               </li>
             ))}

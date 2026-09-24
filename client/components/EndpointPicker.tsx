@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import { API } from '../data/api'
 import type { EndpointOption } from '../types'
+import { Button } from '../ui/Button'
 
 export interface EndpointChoice {
   providerId: string
@@ -108,9 +109,9 @@ export function EndpointPicker({
 
       {picked && (
         <div className="wizard-probe">
-          <button className="btn" type="button" onClick={test} disabled={!baseUrl || probe.state === 'testing'}>
+          <Button type="button" onClick={test} disabled={!baseUrl || probe.state === 'testing'}>
             {probe.state === 'testing' ? 'Checking…' : 'Test connection'}
-          </button>
+          </Button>
           {probe.state !== 'idle' && probe.state !== 'testing' && (
             <span className={`wizard-probe-msg ${probe.state}`}>{probe.message}</span>
           )}

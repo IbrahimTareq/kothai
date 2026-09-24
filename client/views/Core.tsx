@@ -9,6 +9,7 @@ import { CitedCard, PreviewCard } from '../components/Cards'
 import { parseMarkdown } from '../util/markdown'
 import type { Inline } from '../util/markdown'
 import type { ChatSummary, ThreadMsg, UIItem } from '../types'
+import { Button } from '../ui/Button'
 
 interface CoreViewProps {
   focus: boolean
@@ -348,12 +349,12 @@ export function CoreView({
             ))}
           </div>
           {chatList.length < chatTotal && (
-            <button className="btn chat-more" onClick={loadMoreChats}>
+            <Button className="chat-more" onClick={loadMoreChats}>
               Load more{' '}
               <span className="mono dim">
                 {chatList.length} / {chatTotal}
               </span>
-            </button>
+            </Button>
           )}
         </div>
       )}

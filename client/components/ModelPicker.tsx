@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Icon } from './icons'
 import type { ModelPreset, Residency } from '../types'
 import { relevantModels } from '../domain/modelRelevance'
+import { Button } from '../ui/Button'
 
 export type Role = 'llm' | 'embed' | 'vision'
 
@@ -247,15 +248,16 @@ export function RemoteModelField({
             if (!open && draft.trim() !== value) onCommit(draft.trim())
           }}
         />
-        <button
-          className="btn btn--icon remote-model-toggle"
+        <Button
+          size="icon"
+          className="remote-model-toggle"
           type="button"
           disabled={busy || !ids.length}
           aria-label={open ? 'Hide models' : 'Show models'}
           onClick={() => setOpen(o => !o)}
         >
           <Icon name="chevron" size={14} />
-        </button>
+        </Button>
       </div>
 
       {open && Boolean(ids.length) && (

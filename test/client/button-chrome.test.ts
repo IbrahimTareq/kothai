@@ -7,7 +7,7 @@
 // which is exactly how .conn-btn and .wizard-test came to exist.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { findButtonChrome } from '../../scripts/button-chrome.ts'
+import { findBtnClass, findButtonChrome } from '../../scripts/button-chrome.ts'
 
 test('flags a rule that builds a whole button box', () => {
   const css = `.my-btn{padding:var(--space-8) var(--space-14);border-radius:var(--radius-md);
@@ -50,4 +50,28 @@ test('finds rules nested inside a media query', () => {
   const css = `@media (max-width:600px){\n.m{padding:var(--space-8);border-radius:var(--radius-md);font-size:var(--text-sm);cursor:pointer}\n}`
   assert.equal(findButtonChrome(css).length, 1)
   assert.equal(findButtonChrome(css)[0].selector, '.m')
+})
+
+// The stylesheet half above cannot see markup. <Button> in client/ui/ owns the
+// .btn class list, and a hand-written className="btn btn--solid" beside it is
+// the same drift one layer up: a second way to spell the primitive, which is
+// how the stylesheet grew thirty button classes in the first place.
+
+test('flags .btn applied by hand in a className', () => {
+  assert.deepEqual(findBtnClass(`<button className="btn">Go</button>`), [1])
+  assert.deepEqual(findBtnClass(`\n<a className="btn btn--solid" href="/x">X</a>`), [2])
+})
+
+test('flags .btn inside a template or conditional className', () => {
+  assert.deepEqual(findBtnClass(`<button className={\`btn \${armed ? "on" : ""}\`} />`), [1])
+  assert.deepEqual(findBtnClass(`<button className={busy ? 'btn--ghost' : 'x'} />`), [1])
+})
+
+test('ignores classes that merely end in -btn', () => {
+  const src = `<button className="rail-btn" /><button className={\`seg-btn\${on ? " on" : ""}\`} />`
+  assert.deepEqual(findBtnClass(src), [])
+})
+
+test('ignores the word outside a className', () => {
+  assert.deepEqual(findBtnClass(`// a btn is fine to mention\n<p title="btn">btn</p>`), [])
 })

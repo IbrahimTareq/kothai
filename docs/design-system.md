@@ -54,13 +54,17 @@ and are deliberately off the duration scale.
 
 ## Components
 
-`client/styles/components/primitives.css` holds the shared primitives.
-**Buttons are `.btn`** plus a size and a tone, and the two compose freely:
+`client/ui/` holds the React primitives; `client/styles/components/primitives.css`
+styles them. **Buttons are `<Button>`** (`client/ui/Button.tsx`), the only
+writer of the `.btn` class list — `npm run lint:tokens` fails a hand-written
+`className="btn …"` anywhere else. Its props compose freely:
 
-| axis | modifiers |
+| prop | values |
 |---|---|
-| size | `.btn--xs` `.btn--sm` (default) `.btn--lg` |
-| tone | `.btn--solid` `.btn--ghost` `.btn--icon` `.btn--danger` |
+| `size` | `xs`, default, `lg`, `icon` (square, glyph centred) |
+| `tone` | default, `solid`, `ghost` |
+| `danger` | flag; with `tone="solid"` it is the filled confirm of an arm/confirm pair |
+| `asChild` | puts the box on the child instead: an `<a download>`, a `<label>` round a file input |
 
 The sizes were lifted from buttons that already existed rather than invented,
 so the scale describes the app. There are no per-view aliases of `.btn` left —
@@ -72,8 +76,10 @@ class in the app — `.seg-btn`, `.residency-btn`, `.rail-btn`, and the
 composer's `.send-btn`/`.attach-btn` are distinct components with their own
 box, not `.btn` wearing another name, so they're untouched.)
 
-A view may still add a rule *on top of* `.btn` for genuine layout, the way
-`.chat-more` sets its own full width. What it may not do is rebuild the box.
+A view may still pass a `className` for genuine layout, the way `.mf-delete`
+pins itself right. What it may not do is rebuild the box. (`.chat-more`,
+`.remote-model-toggle` and Expanded's `.del` restyle it today — debt, not
+precedent.)
 
 ## Deliberate exceptions
 
@@ -121,6 +127,9 @@ an inline citation ref, a scroll affordance, two tag pills, a three-control
 danger-zone arm/confirm pattern, five popover/combobox list rows, an armed
 icon-delete, and a canvas toolbar (the last two — a tag pill and the canvas
 toolbar — annotated as deferred future migrations, not permanent exceptions).
+
+The markup half of the same rule: outside `client/ui/`, any `className`
+carrying `btn` or `btn--*` fails. It has no escape hatch — use `<Button>`.
 
 To allow a value that genuinely cannot be a token, annotate the line and say why:
 

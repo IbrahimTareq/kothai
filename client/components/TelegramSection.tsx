@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { SettingsGroup, SettingsRow, RowStatus } from './SettingsRow'
 import { API, apiError } from '../data/api'
 import type { TelegramState } from '../types'
+import { Button } from '../ui/Button'
 
 export function TelegramSection() {
   const [state, setState] = useState<TelegramState | null>(null)
@@ -77,9 +78,9 @@ export function TelegramSection() {
           hint="Takes effect after a restart — polling starts at boot."
           action={
             state?.connected ? (
-              <button className="btn btn--danger" onClick={disconnect} disabled={busy}>
+              <Button danger onClick={disconnect} disabled={busy}>
                 {busy ? 'Disconnecting…' : 'Disconnect'}
-              </button>
+              </Button>
             ) : (
               <>
                 <input
@@ -93,9 +94,9 @@ export function TelegramSection() {
                   onChange={e => setToken(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && connect()}
                 />
-                <button className="btn btn--solid" onClick={connect} disabled={busy || !token.trim()}>
+                <Button tone="solid" onClick={connect} disabled={busy || !token.trim()}>
                   {busy ? 'Connecting…' : 'Connect'}
-                </button>
+                </Button>
               </>
             )
           }

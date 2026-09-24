@@ -10,6 +10,7 @@ import { RoleAccordion, RemoteModelField, ROLE_META, fmtGB, type Role } from '..
 import { API } from '../data/api'
 import type { SettingsResponse, VaultStatus } from '../types'
 import { SetupWizard } from './SetupWizard'
+import { Button } from '../ui/Button'
 
 // Every locally-served role downloads up front at setup (on-demand roles are
 // then unloaded), so first use is a fast local load — count them all toward the
@@ -223,9 +224,9 @@ export function Onboarding({ vault, onComplete }: { vault: VaultStatus; onComple
               <span className="onboarding-size mono">
                 {!noneLocal && upfrontBytes ? `Initial download ≈ ${fmtGB(upfrontBytes)}` : ''}
               </span>
-              <button className="btn btn--solid btn--lg" onClick={start}>
+              <Button tone="solid" size="lg" onClick={start}>
                 {noneLocal ? 'Save & start' : <>Download &amp; start</>}
-              </button>
+              </Button>
             </footer>
             <button className="onboarding-skip" onClick={skip}>
               {allLocal || noneLocal

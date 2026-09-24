@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Icon } from './icons'
 import { relTime } from '../util/format'
 import type { ChatSummary } from '../types'
+import { Button } from '../ui/Button'
 
 interface RowProps {
   chat: ChatSummary
@@ -77,12 +78,12 @@ export function ChatRow({ chat, active, open, rename, remove }: RowProps) {
       <div className="chat-row confirming">
         <Icon name="trash" size={14} />
         <span className="chat-title">Delete “{chat.title}”?</span>
-        <button className="btn btn--xs btn--danger" onClick={() => remove(chat.id)}>
+        <Button size="xs" danger onClick={() => remove(chat.id)}>
           Delete
-        </button>
-        <button className="btn btn--xs" onClick={() => setMode('idle')}>
+        </Button>
+        <Button size="xs" onClick={() => setMode('idle')}>
           Cancel
-        </button>
+        </Button>
       </div>
     )
   }

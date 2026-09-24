@@ -11,6 +11,7 @@ import { useNotes } from '../data/useNotes'
 import type { NoteSource } from '../data/useNotes'
 import { isPlaceholder } from '../data/pager'
 import type { CanvasDoc, Collection, UIItem, ViewMode } from '../types'
+import { Button } from '../ui/Button'
 
 interface SpacesViewProps {
   collections: Collection[]
@@ -52,9 +53,7 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
     <div className="spaces-view">
       <header className="spaces-head">
         <h1 className="spaces-title">Spaces</h1>
-        <button className="btn" onClick={() => setCreating(v => !v)}>
-          ＋ New space
-        </button>
+        <Button onClick={() => setCreating(v => !v)}>＋ New space</Button>
       </header>
 
       {creating && (
@@ -80,9 +79,9 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
               if (e.key === 'Escape') setCreating(false)
             }}
           />
-          <button className="btn btn--solid" onClick={submit}>
+          <Button tone="solid" onClick={submit}>
             Create
-          </button>
+          </Button>
         </div>
       )}
 

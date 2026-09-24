@@ -11,6 +11,7 @@ import { isMediaFirst, sourceGlyph, sourceLabel, githubParts } from '../domain/s
 import { lockAxis, shouldDismiss, navDirection, type Axis } from '../layout/swipe'
 import { useScrollEdges } from '../layout/useScrollEdges'
 import type { Collection, UIItem } from '../types'
+import { Button } from '../ui/Button'
 
 function openUrl(url?: string | null) {
   if (url) window.open(url, '_blank')
@@ -547,29 +548,33 @@ export function ExpandedView({
           </div>
 
           <div className="exp-side-actions">
-            <button
-              className="btn btn--icon btn--ghost"
+            <Button
+              size="icon"
+              tone="ghost"
               aria-label="Copy link"
               onClick={() => item.url && navigator.clipboard?.writeText(item.url)}
             >
               <Icon name="copy" size={16} />
               <span className="exp-tip">Copy link</span>
-            </button>
-            <button className="btn btn--icon btn--ghost" aria-label="Open original" onClick={() => openUrl(item.url)}>
+            </Button>
+            <Button size="icon" tone="ghost" aria-label="Open original" onClick={() => openUrl(item.url)}>
               <Icon name="external" size={16} />
               <span className="exp-tip">Open original</span>
-            </button>
-            <button
-              className="btn btn--icon btn--ghost"
+            </Button>
+            <Button
+              size="icon"
+              tone="ghost"
               aria-label={item.pending ? 'Retagging…' : 'Re-tag'}
               disabled={item.pending}
               onClick={() => onRetag(item.id)}
             >
               <Icon name="retag" size={16} />
               <span className="exp-tip">{item.pending ? 'Retagging…' : 'Re-tag'}</span>
-            </button>
-            <button
-              className="btn btn--icon btn--ghost del"
+            </Button>
+            <Button
+              size="icon"
+              tone="ghost"
+              className="del"
               aria-label="Delete"
               onClick={() => {
                 onDelete(item.id)
@@ -578,7 +583,7 @@ export function ExpandedView({
             >
               <Icon name="trash" size={16} />
               <span className="exp-tip">Delete</span>
-            </button>
+            </Button>
           </div>
         </aside>
       </div>

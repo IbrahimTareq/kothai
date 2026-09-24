@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { Icon } from '../components/icons'
 import { EndpointPicker, type EndpointChoice } from '../components/EndpointPicker'
 import type { EndpointOption } from '../types'
+import { Button } from '../ui/Button'
 
 // The wizard's answer is exactly what the shared picker produces; the alias
 // keeps Onboarding's import stable.
@@ -92,9 +93,9 @@ export function SetupWizard({
 
         <footer className="onboarding-foot">
           <span className="onboarding-size mono"></span>
-          <button className="btn btn--solid btn--lg" onClick={() => choice && onConnected(choice)} disabled={!choice}>
+          <Button tone="solid" size="lg" onClick={() => choice && onConnected(choice)} disabled={!choice}>
             Continue
-          </button>
+          </Button>
         </footer>
 
         <button className="onboarding-skip" onClick={() => (preselect ? onSkip() : setConnecting(false))}>

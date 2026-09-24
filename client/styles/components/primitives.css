@@ -2,9 +2,10 @@
    Part of the Kothai design system. Loaded via style.css, before the per-view
    sheets so those can still override.
 
-   .btn is the button. Use it plus a size (.btn--xs/--lg) and a tone
-   (.btn--solid/--ghost/--icon/--danger, and --danger--solid for a filled
-   destructive confirm); size and tone compose freely. There
+   .btn is the button, rendered only by <Button> in client/ui/Button.tsx —
+   markup never spells these classes itself. Sizes (.btn--xs/--lg/--icon) and
+   tones (.btn--solid/--ghost, .btn--danger, and danger+solid for a filled
+   destructive confirm) compose freely. There
    are no per-view aliases of .btn left, and lint:tokens fails any new
    duplicate of this box — see scripts/button-chrome.ts. That doesn't cover
    every button-shaped class in the app: .seg-btn, .residency-btn, .rail-btn,

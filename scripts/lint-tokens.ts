@@ -14,7 +14,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, dirname, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { findButtonChrome } from './button-chrome.ts'
+import { findBtnClass, findButtonChrome } from './button-chrome.ts'
 
 const CLIENT = join(dirname(fileURLToPath(import.meta.url)), '..', 'client')
 const STYLES = join(CLIENT, 'styles')
@@ -184,6 +184,20 @@ for (const full of walk(CLIENT)) {
         }
       }
     }
+  }
+}
+
+/* ── .btn spelled by hand ──────────────────────────────────────────────────
+ * The stylesheet check above keeps new button boxes out of CSS; this keeps the
+ * .btn class list out of markup. With the modifiers written per call site,
+ * each one was a fresh choice, and the stylesheet grew some thirty button
+ * classes beside .btn that way. <Button> in client/ui/ is the one writer. */
+for (const full of walk(CLIENT)) {
+  const rel = full.slice(CLIENT.length + 1)
+  if (rel.startsWith('ui/')) continue
+  for (const line of findBtnClass(readFileSync(full, 'utf8'))) {
+    report.push(`  ${rel}:${line}  [btn-class] .btn applied by hand\n      use <Button> from client/ui/Button.tsx`)
+    failures++
   }
 }
 

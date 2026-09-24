@@ -14,6 +14,7 @@ import { SettingsGroup } from './SettingsRow'
 import { EndpointPicker, type EndpointChoice } from './EndpointPicker'
 import { API } from '../data/api'
 import type { SettingsResponse } from '../types'
+import { Button } from '../ui/Button'
 
 const ROLES = ['llm', 'embed', 'vision'] as const
 
@@ -104,18 +105,16 @@ export function ConnectionPanel({
         </div>
         {!editing && !leaving && (
           <div className="conn-actions">
-            <button
-              className="btn"
+            <Button
               onClick={() => {
                 setEditing(true)
                 setErr(null)
               }}
             >
               {cfg.endpoint.configured ? 'Change' : 'Connect a service'}
-            </button>
+            </Button>
             {cfg.endpoint.configured && cfg.localSupported && (
-              <button
-                className="btn"
+              <Button
                 disabled={busy}
                 onClick={() => {
                   setLeaving(true)
@@ -124,7 +123,7 @@ export function ConnectionPanel({
                 }}
               >
                 Disconnect
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -150,11 +149,10 @@ export function ConnectionPanel({
             />
           ))}
           <div className="conn-actions">
-            <button className="btn btn--solid" disabled={busy} onClick={disconnect}>
+            <Button tone="solid" disabled={busy} onClick={disconnect}>
               {busy ? 'Switching…' : `Switch — up to ${fmtGB(leaveBytes)} to download`}
-            </button>
-            <button
-              className="btn"
+            </Button>
+            <Button
               disabled={busy}
               onClick={() => {
                 setLeaving(false)
@@ -162,7 +160,7 @@ export function ConnectionPanel({
               }}
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -186,11 +184,10 @@ export function ConnectionPanel({
             </p>
           )}
           <div className="conn-actions">
-            <button className="btn btn--solid" disabled={!choice || busy} onClick={saveEndpoint}>
+            <Button tone="solid" disabled={!choice || busy} onClick={saveEndpoint}>
               {busy ? 'Saving…' : 'Save'}
-            </button>
-            <button
-              className="btn"
+            </Button>
+            <Button
               disabled={busy}
               onClick={() => {
                 setEditing(false)
@@ -199,7 +196,7 @@ export function ConnectionPanel({
               }}
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}

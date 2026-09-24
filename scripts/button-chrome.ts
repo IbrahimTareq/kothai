@@ -8,6 +8,9 @@
  * lint-tokens.ts runs its checks at import time and cannot be imported.
  *
  * Escape hatch: put `token-lint-ignore: <reason>` anywhere inside the rule.
+ *
+ * findBtnClass is the same guard one layer up, in markup: <Button> in
+ * client/ui/ is the only thing that may write the .btn class list.
  */
 
 const COMMENT = /\/\*[\s\S]*?\*\//g
@@ -36,4 +39,28 @@ export function findButtonChrome(css: string) {
     })
   }
   return found
+}
+
+// `btn` or `btn--x` as a whole class. The lookbehind is what lets `rail-btn`
+// and `seg-btn${...}` through: they are their own components, not .btn.
+const BTN_CLASS = /(?<![\w-])btn(?:--[a-z]+)?(?![\w-])/
+
+/** Lines where a className attribute applies .btn by hand. */
+export function findBtnClass(tsx: string) {
+  const lines: number[] = []
+  for (const m of tsx.matchAll(/className=(["'{])/g)) {
+    const start = m.index + 'className='.length
+    let end = start + 1
+    if (m[1] === '{') {
+      // balance braces: the value may hold a template literal with ${}
+      for (let depth = 0; end <= tsx.length; end++) {
+        if (tsx[end - 1] === '{') depth++
+        else if (tsx[end - 1] === '}' && --depth === 0) break
+      }
+    } else {
+      end = tsx.indexOf(m[1], start + 1) + 1
+    }
+    if (BTN_CLASS.test(tsx.slice(start, end))) lines.push(tsx.slice(0, m.index).split('\n').length)
+  }
+  return lines
 }

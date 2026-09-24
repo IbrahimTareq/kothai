@@ -20,6 +20,7 @@ import { AvailabilityRow } from '../components/AvailabilityRow'
 import { ModelFilesRow } from '../components/ModelFilesRow'
 import { API, apiError } from '../data/api'
 import type { Residency, SettingsResponse, VaultStatus } from '../types'
+import { Button } from '../ui/Button'
 
 export function SettingsView({
   vault,
@@ -275,12 +276,12 @@ export function SettingsView({
                   )}
                 </span>
                 <span className="backlog-actions">
-                  <button className="btn btn--solid" onClick={enrichNow} disabled={enriching}>
+                  <Button tone="solid" onClick={enrichNow} disabled={enriching}>
                     {enriching ? 'Starting…' : 'Enrich now'}
-                  </button>
-                  <button className="btn" onClick={() => setBacklog(null)} disabled={enriching}>
+                  </Button>
+                  <Button onClick={() => setBacklog(null)} disabled={enriching}>
                     Later
-                  </button>
+                  </Button>
                 </span>
               </div>
             )}
@@ -347,9 +348,11 @@ export function SettingsView({
                   </>
                 }
                 action={
-                  <a className="btn" href="/api/export" download>
-                    Download export
-                  </a>
+                  <Button asChild>
+                    <a href="/api/export" download>
+                      Download export
+                    </a>
+                  </Button>
                 }
               />
 
@@ -363,9 +366,11 @@ export function SettingsView({
                   </>
                 }
                 action={
-                  <a className="btn" href="/api/backup" download>
-                    Download backup
-                  </a>
+                  <Button asChild>
+                    <a href="/api/backup" download>
+                      Download backup
+                    </a>
+                  </Button>
                 }
               />
 
@@ -382,8 +387,7 @@ export function SettingsView({
                 }
                 action={
                   !retagArmed && (
-                    <button
-                      className="btn"
+                    <Button
                       onClick={() => {
                         setRetagArmed(true)
                         setRetagError(null)
@@ -392,7 +396,7 @@ export function SettingsView({
                       disabled={retagging}
                     >
                       Re-tag all notes…
-                    </button>
+                    </Button>
                   )
                 }
               >
@@ -411,12 +415,12 @@ export function SettingsView({
                         ? It can't be stopped once it starts.
                       </label>
                       <div className="danger-confirm-row">
-                        <button className="btn btn--solid" onClick={retagAll} disabled={retagging}>
+                        <Button tone="solid" onClick={retagAll} disabled={retagging}>
                           {retagging ? 'Starting…' : 'Yes, re-tag everything'}
-                        </button>
-                        <button className="btn" onClick={() => setRetagArmed(false)} disabled={retagging}>
+                        </Button>
+                        <Button onClick={() => setRetagArmed(false)} disabled={retagging}>
                           Cancel
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -442,8 +446,8 @@ export function SettingsView({
                 }
                 action={
                   !wipeArmed && (
-                    <button
-                      className="btn btn--danger"
+                    <Button
+                      danger
                       onClick={() => {
                         setWipeArmed(true)
                         setWipeError(null)
@@ -451,7 +455,7 @@ export function SettingsView({
                       }}
                     >
                       Erase all data…
-                    </button>
+                    </Button>
                   )
                 }
               >
@@ -480,15 +484,10 @@ export function SettingsView({
                             }
                           }}
                         />
-                        <button
-                          className="btn btn--danger btn--solid"
-                          onClick={wipeAll}
-                          disabled={wipeConfirm !== WIPE_TOKEN || wiping}
-                        >
+                        <Button danger tone="solid" onClick={wipeAll} disabled={wipeConfirm !== WIPE_TOKEN || wiping}>
                           {wiping ? 'Erasing…' : 'Erase everything'}
-                        </button>
-                        <button
-                          className="btn"
+                        </Button>
+                        <Button
                           onClick={() => {
                             setWipeArmed(false)
                             setWipeConfirm('')
@@ -496,7 +495,7 @@ export function SettingsView({
                           disabled={wiping}
                         >
                           Cancel
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   </div>
