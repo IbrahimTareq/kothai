@@ -14,7 +14,7 @@
 // and a soft-ban is indistinguishable from a deleted post. A wrong guess there
 // is a deleted real save, so the answer is simply "unknown".
 import { oembedEndpoint } from './meta.ts'
-import { get } from '../links/fetch.ts'
+import { get } from './fetch.ts'
 
 export const ALIVE = 'alive'
 export const DEAD = 'dead'

@@ -6,7 +6,7 @@ import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { mockReq, mockRes } from '../../helpers/http.ts'
 import { note } from '../../helpers/notes.ts'
-import type { Availability } from '../../../server/ai/availability.ts'
+import type { Availability } from '../../../server/links/availability.ts'
 import type { ServerNote } from '../../../server/types.ts'
 
 let notes: ServerNote[] = []
@@ -15,7 +15,7 @@ let verdicts: Record<string, Availability> = {}
 
 const realStore = await import('../../../server/data/notes.ts')
 const realCollections = await import('../../../server/data/collections.ts')
-const realAvail = await import('../../../server/ai/availability.ts')
+const realAvail = await import('../../../server/links/availability.ts')
 
 mock.module('../../../server/data/notes.ts', {
   namedExports: {
@@ -44,7 +44,7 @@ mock.module('../../../server/data/notes.ts', {
 mock.module('../../../server/data/collections.ts', {
   namedExports: { ...realCollections, deleteItemEverywhere: async () => {} },
 })
-mock.module('../../../server/ai/availability.ts', {
+mock.module('../../../server/links/availability.ts', {
   namedExports: {
     ...realAvail,
     isCheckable: (url: string | null) => typeof url === 'string' && url.includes('tiktok.com'),

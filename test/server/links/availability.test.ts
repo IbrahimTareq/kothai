@@ -1,4 +1,4 @@
-// Tests for server/ai/availability.ts — the verdict, not the sweep.
+// Tests for server/links/availability.ts — the verdict, not the sweep.
 //
 // The distinction these pin is the one that makes auto-removal safe or
 // catastrophic: a definite "this content is gone" versus "the request failed".
@@ -16,7 +16,7 @@ const realFetch = await import('../../../server/links/fetch.ts')
 mock.module('../../../server/links/fetch.ts', {
   namedExports: { ...realFetch, get: (url: string, accept: string) => getImpl(url, accept) },
 })
-const { checkAvailability, isCheckable, ALIVE, DEAD, UNKNOWN } = await import('../../../server/ai/availability.ts')
+const { checkAvailability, isCheckable, ALIVE, DEAD, UNKNOWN } = await import('../../../server/links/availability.ts')
 
 const TT = 'https://www.tiktok.com/video/7325881953608158497'
 const httpError = (status: number) => Object.assign(new Error(`HTTP ${status}`), { status })

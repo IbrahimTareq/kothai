@@ -12,10 +12,10 @@ import type { NoteRecord } from '../data/notes.ts'
 import * as tags from '../lib/tags.ts'
 import * as tagvocab from '../data/tagvocab.ts'
 import * as inference from './index.ts'
-import { fetchLinkMeta, isYouTubeVideo, fetchYouTubeCaptions } from './meta.ts'
+import { fetchLinkMeta, isYouTubeVideo, fetchYouTubeCaptions } from '../links/meta.ts'
 import { isInstagramPost } from '../links/instagram.ts'
-import type { LinkMeta } from './meta.ts'
-import { applyMeta } from './meta-fields.ts'
+import type { LinkMeta } from '../links/meta.ts'
+import { applyMeta } from '../links/meta-fields.ts'
 import * as collections from '../data/collections.ts'
 import * as settings from '../data/settings.ts'
 import { stepsFor } from './backlog.ts'
@@ -32,9 +32,9 @@ import {
   isStuckInstagramNote,
   setCaptionHandler,
   _igQueueState,
-} from './ig-queue.ts'
+} from '../links/ig-queue.ts'
 
-// The Instagram lane moved to ./ig-queue.ts. Re-exported here because the
+// The Instagram lane moved to ../links/ig-queue.ts. Re-exported here because the
 // routes and its tests address it through this module, and where the queue
 // lives is not their business.
 export {

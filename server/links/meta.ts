@@ -13,8 +13,8 @@ import {
   YoutubeTranscriptVideoUnavailableError,
 } from 'youtube-transcript'
 import type { TranscriptResponse } from 'youtube-transcript'
-import { MAX_HTML, decodeEntities, get, isSafeFetchUrl, saveThumbSafe } from '../links/fetch.ts'
-import { fetchInstagramMeta, isInstagramPost } from '../links/instagram.ts'
+import { MAX_HTML, decodeEntities, get, isSafeFetchUrl, saveThumbSafe } from './fetch.ts'
+import { fetchInstagramMeta, isInstagramPost } from './instagram.ts'
 
 const MAX_ARTICLE = 8000 // chars of extracted body text persisted per note
 const MIN_ARTICLE = 200 // below this it's a paywall/cookie-wall stub, not content
@@ -315,7 +315,7 @@ export function extractArticle(html: string): string | null {
 // `article` and `author` are optional because only some routes can fill them:
 // Instagram has neither, Reddit has an article and no author, the generic
 // oEmbed + OpenGraph path has both. Callers treat the whole thing as
-// optional-per-field anyway — applyMeta (ai/meta-fields.ts) copies across
+// optional-per-field anyway — applyMeta (links/meta-fields.ts) copies across
 // whichever fields came back truthy.
 export interface LinkMeta {
   siteTitle: string | null

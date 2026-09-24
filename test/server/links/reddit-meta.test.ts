@@ -43,7 +43,7 @@ mock.module('../../../server/lib/ssrf.ts', {
   },
 })
 
-const { isRedditPost, isRedditShare, fetchLinkMeta } = await import('../../../server/ai/meta.ts')
+const { isRedditPost, isRedditShare, fetchLinkMeta } = await import('../../../server/links/meta.ts')
 
 const POST_URL = 'https://www.reddit.com/r/breadit/comments/abc123/my_first_sourdough/'
 const oembedOf = (url: string) => `https://www.reddit.com/oembed?url=${encodeURIComponent(url)}&format=json`

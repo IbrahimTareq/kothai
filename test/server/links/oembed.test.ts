@@ -50,7 +50,7 @@ mock.module('../../../server/lib/ssrf.ts', {
   },
 })
 
-const { oembedEndpoint, fetchLinkMeta } = await import('../../../server/ai/meta.ts')
+const { oembedEndpoint, fetchLinkMeta } = await import('../../../server/links/meta.ts')
 
 // oembedEndpoint answers `string | null` — null is a real answer for a URL no
 // provider claims, and half the tests below assert exactly that. This is for

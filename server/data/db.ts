@@ -35,7 +35,7 @@ const DB_FILE = path.join(DATA_DIR, 'kothai.db')
 //   because a note has no embedding until the embed step runs.
 // - Every OTHER field keeps its full record as one JSON `data` column rather
 //   than one SQL column per field: notes in particular pick up fields over
-//   time from ai/meta.ts and ai/enrich.ts (siteTitle, thumb, pending, ai
+//   time from links/meta.ts and ai/enrich.ts (siteTitle, thumb, pending, ai
 //   markers, …), and a fixed column set would silently drop anything future
 //   code adds. settings and tag_vocab are the exception — both have a small,
 //   truly fixed shape, so real columns are simpler there.

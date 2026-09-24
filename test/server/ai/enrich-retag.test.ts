@@ -6,7 +6,7 @@ import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { note } from '../../helpers/notes.ts'
 import type { NoteRecord } from '../../../server/data/notes.ts'
-import type { LinkMeta } from '../../../server/ai/meta.ts'
+import type { LinkMeta } from '../../../server/links/meta.ts'
 import type { Residency } from '../../../server/ai/roles.ts'
 import type { Classification, ClassifyArgs } from '../../../server/ai/providers/types.ts'
 
@@ -44,7 +44,7 @@ function reset() {
 }
 reset()
 
-const realMeta = await import('../../../server/ai/meta.ts')
+const realMeta = await import('../../../server/links/meta.ts')
 const realStore = await import('../../../server/data/notes.ts')
 const realTags = await import('../../../server/lib/tags.ts')
 const realTagvocab = await import('../../../server/data/tagvocab.ts')
@@ -52,7 +52,7 @@ const realNormalise = await import('../../../server/ai/normalise.ts')
 const realCollections = await import('../../../server/data/collections.ts')
 const realSettings = await import('../../../server/data/settings.ts')
 
-mock.module('../../../server/ai/meta.ts', {
+mock.module('../../../server/links/meta.ts', {
   namedExports: { ...realMeta, fetchLinkMeta: async (url: string, id: string) => fetchLinkMetaImpl(url, id) },
 })
 mock.module('../../../server/data/notes.ts', {

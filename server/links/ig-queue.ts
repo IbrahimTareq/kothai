@@ -17,7 +17,7 @@
 import * as store from '../data/notes.ts'
 import type { NoteRecord } from '../data/notes.ts'
 import { fetchLinkMeta } from './meta.ts'
-import { fetchInstagramSlides, isInstagramPost } from '../links/instagram.ts'
+import { fetchInstagramSlides, isInstagramPost } from './instagram.ts'
 import { applyMeta } from './meta-fields.ts'
 
 // A queued fetch. `slides` picks the carousel job over the thumbnail one;

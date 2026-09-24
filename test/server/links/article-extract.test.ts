@@ -2,7 +2,7 @@
 // Pure (html string in, string|null out), so no network or fetch mocking.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { extractArticle, fetchLinkMeta, mergeSiteDesc } from '../../../server/ai/meta.ts'
+import { extractArticle, fetchLinkMeta, mergeSiteDesc } from '../../../server/links/meta.ts'
 
 // Readability needs a real-ish document: a <title>, and enough prose in a
 // single container to beat the nav/footer noise around it.
