@@ -1,11 +1,17 @@
-node_modules
+**/node_modules
 dist
 data
 models
 qvac.config.json
-mockup.html
-umbrel-app-store
 .git
 .claude
 .DS_Store
 *.log
+# The image COPYs only named paths, but the whole context still ships to the
+# builder first: site/ and .worktrees/ put ~9 GB on every local build, and
+# .env and tailscale/ carry an auth key and node state it has no use for.
+site
+.worktrees
+.superpowers
+tailscale
+.env
