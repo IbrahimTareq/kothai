@@ -166,7 +166,7 @@ test("metaFetched write-order: a slow main-chain classify pass must not clobber 
     await new Promise(r => setTimeout(r, 15))
     return { type: 'link', category: 'General', title: 'T', summary: 'S', tags: [] }
   }
-  await enrich.queueEnrich('n1', { absPath: null, text: IG_URL, isUrl: true, hasImage: false })
+  await enrich.queueEnrich('n1', IG_URL)
   assert.equal(seeded('n1').metaFetched, true, "the main pass's patch must never clobber metaFetched back to false")
 })
 
@@ -180,7 +180,7 @@ test('a landed caption triggers exactly one re-classify/re-embed, built from sto
     siteName: 'Instagram',
     thumb: '/uploads/x.jpg',
   })
-  await enrich.queueEnrich(id, { absPath: null, text: IG_URL, isUrl: true, hasImage: false })
+  await enrich.queueEnrich(id, IG_URL)
   await drainIgQueue() // drains the deque past the internal job enrichNote fired
   await enrich.queueJob(() => {}) // drains enrichChain past the reclassify job queueIgMeta enqueued
 
@@ -435,7 +435,7 @@ test('a reclassify failure leaves the note recoverable — igReclassified is NOT
     return { type: 'link', category: 'General', title: 'T', summary: 'S', tags: [] }
   }
 
-  await enrich.queueEnrich(id, { absPath: null, text: IG_URL, isUrl: true, hasImage: false }) // first pass succeeds → ai.classify: true
+  await enrich.queueEnrich(id, IG_URL) // first pass succeeds → ai.classify: true
   await drainIgQueue()
   await enrich.queueJob(() => {}) // drains the reclassify job, which fails
 
@@ -562,7 +562,7 @@ test('a resweep reuses the stored caption instead of leaving classify caption-le
     },
   ])
 
-  await enrich.queueEnrich(id, { absPath: null, text: IG_URL, isUrl: true, hasImage: false })
+  await enrich.queueEnrich(id, IG_URL)
 
   assert.equal(fetchLinkMetaCalls.length, 0, 'metaFetched was already true — must not re-fetch')
   assert.equal(classifyCalls.length, 1)
@@ -602,8 +602,8 @@ test('a resweep retries a PREVIOUSLY FAILED Instagram fetch, but not a previousl
     thumb: null,
   })
 
-  await enrich.queueEnrich(failedId, { absPath: null, text: IG_URL, isUrl: true, hasImage: false })
-  await enrich.queueEnrich(okId, { absPath: null, text: IG_URL, isUrl: true, hasImage: false })
+  await enrich.queueEnrich(failedId, IG_URL)
+  await enrich.queueEnrich(okId, IG_URL)
   await drainIgQueue()
   await enrich.queueJob(() => {})
 

@@ -42,18 +42,12 @@ test('classifySystemPrompt includes the candidate-hashtag line only when candida
   assert.ok(with_.includes("item's own hashtags"))
 })
 
-test('classifyUserPrompt prefixes hints and truncates long text', () => {
-  const p = classifyUserPrompt({ text: 'hello', hasImage: true, isUrl: true })
-  assert.ok(p.includes('An image is attached'))
+test('classifyUserPrompt says the item is a link and truncates long text', () => {
+  const p = classifyUserPrompt({ text: 'https://example.com' })
   assert.ok(p.includes('is (or contains) a URL'))
-  assert.ok(p.includes('hello'))
-  const long = classifyUserPrompt({ text: 'x'.repeat(5000), hasImage: false, isUrl: false })
+  assert.ok(p.includes('https://example.com'))
+  const long = classifyUserPrompt({ text: 'x'.repeat(5000) })
   assert.ok(long.length < 3200, 'text should be capped at 3000 chars')
-})
-
-test('classifyUserPrompt substitutes a placeholder for empty text', () => {
-  const p = classifyUserPrompt({ text: '', hasImage: true, isUrl: false })
-  assert.ok(p.includes('(no text — image only)'))
 })
 
 test('answerUserPrompt numbers notes for citation and caps each one', () => {
@@ -66,7 +60,7 @@ test('answerUserPrompt numbers notes for citation and caps each one', () => {
       content: 'body-a',
       url: 'https://a',
     },
-    { createdAt: '2026-01-02T00:00:00Z', type: 'text', category: 'Work', title: 'B', content: 'body-b' },
+    { createdAt: '2026-01-02T00:00:00Z', type: 'video', category: 'Work', title: 'B', content: 'body-b' },
   ]
   const p = answerUserPrompt({ question: 'what?', contextNotes: notes })
   assert.ok(p.includes('[1]'))

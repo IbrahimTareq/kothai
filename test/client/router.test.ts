@@ -13,9 +13,15 @@ test('top-level navs round-trip through the URL', () => {
 })
 
 test('type galleries round-trip through the URL', () => {
-  for (const nav of ['link', 'image', 'video', 'code', 'note']) {
+  for (const nav of ['link', 'video']) {
     assert.equal(pathToRoute(routeToPath(nav)).nav, nav)
   }
+})
+
+// Kothai saves links only now; a bookmark to a removed type's gallery lands on
+// Everything rather than on a filter nothing can ever match.
+test('a removed type gallery falls back to Everything', () => {
+  for (const type of ['image', 'code', 'note']) assert.equal(pathToRoute(`/type/${type}`).nav, 'all', type)
 })
 
 test('a space detail nav round-trips so refresh keeps you in the space', () => {

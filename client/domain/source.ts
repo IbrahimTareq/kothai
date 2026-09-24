@@ -112,7 +112,7 @@ export const SOURCES: SourceDef[] = [
     label: 'Web',
     dot: '#8a94a6',
     glyph: 'web',
-    test: i => (i.type === 'link' || i.type === 'video') && !!i.host && !PLATFORMS.some(s => s.test(i)),
+    test: i => !!i.host && !PLATFORMS.some(s => s.test(i)),
   },
 ]
 export const SOURCE_BY_KEY: Record<string, SourceDef> = Object.fromEntries(SOURCES.map(s => [s.key, s]))
@@ -130,6 +130,6 @@ export const SOURCE_BY_KEY: Record<string, SourceDef> = Object.fromEntries(SOURC
 // been ATTEMPTED. Un-attempted means a caption and picture genuinely may still
 // arrive — exactly the window right after a bulk import, and it closes within a
 // minute or two once the metadata lane reaches the note.
-export function isAwaitingContent(it: Pick<UIItem, 'pending' | 'metaFetched' | 'thumb' | 'img'>): boolean {
-  return !!it.pending && !it.metaFetched && !it.thumb && !it.img
+export function isAwaitingContent(it: Pick<UIItem, 'pending' | 'metaFetched' | 'thumb'>): boolean {
+  return !!it.pending && !it.metaFetched && !it.thumb
 }

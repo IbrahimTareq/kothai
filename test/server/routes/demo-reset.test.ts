@@ -26,7 +26,7 @@ test('the reset removes every visitor’s links, files and chats, and keeps the 
   const thumb = path.join(UPLOAD_DIR, 'visitor-thumb.jpg')
   writeFileSync(thumb, 'x')
 
-  const seed = await store.addNote({ type: 'text', content: 'seed' })
+  const seed = await store.addNote({ type: 'link', content: 'seed' })
   const theirs = await store.addNote({
     type: 'link',
     url: 'https://example.com',

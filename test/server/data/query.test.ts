@@ -15,14 +15,13 @@ const N = (o: Partial<ServerNote> = {}): ServerNote => ({
   tags: [],
   content: '',
   url: null,
-  image: null,
   ...o,
 })
 const LIB = [
   N({ id: 'a', type: 'video', url: 'https://www.instagram.com/reel/AAA/', siteDesc: 'Makkah at night' }),
   N({ id: 'b', type: 'video', url: 'https://www.instagram.com/p/BBB/' }),
   N({ id: 'c', type: 'link', url: 'https://github.com/foo/bar', title: 'repo' }),
-  N({ id: 'd', type: 'text', content: 'notes about makkah trip' }),
+  N({ id: 'd', type: 'link', content: 'notes about makkah trip' }),
   N({ id: 'e', type: 'link', url: 'https://example.com/x', tags: ['travel'] }),
 ]
 
@@ -64,7 +63,7 @@ test('applyFilters narrows by type, source, q, and collection set', () => {
 
 test('facetsOf counts types and sources', () => {
   const f = facetsOf(LIB)
-  assert.deepEqual(f.types, { video: 2, link: 2, text: 1 })
+  assert.deepEqual(f.types, { video: 2, link: 3 })
   assert.deepEqual(f.sources, { reels: 1, igposts: 1, github: 1, web: 1 })
 })
 
@@ -129,17 +128,17 @@ test('facetsOf: counts unavailable alongside types and sources', () => {
 
 // --- multi-select facets ----------------------------------------------------
 // OR within a facet, AND across them. ANDing within a facet would always be
-// empty (nothing is both a video and a note), which is why lists widen.
+// empty (nothing is both a video and a link), which is why lists widen.
 
 test('applyFilters: several types widen the set rather than narrowing it to nothing', () => {
-  const notes = [N({ id: 'a', type: 'video' }), N({ id: 'b', type: 'link' }), N({ id: 'c', type: 'text' })]
+  const notes = [N({ id: 'a', type: 'video' }), N({ id: 'b', type: 'link' })]
   assert.deepEqual(
     applyFilters(notes, { type: 'video,link' }).map(n => n.id),
     ['a', 'b'],
   )
   assert.deepEqual(
-    applyFilters(notes, { type: ['video', 'text'] }).map(n => n.id),
-    ['a', 'c'],
+    applyFilters(notes, { type: ['video', 'link'] }).map(n => n.id),
+    ['a', 'b'],
   )
 })
 

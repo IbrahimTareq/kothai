@@ -90,10 +90,7 @@ function ItemNode({ data }: NodeProps<FlowNode>) {
       </span>
     ) : undefined
   return (
-    <div
-      className={`cv-item item-card type-${it.type}${headline ? ' linktile' : ''}`}
-      title={it.title || it.name || ''}
-    >
+    <div className={`cv-item item-card type-${it.type}${headline ? ' linktile' : ''}`} title={it.title || ''}>
       <div className="card-content">
         <CardInner item={it} overlay={overlay} />
       </div>

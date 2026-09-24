@@ -105,7 +105,7 @@ test('decode copies rather than viewing, so a blob at a non-multiple-of-4 offset
 
 test('a saved note keeps its embedding in the BLOB column and out of the JSON', async () => {
   store._reset()
-  const { id } = await store.addNote({ type: 'text', content: 'hello', embedding: vec(16) })
+  const { id } = await store.addNote({ type: 'link', content: 'hello', embedding: vec(16) })
   const db = await getDb()
   const row = db.prepare('SELECT data, embedding FROM notes WHERE id = ?').get(id)
   assert.equal(bytesOf(row).byteLength, 64, '16 dims × 4 bytes')
@@ -115,7 +115,7 @@ test('a saved note keeps its embedding in the BLOB column and out of the JSON', 
 
 test('an embedding added later by enrichment lands in the BLOB column too', async () => {
   store._reset()
-  const { id } = await store.addNote({ type: 'text', content: 'hi' })
+  const { id } = await store.addNote({ type: 'link', content: 'hi' })
   const db = await getDb()
   assert.equal(blobOf(db.prepare('SELECT embedding FROM notes WHERE id = ?').get(id)), null)
   await store.updateNote(id, { embedding: vec(16) })
@@ -128,7 +128,7 @@ test('a reload rehydrates embeddings from the blob and search can use them', asy
   const target = vec(16)
   db.prepare('INSERT INTO notes (id, data, embedding) VALUES (?, ?, ?)').run(
     'n1',
-    JSON.stringify({ id: 'n1', type: 'text', content: 'a' }),
+    JSON.stringify({ id: 'n1', type: 'link', content: 'a' }),
     encodeEmbedding(target),
   )
   await store.load()
@@ -146,7 +146,7 @@ test('a legacy row with the vector inside its JSON is migrated into the blob col
   const legacy = vec(16)
   db.prepare('INSERT INTO notes (id, data) VALUES (?, ?)').run(
     'old',
-    JSON.stringify({ id: 'old', type: 'text', content: 'a', embedding: legacy }),
+    JSON.stringify({ id: 'old', type: 'link', content: 'a', embedding: legacy }),
   )
   await store.load()
 
@@ -162,7 +162,7 @@ test('migration is idempotent — a second load rewrites nothing', async () => {
   const db = await getDb()
   db.prepare('INSERT INTO notes (id, data) VALUES (?, ?)').run(
     'old',
-    JSON.stringify({ id: 'old', type: 'text', content: 'a', embedding: vec(16) }),
+    JSON.stringify({ id: 'old', type: 'link', content: 'a', embedding: vec(16) }),
   )
   await store.load()
   const first = db.prepare('SELECT data, embedding FROM notes WHERE id = ?').get('old')
@@ -179,7 +179,7 @@ test('a legacy row with no embedding at all is left alone', async () => {
   const db = await getDb()
   db.prepare('INSERT INTO notes (id, data) VALUES (?, ?)').run(
     'bare',
-    JSON.stringify({ id: 'bare', type: 'text', content: 'a' }),
+    JSON.stringify({ id: 'bare', type: 'link', content: 'a' }),
   )
   await store.load()
   const row = db.prepare('SELECT embedding FROM notes WHERE id = ?').get('bare')
@@ -199,8 +199,8 @@ test('deriveAiMarkers still recognises a Float32Array embedding as "embed alread
 
 test('search skips notes with no embedding without throwing', async () => {
   store._reset()
-  await store.addNote({ type: 'text', content: 'no vector here' })
-  await store.addNote({ type: 'text', content: 'has one', embedding: vec(16) })
+  await store.addNote({ type: 'link', content: 'no vector here' })
+  await store.addNote({ type: 'link', content: 'has one', embedding: vec(16) })
   const hits = store.search(vec(16), 5)
   assert.equal(hits.length, 1)
 })
@@ -214,7 +214,7 @@ test('search skips notes with no embedding without throwing', async () => {
 
 test('an update that does not name the embedding leaves the blob column untouched', async () => {
   store._reset()
-  const { id } = await store.addNote({ type: 'text', content: 'a', embedding: vec(16) })
+  const { id } = await store.addNote({ type: 'link', content: 'a', embedding: vec(16) })
   const db = await getDb()
   // A sentinel that differs from the in-memory vector makes the rewrite
   // observable: if the UPDATE still listed `embedding`, this would be
@@ -230,7 +230,7 @@ test('an update that does not name the embedding leaves the blob column untouche
 
 test('an update that does name the embedding writes it', async () => {
   store._reset()
-  const { id } = await store.addNote({ type: 'text', content: 'a' })
+  const { id } = await store.addNote({ type: 'link', content: 'a' })
   await store.updateNote(id, { embedding: vec(8) })
   const db = await getDb()
   assert.equal(bytesOf(db.prepare('SELECT embedding FROM notes WHERE id = ?').get(id)).byteLength, 32)
@@ -240,7 +240,7 @@ test('the same rule holds for batched { persist: false } writes', async () => {
   // The settings re-embed batches thousands of updates; the flag has to travel
   // with each queued closure rather than being read at flush time.
   store._reset()
-  const { id } = await store.addNote({ type: 'text', content: 'a', embedding: vec(16) })
+  const { id } = await store.addNote({ type: 'link', content: 'a', embedding: vec(16) })
   const db = await getDb()
   db.prepare('UPDATE notes SET embedding = ? WHERE id = ?').run(encodeEmbedding([9, 9, 9, 9]), id)
   await store.updateNote(id, { summary: 'batched' }, { persist: false })

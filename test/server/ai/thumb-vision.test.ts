@@ -93,7 +93,7 @@ function seed(over: Partial<NoteRecord> = {}) {
 async function run(id = 't1') {
   const n = notes.find(x => x.id === id)
   assert.ok(n, `run() was pointed at ${id}, which is not seeded`)
-  await enrich.queueEnrich(id, { absPath: null, text: n.content, isUrl: true, hasImage: false })
+  await enrich.queueEnrich(id, n.content)
 }
 
 test('a non-Instagram note with a thumbnail gets its cover frame described', async () => {

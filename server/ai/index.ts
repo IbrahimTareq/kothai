@@ -30,7 +30,7 @@ import type {
 
 export { FeatureDisabledError } from './roles.ts'
 export { PRESETS, DEFAULTS } from './presets.ts'
-export { normaliseClassification, isJunkTag, heuristicType, deriveTitle, isLikelyUrl, extractUrl } from './normalise.ts'
+export { normaliseClassification, isJunkTag, heuristicType, deriveTitle, isLikelyUrl } from './normalise.ts'
 
 // A thrown value is `unknown`, and the only field either catch below reads is
 // the loader's `code`. Local rather than shared, for the reason meta.ts and

@@ -90,7 +90,7 @@ test('an oEmbed author becomes the note account when it has none', async () => {
   classifyCalls = []
   linkMeta = meta()
 
-  await enrich.queueEnrich('n1', { absPath: null, text: URL_, isUrl: true, hasImage: false })
+  await enrich.queueEnrich('n1', URL_)
 
   const stored = notes.find(n => n.id === 'n1')
   assert.ok(stored)
@@ -101,7 +101,7 @@ test('the account tag lands in the SAME run, not a later sweep', async () => {
   notes = seed(null)
   linkMeta = meta()
 
-  await enrich.queueEnrich('n1', { absPath: null, text: URL_, isUrl: true, hasImage: false })
+  await enrich.queueEnrich('n1', URL_)
 
   // Whatever shape withAccountTag gives an account tag, the note must carry it
   // — reading `existing.account` alone would leave tags empty here, and a
@@ -118,7 +118,7 @@ test('an account the note already has is never overwritten by a provider display
   notes = seed('natgeo')
   linkMeta = meta()
 
-  await enrich.queueEnrich('n1', { absPath: null, text: URL_, isUrl: true, hasImage: false })
+  await enrich.queueEnrich('n1', URL_)
 
   const stored = notes.find(n => n.id === 'n1')
   assert.ok(stored)
@@ -129,7 +129,7 @@ test('no author from the provider leaves account alone rather than writing null 
   notes = seed(null)
   linkMeta = meta({ author: null })
 
-  await enrich.queueEnrich('n1', { absPath: null, text: URL_, isUrl: true, hasImage: false })
+  await enrich.queueEnrich('n1', URL_)
 
   const stored = notes.find(n => n.id === 'n1')
   assert.ok(stored)

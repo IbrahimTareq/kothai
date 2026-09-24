@@ -306,11 +306,11 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
       return Array.isArray(embedding) ? embedding : []
     },
 
-    async classify({ text, hasImage, isUrl, now, knownTags = [], candidateTags = [] }: ClassifyArgs) {
+    async classify({ text, now, knownTags = [], candidateTags = [] }: ClassifyArgs) {
       guard('llm')
       const messages = [
         { role: 'system', content: classifySystemPrompt({ now, knownTags, candidateTags }) },
-        { role: 'user', content: classifyUserPrompt({ text, hasImage, isUrl }) },
+        { role: 'user', content: classifyUserPrompt({ text }) },
       ]
       const model = modelFor('llm')
       let raw = ''
@@ -355,7 +355,7 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
       } catch {
         parsed = {}
       }
-      return normaliseClassification(parsed, { hasImage, isUrl, text })
+      return normaliseClassification(parsed, text)
     },
 
     async describeImage({ absPath, prompt }: DescribeImageArgs): Promise<string> {

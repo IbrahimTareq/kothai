@@ -8,7 +8,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { boardQuery, isBoardNav } from '../../client/domain/boardQuery.ts'
 
-const TYPES = new Set(['note', 'link', 'image', 'video', 'code'])
+const TYPES = new Set(['link', 'video'])
 const SOURCES = new Set(['instagram', 'tiktok', 'youtube', 'github'])
 const isSource = (k: string) => SOURCES.has(k)
 const q = (nav: string, chips: string[] = [], search = '', sort = 'newest') =>
@@ -23,12 +23,6 @@ test('OR within a facet, AND across them — two sources widen, a type then narr
   assert.equal(narrowed.type, 'video', 'and the type rides alongside, not instead')
 })
 
-test('the UI calls it "note", the server calls it "text" — on both paths', () => {
-  assert.equal(q('all', ['note']).type, 'text', 'chip path')
-  assert.equal(q('note').type, 'text', 'direct type-nav path')
-  assert.equal(q('all', ['note', 'image']).type, 'text,image', 'mixed with another type')
-})
-
 test('unavailable is a state, so it combines rather than replacing', () => {
   const both = q('all', ['unavailable', 'instagram'])
   assert.equal(both.unavailable, true)
@@ -37,12 +31,12 @@ test('unavailable is a state, so it combines rather than replacing', () => {
 })
 
 test('a direct type-nav outranks the type chips', () => {
-  assert.equal(q('image', ['video']).type, 'image')
+  assert.equal(q('link', ['video']).type, 'link')
 })
 
 test('a type-nav does not suppress source or search', () => {
-  const out = q('image', ['instagram'], 'sourdough')
-  assert.equal(out.type, 'image')
+  const out = q('video', ['instagram'], 'sourdough')
+  assert.equal(out.type, 'video')
   assert.equal(out.source, 'instagram')
   assert.equal(out.q, 'sourdough')
 })
@@ -67,7 +61,7 @@ test('isBoardNav excludes the screens that are not a filtered board', () => {
   for (const nav of ['core', 'settings', 'spaces', 'space:abc']) {
     assert.equal(isBoardNav(nav), false, nav)
   }
-  for (const nav of ['all', 'image', 'note']) {
+  for (const nav of ['all', 'link', 'video']) {
     assert.equal(isBoardNav(nav), true, nav)
   }
 })

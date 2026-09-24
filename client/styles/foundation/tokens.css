@@ -94,9 +94,6 @@
      picture rather than the page. It was #050505 in two places and #000 in
      three; #000 matches the bars a video carries itself, so no seam shows. */
   --letterbox:#000;
-  /* Code keeps a dark surface in both themes, like an editor. */
-  --code-surface:#050505;
-  --code-ink:rgba(255,255,255,.82);
 
   --bg:#0a0a0a;
   --bg-2:#0d0d0d;          /* raised rows */

@@ -6,8 +6,8 @@
     "fields": 2
   },
   "client/components/Capture.tsx": {
-    "buttons": 3,
-    "fields": 2
+    "buttons": 1,
+    "fields": 1
   },
   "client/components/Cards.tsx": {
     "buttons": 3
@@ -35,7 +35,7 @@
     "sizes": 9
   },
   "client/styles/components/card.css": {
-    "sizes": 17
+    "sizes": 15
   },
   "client/styles/components/primitives.css": {
     "sizes": 14
@@ -50,7 +50,7 @@
     "sizes": 26
   },
   "client/styles/views/expanded.css": {
-    "sizes": 29
+    "sizes": 26
   },
   "client/styles/views/gallery.css": {
     "sizes": 5

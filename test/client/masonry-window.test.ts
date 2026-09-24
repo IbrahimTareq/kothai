@@ -303,6 +303,6 @@ test('HeightBook.avg averages across everything measured, with a floor default',
   const hb = new HeightBook()
   assert.equal(hb.avg(), 260, 'no measurements yet — fixed default')
   hb.set('a', 300, 'video')
-  hb.set('b', 100, 'note')
+  hb.set('b', 100, 'link')
   assert.equal(hb.avg(), 200)
 })

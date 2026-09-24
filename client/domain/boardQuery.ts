@@ -10,9 +10,7 @@
 //   - "unavailable" is a STATE, not a type or a source: a dead link can be any
 //     type from any platform, so it rides as its own parameter and combines
 //     with whatever else is selected rather than replacing it.
-//   - The UI calls a plain text note "note"; the server calls it "text". The
-//     rename has to happen on both the chip path and the direct-type-nav path.
-//   - A direct type-nav (/image) filters server-side and OUTRANKS the type
+//   - A direct type-nav (/video) filters server-side and OUTRANKS the type
 //     chips, which is why navType is checked first.
 //
 // `knownTypes` is passed in rather than imported so this module stays free of
@@ -36,19 +34,10 @@ export function boardQuery(
 ): { query: PagerQuery; active: boolean } {
   const unavailable = chips.includes('unavailable') || undefined
   const source = chips.filter(isSourceKey).join(',') || undefined
-  const chipType =
-    chips
-      .filter(k => k !== 'unavailable' && !isSourceKey(k))
-      .map(serverType)
-      .join(',') || undefined
-  const navType = nav !== 'all' && !nav.startsWith('space:') && knownTypes.has(nav) ? serverType(nav) : undefined
+  const chipType = chips.filter(k => k !== 'unavailable' && !isSourceKey(k)).join(',') || undefined
+  const navType = nav !== 'all' && !nav.startsWith('space:') && knownTypes.has(nav) ? nav : undefined
   return {
     query: { type: navType ?? chipType, source, q: search, unavailable, sort },
     active: isBoardNav(nav),
   }
-}
-
-// The UI's name for a type, in the server's spelling.
-function serverType(k: string): string {
-  return k === 'note' ? 'text' : k
 }

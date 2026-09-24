@@ -133,8 +133,6 @@ for (const [name, build] of PROVIDERS) {
   test(`${name}: classify returns the full normalised shape with junk filtered`, async () => {
     const out = await (await build()).classify({
       text: 'https://example.com',
-      hasImage: false,
-      isUrl: true,
       now: '2026-01-01',
     })
     assert.deepEqual(Object.keys(out).sort(), ['category', 'summary', 'tags', 'title', 'type'])

@@ -16,10 +16,10 @@ export interface TelegramMessage {
   chat: { id: number }
   text?: string
   caption?: string
-  photo?: { file_id: string; file_size?: number }[]
   // Attachment kinds Kothai does not store. Only their presence is checked —
   // by ingest.ts, to decide whether the bound chat is owed an honest "not
   // saved" reply instead of the file being dropped without a word.
+  photo?: unknown
   document?: unknown
   video?: unknown
   voice?: unknown
@@ -103,37 +103,4 @@ export async function sendMessage(token: string, chatId: number, text: string): 
     body: JSON.stringify({ chat_id: chatId, text }),
   })
   if (res && !res.ok) console.error(`[telegram] sendMessage failed: ${res.status}${await describeError(res)}`)
-}
-
-// Telegram hands out a file_path, not bytes. The data URL shape is dictated by
-// lib/http.ts's saveImage, which matches data:image/(png|jpe?g|gif|webp).
-export async function fetchPhotoDataUrl(token: string, fileId: string): Promise<string | null> {
-  const meta = await fetchOrNull(`${API}/bot${token}/getFile?file_id=${encodeURIComponent(fileId)}`)
-  if (!meta) return null
-  if (!meta.ok) {
-    console.error(`[telegram] getFile failed: ${meta.status}${await describeError(meta)}`)
-    return null
-  }
-  // Like every other parse in this module, a non-JSON 200 (a captive portal,
-  // a transparent proxy) degrades to null here rather than throwing — an
-  // uncaught throw here would propagate out of ingestUpdate and stall the
-  // offset the same way an uncaught network error would.
-  const body = (await meta.json().catch(() => null)) as { result?: { file_path?: string } } | null
-  const filePath = body?.result?.file_path
-  if (!filePath) {
-    console.error('[telegram] getFile: response carried no file_path')
-    return null
-  }
-  const bin = await fetchOrNull(`${API}/file/bot${token}/${filePath}`)
-  if (!bin) return null
-  if (!bin.ok) {
-    console.error(`[telegram] photo download failed: ${bin.status}`)
-    return null
-  }
-  // Telegram's compressed `photo` array — the only message shape this client
-  // downloads — is always JPEG regardless of the source file's real format.
-  // Mapping by the file_path extension instead would silently mislabel a
-  // `.gif` (which saveImage's regex also accepts) as JPEG bytes. Revisit if
-  // document/sticker support, which can carry other formats, is added.
-  return `data:image/jpeg;base64,${Buffer.from(await bin.arrayBuffer()).toString('base64')}`
 }

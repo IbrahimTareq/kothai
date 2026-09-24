@@ -25,7 +25,7 @@ const PLATFORM_TESTS: [string, (n: ServerNote) => boolean][] = [
 
 export function sourceKey(n: ServerNote): string | null {
   for (const [key, t] of PLATFORM_TESTS) if (t(n)) return key
-  if ((n.type === 'link' || n.type === 'video') && hostOf(n.url || '')) return 'web'
+  if (hostOf(n.url || '')) return 'web'
   return null
 }
 

@@ -25,7 +25,6 @@ import {
   heuristicType,
   deriveTitle,
   isLikelyUrl,
-  extractUrl,
   stripThinking,
 } from '../normalise.ts'
 import type { Aggregate, ProviderStatus } from '../routing.ts'
@@ -42,7 +41,7 @@ import type {
   ValidationResult,
 } from './types.ts'
 export { FeatureDisabledError, PRESETS, DEFAULTS }
-export { normaliseClassification, isJunkTag, heuristicType, deriveTitle, isLikelyUrl, extractUrl }
+export { normaliseClassification, isJunkTag, heuristicType, deriveTitle, isLikelyUrl }
 
 // ---- the SDK's model registry ------------------------------------------
 // @qvac/sdk exports one constant per model, under its own name. A preset key
@@ -334,7 +333,7 @@ export async function embedText(text: string, { mode = 'document' }: EmbedOption
 // Ask the LLM to categorise a pasted item into a structured record. Output
 // is grammar-constrained to JSON via responseFormat, so parsing is reliable.
 
-export async function classify({ text, hasImage, isUrl, now, knownTags = [], candidateTags = [] }: ClassifyArgs) {
+export async function classify({ text, now, knownTags = [], candidateTags = [] }: ClassifyArgs) {
   const modelId = await managers.llm.acquire()
   return serialise('llm', async () => {
     try {
@@ -342,7 +341,7 @@ export async function classify({ text, hasImage, isUrl, now, knownTags = [], can
         modelId,
         history: [
           { role: 'system', content: classifySystemPrompt({ now, knownTags, candidateTags }) },
-          { role: 'user', content: classifyUserPrompt({ text, hasImage, isUrl }) },
+          { role: 'user', content: classifyUserPrompt({ text }) },
         ],
         stream: false,
         responseFormat: { type: 'json_schema', json_schema: { name: 'classification', schema: CLASSIFY_SCHEMA } },
@@ -357,7 +356,7 @@ export async function classify({ text, hasImage, isUrl, now, knownTags = [], can
       } catch {
         parsed = {}
       }
-      return normaliseClassification(parsed, { hasImage, isUrl, text })
+      return normaliseClassification(parsed, text)
     } finally {
       managers.llm.release()
     }

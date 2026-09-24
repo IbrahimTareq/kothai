@@ -18,15 +18,15 @@ A self-hosted save-all manager with local AI.
 
 ---
 
-You throw links, screenshots and half-formed thoughts at one box. A local model reads each one in the background, gives it a title, picks tags, and turns it into a vector so you can search by meaning instead of exact words. Flip it into Ask and put questions to the pile. Answers are built only from what you saved, and every claim points back at the card it came from.
+You throw links at one box. A local model reads each one in the background, gives it a title, picks tags, and turns it into a vector so you can search by meaning instead of exact words. Flip it into Ask and put questions to the pile. Answers are built only from what you saved, and every claim points back at the card it came from.
 
 ## Why Kothai?
 
-- **Save anything, find it later.** Links, images, text. A local model reads and indexes everything so you search by meaning, not keywords.
+- **Save links, find them later.** Articles, videos, posts, repos. A local model reads and indexes each page so you search by meaning, not keywords.
 - **Ask your own stuff.** Answers are built only from what you saved, with every claim citing the card it came from.
 - **Runs on your hardware.** One container, one SQLite file, no cloud account. A Raspberry Pi 5 handles it.
 - **AI is optional.** Use local models, point at any endpoint, or turn it off entirely. Run the models yourself and your data stays on your machine, with Telegram capture below as the one opt-in exception.
-- **Capture from your phone.** Message a link or photo to a Telegram bot and it lands in your archive — no app to install, nothing exposed to the internet. Opt-in, and whatever you send it is stored on Telegram's servers too.
+- **Capture from your phone.** Message a link to a Telegram bot and it lands in your archive — no app to install, nothing exposed to the internet. Opt-in, and whatever you send it is stored on Telegram's servers too.
 
 See [What is Kothai?](https://getkothai.com/docs/getting-started/what-is-kothai) for the full feature list.
 
@@ -48,7 +48,7 @@ Want nothing leaving your own machines? Self-host with the install script above 
 
 ## How it works
 
-Saving runs in two phases. Phase one writes the note immediately. Phase two is a background queue that fetches metadata, captions images, classifies, and embeds. The UI never waits on a model and a model that's off or still downloading leaves you with the phase-one version rather than an error.
+Saving runs in two phases. Phase one writes the note immediately. Phase two is a background queue that fetches metadata, describes thumbnails, classifies, and embeds. The UI never waits on a model and a model that's off or still downloading leaves you with the phase-one version rather than an error.
 
 Read more: [Architecture](https://getkothai.com/docs/how-it-works/architecture) · [Models & inference](https://getkothai.com/docs/how-it-works/models) · [Security](https://getkothai.com/docs/how-it-works/security)
 

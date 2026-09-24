@@ -1,6 +1,5 @@
 // Backend bridge — maps a server note (QVAC) into the UI item shape and exposes
-// the real /api endpoints. Server types: link/image/video/code/
-// text ("text" becomes "note" in the UI).
+// the real /api endpoints.
 import type {
   CanvasDoc,
   Chat,
@@ -14,7 +13,6 @@ import type {
   SettingsResponse,
   TelegramState,
   UIItem,
-  UIType,
 } from '../types'
 
 function hostOf(url: string): string {
@@ -26,12 +24,10 @@ function hostOf(url: string): string {
 }
 
 export function mapNote(n: ServerNote): UIItem {
-  const ts = Date.parse(n.createdAt) || Date.now()
-  const type: UIType = n.type === 'text' ? 'note' : n.type
-  const base: UIItem = {
+  return {
     id: n.id,
-    ts,
-    type,
+    ts: Date.parse(n.createdAt) || Date.now(),
+    type: n.type,
     tags: n.tags || [],
     category: n.category,
     summary: n.summary,
@@ -39,41 +35,13 @@ export function mapNote(n: ServerNote): UIItem {
     pending: !!n.pending,
     metaFetched: !!n.metaFetched,
     unavailable: !!n.unavailable,
-  }
-  switch (type) {
-    case 'link':
-      return {
-        ...base,
-        url: n.url,
-        host: hostOf(n.url || ''),
-        title: n.siteTitle || n.title,
-        note: n.siteDesc || '',
-        thumb: n.thumb || null,
-        slides: n.slides,
-        siteName: n.siteName || null,
-      }
-    case 'video':
-      return {
-        ...base,
-        url: n.url,
-        host: hostOf(n.url || '') || 'video',
-        title: n.siteTitle || n.title,
-        note: n.siteDesc || '',
-        thumb: n.thumb || null,
-        slides: n.slides,
-        siteName: n.siteName || null,
-      }
-    case 'image':
-      return {
-        ...base,
-        img: n.image,
-        name: n.title || 'image',
-        note: n.pending ? 'analyzing…' : n.summary || n.description || '',
-      }
-    case 'code':
-      return { ...base, lang: 'text', text: n.content, title: n.title }
-    default:
-      return { ...base, text: n.content, title: n.title }
+    url: n.url,
+    host: hostOf(n.url || '') || (n.type === 'video' ? 'video' : ''),
+    title: n.siteTitle || n.title,
+    note: n.siteDesc || '',
+    thumb: n.thumb || null,
+    slides: n.slides,
+    siteName: n.siteName || null,
   }
 }
 
@@ -142,8 +110,7 @@ export function apiError(e: unknown, fallback: string, byCode: Record<string, st
 }
 
 interface SavePayload {
-  text?: string
-  image?: string | null
+  text: string
 }
 interface AskPayload {
   question?: string

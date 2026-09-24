@@ -7,7 +7,6 @@ import type { Residency } from './roles.ts'
 // The markers a note carries once a step has run against it. `thumbVision` is
 // written but deliberately not trusted — see the note on stepsFor below.
 export interface AiMarkers {
-  vision?: boolean
   classify?: boolean
   embed?: boolean
   thumbVision?: boolean
@@ -27,17 +26,15 @@ export interface AiMarkers {
 // reach for a field it has no business gating on.
 export interface BacklogNote {
   ai?: AiMarkers
-  image?: string | null
   thumb?: string | null
   thumbDescription?: string | null
-  description?: string | null
   embedding?: Float32Array | number[] | null
 }
 
-export type Step = 'vision' | 'thumbVision' | 'classify' | 'embed'
+export type Step = 'thumbVision' | 'classify' | 'embed'
 
 // Steps a note needs: the role must be enabled (not off) and the note must not
-// already carry that step's marker. Vision only applies to image notes.
+// already carry that step's marker.
 //
 // `thumbVision` is the odd one out: it is keyed on the ARTIFACT (a thumbnail
 // with no description) rather than on a marker. It has to be, because the
@@ -55,7 +52,6 @@ export type Step = 'vision' | 'thumbVision' | 'classify' | 'embed'
 export function stepsFor(note: BacklogNote, residency: Residency): Step[] {
   const done = note.ai || {}
   const steps: Step[] = []
-  if (residency.vision !== 'off' && note.image && !done.vision) steps.push('vision')
   if (residency.vision !== 'off' && note.thumb && !note.thumbDescription) steps.push('thumbVision')
   if (residency.llm !== 'off' && !done.classify) steps.push('classify')
   if (residency.embed !== 'off' && !done.embed) steps.push('embed')
@@ -71,8 +67,9 @@ export function backlogCount(notes: BacklogNote[], residency: Residency): number
 //
 // classify is deliberately NEVER inferred here: no field in the data model
 // reliably signals "classify succeeded" in isolation. category defaults to
-// 'General' at note creation, summary is also set by the vision step, tags
-// can be set by manual edits, and embedding is written by three independent
+// 'General' at note creation, summary was also set by the vision step on an
+// attached image (before capture went links-only), tags can be set by manual
+// edits, and embedding is written by three independent
 // paths — the classify+embed pipeline, a manual tag-edit re-embed, and a
 // settings embedding-model-switch re-embed — only the first of which is
 // classify-gated. A false positive here permanently hides a note from
@@ -86,6 +83,5 @@ export function deriveAiMarkers(note: BacklogNote): AiMarkers {
   // (see data/notes.ts). An isArray check would read every stored vector as
   // absent and re-embed the entire library on every boot, forever.
   if (note.embedding?.length) ai.embed = true
-  if (note.image && note.description) ai.vision = true
   return ai
 }

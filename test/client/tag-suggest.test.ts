@@ -8,7 +8,7 @@ import assert from 'node:assert/strict'
 import { suggestTags } from '../../client/domain/tagSuggest.ts'
 import type { UIItem } from '../../client/types.ts'
 
-const item = (id: string, tags: string[]): UIItem => ({ id, tags, type: 'note', title: id, ts: 0 }) as unknown as UIItem
+const item = (id: string, tags: string[]): UIItem => ({ id, tags, type: 'link', title: id, ts: 0 }) as unknown as UIItem
 
 const ITEMS = [item('a', ['pasta', 'dinner', 'quick']), item('b', ['pasta', 'dinner']), item('c', ['pasta', 'baking'])]
 

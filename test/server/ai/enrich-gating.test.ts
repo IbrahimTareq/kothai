@@ -10,19 +10,19 @@ import type { Residency } from '../../../server/ai/roles.ts'
 
 const ALL_ON: Residency = { llm: 'ondemand', embed: 'always', vision: 'ondemand' }
 
-test('a note with classify+embed already done and manually-edited tags only needs vision — classify/embed must not be in its step list', () => {
+test('a note with classify+embed already done and manually-edited tags only needs thumbVision — classify/embed must not be in its step list', () => {
   const note = {
-    image: '/uploads/cat.png',
+    thumb: '/uploads/cat.jpg',
     tags: ['user-picked-this-tag'], // manually edited by the user after classify ran
-    ai: { classify: true, embed: true }, // vision missing — e.g. saved back when vision was off
+    ai: { classify: true, embed: true }, // thumbnail undescribed — e.g. saved back when vision was off
   }
   const steps = stepsFor(note, ALL_ON)
-  assert.deepEqual(steps, ['vision'])
+  assert.deepEqual(steps, ['thumbVision'])
   assert.ok(!steps.includes('classify'), 'classify must not rerun — it would overwrite the manually-edited tags')
   assert.ok(!steps.includes('embed'), 'embed must not rerun — nothing changed that would need a new embedding')
 })
 
 test('a brand-new note (no ai markers yet) needs every applicable step', () => {
-  const freshNote = { image: '/uploads/new.png' } // no `ai` field at all — matches addNote()'s shape
-  assert.deepEqual(stepsFor(freshNote, ALL_ON), ['vision', 'classify', 'embed'])
+  const freshNote = { thumb: '/uploads/new.jpg' } // no `ai` field at all — matches addNote()'s shape
+  assert.deepEqual(stepsFor(freshNote, ALL_ON), ['thumbVision', 'classify', 'embed'])
 })

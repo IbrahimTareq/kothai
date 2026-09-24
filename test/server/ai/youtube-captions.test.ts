@@ -204,7 +204,7 @@ function seed(over: Partial<NoteRecord> = {}) {
 test('a transcript reaches classify, embed and the stored article field', async () => {
   seed()
   transcriptImpl = async () => [seg('we are no strangers to love')]
-  await enrich.queueEnrich('y1', { absPath: null, text: WATCH, isUrl: true, hasImage: false })
+  await enrich.queueEnrich('y1', WATCH)
 
   assert.match(classifyCalls[0], /no strangers to love/, 'transcript missing from the classify input')
   assert.match(embedCalls[0], /no strangers to love/, 'transcript missing from the embed input')
@@ -219,14 +219,14 @@ test('a video with no captions is marked done once and never fetched again', asy
   transcriptImpl = async () => {
     throw new realYt.YoutubeTranscriptDisabledError('off')
   }
-  await enrich.queueEnrich('y1', { absPath: null, text: WATCH, isUrl: true, hasImage: false })
+  await enrich.queueEnrich('y1', WATCH)
   assert.equal(transcriptCalls.length, 1)
   assert.ok(notes[0].ai)
   assert.equal(notes[0].ai.captions, true)
   assert.equal(notes[0].article, undefined, 'no captions means no article, not an empty one')
 
   // A second pass over the same note must not spend another request.
-  await enrich.queueEnrich('y1', { absPath: null, text: WATCH, isUrl: true, hasImage: false })
+  await enrich.queueEnrich('y1', WATCH)
   assert.equal(transcriptCalls.length, 1, 'the marker short-circuits the repeat fetch')
 })
 
@@ -235,12 +235,12 @@ test('a transient caption failure leaves the note eligible for a later retry', a
   transcriptImpl = async () => {
     throw new realYt.YoutubeTranscriptTooManyRequestError()
   }
-  await enrich.queueEnrich('y1', { absPath: null, text: WATCH, isUrl: true, hasImage: false })
+  await enrich.queueEnrich('y1', WATCH)
   assert.ok(notes[0].ai)
   assert.equal(notes[0].ai.captions, undefined)
 
   transcriptImpl = async () => [seg('the transcript, eventually')]
-  await enrich.queueEnrich('y1', { absPath: null, text: WATCH, isUrl: true, hasImage: false })
+  await enrich.queueEnrich('y1', WATCH)
   assert.equal(transcriptCalls.length, 2, 'the retry actually happened')
   assert.ok(notes[0].article)
   assert.match(notes[0].article, /the transcript, eventually/)
@@ -255,7 +255,7 @@ test('a transcript landing on an ALREADY-embedded note forces a re-embed — oth
   // invisible to search.
   seed({ ai: { classify: true, embed: true } })
   transcriptImpl = async () => [seg('a transcript worth embedding')]
-  await enrich.queueEnrich('y1', { absPath: null, text: WATCH, isUrl: true, hasImage: false })
+  await enrich.queueEnrich('y1', WATCH)
 
   assert.equal(classifyCalls.length, 0, 'classify was already done and must not be re-run')
   assert.equal(embedCalls.length, 1, 'the new text must be embedded')
@@ -266,7 +266,7 @@ test('with the embed role off, the transcript is still fetched and stored — it
   seed({ ai: { classify: true, embed: true } })
   residencyImpl = () => ({ llm: 'off', embed: 'off', vision: 'off' })
   transcriptImpl = async () => [seg('still worth storing')]
-  await enrich.queueEnrich('y1', { absPath: null, text: WATCH, isUrl: true, hasImage: false })
+  await enrich.queueEnrich('y1', WATCH)
   residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
 
   assert.equal(embedCalls.length, 0)
@@ -280,7 +280,7 @@ test('a non-YouTube link never reaches the caption step', async () => {
   const vimeo = 'https://vimeo.com/12345'
   notes = [{ ...note({ id: 'v1', content: vimeo, url: vimeo, type: 'video' }), ai: {} }]
   transcriptCalls = []
-  await enrich.queueEnrich('v1', { absPath: null, text: vimeo, isUrl: true, hasImage: false })
+  await enrich.queueEnrich('v1', vimeo)
   assert.deepEqual(transcriptCalls, [])
   assert.ok(notes[0].ai)
   assert.equal(notes[0].ai.captions, undefined)

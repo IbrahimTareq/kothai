@@ -6,7 +6,6 @@
 // remotely land in the same shape with the same junk filtering applied.
 import type { NoteType } from '../types.ts'
 import { normalizeTags } from '../lib/tags.ts'
-import { NOTE_TYPES } from './prompts.ts'
 
 // The model's raw JSON answer, straight off a completion — every field is
 // whatever came back, which is the reason this module exists at all.
@@ -16,14 +15,6 @@ interface RawClassification {
   title?: unknown
   summary?: unknown
   tags?: unknown
-}
-
-// What the caller knows about the note independently of the model. All
-// optional: classify() passes all three, the unit tests pass none.
-interface TypeHints {
-  hasImage?: boolean
-  isUrl?: boolean
-  text?: string | null
 }
 
 // Platform / engagement / filler words the model tends to emit for social links.
@@ -127,26 +118,10 @@ export function isJunkTag(t: string): boolean {
 // Exported for tests — classify() itself does real model I/O, so this pure
 // post-processing (type fallback, length caps, junk filtering) is the
 // testable surface for what the model's raw JSON gets turned into.
-export function normaliseClassification(p: RawClassification, { hasImage, isUrl, text }: TypeHints) {
-  // typeof before includes(): NOTE_TYPES is string[], and a model that answers
-  // with a number or an object would otherwise not typecheck here. The guard
-  // decides nothing includes() did not already decide — a non-string is not in
-  // the list either way.
-  let type: string | null = typeof p.type === 'string' && NOTE_TYPES.includes(p.type) ? p.type : null
-  // A note whose whole content is a URL is a link (or a video), as a matter of
-  // fact rather than of judgement — and the model does sometimes answer "text"
-  // for one, having read the fetched page and decided the *content* is prose.
-  // That answer strands a saved article as a plain note: the card falls back to
-  // the note layout, so the page title, the thumbnail and the article stage all
-  // go unused even though enrichment fetched every one of them.
-  //
-  // Only "text" and "code" are overruled. "image" is a real answer for a URL
-  // that points straight at a picture — one the heuristic gets wrong, since it
-  // classifies by the URL alone and calls that a link.
-  if ((!type || type === 'text' || type === 'code') && (isUrl || isLikelyUrl(text))) {
-    type = heuristicType({ hasImage, isUrl, text })
-  }
-  if (!type) type = heuristicType({ hasImage, isUrl, text })
+export function normaliseClassification(p: RawClassification, text: string) {
+  // Anything but a type Kothai stores — "text" or "image" despite the schema's
+  // enum, a number, nothing at all — falls back to the URL heuristic.
+  const type: NoteType = p.type === 'link' || p.type === 'video' ? p.type : heuristicType(text)
   return {
     type,
     category: (p.category || 'General').toString().slice(0, 40),
@@ -164,16 +139,8 @@ export function normaliseClassification(p: RawClassification, { hasImage, isUrl,
 }
 
 // ---- helpers / fallbacks ----------------------------------------------
-export function heuristicType({ hasImage, isUrl, text }: TypeHints): NoteType {
-  if (hasImage) return 'image'
-  const t = (text || '').trim()
-  if (isUrl || /^https?:\/\/\S+$/i.test(t)) {
-    if (/youtube\.com|youtu\.be|vimeo\.com|tiktok\.com|\.mp4(\?|$)/i.test(t)) return 'video'
-    return 'link'
-  }
-  if (/```/.test(t) || /^(function|const|let|var|import|class|def |public |#include|<\?php|SELECT )/m.test(t))
-    return 'code'
-  return 'text'
+export function heuristicType(text: string): NoteType {
+  return /youtube\.com|youtu\.be|vimeo\.com|tiktok\.com|\.mp4(\?|$)/i.test(text) ? 'video' : 'link'
 }
 
 export function deriveTitle(text: string | null | undefined): string {
@@ -183,20 +150,4 @@ export function deriveTitle(text: string | null | undefined): string {
 
 export function isLikelyUrl(text: string | null | undefined): boolean {
   return /^https?:\/\/\S+$/i.test((text || '').trim())
-}
-
-// Pull the first URL out of free text (e.g. "check this out www.foo.com/bar").
-// Used when classification decides a note is a link/video but the text wasn't
-// purely a URL, so the card still gets something to open.
-export function extractUrl(text: string | null | undefined): string | null {
-  const t = text || ''
-  const m = /https?:\/\/[^\s<>"')\]]+/i.exec(t)
-  if (m) return m[0].replace(/[.,;:!?]+$/, '')
-  const w = /\bwww\.[^\s<>"')\]]+/i.exec(t)
-  if (w) return `https://${w[0].replace(/[.,;:!?]+$/, '')}`
-  // bare domain with a well-known TLD, e.g. "google.com" or "foo.dev/bar"
-  const d =
-    /\b[a-z0-9][a-z0-9-]*(\.[a-z0-9-]+)*\.(com|org|net|io|dev|app|ai|co|me|tv|gg|sh|xyz)(\/[^\s<>"')\]]*)?/i.exec(t)
-  if (d) return `https://${d[0].replace(/[.,;:!?]+$/, '')}`
-  return null
 }

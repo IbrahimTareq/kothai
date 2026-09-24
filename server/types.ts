@@ -9,7 +9,7 @@
 // nothing. If you change a field here, change its counterpart there in the
 // same commit.
 
-export type NoteType = 'link' | 'image' | 'video' | 'code' | 'text'
+export type NoteType = 'link' | 'video'
 
 export interface ServerNote {
   id: string
@@ -21,7 +21,6 @@ export interface ServerNote {
   tags: string[]
   content: string
   url: string | null
-  image: string | null
   account?: string | null
   mindNote?: string
   pending?: boolean
@@ -40,7 +39,6 @@ export interface ServerNote {
   // the item has been opened once (slides are fetched lazily) and for any post
   // that turned out to be a single image.
   slides?: string[]
-  description?: string
   score?: number
   // Set only on the public demo (server/routes/demo.ts): the visitor who saved
   // this link, and so the only one shown it. Absent on every note of an

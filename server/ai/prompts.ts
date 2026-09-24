@@ -19,7 +19,6 @@ interface ContextNote {
   siteDesc?: string | null
   article?: string | null
   thumbDescription?: string | null
-  description?: string | null
   tags?: string[]
 }
 
@@ -38,7 +37,7 @@ interface HistoryMessage {
   text?: string
 }
 
-export const NOTE_TYPES = ['link', 'image', 'video', 'code', 'text']
+export const NOTE_TYPES = ['link', 'video']
 
 export const CLASSIFY_SCHEMA = {
   type: 'object',
@@ -86,8 +85,6 @@ export function classifySystemPrompt({
     'Classify the item and return JSON only.',
     `Choose "type" from: ${NOTE_TYPES.join(', ')}.`,
     '- link: a web URL/bookmark. video: a link to a video (YouTube, Vimeo, etc).',
-    '- code: a code snippet.',
-    '- image: an attached picture. text: a general note that fits none of the above.',
     '"category" is a short topical label (1-2 words, Title Case) like "Tech", "Recipes", "Work", "Finance", "Health".',
     '"title" is a concise human title (max ~8 words).',
     '"summary" is one sentence describing the item for later search.',
@@ -107,19 +104,8 @@ export function classifySystemPrompt({
   ].join('\n')
 }
 
-export function classifyUserPrompt({
-  text,
-  hasImage,
-  isUrl,
-}: {
-  text: string
-  hasImage: boolean
-  isUrl: boolean
-}): string {
-  const hints = []
-  if (hasImage) hints.push('An image is attached to this item.')
-  if (isUrl) hints.push('The text is (or contains) a URL.')
-  return `${hints.length ? `${hints.join(' ')}\n\n` : ''}ITEM:\n${(text || '(no text — image only)').slice(0, 3000)}`
+export function classifyUserPrompt({ text }: { text: string }): string {
+  return `The text is (or contains) a URL.\n\nITEM:\n${text.slice(0, 3000)}`
 }
 
 // ---- embedding input -----------------------------------------------------
@@ -279,7 +265,6 @@ export function noteContextBody(note: ContextNote): string {
   add('Caption', note.siteDesc)
   add('Article', clip(note.article, ARTICLE_CHARS))
   add('Thumbnail', note.thumbDescription)
-  add('Description', note.description)
   // `content` IS the url for a saved link — adding it would just print the
   // URL twice, once unlabelled.
   if (note.content !== note.url) add('', note.content)

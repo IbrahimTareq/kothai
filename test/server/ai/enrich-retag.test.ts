@@ -108,8 +108,8 @@ async function drainIgQueue(timeoutMs = 2000) {
 
 test('enrichNote: a note with an account gets "@handle" prepended to its classified tags', async () => {
   reset()
-  seedNotes([{ ...note({ id: 'n1', content: 'hello world', account: 'ChefSteps' }), ai: {} }])
-  await enrich.queueEnrich('n1', { absPath: null, text: 'hello world', isUrl: false, hasImage: false })
+  seedNotes([{ ...note({ id: 'n1', content: 'https://example.com/a', account: 'ChefSteps' }), ai: {} }])
+  await enrich.queueEnrich('n1', 'https://example.com/a')
   const stored = notes.find(n => n.id === 'n1')
   assert.ok(stored)
   assert.deepEqual(stored.tags, ['@chefsteps', 'topic'])
@@ -117,8 +117,8 @@ test('enrichNote: a note with an account gets "@handle" prepended to its classif
 
 test('enrichNote: a note with no account is classified normally, no stray tag', async () => {
   reset()
-  seedNotes([{ ...note({ id: 'n2', content: 'hello world', account: null }), ai: {} }])
-  await enrich.queueEnrich('n2', { absPath: null, text: 'hello world', isUrl: false, hasImage: false })
+  seedNotes([{ ...note({ id: 'n2', content: 'https://example.com/a', account: null }), ai: {} }])
+  await enrich.queueEnrich('n2', 'https://example.com/a')
   const stored = notes.find(n => n.id === 'n2')
   assert.ok(stored)
   assert.deepEqual(stored.tags, ['topic'])
@@ -147,12 +147,12 @@ test('retagNote: forces a fresh classify even on an already-classified, hand-edi
   const id = 'n4'
   seedNotes([
     {
-      ...note({ id, content: 'hello world', account: 'natgeo', tags: ['user-picked-this-tag'] }),
+      ...note({ id, content: 'https://example.com/a', account: 'natgeo', tags: ['user-picked-this-tag'] }),
       ai: { classify: true, embed: true, tagsEdited: true },
     },
   ])
   classifyImpl = async () => ({
-    type: 'text',
+    type: 'link',
     category: 'General',
     title: 'Fresh',
     summary: 'S',

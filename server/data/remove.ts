@@ -15,9 +15,7 @@ export async function removeNote(id: string): Promise<boolean> {
   if (ok && note) {
     // Awaited so the nightly reset has actually freed the disk when it returns.
     // A file that is already gone is not a failed delete.
-    const files = [note.image, note.thumb, ...(note.slides || [])].filter(
-      (f): f is string => !!f?.startsWith('/uploads/'),
-    )
+    const files = [note.thumb, ...(note.slides || [])].filter((f): f is string => !!f?.startsWith('/uploads/'))
     await Promise.all(files.map(f => unlink(path.join(UPLOAD_DIR, path.basename(f))).catch(() => {})))
   }
   return ok

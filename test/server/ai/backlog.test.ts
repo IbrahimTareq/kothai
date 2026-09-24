@@ -8,48 +8,32 @@ import type { Residency } from '../../../server/ai/roles.ts'
 const ALL_ON: Residency = { llm: 'ondemand', embed: 'always', vision: 'ondemand' }
 const ALL_OFF: Residency = { llm: 'off', embed: 'off', vision: 'off' }
 
-test('stepsFor: bare text note with everything on needs classify + embed', () => {
+test('stepsFor: a bare note with everything on needs classify + embed', () => {
   assert.deepEqual(stepsFor({ ai: {} }, ALL_ON), ['classify', 'embed'])
 })
 
-test('stepsFor: image note also needs vision', () => {
-  assert.deepEqual(stepsFor({ image: '/uploads/x.png', ai: {} }, ALL_ON), ['vision', 'classify', 'embed'])
-})
-
 test('stepsFor: completed markers remove steps', () => {
-  const note = { image: '/uploads/x.png', ai: { vision: true, classify: true, embed: true } }
-  assert.deepEqual(stepsFor(note, ALL_ON), [])
+  assert.deepEqual(stepsFor({ ai: { classify: true, embed: true } }, ALL_ON), [])
 })
 
 test('stepsFor: off roles contribute no steps', () => {
-  assert.deepEqual(stepsFor({ image: '/uploads/x.png', ai: {} }, ALL_OFF), [])
+  assert.deepEqual(stepsFor({ ai: {} }, ALL_OFF), [])
   assert.deepEqual(stepsFor({ ai: {} }, { ...ALL_ON, llm: 'off' }), ['embed'])
-})
-
-test('stepsFor: vision only applies to image notes', () => {
-  assert.deepEqual(stepsFor({ ai: { classify: true, embed: true } }, ALL_ON), [])
 })
 
 test('backlogCount: counts notes with at least one needed step', () => {
   const notes = [
     { ai: { classify: true, embed: true } }, // done
     { ai: {} }, // needs both
-    { image: '/u/a.png', ai: { classify: true, embed: true } }, // needs vision
+    { thumb: '/u/a.png', ai: { classify: true, embed: true } }, // needs thumbVision
   ]
   assert.equal(backlogCount(notes, ALL_ON), 2)
   assert.equal(backlogCount(notes, ALL_OFF), 0)
 })
 
-test('deriveAiMarkers: legacy enriched note infers embed + vision, never classify', () => {
-  const legacy = {
-    category: 'Recipes',
-    tags: ['x'],
-    summary: 's',
-    embedding: [0.1],
-    image: '/u/a.png',
-    description: 'a cat',
-  }
-  assert.deepEqual(deriveAiMarkers(legacy), { embed: true, vision: true })
+test('deriveAiMarkers: legacy enriched note infers embed, never classify', () => {
+  const legacy = { category: 'Recipes', tags: ['x'], summary: 's', embedding: [0.1] }
+  assert.deepEqual(deriveAiMarkers(legacy), { embed: true })
 })
 
 test('deriveAiMarkers: heuristic-only note infers nothing', () => {
@@ -60,13 +44,6 @@ test('deriveAiMarkers: heuristic-only note infers nothing', () => {
 test('deriveAiMarkers: existing ai object is returned untouched', () => {
   const ai = { classify: true }
   assert.equal(deriveAiMarkers({ ai, embedding: [1] }), ai)
-})
-
-// summary is also set by the vision step, independent of classify success —
-// classify is never inferred from any field, so this stays unset regardless.
-test('deriveAiMarkers: vision success alone does not imply classify succeeded', () => {
-  const note = { image: '/u/a.png', description: 'a cat', summary: 'a cat' } // no embedding
-  assert.deepEqual(deriveAiMarkers(note), { vision: true })
 })
 
 // addNote() defaults every note's category to 'General' at creation time,

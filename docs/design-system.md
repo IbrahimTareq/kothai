@@ -194,8 +194,8 @@ Three things sit outside the system on purpose. Don't "fix" them.
   their backdrop is the media, not a themed surface. They were literals that
   had drifted across four alphas, and one used a themed overlay token and paled
   on light. The same holds for `--letterbox` behind media that does not fill
-  its frame, `--backdrop` behind a dialog, and the code block's
-  `--code-surface`/`--code-ink`: one value in both themes, on purpose.
+  its frame and `--backdrop` behind a dialog: one value in both themes, on
+  purpose.
 
 ## The guardrail
 

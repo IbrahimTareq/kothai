@@ -6,11 +6,6 @@
 .item-card{position:relative;background:transparent;border:0;border-radius:var(--radius-lg);
   padding:0;display:flex;flex-direction:column;gap:var(--space-8);transition:transform var(--dur-fast)}
 .item-card:hover,.item-card:focus-visible{transform:translateY(-3px)}
-/* text-only cards (note/code) keep a faint surface so they read on the dark bg */
-.item-card.type-note,.item-card.type-code{background:var(--panel);border:1px solid var(--line);padding:var(--space-14)}
-.item-card.type-note:hover,.item-card.type-note:focus-visible,
-.item-card.type-code:hover,.item-card.type-code:focus-visible{border-color:var(--line-hover);
-  background:var(--panel-2)}
 .card-cap{display:flex;flex-direction:column;gap:var(--space-4);padding:0 var(--space-2)}
 .card-del{position:absolute;top:8px;right:8px;z-index:var(--z-content);width:26px;height:26px;
   display:grid;place-items:center;border:0;border-radius:var(--radius);
@@ -41,9 +36,6 @@
 .card-favi{width:34px;height:34px;border-radius:var(--radius);display:grid;place-items:center;
   background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
   font-family:var(--font-mono);font-weight:var(--fw-medium);font-size:var(--text-base)}
-.card-body{font-size:var(--text-sm);line-height:var(--leading-normal);letter-spacing:var(--tracking-tight);
-  color:var(--ink);white-space:pre-wrap}
-.card-sub{font-size:var(--text-xs);color:var(--ink-faint)}
 
 /* ── link tile ────────────────────────────────────────────────────────────
    Headline-led links (article, Reddit post, repo — everything but the
@@ -91,16 +83,6 @@
   background:var(--scrim);border:1px solid rgba(255,255,255,.5);display:grid;place-items:center;
   color:var(--color-white);backdrop-filter:blur(2px)}
 
-/* code */
-.code-head{display:flex;align-items:center;gap:var(--space-6);padding-bottom:var(--space-2)}
-.code-dot{width:7px;height:7px;border-radius:var(--radius-circle);background:var(--line);border:1px solid var(--line)}
-.code-lang{margin-left:auto}
-.code-block{margin:0;font-family:var(--font-mono);font-size:var(--text-xs);line-height:var(--leading-normal);
-  color:var(--code-ink);background:var(--code-surface);border:1px solid var(--line);
-  border-radius:var(--radius);padding:var(--space-12) var(--space-12);overflow-x:auto;white-space:pre;
-  scrollbar-width:thin}
-.type-code .card-content{gap:var(--space-6)}
-
 /* empty */
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-14);
   height:100%;color:var(--ink-faint)}
@@ -115,9 +97,7 @@
   transition:var(--dur-fast);font-size:var(--text-base);font-weight:var(--fw-heading);letter-spacing:var(--tracking-tight)} /* token-lint-ignore: floating action circle, not a .btn box */
 .fab:hover{transform:translateY(-2px);background:var(--accent-hover);box-shadow:0 26px 58px -14px rgba(0,0,0,.9)}
 /* light mode: --line renders as a dark hairline against the pale bg — drop it on item tiles */
-:root[data-theme="light"] .card-favi,
-:root[data-theme="light"] .item-card.type-note,
-:root[data-theme="light"] .item-card.type-code{border-color:transparent}
+:root[data-theme="light"] .card-favi{border-color:transparent}
 .fab .fab-ico{position:relative;display:grid;place-items:center;margin:-1px 0;width:20px;height:20px}
 
 /* ── capture confirmation ─────────────────────────────────────────────────

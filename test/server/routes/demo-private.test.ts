@@ -17,9 +17,9 @@ const ids = (v: unknown) => records(v).map(n => n.id)
 
 async function library() {
   store._reset()
-  const seed = await store.addNote({ type: 'text', content: 'seed' })
-  const mine = await store.addNote({ type: 'text', content: 'mine', visitor: 'a', pending: true })
-  const theirs = await store.addNote({ type: 'text', content: 'theirs', visitor: 'b', pending: true })
+  const seed = await store.addNote({ type: 'link', content: 'seed' })
+  const mine = await store.addNote({ type: 'link', content: 'mine', visitor: 'a', pending: true })
+  const theirs = await store.addNote({ type: 'link', content: 'theirs', visitor: 'b', pending: true })
   return { seed, mine, theirs }
 }
 
@@ -45,10 +45,10 @@ test('another visitor’s link is a 404, not a leak', async () => {
 
 test('the change feed carries only what the visitor can see', async () => {
   store._reset()
-  await store.addNote({ type: 'text', content: 'seed' })
+  await store.addNote({ type: 'link', content: 'seed' })
   const { rev, bootId } = store.revState()
-  const mine = await store.addNote({ type: 'text', content: 'mine', visitor: 'a', pending: true })
-  await store.addNote({ type: 'text', content: 'theirs', visitor: 'b', pending: true })
+  const mine = await store.addNote({ type: 'link', content: 'mine', visitor: 'a', pending: true })
+  await store.addNote({ type: 'link', content: 'theirs', visitor: 'b', pending: true })
   const { res, sent } = mockRes()
   handleNotesDelta(res, new URL(`http://x/api/notes/delta?since=${rev}&boot=${bootId}`), 'a')
   const body = sent.json()
@@ -58,8 +58,8 @@ test('the change feed carries only what the visitor can see', async () => {
 
 test('an install that is not a demo sees every note, exactly as before', async () => {
   store._reset()
-  await store.addNote({ type: 'text', content: 'one' })
-  await store.addNote({ type: 'text', content: 'two' })
+  await store.addNote({ type: 'link', content: 'one' })
+  await store.addNote({ type: 'link', content: 'two' })
   const { res, sent } = mockRes()
   handleNotes(res, new URL('http://x/api/notes'), null)
   assert.equal(sent.json().total, 2)
@@ -114,8 +114,8 @@ test('a visitor cookie that was not issued here is replaced, not used', () => {
 
 test('Ask only retrieves from what the visitor can see, by keyword and by vector', async () => {
   store._reset()
-  const seed = await store.addNote({ type: 'text', content: 'sourdough starter', embedding: [1, 0] })
-  await store.addNote({ type: 'text', content: 'sourdough loaf', embedding: [1, 0], visitor: 'b' })
+  const seed = await store.addNote({ type: 'link', content: 'sourdough starter', embedding: [1, 0] })
+  await store.addNote({ type: 'link', content: 'sourdough loaf', embedding: [1, 0], visitor: 'b' })
   const keep = visibleTo('a')
   assert.deepEqual(ids(store.hybridSearch(null, 'sourdough', keep)), [seed.id])
   assert.deepEqual(ids(store.hybridSearch([1, 0], '', keep)), [seed.id])

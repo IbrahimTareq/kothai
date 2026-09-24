@@ -1,4 +1,4 @@
-// What a demo visitor may save: links only, five a day each, and a daily total
+// What a demo visitor may save: five links a day each, and a daily total
 // across every visitor. The total is what actually bounds the inference bill —
 // a visitor who clears their cookies is a new visitor with a fresh five.
 import { test, mock, beforeEach } from 'node:test'
@@ -9,9 +9,9 @@ import assert from 'node:assert/strict'
 const saved: string[] = []
 mock.module('../../../server/capture.ts', {
   namedExports: {
-    saveCapture: async ({ text }: { text: string }) => {
-      saved.push(text)
-      return { id: String(saved.length), url: text }
+    saveCapture: async ({ url }: { url: string }) => {
+      saved.push(url)
+      return { id: String(saved.length), url }
     },
   },
 })
@@ -29,13 +29,6 @@ async function save(viewer: string | null, body: Record<string, unknown>) {
 beforeEach(() => {
   saved.length = 0
   demoLimits.save.reset()
-})
-
-test('the demo saves links only', async () => {
-  assert.equal((await save('a', { text: 'a thought' })).json().code, 'demo_links_only')
-  const withImage = await save('a', { text: 'https://example.com', image: 'data:image/png;base64,AAAA' })
-  assert.equal(withImage.json().code, 'demo_links_only')
-  assert.equal(saved.length, 0)
 })
 
 test('a visitor can save five links a day, and then hears why not', async () => {
@@ -58,8 +51,8 @@ test('the daily total caps every visitor together', async () => {
   assert.equal((await save('fresh', { text: 'https://example.com/fresh' })).code, 429)
 })
 
-test('an ordinary install has no limit and takes any note', async () => {
-  for (let i = 0; i < 7; i++) assert.equal((await save(null, { text: `note ${i}` })).code, 200)
+test('an ordinary install has no limit', async () => {
+  for (let i = 0; i < 7; i++) assert.equal((await save(null, { text: `https://example.com/${i}` })).code, 200)
 })
 
 test('what a visitor has left is also capped by the day’s total', async () => {

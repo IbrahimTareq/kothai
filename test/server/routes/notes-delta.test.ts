@@ -9,8 +9,8 @@ const urlOf = (qs: string) => new URL(`http://x/api/notes/delta${qs}`)
 test('rev bumps on add/update/delete and changedSince reports patches', async () => {
   store._reset()
   const { rev: r0 } = store.revState()
-  const a = await store.addNote({ type: 'text', content: 'a' })
-  const b = await store.addNote({ type: 'text', content: 'b' })
+  const a = await store.addNote({ type: 'link', content: 'a' })
+  const b = await store.addNote({ type: 'link', content: 'b' })
   const { rev: r1 } = store.revState()
   assert.ok(r1 > r0)
   await store.updateNote(a.id, { title: 'patched' })
@@ -29,7 +29,7 @@ test('rev bumps on add/update/delete and changedSince reports patches', async ()
 test('batched { persist:false } writes still bump rev', async () => {
   store._reset()
   const { rev: r0 } = store.revState()
-  await store.addNote({ type: 'text', content: 'x' }, { persist: false })
+  await store.addNote({ type: 'link', content: 'x' }, { persist: false })
   await store.flush()
   assert.ok(store.revState().rev > r0)
   assert.equal(store.changedSince(r0).length, 1)
@@ -40,7 +40,7 @@ test('deltaOk refuses a since that predates the tombstone window', async () => {
   assert.equal(store.deltaOk(0), true, 'no discarded tombstones yet')
   // simulate overflow via the exported cap
   const ids = []
-  for (let i = 0; i < 3; i++) ids.push((await store.addNote({ type: 'text', content: String(i) })).id)
+  for (let i = 0; i < 3; i++) ids.push((await store.addNote({ type: 'link', content: String(i) })).id)
   store._setTombstoneCap(2)
   for (const id of ids) await store.deleteNote(id)
   assert.equal(store.deltaOk(0), false, 'rev 0 predates the trimmed window')
@@ -51,7 +51,7 @@ test('deltaOk refuses a since that predates the tombstone window', async () => {
 test('GET /api/notes/delta with matching boot returns notes/deleted', async () => {
   store._reset()
   const { bootId } = store.revState()
-  const a = await store.addNote({ type: 'text', content: 'a' })
+  const a = await store.addNote({ type: 'link', content: 'a' })
   const { rev: r1 } = store.revState()
   await store.updateNote(a.id, { title: 'patched' })
   const { res, sent } = mockRes()
@@ -68,7 +68,7 @@ test('GET /api/notes/delta with matching boot returns notes/deleted', async () =
 
 test('GET /api/notes/delta with mismatched boot returns resync: true', async () => {
   store._reset()
-  await store.addNote({ type: 'text', content: 'a' })
+  await store.addNote({ type: 'link', content: 'a' })
   const { res, sent } = mockRes()
   handleNotesDelta(res, urlOf('?since=0&boot=not-the-real-boot'), null)
   const body = sent.json()
@@ -80,7 +80,7 @@ test('GET /api/notes/delta with mismatched boot returns resync: true', async () 
 
 test('paged /api/notes response includes rev and bootId matching revState', async () => {
   store._reset()
-  await store.addNote({ type: 'text', content: 'a' })
+  await store.addNote({ type: 'link', content: 'a' })
   const { res, sent } = mockRes()
   handleNotes(res, new URL('http://x/api/notes?offset=0&limit=10'), null)
   const state = store.revState()

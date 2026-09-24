@@ -1,6 +1,6 @@
 # The public demo's shared library (server/routes/demo.ts seeds it at boot
-# into an empty library). One save per line, links and notes alike, saved in
-# this order, so the last lines are the first cards a visitor sees.
+# into an empty library). One link per line, saved in this order, so the last
+# lines are the first cards a visitor sees.
 #
 # Every link was checked against Kothai's own fetcher (its user agent, not a
 # browser's): Serious Eats, UNESCO and Atlas Obscura answered it with a bot
@@ -9,20 +9,17 @@ https://en.wikipedia.org/wiki/Spirited_Away
 https://www.youtube.com/watch?v=UF8uR6Z6KLc
 https://en.wikipedia.org/wiki/James_Webb_Space_Telescope
 https://www.nngroup.com/articles/ten-usability-heuristics/
-Book list for the summer: Piranesi, The Remains of the Day, Project Hail Mary, and Four Thousand Weeks.
 https://en.wikipedia.org/wiki/Lisbon
 https://www.bbcgoodfood.com/recipes/best-ever-chocolate-brownies-recipe
 https://www.youtube.com/watch?v=h6fcK_fRYaI
 https://gwern.net/spaced-repetition
 https://www.youtube.com/watch?v=kCc8FmEb1nY
 https://www.youtube.com/watch?v=aircAruvnKk
-Gift ideas for Mum's birthday: a pottery class, a good hand cream, and a proper cookbook, maybe Ottolenghi's Simple.
 https://lawsofux.com/
 https://www.vitsoe.com/us/about/good-design
 https://www.joshwcomeau.com/css/interactive-guide-to-flexbox/
 https://github.com/excalidraw/excalidraw
 https://paulgraham.com/makersschedule.html
-Try a weekly maker morning: no meetings before noon on Wednesdays, after reading Paul Graham on maker's schedules.
 https://paulgraham.com/greatwork.html
 https://xkcd.com/1205/
 https://en.wikipedia.org/wiki/AeroPress
@@ -30,8 +27,6 @@ https://www.youtube.com/watch?v=AI4ynXzkSQo
 https://en.wikipedia.org/wiki/Kyoto
 https://en.wikipedia.org/wiki/T%C5%8Dfuku-ji
 https://www.japan-guide.com/e/e3915.html
-Kyoto plan: Fushimi Inari at 7am before the crowds, Tōfuku-ji for the autumn maples, then Nishiki Market for lunch.
 https://www.kingarthurbaking.com/recipes/classic-sandwich-bread-recipe
 https://www.kingarthurbaking.com/recipes/sourdough-starter-recipe
 https://en.wikipedia.org/wiki/Sourdough
-Sourdough notes: 75% hydration was too slack for this flour. Next time 70%, and a 16 hour cold retard in the fridge.

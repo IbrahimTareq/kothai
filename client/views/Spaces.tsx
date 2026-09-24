@@ -49,10 +49,7 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
   }
 
   const coverFor = (c: Collection): string | null => {
-    for (const it of c.covers ?? []) {
-      const src = it.thumb || it.img
-      if (src) return src
-    }
+    for (const it of c.covers ?? []) if (it.thumb) return it.thumb
     return null
   }
 

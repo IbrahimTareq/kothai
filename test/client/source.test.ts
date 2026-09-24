@@ -16,13 +16,12 @@ test('server sourceKey agrees with client SOURCES on every predicate', () => {
     { url: 'https://www.tiktok.com/@u/video/1', type: 'video' },
     { url: 'https://reddit.com/r/x', type: 'link' },
     { url: 'https://example.com/a', type: 'link' },
-    { url: null, type: 'text' },
   ]
   for (const f of fixtures) {
     const item: UIItem = {
       id: 'x',
       ts: 0,
-      type: f.type === 'text' ? 'note' : f.type,
+      type: f.type,
       tags: [],
       pending: false,
       url: f.url,
@@ -41,7 +40,6 @@ test('server sourceKey agrees with client SOURCES on every predicate', () => {
       tags: [],
       content: '',
       url: f.url,
-      image: null,
     }
     const clientKey = SOURCES.find(s => s.test(item))?.key ?? null
     assert.equal(sourceKey(note), clientKey, String(f.url))
@@ -55,20 +53,19 @@ test('server sourceKey agrees with client SOURCES on every predicate', () => {
 // run, and a link with no picture stays pending and thumbnail-less forever.
 
 test('a freshly imported note, before its metadata is fetched, is awaiting content', () => {
-  assert.equal(isAwaitingContent({ pending: true, metaFetched: false, thumb: null, img: null }), true)
+  assert.equal(isAwaitingContent({ pending: true, metaFetched: false, thumb: null }), true)
 })
 
 test('metadata already attempted means this IS the final content, however bare', () => {
   // The case that broke it: pending (the model pass is still queued) but the
   // fetch already ran and found no picture. Nothing more is coming.
-  assert.equal(isAwaitingContent({ pending: true, metaFetched: true, thumb: null, img: null }), false)
+  assert.equal(isAwaitingContent({ pending: true, metaFetched: true, thumb: null }), false)
 })
 
 test('a note that already has a picture is never a skeleton, even while pending', () => {
-  assert.equal(isAwaitingContent({ pending: true, metaFetched: false, thumb: '/uploads/a.jpg', img: null }), false)
-  assert.equal(isAwaitingContent({ pending: true, metaFetched: false, thumb: null, img: '/uploads/b.jpg' }), false)
+  assert.equal(isAwaitingContent({ pending: true, metaFetched: false, thumb: '/uploads/a.jpg' }), false)
 })
 
 test('a settled note is never a skeleton', () => {
-  assert.equal(isAwaitingContent({ pending: false, metaFetched: false, thumb: null, img: null }), false)
+  assert.equal(isAwaitingContent({ pending: false, metaFetched: false, thumb: null }), false)
 })

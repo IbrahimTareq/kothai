@@ -8,7 +8,7 @@
 // already exactly what `p` below sets, so they drop straight in and take the
 // app's lighter default stroke weight.
 import type { ReactElement, SVGProps } from 'react'
-import type { Category, UIType } from '../types'
+import type { Category, NoteType } from '../types'
 
 interface IconProps {
   name: string
@@ -72,19 +72,6 @@ export function Icon({ name, size = 18, stroke = 1.6 }: IconProps): ReactElement
         <svg {...p} aria-hidden="true">
           <rect x="3.5" y="5.5" width="17" height="13" rx="2.5" />
           <path d="M10.5 9.5l4 2.5-4 2.5z" fill="currentColor" stroke="none" />
-        </svg>
-      )
-    case 'note':
-      return (
-        <svg {...p} aria-hidden="true">
-          <path d="M6 3.5h8l4 4V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z" />
-          <path d="M13.5 3.5V8h4.5M8.5 13h7M8.5 16.5h5" />
-        </svg>
-      )
-    case 'code':
-      return (
-        <svg {...p} aria-hidden="true">
-          <path d="M9 8l-4 4 4 4M15 8l4 4-4 4" />
         </svg>
       )
     // open book — the source mark on a link tile that has no platform behind it
@@ -338,13 +325,10 @@ export function Icon({ name, size = 18, stroke = 1.6 }: IconProps): ReactElement
 // Category registry. `core` and `ask` are modes, not storable types.
 export const CATEGORIES: Category[] = [
   { id: 'link', label: 'Links', glyph: 'link' },
-  { id: 'image', label: 'Images', glyph: 'image' },
   { id: 'video', label: 'Videos', glyph: 'video' },
-  { id: 'note', label: 'Notes', glyph: 'note' },
-  { id: 'code', label: 'Code', glyph: 'code' },
 ]
 
-export const CAT: Record<UIType, Category> = Object.fromEntries(CATEGORIES.map(c => [c.id, c])) as Record<
-  UIType,
+export const CAT: Record<NoteType, Category> = Object.fromEntries(CATEGORIES.map(c => [c.id, c])) as Record<
+  NoteType,
   Category
 >

@@ -159,10 +159,9 @@ export default function App() {
   // null on success (the modal closes and the button flashes "Added") or to
   // the failure message, which the modal shows inline over the still-filled
   // input — the one place the user can actually retry from.
-  const saveCapture = async (raw: string, img: string | null): Promise<string | null> => {
-    if (!raw && !img) return 'Nothing to save.'
+  const saveCapture = async (raw: string): Promise<string | null> => {
     try {
-      const { note } = await API.save({ text: raw, image: img })
+      const { note } = await API.save({ text: raw })
       notes.insertLocal(note)
       flashCaptured()
       return null
@@ -342,7 +341,7 @@ export default function App() {
     key: c.id as string,
     label: c.label,
     glyph: c.glyph,
-    count: notes.facets.types[c.id === 'note' ? 'text' : c.id] || 0,
+    count: notes.facets.types[c.id] || 0,
   })).filter(c => c.count > 0)
   const sourceChips = SOURCES.map(s => ({
     key: s.key,

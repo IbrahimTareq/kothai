@@ -65,7 +65,7 @@ export function provider(partial: Partial<Provider> = {}): Provider {
     // without an `error` is not a rejection any caller can render.
     validateModel: () => ({ ok: true }),
 
-    classify: async () => ({ type: '', category: '', title: '', summary: '', tags: [] }),
+    classify: async () => ({ type: 'link', category: '', title: '', summary: '', tags: [] }),
     embedText: async () => [],
     describeImage: async () => '',
     answer: async () => '',

@@ -6,7 +6,7 @@ import type { UIItem } from '../../client/types.ts'
 const item = (id: string, o: Partial<UIItem> = {}): UIItem => ({
   id,
   ts: 0,
-  type: 'note',
+  type: 'link',
   tags: [],
   pending: false,
   ...o,
@@ -128,7 +128,7 @@ test('applyDelta keeps identity for JSON-equal patches and respects the query fi
   const held = p.slots()[0]
   p.applyDelta({ notes: [item('n0', { ts: 300 })], deleted: [], pendingTotal: 0 }, {})
   assert.equal(p.slots()[0], held)
-  p.applyDelta({ notes: [item('nomatch', { ts: 999, type: 'video' })], deleted: [], pendingTotal: 0 }, { type: 'text' })
+  p.applyDelta({ notes: [item('nomatch', { ts: 999, type: 'video' })], deleted: [], pendingTotal: 0 }, { type: 'link' })
   assert.equal(p.total, 1, 'prepend must pass matchesLocal for the active query')
 })
 
@@ -266,7 +266,7 @@ test('matchesLocal mirrors the server filter for optimistic inserts', () => {
   const reel = item('r', { type: 'video', url: 'https://www.instagram.com/reel/A/', host: 'instagram.com' })
   assert.ok(matchesLocal(reel, {}))
   assert.ok(matchesLocal(reel, { type: 'video' }))
-  assert.ok(!matchesLocal(reel, { type: 'text' }))
+  assert.ok(!matchesLocal(reel, { type: 'link' }))
   assert.ok(matchesLocal(reel, { source: 'reels' }))
   assert.ok(!matchesLocal(item('t', { title: 'hello' }), { q: 'xyz' }))
   assert.ok(matchesLocal(item('t', { title: 'hello world' }), { q: 'world' }))
@@ -290,10 +290,10 @@ test('matchesLocal never optimistically matches a collection-scoped query', () =
 
 test('matchesLocal: a note matches if it is ANY of the selected types', () => {
   const vid = { id: 'a', type: 'video', pending: false, ts: 0, tags: [] } as UIItem
-  const note = { id: 'b', type: 'note', pending: false, ts: 0, tags: [] } as UIItem
-  assert.equal(matchesLocal(vid, { type: 'video,text' }), true)
-  assert.equal(matchesLocal(note, { type: 'video,text' }), true, 'note maps to the server type "text"')
-  assert.equal(matchesLocal(vid, { type: 'link,text' }), false)
+  const link = { id: 'b', type: 'link', pending: false, ts: 0, tags: [] } as UIItem
+  assert.equal(matchesLocal(vid, { type: 'video,link' }), true)
+  assert.equal(matchesLocal(link, { type: 'video,link' }), true)
+  assert.equal(matchesLocal(vid, { type: 'link' }), false)
 })
 
 test('matchesLocal: a note matches if it is from ANY of the selected sources', () => {
@@ -322,7 +322,7 @@ test('matchesLocal: facets AND together', () => {
     tags: [],
   } as UIItem
   assert.equal(matchesLocal(tt, { source: 'tiktok', type: 'video' }), true)
-  assert.equal(matchesLocal(tt, { source: 'tiktok', type: 'text' }), false)
+  assert.equal(matchesLocal(tt, { source: 'tiktok', type: 'link' }), false)
 })
 
 test('matchesLocal: unavailable combines with the rest, and is hidden by default', () => {

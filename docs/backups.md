@@ -43,7 +43,7 @@ This uses SQLite's `VACUUM INTO`, which reads one consistent snapshot and writes
 
 Two things to know:
 
-- **It's the database only.** `data/uploads/` is not in it. Images you pasted or dropped into a note exist nowhere else, so keep a copy of that directory too.
+- **It's the database only.** `data/uploads/` is not in it. Thumbnails and carousel slides live there, so keep a copy of that directory too.
 - It briefly needs free disk space equal to the database's size, and refuses while an import is running.
 
 To restore, stop the container and put the downloaded file in place of `data/kothai.db`, deleting any `kothai.db-wal` and `kothai.db-shm` beside it.

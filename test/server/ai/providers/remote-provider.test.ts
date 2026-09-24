@@ -155,7 +155,7 @@ test('classify requests json_schema and normalises the result', async () => {
   }
   const p = make()
   await p.init()
-  const out = await p.classify({ text: 'https://x.com', hasImage: false, isUrl: true, now: 'now' })
+  const out = await p.classify({ text: 'https://x.com', now: 'now' })
   assert.equal(record(seen.response_format).type, 'json_schema')
   assert.equal(seen.model, 'llama3.2:3b')
   assert.equal(out.type, 'link')
@@ -170,14 +170,14 @@ test('classify retries without json_schema when the endpoint rejects it', async 
       res.writeHead(400, { 'content-type': 'application/json' })
       return res.end(JSON.stringify({ error: 'response_format unsupported' }))
     }
-    okJson(res, chatReply(JSON.stringify({ type: 'text', category: 'C', title: 'T', summary: 'S', tags: ['x'] })))
+    okJson(res, chatReply(JSON.stringify({ type: 'link', category: 'C', title: 'T', summary: 'S', tags: ['x'] })))
   }
   const p = make()
   await p.init()
-  const out = await p.classify({ text: 'hi', hasImage: false, isUrl: false, now: 'now' })
+  const out = await p.classify({ text: 'hi', now: 'now' })
   assert.equal(bodies.length, 2)
   assert.ok(!bodies[1].response_format, 'retry must drop response_format')
-  assert.equal(out.type, 'text')
+  assert.equal(out.type, 'link')
 })
 
 test('classify json_schema 400 does not open the circuit when plain retry succeeds', async () => {
@@ -188,11 +188,11 @@ test('classify json_schema 400 does not open the circuit when plain retry succee
       res.writeHead(400, { 'content-type': 'application/json' })
       return res.end(JSON.stringify({ error: 'response_format unsupported' }))
     }
-    okJson(res, chatReply(JSON.stringify({ type: 'text', category: 'C', title: 'T', summary: 'S', tags: [] })))
+    okJson(res, chatReply(JSON.stringify({ type: 'link', category: 'C', title: 'T', summary: 'S', tags: [] })))
   }
   const p = make()
   await p.init()
-  await p.classify({ text: 'hi', hasImage: false, isUrl: false, now: 'now' })
+  await p.classify({ text: 'hi', now: 'now' })
   assert.equal(p.available(), true, 'circuit must stay closed after schema probe 400 + successful retry')
   assert.equal(p.statusSnapshot().aggregate.state, 'ready')
 })
@@ -210,7 +210,7 @@ test('classify opens the circuit on a genuine failure, not just on the plain-pro
   })
   await dead.init()
   for (let i = 0; i < 5; i++) {
-    await dead.classify({ text: 'hi', hasImage: false, isUrl: false, now: 'now' }).catch(() => {})
+    await dead.classify({ text: 'hi', now: 'now' }).catch(() => {})
   }
   assert.equal(dead.available(), false, 'circuit must open after repeated genuine classify failures')
 })
@@ -219,7 +219,7 @@ test('classify falls back to heuristics when output is unparseable after the ret
   routes['/chat/completions'] = (_req, res) => okJson(res, chatReply('sorry, I cannot'))
   const p = make()
   await p.init()
-  const out = await p.classify({ text: 'https://youtube.com/watch?v=1', hasImage: false, isUrl: true, now: 'now' })
+  const out = await p.classify({ text: 'https://youtube.com/watch?v=1', now: 'now' })
   assert.equal(out.type, 'video', 'heuristicType must supply the type')
   assert.equal(out.category, 'General')
 })
@@ -336,14 +336,14 @@ test('a model one role cannot use fails that role alone, not the whole endpoint'
         JSON.stringify({ error: 'Multimodal data provided, but model does not support multimodal requests.' }),
       )
     }
-    okJson(res, chatReply(JSON.stringify({ type: 'text', category: 'C', title: 'T', summary: 'S', tags: ['x'] })))
+    okJson(res, chatReply(JSON.stringify({ type: 'link', category: 'C', title: 'T', summary: 'S', tags: ['x'] })))
   }
   routes['/embeddings'] = (_req, res) => okJson(res, { data: [{ embedding: [0.1] }] })
   const p = make({ llm: 'llama3.2:3b', embed: 'nomic-embed-text', vision: 'llama3.2:3b-as-vision' })
   await p.init()
 
   await p.describeImage({ absPath: file }).catch(() => {})
-  const out = await p.classify({ text: 'hi', hasImage: false, isUrl: false, now: 'now' })
+  const out = await p.classify({ text: 'hi', now: 'now' })
   assert.deepEqual(out.tags, ['x'], 'classify must still run after a vision 400')
   assert.deepEqual(await p.embedText('hi'), [0.1], 'embed must still run after a vision 400')
 

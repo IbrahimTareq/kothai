@@ -20,30 +20,23 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 // ---- API handlers ------------------------------------------------------
 // Every save returns instantly with heuristic metadata (regex type, derived
-// title) — the AI pipeline (vision caption for images, then LLM classify +
-// embed) runs in the background and patches the note when done (`pending`
-// flags the card). A failure anywhere just leaves the heuristic version; the
-// note itself is never lost.
+// title) — link metadata, then LLM classify + embed, run in the background
+// and patch the note when done (`pending` flags the card). A failure anywhere
+// just leaves the heuristic version; the note itself is never lost.
 // `viewer` is the demo visitor (routes/demo.ts), null on an ordinary install.
 export async function handleSave(req: IncomingMessage, res: ServerResponse, viewer: string | null): Promise<void> {
   const body = await readBody(req)
-  const fields = isRecord(body) ? body : {}
-  const text = (fields.text || '').toString().trim()
-  const imageData = fields.image // optional data URL
-  if (!text && !imageData) return json(res, 400, { error: 'Provide text and/or an image.' })
-  if (viewer) {
-    // Links only on the demo: a link is what it exists to show, while a typed
-    // note or an uploaded image would put whatever a stranger chose on the
-    // operator's disk and through the vision model.
-    if (imageData || !ai.isLikelyUrl(text)) {
-      return json(res, 400, { error: 'The demo saves links only.', code: 'demo_links_only' })
-    }
-    if (!demoLimits.save.take(viewer)) {
-      return json(res, 429, { error: 'That’s all the demo saves in a day. Try again tomorrow.', code: 'demo_limit' })
-    }
+  const url = ((isRecord(body) ? body.text : '') || '').toString().trim()
+  // Links only. The client's detect chip applies this same test, so this is
+  // reached only by a client that skipped it.
+  if (!ai.isLikelyUrl(url)) {
+    return json(res, 400, { error: 'Kothai saves links: paste one starting with https://', code: 'links_only' })
+  }
+  if (viewer && !demoLimits.save.take(viewer)) {
+    return json(res, 429, { error: 'That’s all the demo saves in a day. Try again tomorrow.', code: 'demo_limit' })
   }
 
-  const note = await saveCapture({ text, image: typeof imageData === 'string' ? imageData : null, visitor: viewer })
+  const note = await saveCapture({ url, visitor: viewer })
   json(res, 200, { note, aiClassified: false })
 }
 

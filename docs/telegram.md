@@ -8,11 +8,11 @@ Message a bot from your phone and it becomes a note. Kothai long-polls Telegram'
 2. Paste the token into Settings → **TELEGRAM** and click **Connect**.
 3. Restart Kothai. Polling only starts at boot, so the bot won't respond to anything until you do.
 4. Settings now shows a six-character pairing code. Send exactly that, as a message, to your bot.
-5. The bot replies "🔗 Connected. Anything you send here is saved to Kothai." — from then on, anything you send it is saved.
+5. The bot replies "🔗 Connected. Any link you send here is saved to Kothai." — from then on, any link you send it is saved.
 
 ## What gets saved
 
-Links, plain text and photos. Anything else — a file, video, voice note, sticker or GIF — is dropped rather than saved, and once your chat is bound the bot tells you so: it saves the caption if you attached one and replies that the attachment itself didn't make it. A photo that fails to download gets the same treatment — the caption is saved, and the bot says the photo didn't come through.
+Links only: a message whose whole text is one `http(s)://` link. Anything else — plain text, a photo, a file, video, voice note, sticker or GIF — is refused, and once your chat is bound the bot tells you so. A link sent as the caption of an attachment is saved, and the bot replies that the attachment itself was dropped.
 
 ## Why the pairing code
 

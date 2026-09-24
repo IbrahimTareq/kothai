@@ -201,8 +201,10 @@ test('an empty library records the recipe without queueing a sweep over nothing'
 })
 
 test('notes enriched normally record the recipe they were embedded under', async () => {
-  reset([{ ...note({ id: 'n1', content: 'plain text note', type: 'text' }), ai: {} }])
-  await enrich.queueEnrich('n1', { absPath: null, text: 'plain text note', isUrl: false, hasImage: false })
+  // Metadata already fetched, so enrichNote reuses it instead of going to the
+  // network — this file mocks no fetcher.
+  reset([{ ...note({ id: 'n1', content: 'https://example.com/a', metaFetched: true, siteTitle: 'A' }), ai: {} }])
+  await enrich.queueEnrich('n1', 'https://example.com/a')
   assert.ok(notes[0].ai)
   assert.equal(notes[0].ai.embed, true)
   assert.equal(notes[0].ai.embedRecipe, EMBED_RECIPE)

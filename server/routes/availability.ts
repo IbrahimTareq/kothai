@@ -148,7 +148,7 @@ export async function handleAvailabilityRemove(req: IncomingMessage, res: Server
     await collections.deleteItemEverywhere(note.id)
     // Same cleanup handleDeleteNote does — an orphaned thumbnail on disk
     // outlives the note otherwise.
-    for (const f of [note.image, note.thumb, ...(note.slides || [])]) {
+    for (const f of [note.thumb, ...(note.slides || [])]) {
       if (f && typeof f === 'string' && f.startsWith('/uploads/')) {
         unlink(path.join(UPLOAD_DIR, path.basename(f))).catch(() => {})
       }

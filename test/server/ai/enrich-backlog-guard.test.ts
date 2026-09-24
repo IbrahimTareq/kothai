@@ -22,7 +22,6 @@ test('queueBacklog enqueues nothing and reports 0 when the provider is unavailab
       isLikelyUrl: () => false,
       heuristicType: () => 'text',
       deriveTitle: () => '',
-      extractUrl: () => null,
       FeatureDisabledError: class extends Error {},
     },
   })

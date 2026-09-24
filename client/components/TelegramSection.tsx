@@ -67,8 +67,8 @@ export function TelegramSection() {
       sub={
         <>
           Message a bot to save from your phone. Create one by messaging <code>@BotFather</code> on Telegram and sending
-          it <code>/newbot</code>. Only links, plain text and photos are saved — other attachments (files, video, voice
-          notes, stickers) are dropped. Whatever you send passes through Telegram's servers before it reaches Kothai.
+          it <code>/newbot</code>. Only links are saved — text, photos and other attachments are refused, and the bot
+          says so. Whatever you send passes through Telegram's servers before it reaches Kothai.
         </>
       }
     >

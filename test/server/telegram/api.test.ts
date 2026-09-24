@@ -8,7 +8,7 @@
 // "captures sometimes arrive twice".
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { getUpdates, sendMessage, fetchPhotoDataUrl } from '../../../server/telegram/api.ts'
+import { getUpdates, sendMessage } from '../../../server/telegram/api.ts'
 
 function stubFetch(handler: (url: string, init?: RequestInit) => Response | Promise<Response>) {
   const original = globalThis.fetch
@@ -67,41 +67,4 @@ test('sendMessage: POSTs the chat id and text', async t => {
 test('sendMessage: a rejected fetch does not throw', async t => {
   t.after(stubFetch(() => Promise.reject(new Error('network down'))))
   await assert.doesNotReject(sendMessage('TOKEN', 42, 'saved'))
-})
-
-test('fetchPhotoDataUrl: resolves the file path then returns a data URL saveImage accepts', async t => {
-  t.after(
-    stubFetch(url => {
-      if (url.includes('getFile')) return jsonRes({ ok: true, result: { file_path: 'photos/a.jpg' } })
-      return new Response(new Uint8Array([1, 2, 3]), { status: 200 })
-    }),
-  )
-  const dataUrl = await fetchPhotoDataUrl('TOKEN', 'FILE')
-  assert.match(dataUrl ?? '', /^data:image\/jpeg;base64,/)
-})
-
-test('fetchPhotoDataUrl: a file with no path yields null rather than a broken note', async t => {
-  t.after(stubFetch(() => jsonRes({ ok: true, result: {} })))
-  const dataUrl = await fetchPhotoDataUrl('TOKEN', 'FILE')
-  assert.equal(dataUrl, null)
-})
-
-// Telegram's file_path download URLs expire, and Task 5's poll loop does not
-// advance its offset when handling an update throws — so a throw here would
-// have Telegram redeliver the same update, and the same throw, forever.
-test('fetchPhotoDataUrl: a network failure resolving the file path yields null instead of throwing', async t => {
-  t.after(stubFetch(() => Promise.reject(new Error('DNS lookup failed'))))
-  const dataUrl = await fetchPhotoDataUrl('TOKEN', 'FILE')
-  assert.equal(dataUrl, null)
-})
-
-test('fetchPhotoDataUrl: a network failure downloading the file yields null instead of throwing', async t => {
-  t.after(
-    stubFetch(url => {
-      if (url.includes('getFile')) return jsonRes({ ok: true, result: { file_path: 'photos/a.jpg' } })
-      return Promise.reject(new Error('file_path expired'))
-    }),
-  )
-  const dataUrl = await fetchPhotoDataUrl('TOKEN', 'FILE')
-  assert.equal(dataUrl, null)
 })

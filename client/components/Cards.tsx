@@ -50,25 +50,6 @@ function LoadingCard({ item, overlay }: { item: UIItem; overlay?: ReactElement }
   )
 }
 
-function ImageThumb({ item, overlay }: { item: UIItem; overlay?: ReactElement }) {
-  if (item.img) {
-    return (
-      <div className="img-thumb real">
-        <img src={item.img} alt={item.name || 'image'} loading="lazy" />
-        <div className="img-scan"></div>
-        {overlay}
-      </div>
-    )
-  }
-  return (
-    <div className="img-thumb" style={{ background: imgGradient(tileSeed(item)), height: phHeight(tileSeed(item)) }}>
-      <div className="img-scan"></div>
-      <Icon name="image" size={22} />
-      {overlay}
-    </div>
-  )
-}
-
 // The picture-led card, kept for links whose content IS the picture (Instagram
 // posts, TikTok). Unchanged from the card every link used to get.
 function MediaLinkCard({ item, overlay }: { item: UIItem; overlay?: ReactElement }): ReactElement {
@@ -138,7 +119,7 @@ function LinkTile({ item, overlay }: { item: UIItem; overlay?: ReactElement }): 
 
 // `overlay` (brand badge + action buttons) is placed INSIDE the thumbnail when
 // there is one, so it sits over the image (like the top-left brand badge); for
-// media-less cards (note/code/faviconless link) it falls back to card level.
+// a media-less card (a faviconless link) it falls back to card level.
 export function CardInner({ item, overlay }: { item: UIItem; overlay?: ReactElement }): ReactElement {
   const it = item
   switch (it.type) {
@@ -147,17 +128,6 @@ export function CardInner({ item, overlay }: { item: UIItem; overlay?: ReactElem
       // link — it keeps the picture-led card (see isMediaFirst).
       if (isMediaFirst(it)) return <MediaLinkCard item={it} overlay={overlay} />
       return <LinkTile item={it} overlay={overlay} />
-    case 'image':
-      return (
-        <Fragment>
-          <ImageThumb item={it} overlay={overlay} />
-          {it.name && (
-            <div className="card-cap">
-              <div className="card-sub mono">{it.name}</div>
-            </div>
-          )}
-        </Fragment>
-      )
     case 'video':
       if (isAwaitingContent(it)) return <LoadingCard item={it} overlay={overlay} />
       return (
@@ -185,33 +155,6 @@ export function CardInner({ item, overlay }: { item: UIItem; overlay?: ReactElem
               <Icon name="video" size={11} /> {it.siteName || it.host}
             </div>
           </div>
-        </Fragment>
-      )
-    case 'note':
-      return (
-        <Fragment>
-          {overlay}
-          <div className="card-body">{it.text}</div>
-        </Fragment>
-      )
-    case 'code':
-      return (
-        <Fragment>
-          {overlay}
-          <div className="code-head mono">
-            <span className="code-dot"></span>
-            <span className="code-dot"></span>
-            <span className="code-dot"></span>
-            <span className="code-lang eyebrow">{it.lang}</span>
-          </div>
-          <pre className="code-block mono">{it.text}</pre>
-        </Fragment>
-      )
-    default:
-      return (
-        <Fragment>
-          {overlay}
-          <div className="card-body">{it.text}</div>
         </Fragment>
       )
   }
@@ -331,9 +274,9 @@ export function ItemCard({
 // The one line of small print under a tile: what it is, where it came from,
 // when it was saved. Replaces the badge/number/timestamp header row.
 //
-// Only a real origin is named. sourceLabel falls back to "Web", which on a
-// pasted note or an uploaded image is a fact about nothing — and at this width
-// a word of filler is what pushes the date off the end of the line.
+// Only a real origin is named. sourceLabel falls back to "Web", which on an
+// item with no host is a fact about nothing — and at this width a word of
+// filler is what pushes the date off the end of the line.
 function tileMeta(it: UIItem): string {
   const kind = CAT[it.type].label.replace(/s$/, '')
   const from = it.siteName || (it.host ? sourceLabel(it) : null)
@@ -341,7 +284,6 @@ function tileMeta(it: UIItem): string {
 }
 
 function tileTitle(it: UIItem): string {
-  if (it.type === 'image') return it.name || 'Image'
   return it.title || it.host || CAT[it.type].label.replace(/s$/, '')
 }
 
@@ -349,14 +291,14 @@ const norm = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim()
 
 export function PreviewCard({ item, n, onJump }: { item: UIItem; n: number; onJump: (item: UIItem) => void }) {
   const it = item
-  const media = it.type === 'image' ? it.img || it.thumb : it.thumb
-  // Notes and code have no picture, so the slot the media would occupy holds
-  // the text itself — the tile keeps its footprint instead of collapsing.
-  const excerpt = !media ? (it.text || it.note || it.summary || '').trim() : ''
+  const media = it.thumb
+  // A link with no picture has its description in the slot the media would
+  // occupy — the tile keeps its footprint instead of collapsing.
+  const excerpt = !media ? (it.note || it.summary || '').trim() : ''
   const title = tileTitle(it)
-  // A short note's server-written title is usually the note read back verbatim,
-  // so printing both put the same sentence on the tile twice. The excerpt is
-  // the fuller of the two, so it is the one that stays.
+  // An excerpt that opens with the title would print the same sentence on the
+  // tile twice. The excerpt is the fuller of the two, so it is the one that
+  // stays.
   const titled = !(excerpt && norm(excerpt).startsWith(norm(title)))
   const jump = () => onJump(it)
   return (
@@ -418,21 +360,13 @@ export function PreviewCard({ item, n, onJump }: { item: UIItem; n: number; onJu
 // UUID, which was the widest thing on the row and the least readable.
 export function CitedCard({ item, onJump }: { item: UIItem; onJump: (item: UIItem) => void }) {
   const it = item
-  const summary =
-    it.type === 'link'
-      ? it.title
-      : it.type === 'image'
-        ? it.name
-        : it.type === 'video'
-          ? it.title
-          : (it.text || '').slice(0, 90) + ((it.text || '').length > 90 ? '…' : '')
   return (
     <button className="cited" onClick={() => onJump(it)}>
       <span className="cited-icon" data-type={it.type}>
         <Icon name={CAT[it.type].glyph} size={14} />
       </span>
       <span className="cited-main">
-        <span className="cited-summary">{summary}</span>
+        <span className="cited-summary">{it.title}</span>
         <span className="cited-meta mono">{tileMeta(it)}</span>
       </span>
       <span className="cited-go">

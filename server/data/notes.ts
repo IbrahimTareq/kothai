@@ -205,14 +205,13 @@ export async function addNote(
   const record: NoteRecord = {
     id: randomUUID(),
     createdAt: new Date().toISOString(),
-    type: 'text',
+    type: 'link',
     category: 'General',
     title: '',
     summary: '',
     tags: [],
     content: '',
     url: null,
-    image: null,
     embedding: null,
     ...note,
   }

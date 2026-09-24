@@ -9,7 +9,7 @@ const urlOf = (qs: string) => new URL(`http://x/api/notes${qs}`)
 
 test('paged /api/notes returns page, total, facets, pendingTotal', async () => {
   store._reset()
-  for (let i = 0; i < 5; i++) await store.addNote({ type: 'text', content: `n${i}` })
+  for (let i = 0; i < 5; i++) await store.addNote({ type: 'link', content: `n${i}` })
   await store.addNote({ type: 'video', url: 'https://www.instagram.com/reel/Z/', pending: true })
   const { res, sent } = mockRes()
   handleNotes(res, urlOf('?offset=0&limit=3'), null)
@@ -26,18 +26,18 @@ test('paged /api/notes returns page, total, facets, pendingTotal', async () => {
 
 test('filters compose and facets ignore type/source narrowing', async () => {
   store._reset()
-  await store.addNote({ type: 'text', content: 'makkah diary' })
+  await store.addNote({ type: 'link', content: 'makkah diary' })
   await store.addNote({ type: 'video', url: 'https://www.instagram.com/reel/Y/', siteDesc: 'makkah' })
   const { res, sent } = mockRes()
   handleNotes(res, urlOf('?q=makkah&type=video&limit=10'), null)
   const body = sent.json()
   assert.equal(body.total, 1, 'total reflects the fully filtered set')
-  assert.deepEqual(record(body.facets).types, { text: 1, video: 1 }, 'facets count the q-set only')
+  assert.deepEqual(record(body.facets).types, { link: 1, video: 1 }, 'facets count the q-set only')
 })
 
 test('no-param request is paged with defaults (offset 0, limit 120)', async () => {
   store._reset()
-  for (let i = 0; i < 3; i++) await store.addNote({ type: 'text', content: String(i) })
+  for (let i = 0; i < 3; i++) await store.addNote({ type: 'link', content: String(i) })
   const { res, sent } = mockRes()
   handleNotes(res, urlOf(''), null)
   const body = sent.json()
@@ -51,9 +51,9 @@ test('no-param request is paged with defaults (offset 0, limit 120)', async () =
 test('?collection=<id> narrows to only the notes added to that collection', async () => {
   store._reset()
   collections._reset()
-  const a = await store.addNote({ type: 'text', content: 'in the collection' })
-  const b = await store.addNote({ type: 'text', content: 'also in the collection' })
-  await store.addNote({ type: 'text', content: 'not in the collection' })
+  const a = await store.addNote({ type: 'link', content: 'in the collection' })
+  const b = await store.addNote({ type: 'link', content: 'also in the collection' })
+  await store.addNote({ type: 'link', content: 'not in the collection' })
 
   const c = await collections.create({ name: 'Test Space' })
   await collections.addItem(c.id, a.id)
@@ -77,16 +77,15 @@ test('?collection=<id> narrows to only the notes added to that collection', asyn
 
 test('deleting a note that owns uploaded files still removes the note', async () => {
   // The single-note delete path cleans up the note's uploads on the way out.
-  // No fixture here ever carried an image, so that block never ran and a
+  // No fixture here ever carried an upload, so that block never ran and a
   // broken UPLOAD_DIR read inside it stayed invisible — the note vanishes from
   // the store first, so a throw there is reported to the user as a 500 on a
   // delete that already happened.
   store._reset()
   collections._reset()
   const note = await store.addNote({
-    type: 'image',
+    type: 'link',
     content: 'has uploads',
-    image: '/uploads/notes-route-image.png',
     thumb: '/uploads/notes-route-thumb.png',
     slides: ['/uploads/notes-route-slide-1.png'],
   })

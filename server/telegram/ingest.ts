@@ -4,11 +4,11 @@
 // no network and no database — it is the bot's entire access control and the
 // one thing here that must not regress.
 import type { TelegramUpdate } from './api.ts'
+import { isLikelyUrl } from '../ai/normalise.ts'
 
 export interface IngestIO {
-  saveCapture: (c: { text: string; image?: string | null }) => Promise<{ id: string }>
+  saveCapture: (c: { url: string }) => Promise<{ id: string }>
   sendMessage: (chatId: number, text: string) => Promise<void>
-  fetchPhotoDataUrl: (fileId: string) => Promise<string | null>
   // Also clears the persisted pairing code, so a code cannot be replayed to
   // bind a second chat once the first has claimed it. Not obvious from the
   // name alone — callers implementing this must do both writes.
@@ -20,24 +20,6 @@ export interface IngestIO {
   // cannot be persisted is not something to paper over with a "connected"
   // reply that turns out to be a lie.
   bind: (chatId: number | null) => void
-}
-
-// The bound chat is already authenticated, so — unlike the silence rule
-// below, which exists purely so a stranger probing the bot learns nothing —
-// telling it the truth costs nothing. Returns null when there is nothing to
-// report: a save went through clean, or the update had no attachment at all.
-function droppedAttachmentReply(saved: boolean, unsupportedType: boolean, photoFailed: boolean): string | null {
-  if (unsupportedType) {
-    return saved
-      ? '⚠️ Saved the caption. Only links, text and photos are supported — other files are dropped.'
-      : "🚫 Didn't save that — only links, text and photos are supported."
-  }
-  if (photoFailed) {
-    return saved
-      ? '⚠️ Saved the caption, but the photo failed to download.'
-      : "❌ Couldn't download that photo — nothing saved."
-  }
-  return null
 }
 
 export async function ingestUpdate(
@@ -62,7 +44,7 @@ export async function ingestUpdate(
   if (state.boundChatId === null) {
     if (!state.pairingCode || text !== state.pairingCode) return
     io.bind(chatId)
-    await io.sendMessage(chatId, '🔗 Connected. Anything you send here is saved to Kothai.')
+    await io.sendMessage(chatId, '🔗 Connected. Any link you send here is saved to Kothai.')
     return
   }
 
@@ -70,19 +52,15 @@ export async function ingestUpdate(
   // a reply — even a refusal — confirms the bot is live to whoever is probing.
   if (chatId !== state.boundChatId) return
 
-  // Telegram sends one entry per rendered size, ascending. The last is the
-  // largest, which is the one worth captioning.
-  const largest = message.photo?.[message.photo.length - 1]
-  const image = largest ? await io.fetchPhotoDataUrl(largest.file_id) : null
-  const photoFailed = Boolean(largest) && !image
-  // Only text, captions and a compressed `photo` are ever saved. A PDF,
-  // video, voice note, sticker or a photo sent "as a file" (uncompressed —
-  // Telegram delivers that as `document`, not `photo`) arrives here as none
-  // of those, and used to be dropped with no reply at all — which, per
-  // docs/telegram.md's "if nothing happens" guidance, reads to the owner as
-  // "not bound, or wrong code" rather than "not supported".
-  const unsupportedType = Boolean(
-    message.document ||
+  // The bound chat is already authenticated, so — unlike the silence rules
+  // above, which exist purely so a stranger probing the bot learns nothing —
+  // telling it the truth costs nothing. An unsupported message used to be
+  // dropped with no reply at all, which, per docs/telegram.md's "if nothing happens"
+  // guidance, reads to the owner as "not bound, or wrong code" rather than
+  // "not supported".
+  const attached = Boolean(
+    message.photo ||
+      message.document ||
       message.video ||
       message.voice ||
       message.video_note ||
@@ -91,12 +69,14 @@ export async function ingestUpdate(
       message.animation,
   )
 
-  if (!text && !image) {
-    const reply = droppedAttachmentReply(false, unsupportedType, photoFailed)
-    if (reply) await io.sendMessage(chatId, reply)
+  if (!isLikelyUrl(text)) {
+    await io.sendMessage(chatId, "🚫 Didn't save that — Kothai saves links only.")
     return
   }
 
-  await io.saveCapture({ text, image })
-  await io.sendMessage(chatId, droppedAttachmentReply(true, unsupportedType, photoFailed) ?? '✅ Saved.')
+  await io.saveCapture({ url: text })
+  await io.sendMessage(
+    chatId,
+    attached ? '⚠️ Saved the link. Only links are saved — the attachment was dropped.' : '✅ Saved.',
+  )
 }

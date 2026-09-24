@@ -13,34 +13,28 @@ import { useDemo } from './Demo'
 interface CaptureModalProps {
   onClose: () => void
   // Resolves to null on success, or the failure message to show inline.
-  onSave: (text: string, image: string | null) => Promise<string | null>
+  onSave: (text: string) => Promise<string | null>
 }
 
 export function CaptureModal({ onClose, onSave }: CaptureModalProps) {
   const [text, setText] = useState('')
-  const [pendingImg, setPendingImg] = useState<string | null>(null)
   const [closing, setClosing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
 
-  const detected: Detection | null = text.trim() ? detectType(text) : null
-  const chip: Detection | null = detected || (pendingImg ? { type: 'image' } : null)
+  // detectType applies the server's own link test, so a chip here is exactly
+  // what /api/save will accept — Save is never offered for input it refuses.
+  const chip: Detection | null = detectType(text)
 
-  // The demo saves one thing: a bare http(s) link, the same test as the
-  // server's isLikelyUrl (server/ai/normalise.ts). detectType is looser, since
-  // it also calls "example.com" or a link with a few words around it a link,
-  // and the server would refuse those here after the visitor had pressed save.
   const demo = useDemo()
-  const demoHint = !demo
-    ? null
-    : demo.savesLeft === 0
+  const hint =
+    demo?.savesLeft === 0
       ? 'That’s all the demo saves today.'
-      : text.trim() && !/^https?:\/\/\S+$/i.test(text.trim())
-        ? 'The demo saves links only: paste one starting with https://'
+      : text.trim() && !chip
+        ? 'Kothai saves links: paste one starting with https://'
         : null
-  const canSave = demo ? !demoHint && !!text.trim() : !!text.trim() || !!pendingImg
+  const canSave = !!chip && !hint
 
   // Play the exit animation, then unmount. Matches the .16s cap-out CSS duration.
   const close = () => {
@@ -48,19 +42,12 @@ export function CaptureModal({ onClose, onSave }: CaptureModalProps) {
     window.setTimeout(onClose, 160)
   }
 
-  const onImageFile = (file: File | null | undefined) => {
-    if (!file) return
-    const r = new FileReader()
-    r.onload = () => setPendingImg(r.result as string)
-    r.readAsDataURL(file)
-  }
-
   const save = async () => {
     const raw = text.trim()
     if (!canSave || saving) return
     setSaving(true)
     setError(null)
-    const err = await onSave(raw, pendingImg)
+    const err = await onSave(raw)
     setSaving(false)
     if (err)
       setError(err) // on failure, keep the modal + input so nothing is lost
@@ -84,65 +71,25 @@ export function CaptureModal({ onClose, onSave }: CaptureModalProps) {
       overlayClassName={`cap-overlay${closing ? ' closing' : ''}`}
       className="cap-modal"
     >
-      <div className={`input-shell${text || pendingImg ? ' focus' : ''}`}>
-        {pendingImg && (
-          <span className="attach-preview">
-            <img src={pendingImg} alt="attachment" />
-            <button
-              className="attach-x"
-              aria-label="Remove attached image"
-              title="Remove attached image"
-              onClick={() => setPendingImg(null)}
-            >
-              ✕
-            </button>
-          </span>
-        )}
+      <div className={`input-shell${text ? ' focus' : ''}`}>
         <textarea
           ref={taRef}
           rows={1}
           value={text}
-          placeholder={demo ? 'Paste a link…' : 'Drop a link, note, or code…'}
+          placeholder="Paste a link…"
           onChange={e => {
             setText(e.target.value)
             if (error) setError(null)
           }}
           onKeyDown={onKey}
-          onPaste={e => {
-            if (demo) return
-            const it = Array.from(e.clipboardData?.items || []).find(x => x.type.startsWith('image/'))
-            if (it) {
-              e.preventDefault()
-              onImageFile(it.getAsFile())
-            }
-          }}
         />
         {chip && (
           <span className="detect-chip">
             <Icon name={CAT[chip.type].glyph} size={12} /> {CAT[chip.type].label.replace(/s$/, '').toUpperCase()}
-            {chip.lang ? ` · ${chip.lang.toUpperCase()}` : ''}
           </span>
         )}
-        <input
-          type="file"
-          accept="image/*"
-          ref={fileRef}
-          style={{ display: 'none' }}
-          onChange={e => {
-            onImageFile(e.target.files?.[0])
-            e.target.value = ''
-          }}
-        />
-        {/* Named as Ask's are: these are icon-only, and the send button had
-              no name at all, so a screen reader announced a bare "button". */}
-        <button
-          className="attach-btn"
-          aria-label="Attach an image"
-          title="Attach an image"
-          onClick={() => fileRef.current?.click()}
-        >
-          <Icon name="image" size={17} />
-        </button>
+        {/* Named as Ask's is: it is icon-only, and had no name at all, so a
+              screen reader announced a bare "button". */}
         <button className="send-btn" aria-label="Save" title="Save" disabled={!canSave || saving} onClick={save}>
           <Icon name="send" size={18} />
         </button>
@@ -152,7 +99,7 @@ export function CaptureModal({ onClose, onSave }: CaptureModalProps) {
           {error}
         </div>
       )}
-      {!error && demoHint && <div className="cap-hint mono">{demoHint}</div>}
+      {!error && hint && <div className="cap-hint mono">{hint}</div>}
     </Dialog>
   )
 }

@@ -3,7 +3,7 @@
 // Thirteen test files mock store.allNotes() with an array of note literals.
 // In .js those arrays are inferred as any[] and every read off them is
 // unchecked; typing one as ServerNote[] is what makes the reads mean
-// something, and that in turn requires every literal to carry all ten required
+// something, and that in turn requires every literal to carry all nine required
 // fields — which is a lot of noise around the one or two a test is actually
 // asserting on.
 //
@@ -16,14 +16,13 @@ export function note(partial: Partial<ServerNote> = {}): ServerNote {
   return {
     id: 'note-1',
     createdAt: '2026-01-01T00:00:00.000Z',
-    type: 'text',
+    type: 'link',
     category: '',
     title: '',
     summary: '',
     tags: [],
     content: '',
     url: null,
-    image: null,
     ...partial,
   }
 }

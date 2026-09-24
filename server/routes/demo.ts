@@ -145,7 +145,7 @@ export async function seedDemo(): Promise<void> {
   if (store.count() > 0) return
   const list = await readFile(new URL('../demo-library.txt', import.meta.url), 'utf8')
   for (const line of list.split('\n')) {
-    const text = line.trim()
-    if (text && !text.startsWith('#')) await saveCapture({ text })
+    const url = line.trim()
+    if (url && !url.startsWith('#')) await saveCapture({ url })
   }
 }

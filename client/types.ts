@@ -2,11 +2,9 @@
 // Its server-side counterpart is server/types.ts. The duplication is
 // deliberate — see the note there.
 
-// Types the server persists/emits. "text" becomes "note" in the UI.
-export type NoteType = 'link' | 'image' | 'video' | 'code' | 'text'
-
-// Types the UI renders. ("text" becomes "note".)
-export type UIType = 'link' | 'image' | 'video' | 'code' | 'note'
+// The types the server persists and the UI renders. Kothai saves links only;
+// a video is a link the classifier recognised as one.
+export type NoteType = 'link' | 'video'
 
 export type ViewMode = 'grid4' | 'grid6' | 'grid8'
 export type CaptureMode = 'store' | 'ask'
@@ -22,7 +20,6 @@ export interface ServerNote {
   tags: string[]
   content: string
   url: string | null
-  image: string | null
   account?: string | null
   mindNote?: string
   pending?: boolean
@@ -39,7 +36,6 @@ export interface ServerNote {
   // the item has been opened once (slides are fetched lazily) and for any post
   // that turned out to be a single image.
   slides?: string[]
-  description?: string
   score?: number
 }
 
@@ -47,7 +43,7 @@ export interface ServerNote {
 export interface UIItem {
   id: string
   ts: number
-  type: UIType
+  type: NoteType
   tags: string[]
   category?: string
   summary?: string
@@ -68,26 +64,21 @@ export interface UIItem {
   thumb?: string | null
   slides?: string[]
   siteName?: string | null
-  img?: string | null
-  name?: string
-  lang?: string
-  text?: string
   seed?: number
   score?: number
 }
 
 export interface Category {
-  id: UIType
+  id: NoteType
   label: string
   glyph: string
 }
 
 // What client-side detection infers from raw pasted text (for the detect chip).
 export interface Detection {
-  type: UIType
-  url?: string
-  host?: string
-  lang?: string
+  type: NoteType
+  url: string
+  host: string
 }
 
 export type Residency = 'off' | 'ondemand' | 'always'

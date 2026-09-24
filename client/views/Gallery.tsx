@@ -4,7 +4,7 @@ import { useRef } from 'react'
 import { Icon, CAT } from '../components/icons'
 import { ItemCard } from '../components/Cards'
 import { WindowedBoard } from '../components/Board'
-import type { Collection, UIItem, UIType, ViewMode } from '../types'
+import type { Collection, UIItem, NoteType, ViewMode } from '../types'
 import type { Slot } from '../data/pager'
 import { useScrollEdges } from '../layout/useScrollEdges'
 import { PageHeader } from '../ui/PageHeader'
@@ -70,7 +70,7 @@ export function GalleryView({
   addToCollection,
   removeFromCollection,
 }: GalleryViewProps) {
-  const cat = CAT[nav as UIType] || VIEW_CAT[nav] || { label: nav, glyph: 'all' }
+  const cat = CAT[nav as NoteType] || VIEW_CAT[nav] || { label: nav, glyph: 'all' }
 
   const scrollRef = useRef<HTMLDivElement>(null)
 

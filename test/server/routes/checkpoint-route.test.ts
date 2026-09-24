@@ -64,7 +64,7 @@ function contentsOfMainFileAlone(label: string): unknown[] {
 }
 
 test('a batched write reaches kothai.db itself, not just the in-memory queue', async () => {
-  await store.addNote({ type: 'text', content: 'queued-not-yet-written' }, { persist: false })
+  await store.addNote({ type: 'link', content: 'queued-not-yet-written' }, { persist: false })
 
   const res = await checkpoint()
   assert.equal(res.status, 200)
@@ -74,7 +74,7 @@ test('a batched write reaches kothai.db itself, not just the in-memory queue', a
 })
 
 test('the WAL is truncated, so kothai.db is not a stale copy of the database', async () => {
-  await store.addNote({ type: 'text', content: 'committed-normally' })
+  await store.addNote({ type: 'link', content: 'committed-normally' })
 
   await (await checkpoint()).json()
 
@@ -103,7 +103,7 @@ test('it refuses while an import is running rather than committing half of one',
 })
 
 test('it can run repeatedly — a backup hook fires on every scheduled backup', async () => {
-  await store.addNote({ type: 'text', content: 'second-run' }, { persist: false })
+  await store.addNote({ type: 'link', content: 'second-run' }, { persist: false })
   assert.equal((await jsonBody(await checkpoint())).ok, true)
 
   const contents = contentsOfMainFileAlone('repeat')

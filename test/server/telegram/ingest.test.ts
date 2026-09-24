@@ -17,18 +17,17 @@ const msg = (chatId: number, over: Record<string, unknown> = {}): TelegramUpdate
 })
 
 function deps() {
-  const saved: { text: string; image?: string | null }[] = []
+  const saved: { url: string }[] = []
   const sent: { chatId: number; text: string }[] = []
   const bound: (number | null)[] = []
   const io: IngestIO = {
-    saveCapture: async (c: { text: string; image?: string | null }) => {
+    saveCapture: async (c: { url: string }) => {
       saved.push(c)
       return { id: 'n1' }
     },
     sendMessage: async (chatId: number, text: string) => {
       sent.push({ chatId, text })
     },
-    fetchPhotoDataUrl: async () => 'data:image/jpeg;base64,AAAA',
     bind: (chatId: number | null) => bound.push(chatId),
   }
   return { saved, sent, bound, io }
@@ -64,34 +63,42 @@ test('a message from any other chat is dropped silently — no save, no reply', 
   assert.deepEqual(d.bound, [])
 })
 
-test('a text message from the bound chat is saved and confirmed', async () => {
+test('a link from the bound chat is saved and confirmed', async () => {
   const d = deps()
   await ingestUpdate(msg(99), { boundChatId: 99, pairingCode: null }, d.io)
-  assert.equal(d.saved[0].text, 'https://example.com')
+  assert.deepEqual(d.saved, [{ url: 'https://example.com' }])
   assert.equal(d.sent[0].chatId, 99)
+  assert.match(d.sent[0].text, /saved/i)
 })
 
-test('a photo is downloaded at its largest size and saved as an image', async () => {
+// Kothai saves links only. The bound chat is owed an honest refusal — silence
+// reads to the owner as "not bound, or wrong code" (docs/telegram.md).
+test('plain text from the bound chat is refused, with a reply that says so', async () => {
   const d = deps()
-  const update = msg(99, {
-    text: undefined,
-    photo: [
-      { file_id: 'small', file_size: 100 },
-      { file_id: 'large', file_size: 9000 },
-    ],
-  })
-  await ingestUpdate(update, { boundChatId: 99, pairingCode: null }, d.io)
-  assert.match(d.saved[0].image ?? '', /^data:image\/jpeg/)
+  await ingestUpdate(msg(99, { text: 'a thought' }), { boundChatId: 99, pairingCode: null }, d.io)
+  assert.deepEqual(d.saved, [])
+  assert.equal(d.sent.length, 1)
+  assert.match(d.sent[0].text, /links only/i)
+  assert.doesNotMatch(d.sent[0].text, /saved\./i)
 })
 
-test("a photo's caption becomes the note text", async () => {
+test('a photo is not saved, even with a caption', async () => {
   const d = deps()
   const update = msg(99, { text: undefined, caption: 'the good bit', photo: [{ file_id: 'a' }] })
   await ingestUpdate(update, { boundChatId: 99, pairingCode: null }, d.io)
-  assert.equal(d.saved[0].text, 'the good bit')
+  assert.deepEqual(d.saved, [])
+  assert.match(d.sent[0].text, /links only/i)
 })
 
-test('an update carrying neither text nor a photo saves nothing', async () => {
+test('a link captioning an attachment is saved, and the reply says the attachment was dropped', async () => {
+  const d = deps()
+  const update = msg(99, { text: undefined, caption: 'https://example.com/a', photo: [{ file_id: 'a' }] })
+  await ingestUpdate(update, { boundChatId: 99, pairingCode: null }, d.io)
+  assert.deepEqual(d.saved, [{ url: 'https://example.com/a' }])
+  assert.match(d.sent[0].text, /attachment was dropped/i)
+})
+
+test('an update carrying no text at all saves nothing', async () => {
   const d = deps()
   await ingestUpdate(
     { update_id: 1, message: { message_id: 1, chat: { id: 99 } } },
@@ -99,16 +106,6 @@ test('an update carrying neither text nor a photo saves nothing', async () => {
     d.io,
   )
   assert.deepEqual(d.saved, [])
-})
-
-test('a failed photo download still saves the caption as text, rather than dropping the message', async () => {
-  const d = deps()
-  d.io.fetchPhotoDataUrl = async () => null
-  const update = msg(99, { text: undefined, caption: 'the good bit', photo: [{ file_id: 'a' }] })
-  await ingestUpdate(update, { boundChatId: 99, pairingCode: null }, d.io)
-  assert.equal(d.saved.length, 1, 'losing the image must not lose the message')
-  assert.equal(d.saved[0].text, 'the good bit')
-  assert.equal(d.saved[0].image, null)
 })
 
 test('an update with no message — e.g. a channel_post — binds nothing, sends nothing, saves nothing', async () => {
@@ -119,45 +116,19 @@ test('an update with no message — e.g. a channel_post — binds nothing, sends
   assert.deepEqual(d.saved, [])
 })
 
-// droppedAttachmentReply's four cases below only ever fire for the BOUND
-// chat — it is already authenticated, so telling it the truth costs nothing.
-// A stranger probing the unbound bot still gets total silence (pinned last),
-// because a reply of any kind — even "that file type isn't supported" —
-// would confirm the bot is live.
-
-test('an unsupported attachment with a caption: the caption is saved, and the reply says other files are dropped', async () => {
-  const d = deps()
-  const update = msg(99, { text: undefined, caption: 'read this later', document: { file_id: 'doc1' } })
-  await ingestUpdate(update, { boundChatId: 99, pairingCode: null }, d.io)
-  assert.equal(d.saved.length, 1, 'the caption is text — there is no reason to lose it')
-  assert.equal(d.saved[0].text, 'read this later')
-  assert.equal(d.saved[0].image, null)
-  assert.equal(d.sent.length, 1)
-  assert.equal(d.sent[0].chatId, 99)
-  assert.match(d.sent[0].text, /only links, text and photos are supported/i)
-  assert.match(d.sent[0].text, /saved the caption/i)
-})
+// The replies above only ever go to the BOUND chat — it is already
+// authenticated, so telling it the truth costs nothing. A stranger probing the
+// unbound bot still gets total silence, because a reply of any kind — even
+// "that isn't supported" — would confirm the bot is live.
 
 test('an unsupported attachment with no caption: nothing is saved, and the reply explains why instead of pretending it worked', async () => {
   const d = deps()
   const update = msg(99, { text: undefined, video: { file_id: 'vid1' } })
   await ingestUpdate(update, { boundChatId: 99, pairingCode: null }, d.io)
-  assert.deepEqual(d.saved, [], 'nothing here is text, a caption or a photo')
+  assert.deepEqual(d.saved, [])
   assert.equal(d.sent.length, 1)
-  assert.equal(d.sent[0].chatId, 99)
-  assert.match(d.sent[0].text, /only links, text and photos are supported/i)
-  assert.doesNotMatch(d.sent[0].text, /saved/i, 'nothing was saved — the reply must not claim otherwise')
-})
-
-test('a photo download failure with a caption: the caption is saved, and the reply says the photo specifically failed', async () => {
-  const d = deps()
-  d.io.fetchPhotoDataUrl = async () => null
-  const update = msg(99, { text: undefined, caption: 'the good bit', photo: [{ file_id: 'a' }] })
-  await ingestUpdate(update, { boundChatId: 99, pairingCode: null }, d.io)
-  assert.equal(d.saved.length, 1)
-  assert.equal(d.saved[0].text, 'the good bit')
-  assert.equal(d.sent.length, 1)
-  assert.match(d.sent[0].text, /photo failed to download/i)
+  assert.match(d.sent[0].text, /links only/i)
+  assert.doesNotMatch(d.sent[0].text, /saved\./i, 'nothing was saved — the reply must not claim otherwise')
 })
 
 test('the silence rule for an unbound/wrong chat is unchanged by the new replies — an unsupported attachment from a stranger still gets nothing back', async () => {

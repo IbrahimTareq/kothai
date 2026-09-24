@@ -76,7 +76,7 @@ const option = (kind: ProviderKind) => ({ key: kind, label: '', desc: '', best: 
 
 // The arguments are all required on the contract and none of them steer a fake,
 // so they are named once here rather than at every call below.
-const CLASSIFY = { text: 'hi', hasImage: false, isUrl: false, now: '2026-01-01' }
+const CLASSIFY = { text: 'hi', now: '2026-01-01' }
 const ASK = { question: 'hi', contextNotes: [] }
 
 function fake(kind: ProviderKind): Provider & { calls: Call[] } {
@@ -109,7 +109,7 @@ function fake(kind: ProviderKind): Provider & { calls: Call[] } {
     },
     classify: async () => {
       calls.push(['classify'])
-      return { type: '', category: kind, title: '', summary: '', tags: [] }
+      return { type: 'link', category: kind, title: '', summary: '', tags: [] }
     },
     embedText: async () => {
       calls.push(['embedText'])

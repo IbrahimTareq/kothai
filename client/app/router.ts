@@ -9,7 +9,7 @@ export interface Route {
 }
 
 // Storable types get their own filtered gallery at /type/<type>.
-const TYPES = ['link', 'image', 'video', 'code', 'note']
+const TYPES = ['link', 'video']
 
 // URL path → app state. Home and any unknown path land on Everything.
 export function pathToRoute(pathname: string): Route {

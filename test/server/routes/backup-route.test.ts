@@ -77,7 +77,7 @@ async function backup() {
 
 test('the response is a real SQLite database containing the live notes', async () => {
   store._reset()
-  await store.addNote({ type: 'text', content: 'in the backup' })
+  await store.addNote({ type: 'link', content: 'in the backup' })
 
   const res = await backup()
   assert.equal(res.status, 200)
@@ -101,7 +101,7 @@ test('it is served as a dated file download, not rendered inline', async () => {
 
 test('Content-Length matches the bytes actually sent, so the browser can show progress', async () => {
   store._reset()
-  await store.addNote({ type: 'text', content: 'x' })
+  await store.addNote({ type: 'link', content: 'x' })
   const res = await backup()
   const declared = Number(res.headers.get('content-length'))
   const actual = (await res.arrayBuffer()).byteLength
@@ -110,7 +110,7 @@ test('Content-Length matches the bytes actually sent, so the browser can show pr
 
 test('the temp snapshot is deleted afterwards — a backup must not double disk use forever', async () => {
   store._reset()
-  await store.addNote({ type: 'text', content: 'x' })
+  await store.addNote({ type: 'link', content: 'x' })
   assert.deepEqual(await waitForCleanup(), [], 'precondition: earlier tests cleaned up after themselves')
   const res = await backup()
   await res.arrayBuffer()
@@ -122,7 +122,7 @@ test('writes queued by a batched operation are committed first, so they are in t
   // a flush the backup would silently omit it — a backup that quietly drops
   // recent data is worse than one that fails.
   store._reset()
-  await store.addNote({ type: 'text', content: 'queued not yet written' }, { persist: false })
+  await store.addNote({ type: 'link', content: 'queued not yet written' }, { persist: false })
   const res = await backup()
   const db = await downloadAndOpen(res)
   assert.equal(db.prepare('SELECT count(*) n FROM notes').get()?.n, 1)
@@ -143,7 +143,7 @@ test('it refuses while an import is running rather than snapshotting a half-writ
 
 test('two backups at once are refused rather than both writing a full copy of the database', async () => {
   store._reset()
-  for (let i = 0; i < 50; i++) await store.addNote({ type: 'text', content: 'x'.repeat(200) })
+  for (let i = 0; i < 50; i++) await store.addNote({ type: 'link', content: 'x'.repeat(200) })
   await waitForCleanup()
   const [a, b] = await Promise.all([fetch(`${BASE}/api/backup`), fetch(`${BASE}/api/backup`)])
   const codes = [a.status, b.status].sort()

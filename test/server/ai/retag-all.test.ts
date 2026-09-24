@@ -159,15 +159,12 @@ test('hand-edited tags survive — the whole difference from the single-note ret
 })
 
 test('the marker is cleared for classify and embed, but vision work is left alone', async () => {
-  await reset([
-    { ...STALE, image: '/uploads/x.png', ai: { classify: true, embed: true, vision: true, thumbVision: true } },
-  ])
+  await reset([{ ...STALE, ai: { classify: true, embed: true, thumbVision: true } }])
   await enrich.retagAll()
 
   // Re-describing every thumbnail is a far longer job with its own backlog
   // entry; this action is about classification.
   assert.ok(notes[0].ai)
-  assert.equal(notes[0].ai.vision, true)
   assert.equal(notes[0].ai.thumbVision, true)
 })
 

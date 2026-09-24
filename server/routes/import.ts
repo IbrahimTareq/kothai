@@ -331,7 +331,7 @@ async function runImport(req: IncomingMessage, res: ServerResponse): Promise<voi
       // so the cheap lane is already running before the first classify pass
       // takes the model.
       enrich.queueLinkMeta(id, url)
-      enrich.queueEnrich(id, { absPath: null, text: url, isUrl: true, hasImage: false })
+      enrich.queueEnrich(id, url)
     }
   } catch (e) {
     console.error('[import] failed to queue enrich for imported notes:', e instanceof Error ? e.message : e)

@@ -6,7 +6,7 @@ One Node process serves both the built client and the JSON API on a single port.
 
 **Phase one** runs inside the request. It writes the note using heuristic guesses for type and title. The response returns immediately.
 
-**Phase two** is a background FIFO queue that runs enrichment: fetch metadata, caption images, classify, embed.
+**Phase two** is a background FIFO queue that runs enrichment: fetch metadata, describe the thumbnail, classify, embed.
 
 What this buys:
 

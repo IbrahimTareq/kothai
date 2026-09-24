@@ -2,7 +2,7 @@
 // id, which is read at boot and written the first time the owner pairs.
 import { readTelegram, writeTelegram } from '../data/telegram.ts'
 import { saveCapture } from '../capture.ts'
-import { getUpdates, sendMessage, fetchPhotoDataUrl } from './api.ts'
+import { getUpdates, sendMessage } from './api.ts'
 import { ingestUpdate } from './ingest.ts'
 import { pollOnce, startPolling } from './poll.ts'
 
@@ -44,7 +44,6 @@ export function startTelegramCapture(): boolean {
           {
             saveCapture,
             sendMessage: (chatId, text) => sendMessage(token, chatId, text),
-            fetchPhotoDataUrl: fileId => fetchPhotoDataUrl(token, fileId),
             bind: chatId => {
               // Write before touching `bound`: if this throws (read-only volume,
               // full disk), `bound` must stay null so the redelivered pairing

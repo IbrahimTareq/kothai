@@ -1,7 +1,7 @@
-// Expanded.tsx — full-screen overlay for a single saved item. A type/brand-
-// specific main panel on the left (GitHub repo card, Reddit post, media reel,
-// article stage, or a plain note/image/code) and an editable metadata sidebar
-// (title, source, tags, mind note, actions) on the right.
+// Expanded.tsx — full-screen overlay for a single saved item. A brand-specific
+// main panel on the left (GitHub repo card, Reddit post, media reel, or article
+// stage) and an editable metadata sidebar (title, source, tags, mind note,
+// actions) on the right.
 import { useEffect, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
 import { Icon } from '../components/icons'
@@ -64,7 +64,7 @@ function RedditPanel({ item }: { item: UIItem }): ReactElement {
 
 function MediaPanel({ item, slidesLoading }: { item: UIItem; slidesLoading?: boolean }): ReactElement {
   const brand = sourceGlyph(item)
-  const media = item.thumb || item.img
+  const media = item.thumb
   // A multi-photo post is a deck to swipe through, not one cropped still. The
   // play glyph is deliberately dropped here: every slide is a photo, so the
   // only thing left to signal is which slide you're on, which the dots do.
@@ -165,38 +165,6 @@ function ArticlePanel({ item }: { item: UIItem }): ReactElement {
   )
 }
 
-function ImagePanel({ item }: { item: UIItem }): ReactElement {
-  return (
-    <div className="exp-img">
-      {item.img ? (
-        <img src={item.img} alt={item.name || 'image'} />
-      ) : (
-        <div className="exp-img-ph" style={{ background: imgGradient(item.seed ?? 1) }}>
-          <Icon name="image" size={40} />
-        </div>
-      )}
-    </div>
-  )
-}
-
-function CodePanel({ item }: { item: UIItem }): ReactElement {
-  return (
-    <div className="exp-code">
-      <div className="code-head mono">
-        <span className="code-dot" />
-        <span className="code-dot" />
-        <span className="code-dot" />
-        <span className="code-lang eyebrow">{item.lang}</span>
-      </div>
-      <pre className="code-block mono">{item.text}</pre>
-    </div>
-  )
-}
-
-function NotePanel({ item }: { item: UIItem }): ReactElement {
-  return <div className="exp-note-panel">{item.text || item.title}</div>
-}
-
 function Field({ label, value, big }: { label: string; value: string; big?: boolean }): ReactElement {
   return (
     <div className="exp-field">
@@ -208,15 +176,10 @@ function Field({ label, value, big }: { label: string; value: string; big?: bool
 
 function MainPanel({ item, slidesLoading }: { item: UIItem; slidesLoading?: boolean }): ReactElement {
   const brand = sourceGlyph(item)
-  if (item.type === 'link' || item.type === 'video') {
-    if (brand === 'github') return <GithubPanel item={item} />
-    if (brand === 'reddit') return <RedditPanel item={item} />
-    if (isMediaFirst(item)) return <MediaPanel item={item} slidesLoading={slidesLoading} />
-    return <ArticlePanel item={item} />
-  }
-  if (item.type === 'image') return <ImagePanel item={item} />
-  if (item.type === 'code') return <CodePanel item={item} />
-  return <NotePanel item={item} />
+  if (brand === 'github') return <GithubPanel item={item} />
+  if (brand === 'reddit') return <RedditPanel item={item} />
+  if (isMediaFirst(item)) return <MediaPanel item={item} slidesLoading={slidesLoading} />
+  return <ArticlePanel item={item} />
 }
 
 // ---- overlay + editable sidebar ---------------------------------------------
@@ -390,7 +353,7 @@ export function ExpandedView({
     </>
   )
 
-  const title = item.title || item.name || (item.text || '').slice(0, 60) || 'Untitled'
+  const title = item.title || 'Untitled'
 
   // Follows the drag 1:1 and fades toward (never quite reaching) transparent,
   // so the board underneath is visibly there before the release decides

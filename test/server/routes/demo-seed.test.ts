@@ -19,8 +19,8 @@ process.env.KOTHAI_DATA_DIR = mkdtempSync(path.join(os.tmpdir(), 'kothai-demo-se
 const saved: string[] = []
 mock.module('../../../server/capture.ts', {
   namedExports: {
-    saveCapture: async ({ text }: { text: string }) => {
-      saved.push(text)
+    saveCapture: async ({ url }: { url: string }) => {
+      saved.push(url)
       return { id: String(saved.length) }
     },
   },
@@ -35,16 +35,22 @@ test('an empty demo library is seeded with every save in the list, in order', as
   saved.length = 0
   await seedDemo()
   assert.equal(saved[0], 'https://en.wikipedia.org/wiki/Spirited_Away')
-  assert.match(saved[saved.length - 1], /^Sourdough notes:/, 'the last line is the first card a visitor sees')
+  assert.equal(
+    saved[saved.length - 1],
+    'https://en.wikipedia.org/wiki/Sourdough',
+    'the last line is the first card a visitor sees',
+  )
+  // Kothai saves links only, so a line that is not one would seed a card
+  // nothing can render.
   assert.ok(
-    saved.every(s => s.trim() && !s.startsWith('#')),
-    'comments and blank lines are not saves',
+    saved.every(s => /^https?:\/\/\S+$/.test(s)),
+    'every save is a link — no comments, blank lines or plain-text notes',
   )
 })
 
 test('a demo library that already holds notes is left alone', async () => {
   store._reset()
-  await store.addNote({ type: 'text', content: 'already here' })
+  await store.addNote({ type: 'link', content: 'already here' })
   saved.length = 0
   await seedDemo()
   assert.equal(saved.length, 0)

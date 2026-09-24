@@ -5,29 +5,25 @@
 import * as store from './data/notes.ts'
 import * as ai from './ai/index.ts'
 import * as enrich from './ai/enrich.ts'
-import { saveImage } from './lib/http.ts'
 import type { PublicNote } from './data/notes.ts'
 
+// `url` has already passed ai.isLikelyUrl: each caller refuses anything else
+// in its own words (a 400 on /api/save, a reply in Telegram).
 export async function saveCapture({
-  text,
-  image,
+  url,
   visitor = null,
 }: {
-  text: string
-  image?: string | null
+  url: string
   visitor?: string | null
 }): Promise<PublicNote> {
-  const img = await saveImage(image)
-  const isUrl = ai.isLikelyUrl(text)
   const note = await store.addNote({
-    type: img ? 'image' : ai.heuristicType({ hasImage: false, isUrl, text }),
-    title: ai.deriveTitle(text) || (img ? 'Image' : 'Untitled'),
-    content: text,
-    url: isUrl ? text : null,
-    image: img?.webPath || null,
+    type: ai.heuristicType(url),
+    title: ai.deriveTitle(url),
+    content: url,
+    url,
     pending: true,
     ...(visitor ? { visitor } : {}),
   })
-  enrich.queueEnrich(note.id, { absPath: img?.absPath, text, isUrl, hasImage: !!img })
+  enrich.queueEnrich(note.id, url)
   return note
 }

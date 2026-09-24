@@ -127,11 +127,8 @@ export function visibleBoxes(boxes: Box[], scrollTop: number, viewportH: number)
 // the scrollbar settles slightly as you scroll into new territory.
 function estimateHeight(item: UIItem): number {
   // Media cards are dominated by the thumbnail; Instagram's are portrait.
-  if (item.type === 'image' || item.type === 'video') return 340
-  if (item.type === 'link') return item.thumb ? 300 : 150
-  if (item.type === 'code') return 220
-  const chars = (item.text || item.summary || item.note || '').length
-  return Math.min(360, 110 + Math.ceil(chars / 42) * 17)
+  if (item.type === 'video') return 340
+  return item.thumb ? 300 : 150
 }
 
 // Measured card heights plus a self-calibrating estimate for cards not yet

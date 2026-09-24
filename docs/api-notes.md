@@ -5,17 +5,13 @@ Create, list, update, and delete notes.
 ## POST /api/save
 
 ```json
-{ "text": "https://example.com", "image": "data:image/png;base64,..." }
+{ "text": "https://example.com" }
 ```
 
 <TypeTable
   type={{
     text: {
-      description: 'URL or plain text to save',
-      type: 'string',
-    },
-    image: {
-      description: 'Base64-encoded image data',
+      description: 'The http(s) link to save. Anything else is refused with a 400 and `code: "links_only"`.',
       type: 'string',
     },
   }}
@@ -39,7 +35,7 @@ Returns immediately. Enrichment runs in the background.
     },
     type: {
       description: 'Filter by note type',
-      type: '"link" | "image" | "video" | "code" | "note"',
+      type: '"link" | "video"',
     },
     source: {
       description: 'Filter by source platform',

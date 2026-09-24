@@ -81,7 +81,7 @@ test('extracted article reaches classify, embed and the stored note', async () =
   classifyCalls = []
   embedCalls = []
 
-  await enrich.queueEnrich('n1', { absPath: null, text: URL_, isUrl: true, hasImage: false })
+  await enrich.queueEnrich('n1', URL_)
 
   assert.match(classifyCalls[0], /Autolyse is the resting period/, 'article missing from classify input')
   assert.match(embedCalls[0], /Autolyse is the resting period/, 'article missing from embed input')
