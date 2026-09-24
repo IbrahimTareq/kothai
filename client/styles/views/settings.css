@@ -370,7 +370,9 @@
 .wizard-choices{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-12);margin:var(--space-24) 0}
 .wizard-choice{display:flex;flex-direction:column;gap:var(--space-8);padding:var(--space-20);text-align:left;
   background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-lg);cursor:pointer}
-.wizard-choice:hover{border-color:var(--line-hover)}
+.wizard-choice:hover:not(:disabled){border-color:var(--line-hover)}
+.wizard-choice:disabled{background:none;cursor:default}
+.wizard-choice:disabled .wizard-choice-title,.wizard-choice:disabled .wizard-choice-desc{color:var(--ink-faint)}
 
 .wizard-providers{display:flex;flex-wrap:wrap;gap:var(--space-8);margin:var(--space-20) 0 var(--space-12)}
 .wizard-provider{display:inline-flex;align-items:center;gap:var(--space-8);padding:var(--space-8) var(--space-14);

@@ -56,14 +56,17 @@ export function SetupWizard({
                 Nothing to download. You paste an API key and pay the provider for what you use.
               </span>
             </button>
-            {localSupported && (
-              <button className="wizard-choice" onClick={onLocal}>
-                <span className="wizard-choice-title">On this machine</span>
-                <span className="wizard-choice-desc">
-                  Nothing leaves the box, no key, no bills. Downloads a few GB of models.
-                </span>
-              </button>
-            )}
+            {/* Greyed rather than hidden on the lite image: a lone cloud card
+                read as the only way Kothai can run, with no hint that a full
+                image could keep everything on the box. */}
+            <button className="wizard-choice" onClick={onLocal} disabled={!localSupported}>
+              <span className="wizard-choice-title">On this machine</span>
+              <span className="wizard-choice-desc">
+                {localSupported
+                  ? 'Nothing leaves the box, no key, no bills. Downloads a few GB of models.'
+                  : 'Not in the lite image, which runs no models itself. Install the full image to keep everything local.'}
+              </span>
+            </button>
           </div>
 
           <button className="onboarding-skip" onClick={onSkip}>
