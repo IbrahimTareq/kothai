@@ -63,6 +63,7 @@ let classifyArgs: ClassifyArgs[]
 let embedCalls: string[]
 let autoAddCalls: { id: string; tags: string[] }[]
 let describeImageCalls: DescribeImageArgs[]
+let thumbRetryCalls: string[]
 
 function reset() {
   seedNotes([])
@@ -72,6 +73,7 @@ function reset() {
   embedCalls = []
   autoAddCalls = []
   describeImageCalls = []
+  thumbRetryCalls = []
   fetchLinkMetaImpl = async () => ({ siteTitle: null, siteDesc: null, siteName: 'Instagram', thumb: null })
   classifyImpl = async () => ({ type: 'link', category: 'General', title: 'T', summary: 'S', tags: [] })
   embedTextImpl = async () => [0, 0, 0]
@@ -137,6 +139,15 @@ mock.module('../../../server/data/collections.ts', {
 })
 mock.module('../../../server/data/settings.ts', {
   namedExports: { ...realSettings, getResidency: () => residencyImpl() },
+})
+// The real one schedules minute-long timers; the boot sweep's only job is to
+// hand the note over.
+mock.module('../../../server/links/thumb-retry.ts', {
+  namedExports: {
+    queueThumbRetry: (id: string) => {
+      thumbRetryCalls.push(id)
+    },
+  },
 })
 
 const enrich = await import('../../../server/ai/enrich.ts')
@@ -502,6 +513,67 @@ test('boot sweep: a note whose caption landed but whose reclassify never ran get
   const saved = seeded(id)
   assert.ok(saved.ai)
   assert.equal(saved.ai.igReclassified, true)
+})
+
+// The note above has a siteTitle, which almost no real Instagram post does:
+// the caption lands in siteDesc alone (9 of ~1,670 on a real install carried
+// a siteTitle). Such a note enters the `!n.siteTitle` block, whose Instagram
+// arm used to `continue` past every sweep below it — 191 notes sat with a
+// caption they had never been classified on.
+const CAPTION_ONLY: NoteRecord = {
+  ...note({
+    id: 'n7b',
+    content: IG_URL,
+    url: IG_URL,
+    type: 'link',
+    metaFetched: true,
+    siteDesc: 'the caption, and no siteTitle',
+    thumb: '/uploads/meta-n7b.jpg',
+  }),
+  ai: { classify: true, embed: true },
+}
+
+test('boot sweep: a caption-only note (no siteTitle, like nearly every Instagram post) still gets its reclassify', async () => {
+  reset()
+  seedNotes([CAPTION_ONLY])
+
+  enrich.queueMetaBackfill()
+  await drainIgQueue()
+  await enrich.queueJob(() => {})
+
+  assert.equal(fetchLinkMetaCalls.length, 0, 'the caption is on disk — no Instagram fetch at boot')
+  assert.equal(classifyCalls.length, 1)
+  assert.match(classifyCalls[0], /the caption, and no siteTitle/)
+  assert.equal(seeded('n7b').ai?.igReclassified, true)
+})
+
+test('boot sweep: the reclassify it queues leaves thumbnail vision to the backlog', async () => {
+  reset()
+  seedNotes([CAPTION_ONLY])
+
+  enrich.queueMetaBackfill()
+  await enrich.queueJob(() => {})
+
+  // One vision pass per note at boot would hold the single FIFO for as long
+  // as the sweep is wide — see stepsFor's comment in backlog.ts.
+  assert.equal(describeImageCalls.length, 0)
+  assert.equal(classifyCalls.length, 1, 'classify and embed still run on the caption')
+  assert.equal(embedCalls.length, 1)
+})
+
+test('boot sweep: an Instagram note whose thumbnail only failed for now is put back on thumb-retry', async () => {
+  reset()
+  seedNotes([
+    {
+      ...note({ id: 'n7c', content: IG_URL, url: IG_URL, type: 'link', metaFetched: true, siteDesc: 'cap' }),
+      thumbSrc: 'https://scontent.cdninstagram.com/x.jpg',
+      ai: { classify: true, embed: true, igReclassified: true },
+    },
+  ])
+
+  enrich.queueMetaBackfill()
+
+  assert.deepEqual(thumbRetryCalls, ['n7c'])
 })
 
 test('hand-edited tags survive a reclassify (MUST FIX 2)', async () => {

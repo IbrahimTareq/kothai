@@ -210,7 +210,9 @@ async function describeThumb(
 // (the boot sweep in queueMetaBackfill below, or another queueIgMeta call) —
 // this codebase already prefers that tradeoff (see backlog.ts's
 // deriveAiMarkers comment on the same false-positive-vs-false-negative call).
-async function reclassifyWithCaption(id: string) {
+//
+// `vision: false` is the boot sweep's: see its comment in queueMetaBackfill.
+async function reclassifyWithCaption(id: string, { vision = true } = {}) {
   const residency = settings.getResidency()
   const runClassify = residency.llm !== 'off'
   const runEmbed = residency.embed !== 'off'
@@ -224,7 +226,7 @@ async function reclassifyWithCaption(id: string) {
   // time this runs, so this is where an Instagram note's frame gets described.
   // enrichNote runs the same step for every other kind of note; whichever
   // reaches a given note first wins, and the marker makes the other a no-op.
-  const thumbDescription = await describeThumb(existing, residency, ai)
+  const thumbDescription = vision ? await describeThumb(existing, residency, ai) : ''
 
   // Built from stored fields (content + the siteTitle/siteDesc queueIgMeta
   // just patched in) plus the thumbnail description above — no network call
@@ -333,9 +335,11 @@ export function queueMetaBackfill() {
         } else if (metaRetryEligible(n)) {
           queueIgMeta(n.id, n.url)
         }
-        continue
-      }
-      if (!n.metaFetched) {
+        // No `continue` here: it skipped every sweep below for an Instagram
+        // post without a siteTitle — nearly all of them, since the caption
+        // lands in siteDesc — and 191 captioned notes on a real install were
+        // never reclassified on their caption.
+      } else if (!n.metaFetched) {
         // Read out here, not inside the job: the enclosing `n.url &&` test
         // proves it is a string, and that proof does not survive into a
         // closure that runs later (the property could have been reassigned by
@@ -362,14 +366,22 @@ export function queueMetaBackfill() {
     // process restarted between queueIgMeta's store.updateNote and its
     // queueJob(reclassifyWithCaption) call, or the reclassify itself failed
     // (see reclassifyWithCaption's comment on why it doesn't set the marker
-    // on failure). Such a note fails BOTH gates above (metaFetched is
-    // already true, so the block above skips it) and stepsFor's classify gate
+    // on failure). The block above never queues a fetch for such a note
+    // (metaFetched is already true and a caption landed, so it is neither
+    // stuck nor retry-eligible), and stepsFor's classify gate skips it too
     // (ai.classify is already true from the original URL-only pass) — so
     // without this, it would stay on URL-only metadata forever. On a large
     // import a restart inside the ~2.5s/post throttle window is routine, not
     // an edge case.
+    //
+    // Without vision: a real install had 191 of these waiting when the fix
+    // above landed, every one with a thumbnail and no description. A vision pass
+    // each would hold the single enrichment FIFO for the better part of an
+    // hour ahead of anything the user saves, which is the boot-time stall
+    // stepsFor's comment in backlog.ts refuses. The missing description
+    // stays counted in the Settings backlog, whose pass re-embeds with it.
     if (n.url && isInstagramPost(n.url) && (n.siteTitle || n.siteDesc) && !n.ai?.igReclassified) {
-      queueJob(() => reclassifyWithCaption(n.id))
+      queueJob(() => reclassifyWithCaption(n.id, { vision: false }))
     }
     // Captions arrived after these notes were saved, so they carry no
     // `ai.captions` marker and none of the gates above would reach them: a
@@ -387,9 +399,7 @@ export function queueMetaBackfill() {
   // the in-memory chain, so a restart mid-import dropped every job still
   // queued and nothing looked at `pending` again: on a real install 1,596 of
   // 1,885 notes (an Instagram import and a TikTok one) stayed flagged for a
-  // month, and the client polled for them every 15s the whole time. A loop of
-  // its own, after the one above: that one's Instagram arm `continue`s past
-  // everything below it for any post without a siteTitle — nearly all of them.
+  // month, and the client polled for them every 15s the whole time.
   //
   // A note still owed classify or embed gets the pass its import promised. One
   // owed only a thumbnail description is cleared instead: it already has its
