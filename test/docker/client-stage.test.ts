@@ -7,8 +7,8 @@ import { test } from 'node:test'
 // added to `build`, and 765cbf4 added `biome check .`, which failed on 295
 // files because biome.json is not in that stage. Neither is caught by CI until
 // a release tag runs docker.yml, so assert the coupling here instead.
-const dockerfile = readFileSync(new URL('../Dockerfile', import.meta.url), 'utf8')
-const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+const dockerfile = readFileSync(new URL('../../Dockerfile', import.meta.url), 'utf8')
+const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
 
 const clientStage = dockerfile.slice(
   dockerfile.indexOf('AS client'),
