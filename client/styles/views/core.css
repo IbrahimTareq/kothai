@@ -33,7 +33,7 @@
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-xl);
   padding:var(--space-12) var(--space-12) var(--space-12) var(--space-18);transition:border-color var(--dur-mid), background var(--dur-mid)}
 .input-shell.focus{border-color:var(--line-focus);background:var(--panel-2)}
-.input-shell textarea{flex:1;background:transparent;border:0;outline:none;resize:none;
+.input-shell textarea{flex:1;background:transparent;border:0;outline:none;resize:none;  /* token-lint-ignore: .input-shell.focus shows focus on the whole composer */
   color:var(--ink);font-family:var(--font-sans);font-size:var(--text-md);
   letter-spacing:var(--tracking-tight);line-height:var(--leading-normal);
   max-height:200px;padding:var(--space-6) 0}
@@ -305,7 +305,7 @@
 .chat-row.active{background:var(--panel-3)}
 /* renaming / delete-confirm states share the row's box so nothing jumps */
 .chat-row.renaming,.chat-row.confirming{cursor:default}
-.chat-rename{flex:1;min-width:0;background:transparent;border:0;outline:none;
+.chat-rename{flex:1;min-width:0;background:transparent;border:0;outline:none;  /* token-lint-ignore: exists only while renaming, opened focused and committed on blur */
   color:var(--ink);font-family:inherit;font-size:var(--text-sm);
   letter-spacing:var(--tracking-tight)}
 /* Load more sits under the list rather than paging it: the count says how much

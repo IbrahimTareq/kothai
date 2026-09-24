@@ -142,7 +142,7 @@
   background:var(--panel);border:1px solid var(--line-2);border-radius:var(--radius-md);
   color:inherit;padding:0;
   transition:background var(--dur-fast) ease,border-color var(--dur-fast) ease}
-.tile:hover,.tile:focus-visible{background:var(--panel-2);border-color:var(--line);outline:none}
+.tile:hover,.tile:focus-visible{background:var(--panel-2);border-color:var(--line)}
 
 .tile-media{position:relative;aspect-ratio:16/10;overflow:hidden;
   display:grid;place-items:center;color:var(--ink-faint);
@@ -214,7 +214,7 @@
    and spilled their text instead of the list scrolling. Hence flex:none. */
 .menu-item{display:flex;flex:none;align-items:center;gap:var(--space-8);box-sizing:border-box;min-height:var(--control-md);
   padding:var(--space-8) var(--space-6);border-radius:var(--radius-md);font-size:var(--text-sm);cursor:pointer;
-  outline:none;user-select:none}
+  outline:none;user-select:none}  /* token-lint-ignore: focus is the [data-highlighted] fill below. Radix focuses the row under the pointer too, and Chrome counts that as :focus-visible, so a ring followed the mouse */
 .menu-item[data-highlighted],.menu-item.active,.menu-item:where(button):hover{
   background:color-mix(in srgb,var(--ink) 8%,transparent)}
 /* A combobox's option is the view's own <button>, not a Radix item, so it
@@ -223,6 +223,9 @@
    their own padding, radius and fill, and stood 37 and 31px tall on touch.
    :where() holds this at one class, so a view can still tint the text. */
 .menu-item:where(button){width:100%;border:0;background:none;color:inherit;line-height:inherit;text-align:left}
+/* A combobox row is a plain button that only a Tab focuses, so it takes the
+   ring, drawn inside: the list scrolls, and its overflow clips one outside. */
+.menu-item:where(button):focus-visible{outline:var(--focus-ring);outline-offset:-2px}
 .menu-check{width:12px;display:inline-flex;justify-content:center}
 .menu-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .menu-trailing{display:inline-flex;color:var(--ink-mute)}
@@ -261,7 +264,8 @@
    so every field reaches 44px on touch, not one. */
 .field{box-sizing:border-box;min-width:0;min-height:var(--control-md);
   padding:var(--space-8) var(--space-12);background:var(--panel-3);
-  border:1px solid var(--line);border-radius:var(--radius-md);outline:none;
+  border:1px solid var(--line);border-radius:var(--radius-md);
+  outline:none;  /* token-lint-ignore: focus is the border brightening to --line-focus below. A field matches :focus-visible on a click too, since it is typed into, so the ring would draw on every click */
   color:var(--ink);font-size:var(--text-sm);transition:border-color var(--dur-fast)}
 /* Fields do not inherit the page's font on their own. Inherit it at zero
    specificity: a bare .field rule loads after base.css and would beat .mono,
@@ -293,7 +297,7 @@ textarea.field{resize:vertical;line-height:var(--leading-normal)}
    so it draws no ring; the first Tab reaches the first real one. */
 .dialog-title{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;
   overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-[role="dialog"]:focus{outline:none}
+[role="dialog"]:focus{outline:none}  /* token-lint-ignore: the panel, not a control; see above */
 
 /* ── confirm ───────────────────────────────────────────────────────────────
    What <Confirm> in client/ui/ draws: the erase row's red-bordered panel,

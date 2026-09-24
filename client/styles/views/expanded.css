@@ -141,7 +141,7 @@ a.exp-src:hover{color:var(--ink);text-decoration:underline;text-underline-offset
 /* the in-place tag editor sits level with the compact chips around it */
 .exp-tag-input{box-sizing:border-box;width:96px;height:var(--control-sm);padding:0 var(--space-12);
   border:1px solid var(--ink-faint);border-radius:var(--radius-full);
-  background:transparent;color:var(--ink);font-size:var(--text-xs);outline:none}
+  background:transparent;color:var(--ink);font-size:var(--text-xs);outline:none}  /* token-lint-ignore: exists only while adding, opened focused and committed on blur */
 .exp-note{width:100%;min-height:92px}
 .exp-side-actions{display:flex;align-items:center;justify-content:center;gap:var(--space-22);padding:var(--space-16);
   border-top:1px solid var(--line)}

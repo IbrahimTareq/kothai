@@ -48,6 +48,18 @@ the right move is to use the nearest step, not to add one.
 **Spacing above 48px is layout, not rhythm** — mobile composer clearance, hero
 padding. Those stay literal and the linter ignores them.
 
+**Focus is one monochrome ring.** `:focus-visible` draws `--focus-ring`, a
+2px `--ink` outline offset from the control, so a Tab shows it and a click
+does not. The browser's own ring had been showing through in the OS accent,
+an orange-gold the palette does not have. Combobox rows draw it inset,
+because their scrolling list clips anything outside. A `<Menu>` row shows
+focus as its highlight fill instead: Radix focuses the row under the pointer,
+and Chrome counts that as `:focus-visible`, so a ring there followed the
+mouse. A rule may hide the ring only with
+`token-lint-ignore` naming what shows focus instead: a field's border, the
+composer's shell, the search underline, or an editor that exists only while
+focused. `lint:tokens` fails a bare `outline:none`.
+
 **Reduced motion keeps the state change and drops the movement.** Under
 `prefers-reduced-motion: reduce` a fade stays and a slide, scale or sweep does
 not: the capture modal fades instead of rising, the loading shimmer holds still,

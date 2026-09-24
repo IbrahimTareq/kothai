@@ -91,6 +91,17 @@ const RULES = [
     msg: 'raw line-height — use a --leading-* token',
   },
   { id: 'z-index', re: /z-index:\s*[0-9]/g, msg: 'raw z-index — use a --z-* token' },
+  // Twelve rules set outline:none, and keyboard focus went with most of them:
+  // a tile, a card and a smart-space spark showed it only as their hover
+  // state, and a combobox row reached by Tab showed nothing. Everything else
+  // fell back to the browser's own ring, in an accent colour the palette does
+  // not have. base.css now draws one monochrome ring on :focus-visible, so
+  // hiding it has to say what shows focus instead.
+  {
+    id: 'outline',
+    re: /outline:\s*(?:none|0)(?![\w.])/g,
+    msg: 'outline:none hides keyboard focus — let the :focus-visible ring show, or annotate what shows focus instead',
+  },
   {
     id: 'duration',
     // durations under .5s are interaction feedback and must be on the scale

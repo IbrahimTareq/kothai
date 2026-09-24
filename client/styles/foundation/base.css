@@ -41,6 +41,9 @@ h1,h2,h3,h4{font-weight:var(--fw-heading);letter-spacing:var(--tracking-heading)
 button{font-family:inherit;letter-spacing:inherit}
 a{color:inherit}
 ::selection{background:var(--selection);color:var(--ink)}
+/* The one focus ring. :focus-visible, so a Tab draws it and a click does not;
+   offset so it reads against the page rather than the control's own fill. */
+:focus-visible{outline:var(--focus-ring);outline-offset:2px}
 
 /* Background: Behold is flat & imagery-led; for an app we keep a single,
    near-invisible top vignette for depth. No scanlines / grid / glow. */

@@ -136,6 +136,10 @@
   --scrollbar-thumb:rgba(255,255,255,.1);
   --scrollbar-thumb-hover:rgba(255,255,255,.2);
   --selection:rgba(255,255,255,.16);
+  /* Keyboard focus. The browser's own ring is the OS accent, an orange-gold
+     on this machine, which a black-and-white palette has no place for. --ink
+     is the strongest contrast either theme has against its page. */
+  --focus-ring:2px solid var(--ink);
 
   /* "accent" is pure white — CTAs invert (white bg / dark ink), like Behold's
      "Download on iOS" pill. Ink on an accent fill is --on-accent.

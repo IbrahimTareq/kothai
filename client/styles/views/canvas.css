@@ -64,9 +64,13 @@
 }
 .cv-text textarea {
   display: block; width: 100%; resize: none; border: 0; background: transparent; color: var(--ink);
-  font: inherit; font-size: var(--text-sm); line-height: var(--leading-normal); outline: none; overflow: hidden;
+  font: inherit; font-size: var(--text-sm); line-height: var(--leading-normal); overflow: hidden;
+  outline: none; /* token-lint-ignore: the note's box shows focus, below — a ring round the text inside it doubled the selection outline */
 }
 .cv-text textarea::placeholder { color: var(--ink-faint); }
+/* An in-place editor shows focus the way a .field does: its box's border
+   brightens. The textarea and the column's label had no focus state at all. */
+.cv-text:focus-within, .cv-col:focus-within { border-color: var(--line-focus); }
 
 /* Columns. .cv-col-head height must match COL_HEAD in layout/canvas.ts. */
 .cv-col {
@@ -83,7 +87,8 @@
   background-image: radial-gradient(var(--ink-faint) 1px, transparent 1.2px); background-size: 5px 5px;
 }
 .cv-col-head input {
-  flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink); outline: none;
+  flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink);
+  outline: none; /* token-lint-ignore: the column's box shows focus, below */
   font: inherit; font-size: var(--text-xs); font-weight: var(--fw-medium);
   letter-spacing: var(--tracking-label); text-transform: uppercase;
 }
