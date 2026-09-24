@@ -53,6 +53,7 @@
 .coll-rule.fade-l.fade-r{
   -webkit-mask-image:linear-gradient(to right,transparent,#000 var(--space-32),#000 calc(100% - var(--space-32)),transparent);  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
   mask-image:linear-gradient(to right,transparent,#000 var(--space-32),#000 calc(100% - var(--space-32)),transparent)}
+.coll-rule-label { flex: none; }
 .coll-smart { display: inline-flex; flex: none; color: var(--ink-mute); cursor: help; }
 .coll-smart:hover, .coll-smart:focus-visible { color: var(--ink); }
 /* dashed, like the expanded sidebar's "add to space" — a slot, not a value */

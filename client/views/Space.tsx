@@ -193,7 +193,7 @@ export function CollectionView({
           collection.tags.length > 0 && (
             <Tooltip
               label="Smart space"
-              detail="Any item tagged with a rule below joins this space automatically."
+              detail="Any item carrying one of the tags below joins this space automatically."
               side="bottom"
             >
               <span className="coll-smart" tabIndex={0} aria-label="Smart space">
@@ -247,17 +247,21 @@ export function CollectionView({
         }
         filters={
           <div className={`coll-rule${ruleFade}`} ref={ruleRef}>
+            {/* Named, because this row sits exactly where Everything's filters
+                do and draws the same pills — but a click here stops a tag
+                filling the space, where a click there only narrows the view. */}
+            {collection.tags.length > 0 && <span className="eyebrow coll-rule-label">Auto-adds</span>}
             {collection.tags.map(t => (
-              <Chip removable key={t} title="Remove rule tag" onClick={() => removeTag(t)}>
+              <Chip removable key={t} title="Stop auto-adding this tag" onClick={() => removeTag(t)}>
                 {t}
               </Chip>
             ))}
             <div className="coll-ruleadd">
               <Popover
-                label="Add rule tag"
+                label="Auto-add a tag"
                 open={addingTag}
                 onOpenChange={open => (open ? setAddingTag(true) : closeRuleAdd())}
-                trigger={<Chip add>+ rule tag</Chip>}
+                trigger={<Chip add>{collection.tags.length ? '+ Tag' : '+ Auto-add by tag'}</Chip>}
               >
                 <p className="rulepop-hint">Items tagged with any of these automatically join this space.</p>
                 <Input
@@ -344,9 +348,14 @@ export function CollectionView({
       ) : (
         <div className="gal-scroll" ref={scrollRef}>
           {collItems.length === 0 ? (
+            // Not the spark: that marks a smart space, and this may not be one.
+            // The button is the way to fill it, which the message only named.
             <div className="empty">
-              <Icon name="spark" size={40} />
-              <p>{collection.tags.length > 0 ? 'NO ITEMS MATCH YET' : 'ADD ITEMS FROM EVERYTHING'}</p>
+              <Icon name="spaces" size={40} />
+              <p>{collection.tags.length > 0 ? 'NO ITEMS MATCH YET' : 'NO ITEMS YET'}</p>
+              <Button className="coll-browse" onClick={() => navigate('all')}>
+                Browse Everything
+              </Button>
             </div>
           ) : (
             <WindowedBoard

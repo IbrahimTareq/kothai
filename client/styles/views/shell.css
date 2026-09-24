@@ -30,6 +30,9 @@
    one Segmented without .view-toggle. */
 :root[data-demo] .collection-view :is(.coll-rule, .page-display .seg:not(.view-toggle)){display:none}
 :root[data-demo] .coll-name{pointer-events:none}
+/* An empty space's way to Everything goes as well: Everything has no "Add to
+   space" on the demo, so it would send a visitor to a control they lack. */
+:root[data-demo] .coll-browse{display:none}
 /* What it locks instead, where the value itself is worth seeing: an item's
    tags, note and spaces. A disabled fieldset takes every
    control inside out of reach, keyboard included; display:contents keeps it
