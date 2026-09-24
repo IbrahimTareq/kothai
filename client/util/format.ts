@@ -1,18 +1,20 @@
 // Time / date / gradient formatting helpers.
 
-const now = Date.now()
-
 // Wall-clock time for a chat message. Absolute rather than relative: a thread
 // is read top to bottom, and "2m ago" on every line goes stale the moment the
-// tab sits open (relTime's `now` is fixed at import).
+// tab sits open (relTime is only as fresh as the card's last render).
 export function clockTime(ts: number): string {
   if (!Number.isFinite(ts)) return ''
   return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 }
 
+// Read the clock per call. Taken once at import, it made every link saved
+// after the page loaded read "scheduled" until a reload, which on the demo
+// looked like a save stuck in processing. Nothing is ever dated ahead, so a
+// negative diff is only the server's clock running ahead of this one, and it
+// falls through to "just now".
 export function relTime(ts: number): string {
-  const diff = now - ts
-  if (diff < 0) return 'scheduled'
+  const diff = Date.now() - ts
   const mins = Math.floor(diff / 60000)
   if (mins < 1) return 'just now'
   if (mins < 60) return `${mins}m ago`
