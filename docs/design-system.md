@@ -103,6 +103,14 @@ absorbed Expanded's own tag pills, whose annotation had deferred exactly this,
 and settled "add one" on the dashed, quiet pill: "+ Add tag" had been a filled
 accent in the same sidebar as a dashed "Add to space".
 
+**A modal is `<Dialog>`** (`client/ui/`, on Radix): the item view and quick
+capture. It traps focus, hides the page behind it from a screen reader, names
+itself with a `title` it reads out but does not show, opens on the panel (or on
+`initialFocus`), closes on Escape or an outside press through Radix's layer
+stack, and returns focus to what opened it. Both were plain divs with none of
+that: Tab walked out of the item view into the board, and closing one dropped
+focus on `<body>`.
+
 **Every page opens with `<PageHeader>`** (`client/ui/`). Two rows: identity
 (`lead`, `title`, a mono `meta` count, `actions` on the right) over a toolbar
 of `filters` on the left — what is shown — and `display` on the right — how

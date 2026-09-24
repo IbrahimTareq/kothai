@@ -13,6 +13,7 @@ import { useScrollEdges } from '../layout/useScrollEdges'
 import type { Collection, UIItem } from '../types'
 import { Button } from '../ui/Button'
 import { Chip } from '../ui/Chip'
+import { Dialog } from '../ui/Dialog'
 import { Menu } from '../ui/Menu'
 import { Textarea } from '../ui/Input'
 import { Tooltip } from '../ui/Tooltip'
@@ -364,17 +365,6 @@ export function ExpandedView({
     setDragY(0)
   }
 
-  // Esc closes a menu open inside the overlay first, then the overlay. Radix
-  // sees the key first (a capture listener on document) and marks the event
-  // handled when it dismisses one of its layers.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !e.defaultPrevented) onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   const commitTags = (next: string[]) => {
     setTags(next)
     onUpdate(item.id, { tags: next })
@@ -398,6 +388,8 @@ export function ExpandedView({
     </>
   )
 
+  const title = item.title || item.name || (item.text || '').slice(0, 60) || 'Untitled'
+
   // Follows the drag 1:1 and fades toward (never quite reaching) transparent,
   // so the board underneath is visibly there before the release decides
   // whether the gesture actually commits.
@@ -406,163 +398,167 @@ export function ExpandedView({
     : undefined
 
   return (
-    <div className="exp-overlay" onClick={onClose}>
-      <div className={`exp-shell${dragging ? ' dragging' : ''}`} style={shellStyle} onClick={e => e.stopPropagation()}>
-        <button className="exp-close-m" aria-label="Close" onClick={onClose}>
-          <Icon name="close" size={16} />
-        </button>
-        {/* The gesture area. Pointer handlers live here (not on .exp-shell or
+    <Dialog
+      title={title}
+      onClose={onClose}
+      overlayClassName="exp-overlay"
+      className={`exp-shell${dragging ? ' dragging' : ''}`}
+      style={shellStyle}
+    >
+      <button className="exp-close-m" aria-label="Close" onClick={onClose}>
+        <Icon name="close" size={16} />
+      </button>
+      {/* The gesture area. Pointer handlers live here (not on .exp-shell or
             .exp-overlay) so .exp-side's own vertical scroll — the tags/notes/
             spaces form — is never in competition with them. */}
-        <div
-          className={`exp-main${mainFade}`}
-          ref={mainRef}
-          onPointerDown={onGestureStart}
-          onPointerMove={onGestureMove}
-          onPointerUp={onGestureEnd}
-          onPointerCancel={onGestureCancel}
-        >
-          <MainPanel item={item} slidesLoading={slidesLoading} />
-        </div>
+      <div
+        className={`exp-main${mainFade}`}
+        ref={mainRef}
+        onPointerDown={onGestureStart}
+        onPointerMove={onGestureMove}
+        onPointerUp={onGestureEnd}
+        onPointerCancel={onGestureCancel}
+      >
+        <MainPanel item={item} slidesLoading={slidesLoading} />
+      </div>
 
-        <aside className="exp-side">
-          <div className="exp-side-scroll">
-            <h2 className="exp-title">{item.title || item.name || (item.text || '').slice(0, 60) || 'Untitled'}</h2>
-            <div className="exp-meta">
-              {relTime(item.ts)}
-              {item.url ? (
-                <a className="exp-src" href={item.url} target="_blank" rel="noreferrer">
-                  {srcInner}
-                </a>
-              ) : (
-                <span className="exp-src">{srcInner}</span>
+      <aside className="exp-side">
+        <div className="exp-side-scroll">
+          <h2 className="exp-title">{title}</h2>
+          <div className="exp-meta">
+            {relTime(item.ts)}
+            {item.url ? (
+              <a className="exp-src" href={item.url} target="_blank" rel="noreferrer">
+                {srcInner}
+              </a>
+            ) : (
+              <span className="exp-src">{srcInner}</span>
+            )}
+          </div>
+
+          <section className="exp-sec">
+            <div className="exp-sec-h">
+              Tags <span className="exp-sec-n">{tags.length}</span>
+            </div>
+            <div className="exp-tags">
+              <Chip compact add onClick={() => setAdding(true)}>
+                + Add tag
+              </Chip>
+              {tags.map(t => (
+                <Chip compact removable key={t} title="Remove tag" onClick={() => removeTag(t)}>
+                  {t}
+                </Chip>
+              ))}
+              {adding && (
+                <input
+                  className="exp-tag-input mono"
+                  autoFocus
+                  value={draft}
+                  placeholder="tag…"
+                  onChange={e => setDraft(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') addTag()
+                    if (e.key === 'Escape') {
+                      setAdding(false)
+                      setDraft('')
+                    }
+                  }}
+                  onBlur={addTag}
+                />
               )}
             </div>
+          </section>
 
-            <section className="exp-sec">
-              <div className="exp-sec-h">
-                Tags <span className="exp-sec-n">{tags.length}</span>
-              </div>
-              <div className="exp-tags">
-                <Chip compact add onClick={() => setAdding(true)}>
-                  + Add tag
-                </Chip>
-                {tags.map(t => (
-                  <Chip compact removable key={t} title="Remove tag" onClick={() => removeTag(t)}>
-                    {t}
-                  </Chip>
-                ))}
-                {adding && (
-                  <input
-                    className="exp-tag-input mono"
-                    autoFocus
-                    value={draft}
-                    placeholder="tag…"
-                    onChange={e => setDraft(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') addTag()
-                      if (e.key === 'Escape') {
-                        setAdding(false)
-                        setDraft('')
-                      }
-                    }}
-                    onBlur={addTag}
-                  />
-                )}
-              </div>
-            </section>
+          <section className="exp-sec">
+            <div className="exp-sec-h">Notes</div>
+            <Textarea
+              className="exp-note"
+              placeholder="Type here to add a note…"
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              onBlur={commitNote}
+            />
+          </section>
 
-            <section className="exp-sec">
-              <div className="exp-sec-h">Notes</div>
-              <Textarea
-                className="exp-note"
-                placeholder="Type here to add a note…"
-                value={note}
-                onChange={e => setNote(e.target.value)}
-                onBlur={commitNote}
-              />
-            </section>
-
-            <section className="exp-sec">
-              <div className="exp-sec-h">
-                Spaces <span className="exp-sec-n">{inSpaces.length}</span>
-              </div>
-              <div className="exp-colls">
-                {inSpaces.map(c => (
-                  <div key={c.id} className="exp-coll">
-                    {c.tags.length > 0 && <Icon name="spark" size={11} />}
-                    <span className="exp-coll-name">{c.name}</span>
-                    <button
-                      className="exp-coll-x"
-                      aria-label={`Remove from ${c.name}`}
-                      onClick={() => onRemoveFrom(c.id, item.id)}
-                    >
-                      <Icon name="close" size={11} />
-                    </button>
-                  </div>
-                ))}
-                <Menu
-                  empty={collections.length === 0 ? 'No spaces yet' : 'In every space'}
-                  trigger={
-                    <button className="exp-coll-plus">
-                      <Icon name="plus" size={12} /> Add to space
-                    </button>
-                  }
-                  items={openSpaces.map(c => ({
-                    key: c.id,
-                    label: c.name,
-                    trailing: c.tags.length > 0 && (
-                      <span title="Smart space">
-                        <Icon name="spark" size={11} />
-                      </span>
-                    ),
-                    onSelect: () => onAddTo(c.id, item.id),
-                  }))}
-                />
-              </div>
-            </section>
-          </div>
-
-          <div className="exp-side-actions">
-            {/* Tips hang on a wrapper: a disabled button fires no pointer events,
-                and while a retag runs "Retagging…" is the only sign it took. */}
-            {[
-              { label: 'Copy link', icon: 'copy', onClick: () => item.url && navigator.clipboard?.writeText(item.url) },
-              { label: 'Open original', icon: 'external', onClick: () => openUrl(item.url) },
-              {
-                label: item.pending ? 'Retagging…' : 'Re-tag',
-                icon: 'retag',
-                disabled: item.pending,
-                onClick: () => onRetag(item.id),
-              },
-              {
-                label: 'Delete',
-                icon: 'trash',
-                className: 'del',
-                onClick: () => {
-                  onDelete(item.id)
-                  onClose()
-                },
-              },
-            ].map(a => (
-              <Tooltip key={a.icon} label={a.label}>
-                <span className="exp-tip-wrap">
-                  <Button
-                    size="icon"
-                    tone="ghost"
-                    className={a.className}
-                    aria-label={a.label}
-                    disabled={a.disabled}
-                    onClick={a.onClick}
+          <section className="exp-sec">
+            <div className="exp-sec-h">
+              Spaces <span className="exp-sec-n">{inSpaces.length}</span>
+            </div>
+            <div className="exp-colls">
+              {inSpaces.map(c => (
+                <div key={c.id} className="exp-coll">
+                  {c.tags.length > 0 && <Icon name="spark" size={11} />}
+                  <span className="exp-coll-name">{c.name}</span>
+                  <button
+                    className="exp-coll-x"
+                    aria-label={`Remove from ${c.name}`}
+                    onClick={() => onRemoveFrom(c.id, item.id)}
                   >
-                    <Icon name={a.icon} size={16} />
-                  </Button>
-                </span>
-              </Tooltip>
-            ))}
-          </div>
-        </aside>
-      </div>
-    </div>
+                    <Icon name="close" size={11} />
+                  </button>
+                </div>
+              ))}
+              <Menu
+                empty={collections.length === 0 ? 'No spaces yet' : 'In every space'}
+                trigger={
+                  <button className="exp-coll-plus">
+                    <Icon name="plus" size={12} /> Add to space
+                  </button>
+                }
+                items={openSpaces.map(c => ({
+                  key: c.id,
+                  label: c.name,
+                  trailing: c.tags.length > 0 && (
+                    <span title="Smart space">
+                      <Icon name="spark" size={11} />
+                    </span>
+                  ),
+                  onSelect: () => onAddTo(c.id, item.id),
+                }))}
+              />
+            </div>
+          </section>
+        </div>
+
+        <div className="exp-side-actions">
+          {/* Tips hang on a wrapper: a disabled button fires no pointer events,
+                and while a retag runs "Retagging…" is the only sign it took. */}
+          {[
+            { label: 'Copy link', icon: 'copy', onClick: () => item.url && navigator.clipboard?.writeText(item.url) },
+            { label: 'Open original', icon: 'external', onClick: () => openUrl(item.url) },
+            {
+              label: item.pending ? 'Retagging…' : 'Re-tag',
+              icon: 'retag',
+              disabled: item.pending,
+              onClick: () => onRetag(item.id),
+            },
+            {
+              label: 'Delete',
+              icon: 'trash',
+              className: 'del',
+              onClick: () => {
+                onDelete(item.id)
+                onClose()
+              },
+            },
+          ].map(a => (
+            <Tooltip key={a.icon} label={a.label}>
+              <span className="exp-tip-wrap">
+                <Button
+                  size="icon"
+                  tone="ghost"
+                  className={a.className}
+                  aria-label={a.label}
+                  disabled={a.disabled}
+                  onClick={a.onClick}
+                >
+                  <Icon name={a.icon} size={16} />
+                </Button>
+              </span>
+            </Tooltip>
+          ))}
+        </div>
+      </aside>
+    </Dialog>
   )
 }

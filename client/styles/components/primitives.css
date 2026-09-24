@@ -270,3 +270,11 @@ textarea.field{resize:vertical;line-height:var(--leading-normal)}
   padding:var(--space-10) var(--space-12);border-radius:var(--radius-lg);box-shadow:var(--shadow-popover);
   color:var(--ink-dim);line-height:var(--leading-snug);white-space:normal}
 .tip--detail b{color:var(--ink);font-weight:var(--fw-heading)}
+
+/* ── dialog ────────────────────────────────────────────────────────────────
+   <Dialog> in client/ui/ names each modal for a screen reader without showing
+   the name, and opens focused on the panel itself — which is not a control,
+   so it draws no ring; the first Tab reaches the first real one. */
+.dialog-title{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;
+  overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+[role="dialog"]:focus{outline:none}
