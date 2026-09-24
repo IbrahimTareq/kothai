@@ -6,15 +6,15 @@
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 
-// Typed as meta.get's own signature, which forces every stub below to hand
+// Typed as get's own signature, which forces every stub below to hand
 // back a REAL Response. The literals they used to return ({ json: async () =>
 // ... }) could only be typed by lying about what get() answers — and the case
 // that matters most here, a 200 whose body is not JSON, is only honest if
 // json() fails the way the real one does.
 let getImpl: (url: string, accept: string) => Promise<Response>
-const realMeta = await import('../../../server/ai/meta.ts')
-mock.module('../../../server/ai/meta.ts', {
-  namedExports: { ...realMeta, get: (url: string, accept: string) => getImpl(url, accept) },
+const realFetch = await import('../../../server/links/fetch.ts')
+mock.module('../../../server/links/fetch.ts', {
+  namedExports: { ...realFetch, get: (url: string, accept: string) => getImpl(url, accept) },
 })
 const { checkAvailability, isCheckable, ALIVE, DEAD, UNKNOWN } = await import('../../../server/ai/availability.ts')
 

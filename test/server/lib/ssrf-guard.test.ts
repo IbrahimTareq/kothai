@@ -173,7 +173,7 @@ test('assertPublicUrl: allowPrivate re-opens everything except the scheme check 
 
 // Real Response objects rather than Response-alikes: safeFetch hands its result
 // straight back to the caller, which reads res.ok and res.status
-// (server/ai/meta.ts), so the fake has to be the same thing. Identity of the
+// (server/links/fetch.ts), so the fake has to be the same thing. Identity of the
 // returned object is what each test below asserts.
 const redirectTo = (location: string, status = 302): Response => new Response(null, { status, headers: { location } })
 

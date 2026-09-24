@@ -13,7 +13,8 @@
 // scrape sits behind a >=2.5s throttle precisely because Instagram soft-bans,
 // and a soft-ban is indistinguishable from a deleted post. A wrong guess there
 // is a deleted real save, so the answer is simply "unknown".
-import { oembedEndpoint, get } from './meta.ts'
+import { oembedEndpoint } from './meta.ts'
+import { get } from '../links/fetch.ts'
 
 export const ALIVE = 'alive'
 export const DEAD = 'dead'
