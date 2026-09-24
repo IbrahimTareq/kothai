@@ -6,7 +6,7 @@ import { ItemCard } from '../components/Cards'
 import { WindowedBoard } from '../components/Board'
 import { useScrollEdges } from '../layout/useScrollEdges'
 import { suggestTags } from '../domain/tagSuggest'
-import { Canvas } from '../components/Canvas'
+import { CanvasLoading, LazyCanvas } from '../components/LazyCanvas'
 import { useNotes } from '../data/useNotes'
 import type { NoteSource } from '../data/useNotes'
 import { isPlaceholder } from '../data/pager'
@@ -444,7 +444,7 @@ export function CollectionView({
 
       {board ? (
         membersReady ? (
-          <Canvas
+          <LazyCanvas
             collectionId={collection.id}
             items={collItems}
             doc={collection.canvas}
@@ -456,10 +456,7 @@ export function CollectionView({
           // Membership isn't fully loaded yet — mounting Canvas now would have
           // it treat not-yet-loaded members as departed and delete their cards
           // (see membersReady above). Wait rather than risk that.
-          <div className="empty">
-            <Icon name="spark" size={40} />
-            <p>LOADING CANVAS…</p>
-          </div>
+          <CanvasLoading />
         )
       ) : (
         <div className="gal-scroll" ref={scrollRef}>

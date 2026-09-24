@@ -28,7 +28,7 @@ const ROLE_PLACEHOLDER: Record<Role, string> = {
 }
 
 // Human copy for the three residency policies, in display order.
-export const POLICY_META: { key: Residency; label: string; desc: string }[] = [
+const POLICY_META: { key: Residency; label: string; desc: string }[] = [
   { key: 'off', label: 'Off', desc: 'No download, no RAM. Features that need this model are disabled.' },
   {
     key: 'ondemand',
@@ -39,7 +39,7 @@ export const POLICY_META: { key: Residency; label: string; desc: string }[] = [
 ]
 
 // Segmented Off / On demand / Always control + a one-line tradeoff blurb.
-export function ResidencyControl({
+function ResidencyControl({
   value,
   busy,
   onPick,

@@ -125,7 +125,7 @@ export function visibleBoxes(boxes: Box[], scrollTop: number, viewportH: number)
 // that have never been on screen; once a card mounts, its real measured
 // height replaces this in the cache. Rough is fine — being wrong just means
 // the scrollbar settles slightly as you scroll into new territory.
-export function estimateHeight(item: UIItem): number {
+function estimateHeight(item: UIItem): number {
   // Media cards are dominated by the thumbnail; Instagram's are portrait.
   if (item.type === 'image' || item.type === 'video') return 340
   if (item.type === 'link') return item.thumb ? 300 : 150

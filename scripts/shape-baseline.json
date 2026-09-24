@@ -17,7 +17,7 @@
   },
   "client/layout/canvas.ts": {
     "lines": 250,
-    "exports": 20
+    "exports": 18
   },
   "client/views/Core.tsx": {
     "lines": 573,
@@ -32,7 +32,7 @@
     "exports": 1
   },
   "client/views/Spaces.tsx": {
-    "lines": 493,
+    "lines": 490,
     "exports": 2
   },
   "server/ai/enrich.ts": {
@@ -61,7 +61,7 @@
   },
   "server/data/collections.ts": {
     "lines": 286,
-    "exports": 15
+    "exports": 14
   },
   "server/data/notes.ts": {
     "lines": 686,
@@ -83,6 +83,6 @@
     "claudeMdLines": 45,
     "cleanCodeRulesLines": 41,
     "baselineEntries": 20,
-    "exportTotal": 507
+    "exportTotal": 502
   }
 }

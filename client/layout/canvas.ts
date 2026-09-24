@@ -13,12 +13,12 @@ export const COL_MIN_H = 120
 export const COL_HEAD = 36 // column header height; must match .cv-col-head in canvas.css
 export const COL_PAD = 12
 export const GAP = 24
-export const PACK_MAX_W = 1200
+const PACK_MAX_W = 1200
 export const DEFAULT_H = 160 // assumed card height until React Flow has measured it
 
 export const EMPTY_DOC: CanvasDoc = { nodes: [], edges: [] }
 
-export const itemNodeId = (itemId: string) => `item:${itemId}`
+const itemNodeId = (itemId: string) => `item:${itemId}`
 
 export interface Bounds {
   minX: number

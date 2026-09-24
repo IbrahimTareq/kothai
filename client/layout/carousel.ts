@@ -3,7 +3,7 @@
 // directly testable, the same way masonry.ts and pager.ts are.
 
 export const PEEK = 2 // slides drawn either side of the active one
-export const SWIPE_PX = 56 // drag distance that commits to the neighbouring slide
+const SWIPE_PX = 56 // drag distance that commits to the neighbouring slide
 export const SLOP_PX = 6 // movement below this is still a click, not a drag
 
 export interface SlidePos {

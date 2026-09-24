@@ -67,7 +67,7 @@ export interface SourceDef {
   glyph?: string
   test: (i: UIItem) => boolean
 }
-export const PLATFORMS: SourceDef[] = [
+const PLATFORMS: SourceDef[] = [
   {
     key: 'github',
     label: 'GitHub',
