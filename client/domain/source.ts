@@ -58,15 +58,6 @@ export function githubParts(url?: string | null): { owner: string; repo: string 
   }
 }
 
-// Monochrome-first per the design system; the rest stay as optional tints.
-export const ACCENTS = [
-  '#ffffff', // mono (default)
-  '#cdd6e4', // ash
-  '#38e0d4', // plasma
-  '#ff9d4d', // sodium
-  '#9d7dff', // ion violet
-]
-
 // Popular saved sources for the Everything-page filter pills. Each is a host/url
 // predicate over a saved item — sources are just types narrowed by platform.
 export interface SourceDef {

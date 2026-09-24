@@ -182,9 +182,7 @@
 
   /* ── Stacking ──
      Named for the job each layer does, so a new element is placed by role and
-     never by picking a number. Values preserve the existing order exactly.
-     The Tweaks panel sits outside this system (it injects its own stylesheet
-     at 2147483646) and is not covered here. */
+     never by picking a number. Values preserve the existing order exactly. */
   --z-base:0;             /* background fx */
   --z-raised:1;           /* app root */
   --z-content:3;          /* controls layered on a card or thumbnail */

@@ -1,4 +1,4 @@
-// App.tsx — Kothai shell: capture console, reactor states, gallery, ask thread, tweaks.
+// App.tsx — Kothai shell: capture console, reactor states, gallery, ask thread.
 import { useState, useEffect, useRef } from 'react'
 import { Icon, CATEGORIES, CAT } from '../components/icons'
 import { API } from '../data/api'
@@ -13,19 +13,12 @@ import { ExpandedView } from '../views/Expanded'
 import { SettingsView } from '../views/Settings'
 import { Onboarding } from '../views/Onboarding'
 import { CaptureModal } from '../components/Capture'
-import { useTweaks, TweaksPanel, TweakSection, TweakColor, TweakToggle, TweakRadio } from '../components/Tweaks'
 import { pathToRoute, routeToPath, chatPath } from './router'
-import { ACCENTS, SOURCES, SOURCE_BY_KEY, sourceGlyph } from '../domain/source'
+import { SOURCES, SOURCE_BY_KEY, sourceGlyph } from '../domain/source'
 import { CoreView } from '../views/Core'
 import { GalleryView } from '../views/Gallery'
 import { SpacesView, CollectionView } from '../views/Spaces'
 import type { UIItem, ViewMode } from '../types'
-
-const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/ {
-  accent: '#ffffff',
-  defaultView: 'grid4',
-  texture: true,
-} /*EDITMODE-END*/
 
 // The type ids the board understands, taken from the icon catalogue so the two
 // cannot drift. boardQuery takes it as an argument rather than importing
@@ -33,7 +26,6 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/ {
 const KNOWN_TYPES = new Set(Object.keys(CAT))
 
 export default function App() {
-  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS)
   const { vault, llmOff, llmWarming, needsSetup, setNeedsSetup } = useVaultStatus()
   const {
     collections,
@@ -55,7 +47,7 @@ export default function App() {
   // After nav: useChat reloads the saved-conversation list on entering Ask.
   const chat = useChat(nav)
   const [captureOpen, setCaptureOpen] = useState(false)
-  const [view, setView] = useState<ViewMode>(TWEAK_DEFAULTS.defaultView as ViewMode)
+  const [view, setView] = useState<ViewMode>('grid4')
   const [search, setSearch] = useState('')
   const [searchFocus, setSearchFocus] = useState(false)
   // Everything-page filters, multi-select. Chip keys are mixed (types, sources
@@ -79,13 +71,6 @@ export default function App() {
   // is a separate instance from the Everything board's.
   const spaceNotesRef = useRef<NoteSource | null>(null)
 
-  // Only pin --accent inline for a real (non-default) tint; otherwise defer to
-  // the stylesheet so each theme's default accent applies.
-  useEffect(() => {
-    const el = document.documentElement
-    if (t.accent && t.accent.toLowerCase() !== '#ffffff') el.style.setProperty('--accent', t.accent)
-    else el.style.removeProperty('--accent')
-  }, [t.accent])
   useEffect(() => {
     document.documentElement.dataset.theme = theme
     try {
@@ -95,15 +80,8 @@ export default function App() {
     }
   }, [theme])
   useEffect(() => {
-    setView(t.defaultView as ViewMode)
-  }, [t.defaultView])
-  useEffect(() => {
     setGalFilter([])
   }, [nav]) // clear filters when switching pages
-  useEffect(() => {
-    const fx = document.getElementById('bg-fx')
-    if (fx) fx.style.display = t.texture ? '' : 'none'
-  }, [t.texture])
 
   // nav + chips → the server query for the Everything board. The rules (OR
   // within a facet, AND across them; "unavailable" as a state rather than a
@@ -545,23 +523,6 @@ export default function App() {
       )}
 
       {captureOpen && <CaptureModal onClose={() => setCaptureOpen(false)} onSave={saveCapture} />}
-
-      <TweaksPanel>
-        <TweakSection label="Core" />
-        <TweakColor label="Accent signal" value={t.accent} options={ACCENTS} onChange={v => setTweak('accent', v)} />
-        <TweakToggle label="Ambient texture" value={t.texture} onChange={v => setTweak('texture', v)} />
-        <TweakSection label="Gallery" />
-        <TweakRadio
-          label="Default grid"
-          value={t.defaultView}
-          options={[
-            { value: 'grid4', label: '4' },
-            { value: 'grid6', label: '6' },
-            { value: 'grid8', label: '8' },
-          ]}
-          onChange={v => setTweak('defaultView', v)}
-        />
-      </TweaksPanel>
     </div>
   )
 }

@@ -45,13 +45,9 @@ const RECESSIVE_INK = new Set(['--ink-faint'])
 // design system lists content overlays as a standing exception.
 const MEDIA_BACKDROP = new Set(['--overlay'])
 
-// tweaks.css only overrides a third-party panel that ships its own language,
-// the same exclusion the token linter makes.
-const SKIP = new Set(['tweaks.css'])
-
 const walk = (dir: string): string[] =>
   readdirSync(dir, { withFileTypes: true }).flatMap(e =>
-    e.isDirectory() ? walk(join(dir, e.name)) : e.name.endsWith('.css') && !SKIP.has(e.name) ? [join(dir, e.name)] : [],
+    e.isDirectory() ? walk(join(dir, e.name)) : e.name.endsWith('.css') ? [join(dir, e.name)] : [],
   )
 
 type Pairing = { file: string; selector: string; fg: string; bg: string }

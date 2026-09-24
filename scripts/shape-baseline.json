@@ -1,6 +1,6 @@
 {
   "client/app/App.tsx": {
-    "lines": 568,
+    "lines": 529,
     "exports": 1
   },
   "client/components/Canvas.tsx": {
@@ -10,10 +10,6 @@
   "client/components/Cards.tsx": {
     "lines": 472,
     "exports": 4
-  },
-  "client/components/Tweaks.tsx": {
-    "lines": 468,
-    "exports": 8
   },
   "client/data/api.ts": {
     "lines": 486,
@@ -80,7 +76,7 @@
     "exports": 9
   },
   "server/routes/import.ts": {
-    "lines": 482,
+    "lines": 481,
     "exports": 1
   },
   "server/routes/settings.ts": {
@@ -90,7 +86,7 @@
   "_governance": {
     "claudeMdLines": 45,
     "cleanCodeRulesLines": 41,
-    "baselineEntries": 22,
-    "exportTotal": 517
+    "baselineEntries": 21,
+    "exportTotal": 508
   }
 }

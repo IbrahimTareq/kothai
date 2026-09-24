@@ -18,8 +18,7 @@ import { findButtonChrome } from './button-chrome.ts'
 
 const CLIENT = join(dirname(fileURLToPath(import.meta.url)), '..', 'client')
 const STYLES = join(CLIENT, 'styles')
-// tweaks.css only overrides a third-party panel that ships its own language.
-const SKIP = new Set(['tokens.css', 'tweaks.css'])
+const SKIP = new Set(['tokens.css'])
 
 // Stylesheets are grouped into foundation/, components/ and views/, so walk
 // the tree rather than reading one flat directory. Paths stay relative to
@@ -130,10 +129,7 @@ for (const file of files) {
  * dynamic values (computed positions, gradients, progress widths) are the
  * legitimate use of inline style and must not be flagged, so interpolations
  * are stripped before the literals are examined.
- *
- * Tweaks.tsx is skipped: it injects a third-party panel's own stylesheet.
  */
-const SKIP_TSX = new Set(['Tweaks.tsx'])
 const LAYOUT_PROP =
   /^(padding|margin|gap|inset|top|right|bottom|left|width|height|minWidth|minHeight|maxWidth|maxHeight|fontSize|borderRadius|zIndex|letterSpacing|lineHeight)/
 
@@ -141,7 +137,7 @@ function walk(dir: string): string[] {
   return readdirSync(dir).flatMap(name => {
     const full = join(dir, name)
     if (statSync(full).isDirectory()) return walk(full)
-    return name.endsWith('.tsx') && !SKIP_TSX.has(name) ? [full] : []
+    return name.endsWith('.tsx') ? [full] : []
   })
 }
 

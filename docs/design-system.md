@@ -87,9 +87,6 @@ Three things sit outside the system on purpose. Don't "fix" them.
   video use literal black scrims and white glyphs, because their backdrop is the
   media, not a themed surface. Same for letterbox backgrounds and the dark code
   block. Each is annotated with `token-lint-ignore` and a reason.
-- **The Tweaks panel.** `Tweaks.tsx` injects its own stylesheet with a foreign
-  design language and a `--dc-inv-zoom` token; `tweaks.css` only overrides it.
-  Both are excluded from the linter.
 
 ## The guardrail
 
