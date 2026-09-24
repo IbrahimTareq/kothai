@@ -78,7 +78,12 @@ export function CaptureModal({ onClose, onSave }: CaptureModalProps) {
           {pendingImg && (
             <span className="attach-preview">
               <img src={pendingImg} alt="attachment" />
-              <button className="attach-x" title="remove" onClick={() => setPendingImg(null)}>
+              <button
+                className="attach-x"
+                aria-label="Remove attached image"
+                title="Remove attached image"
+                onClick={() => setPendingImg(null)}
+              >
                 ✕
               </button>
             </span>
@@ -117,10 +122,23 @@ export function CaptureModal({ onClose, onSave }: CaptureModalProps) {
               e.target.value = ''
             }}
           />
-          <button className="attach-btn" title="attach image" onClick={() => fileRef.current?.click()}>
+          {/* Named as Ask's are: these are icon-only, and the send button had
+              no name at all, so a screen reader announced a bare "button". */}
+          <button
+            className="attach-btn"
+            aria-label="Attach an image"
+            title="Attach an image"
+            onClick={() => fileRef.current?.click()}
+          >
             <Icon name="image" size={17} />
           </button>
-          <button className="send-btn" disabled={(!text.trim() && !pendingImg) || saving} onClick={save}>
+          <button
+            className="send-btn"
+            aria-label="Save"
+            title="Save"
+            disabled={(!text.trim() && !pendingImg) || saving}
+            onClick={save}
+          >
             <Icon name="send" size={18} />
           </button>
         </div>
