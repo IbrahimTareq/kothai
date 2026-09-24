@@ -137,7 +137,7 @@ export function findUnreducedMotion(sheets: { file: string; css: string }[]) {
       .replace(/@media[^{]*prefers-reduced-motion[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, m => m.replace(/[^\n]/g, ' '))
     for (const m of outside.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
       const anim = m[2].match(/animation(?:-name)?\s*:\s*([^;]*)/)
-      const name = anim && anim[1].split(/[\s,]+/).find(w => moving.has(w))
+      const name = anim?.[1].split(/[\s,]+/).find(w => moving.has(w))
       if (!name) continue
       const line = css.slice(0, m.index + m[1].length - m[1].trimStart().length).split('\n').length
       for (const sel of m[1].split(','))
