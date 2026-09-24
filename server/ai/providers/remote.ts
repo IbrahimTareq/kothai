@@ -88,6 +88,17 @@ interface RemoteProviderOptions {
 
 export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath = '' }: RemoteProviderOptions) {
   const circuit = new Circuit({ threshold: 5, cooldownMs: 60_000 })
+  // A second breaker per role, for failures that belong to ONE role's model
+  // rather than to the endpoint. With only the shared breaker, a Railway
+  // install whose vision role named a text-only model got a 400 on every
+  // thumbnail, and that 400 opened the circuit for classify and embed too — so
+  // nothing was ever tagged or embedded. Outages, bad keys and rate limits are
+  // still the endpoint's, and still stop every role.
+  const roleCircuits: Record<Role, Circuit> = {
+    llm: new Circuit({ threshold: 5, cooldownMs: 60_000 }),
+    embed: new Circuit({ threshold: 5, cooldownMs: 60_000 }),
+    vision: new Circuit({ threshold: 5, cooldownMs: 60_000 }),
+  }
   let catalogue: string[] = []
   // Some providers keep their embedding models out of /models entirely —
   // OpenRouter lists hundreds of chat models there and not one embedding, and
@@ -116,19 +127,37 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
         message: `Inference endpoint is unavailable: ${circuit.reason}`,
       })
     }
+    if (!roleCircuits[role].allow()) {
+      throw new FeatureDisabledError(role, {
+        code: 'circuit_open',
+        message: `The ${role} model was rejected: ${roleCircuits[role].reason}`,
+      })
+    }
+  }
+
+  function recordSuccess(role: Role) {
+    circuit.recordSuccess()
+    roleCircuits[role].recordSuccess()
+    if (probeError) probeError = ''
+  }
+
+  // 400 and 404 are answers about the request and the model named in it — a
+  // model that cannot take images, an id the endpoint does not serve. Anything
+  // else says the endpoint itself is down or refusing us.
+  function recordFailure(role: Role, e: RemoteError) {
+    const breaker = e.code === 'bad_request' || e.code === 'model_not_found' ? roleCircuits[role] : circuit
+    breaker.recordFailure({ transient: e.transient, message: e.message, retryAfterMs: e.retryAfterMs })
   }
 
   // Every network call funnels through here so success/failure bookkeeping
   // for the circuit happens in exactly one place.
-  async function call<T>(fn: () => Promise<T>): Promise<T> {
+  async function call<T>(role: Role, fn: () => Promise<T>): Promise<T> {
     try {
       const out = await fn()
-      circuit.recordSuccess()
-      if (probeError) probeError = ''
+      recordSuccess(role)
       return out
     } catch (e) {
-      if (e instanceof RemoteError)
-        circuit.recordFailure({ transient: e.transient, message: e.message, retryAfterMs: e.retryAfterMs })
+      if (e instanceof RemoteError) recordFailure(role, e)
       throw e
     }
   }
@@ -234,6 +263,8 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
         if (!baseUrl || !model) return { state: 'off', progress: 0, message: '', model }
         if (!circuit.allow()) return { state: 'error', progress: 0, message: circuit.reason, model }
         if (probeError) return { state: 'error', progress: 0, message: probeError, model }
+        if (!roleCircuits[role].allow())
+          return { state: 'error', progress: 0, message: roleCircuits[role].reason, model }
         return { state: 'ready', progress: 100, message: 'Ready', model }
       }
       const roles: Record<Role, RoleStatus> = {
@@ -244,10 +275,11 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
       // No endpoint configured at all is AI-free mode, not a fault — the same
       // state local reports when every role's residency is 'off'.
       const anyOn = ROLES.some(r => roles[r].state !== 'off')
-      const broken = anyOn && ROLES.some(r => roles[r].state === 'error')
-      const aggregate: Aggregate = broken
-        ? { state: 'error', progress: 0, message: probeError || circuit.reason || 'Inference endpoint unavailable' }
-        : { state: 'ready', progress: 100, message: 'Ready' }
+      const broken = ROLES.find(r => roles[r].state === 'error')
+      const aggregate: Aggregate =
+        anyOn && broken
+          ? { state: 'error', progress: 0, message: probeError || circuit.reason || roles[broken].message }
+          : { state: 'ready', progress: 100, message: 'Ready' }
       return { roles, aggregate }
     },
 
@@ -260,7 +292,7 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
     async embedText(text: string, { mode = 'document' }: EmbedOptions = {}): Promise<number[]> {
       guard('embed')
       const clean = embedInput(clipToTokens(text), { mode, model: modelFor('embed') }) || ' '
-      const res = await call(() =>
+      const res = await call('embed', () =>
         postJson(
           baseUrl,
           '/embeddings',
@@ -298,8 +330,7 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
             TIMEOUTS.classify,
           ),
         )
-        circuit.recordSuccess()
-        if (probeError) probeError = ''
+        recordSuccess('llm')
       } catch (e) {
         // Not every OpenAI-compatible server implements json_schema. A 400 is
         // the usual "I don't know this field" answer — retry once with plain
@@ -310,11 +341,10 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
         // circuit — classify() is the backlog's dominant call, so if its
         // failures never reach the circuit, the enrich queue never halts.
         if (!(e instanceof RemoteError) || e.code !== 'bad_request') {
-          if (e instanceof RemoteError)
-            circuit.recordFailure({ transient: e.transient, message: e.message, retryAfterMs: e.retryAfterMs })
+          if (e instanceof RemoteError) recordFailure('llm', e)
           throw e
         }
-        raw = textOf(await call(() => chat({ model, messages }, TIMEOUTS.classify)))
+        raw = textOf(await call('llm', () => chat({ model, messages }, TIMEOUTS.classify)))
       }
       // Annotated, not narrowed: normaliseClassification's own parameter type
       // is all-optional and all-unknown precisely because this is the model's
@@ -332,7 +362,7 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
       guard('vision')
       const bytes = await readFile(absPath)
       const mime = MIME[path.extname(absPath).toLowerCase()] || 'image/png'
-      const res = await call(() =>
+      const res = await call('vision', () =>
         chat(
           {
             model: modelFor('vision'),
@@ -356,7 +386,7 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
 
     async answer({ question, contextNotes, history = [] }: AnswerArgs): Promise<string> {
       guard('llm')
-      const res = await call(() =>
+      const res = await call('llm', () =>
         chat(
           {
             model: modelFor('llm'),

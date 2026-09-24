@@ -318,6 +318,47 @@ test('a non-transient failure opens the circuit and later calls fail fast withou
   assert.equal(p.available(), false)
 })
 
+test('a model one role cannot use fails that role alone, not the whole endpoint', async () => {
+  // Regression, from a Railway install: vision was pointed at llama3.2:3b, a
+  // text-only model. Ollama answered every thumbnail with 400 "model does not
+  // support multimodal requests", that opened the ONE endpoint-wide circuit,
+  // and the same note's classify and embed then failed with "Inference
+  // endpoint is unavailable" — so no note was ever tagged or embedded.
+  const dir = mkdtempSync(path.join(tmpdir(), 'kothai-img-'))
+  const file = path.join(dir, 'a.png')
+  writeFileSync(file, Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+  let visionHits = 0
+  routes['/chat/completions'] = (_req, res, body) => {
+    if (record(body).model === 'llama3.2:3b-as-vision') {
+      visionHits++
+      res.writeHead(400, { 'content-type': 'application/json' })
+      return res.end(
+        JSON.stringify({ error: 'Multimodal data provided, but model does not support multimodal requests.' }),
+      )
+    }
+    okJson(res, chatReply(JSON.stringify({ type: 'text', category: 'C', title: 'T', summary: 'S', tags: ['x'] })))
+  }
+  routes['/embeddings'] = (_req, res) => okJson(res, { data: [{ embedding: [0.1] }] })
+  const p = make({ llm: 'llama3.2:3b', embed: 'nomic-embed-text', vision: 'llama3.2:3b-as-vision' })
+  await p.init()
+
+  await p.describeImage({ absPath: file }).catch(() => {})
+  const out = await p.classify({ text: 'hi', hasImage: false, isUrl: false, now: 'now' })
+  assert.deepEqual(out.tags, ['x'], 'classify must still run after a vision 400')
+  assert.deepEqual(await p.embedText('hi'), [0.1], 'embed must still run after a vision 400')
+
+  // The broken role itself fails fast rather than re-sending every image.
+  const e = await p.describeImage({ absPath: file }).catch(x => x)
+  assert.equal(visionHits, 1)
+  assert.ok(e instanceof FeatureDisabledError)
+  // And says so where the user will look, without calling the endpoint down.
+  const status = p.statusSnapshot()
+  assert.equal(status.roles.vision.state, 'error')
+  assert.match(status.roles.vision.message, /400/)
+  assert.equal(status.roles.llm.state, 'ready')
+  assert.equal(p.available(), true)
+})
+
 test('validateModel accepts any non-empty string and warns on one the endpoint does not list', async () => {
   const p = make()
   await p.init()
