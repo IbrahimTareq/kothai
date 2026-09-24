@@ -401,31 +401,11 @@ async function fetchInstagramMeta(url: string, noteId: string): Promise<Instagra
 }
 
 // ---- Reddit -------------------------------------------------------------
-// Reddit serves a full JSON rendering of any post at the same URL with
-// `.json` appended — no API key, no OAuth, no package. That payload carries
-// the selftext and the comment thread, which is the whole substance of a
-// Reddit save.
-//
-// It is also, as of testing this against the live site, walled: www and
-// api.reddit.com answer an anonymous request with 403, and old.reddit
-// redirects to a login page. The plain HTML page is no better — Reddit serves
-// a shell with `<title>Reddit</title>` and no og: tags at all to a
-// non-browser client. The one route still open is Reddit's own oEmbed
-// endpoint, which the provider registry already resolves and which returns
-// the post title and author.
-//
-// So this is written to DEGRADE rather than to succeed or fail: it tries the
-// rich JSON first and, on any failure, hands the URL back to the generic
-// oEmbed + OpenGraph path below. A Reddit save then gets its real title
-// instead of nothing, and if Reddit ever reopens the endpoint — or the
-// operator runs somewhere it is not blocked — the full body and comments
-// come back with no further change. Throwing instead would leave the note
-// with no metadata whatsoever AND burn its five metaTries retries on a wall
-// that is not going to move.
-//
-// No dedicated throttle here, unlike Instagram: link enrichment runs one job
-// at a time on the FIFO chain (see enrich.js), and Reddit saves are a trickle
-// rather than the bulk imports that made Instagram's 2.5s spacing necessary.
+// Reddit posts go through the generic oEmbed + OpenGraph path below: Reddit's
+// oEmbed endpoint is the one route still open to a non-browser client, and it
+// returns the post title and author. The richer `.json` rendering (selftext
+// and comments) answers 403 to anonymous requests, from datacenter and home
+// connections alike, so the fetcher and parser built for it were removed.
 
 export function isRedditPost(url: string): boolean {
   try {
@@ -440,12 +420,10 @@ export function isRedditPost(url: string): boolean {
 
 // Reddit's share sheet hands out /r/<sub>/s/<id> links, and those — not the
 // canonical /comments/ ones — are what actually gets pasted in from the mobile
-// apps. Nothing below recognises them: the oEmbed registry's pattern wants
-// /comments/, and `<share-link>.json` is not a rendering of anything, so the
-// whole Reddit path is skipped and the note is left titled "Reddit" by the
-// shell page's <title>. They are plain redirects to the canonical post, so one
-// redirect-following request turns a share link back into a URL every path
-// here already handles.
+// apps. The oEmbed registry's pattern wants /comments/, so a share link skips
+// it and the note is left titled "Reddit" by the shell page's <title>. They
+// are plain redirects to the canonical post, so one redirect-following request
+// turns a share link back into a URL oEmbed recognises.
 //
 // The share segment has to be the LAST one: a subreddit can be named `s`, and
 // `/r/s/comments/<id>/...` is an ordinary post URL, not a share link.
@@ -472,170 +450,6 @@ export async function resolveRedditShare(url: string): Promise<string | null> {
   } catch {
     return null
   }
-}
-
-// Built from origin+pathname for the same reason instagramEmbedUrl is: a
-// share URL usually carries tracking query params, and `url + '.json'` would
-// append the suffix after the query string where Reddit never looks for it.
-// `raw_json=1` stops Reddit HTML-escaping & < > inside every body it
-// returns, which would otherwise land in the note verbatim.
-export function redditJsonUrl(url: string, { limit = 20 }: { limit?: number } = {}): string | null {
-  let u: URL
-  try {
-    u = new URL(url)
-  } catch {
-    return null
-  }
-  return `${u.origin}${u.pathname.replace(/\/+$/, '')}.json?raw_json=1&limit=${limit}`
-}
-
-const MAX_COMMENTS = 8
-const MAX_COMMENT_CHARS = 600
-
-// As much of Reddit's JSON rendering as this reads. Every field is optional
-// because in practice every one of them really is missing somewhere — see
-// parseRedditPost — so the optional chains below are load-bearing, not
-// decoration.
-interface RedditPost {
-  title?: string
-  selftext?: string
-  subreddit?: string
-  author?: string
-  url?: string
-  thumbnail?: string
-  preview?: { images?: { source?: { url?: string } }[] }
-}
-
-interface RedditComment {
-  body?: string
-  author?: string
-  stickied?: boolean
-}
-
-interface RedditListing<T> {
-  data?: { children?: { data?: T }[] }
-}
-
-// The two-element array Reddit answers a post URL with: the post, then its
-// comment tree.
-type RedditPayload = [RedditListing<RedditPost>?, RedditListing<RedditComment>?] | null
-
-// What a Reddit post contributes. `article` is the field the whole JSON route
-// exists for — the sub/author line, the selftext and the thread, which the
-// oEmbed fallback cannot produce.
-export interface RedditMeta {
-  siteTitle: string | null
-  siteDesc: string | null
-  siteName: string
-  article: string | null
-  thumbUrl: string | null
-}
-
-// Pure payload → { siteTitle, siteDesc, siteName, article, thumbUrl }
-// (exported for tests; no network).
-//
-// Reddit answers a post URL with a two-element array of Listings: the post
-// itself, then its comment tree. Every field is optional in practice —
-// deleted posts, removed bodies, quarantined subs and link posts with no
-// selftext all arrive as the same shape with holes in it — so this reads
-// defensively throughout and returns nulls rather than throwing.
-export function parseRedditPost(payload: unknown): RedditMeta {
-  const empty = { siteTitle: null, siteDesc: null, siteName: 'Reddit', article: null, thumbUrl: null }
-  // `unknown` in, because this is handed straight off res.json() — a document
-  // from reddit.com, not something this server produced. Everything past this
-  // line is the same optional-chain read the untyped version did; the one
-  // check is that the payload is the array those chains assume.
-  const listings: RedditPayload = Array.isArray(payload) ? [payload[0], payload[1]] : null
-  const post = listings?.[0]?.data?.children?.[0]?.data
-  if (!post) return empty
-
-  const selftext = clean(post.selftext)
-  const parts: string[] = []
-  if (post.subreddit) parts.push(`r/${post.subreddit}${post.author ? ` — posted by u/${post.author}` : ''}`)
-  if (selftext) parts.push(selftext)
-
-  // The thread is often where the actual answer lives — a "what is this
-  // plant" post's whole value is the reply naming it. Stickied bot posts and
-  // deleted bodies carry none of that and are dropped.
-  const comments = (listings?.[1]?.data?.children || [])
-    .map(c => c?.data)
-    // A type predicate, not a bare boolean: the filter is what makes `body`
-    // present for the map below, and only a predicate carries that across.
-    .filter((c): c is RedditComment =>
-      Boolean(c?.body && !c.stickied && !['[deleted]', '[removed]'].includes(c.body.trim())),
-    )
-    .slice(0, MAX_COMMENTS)
-    // `|| ''` covers the one gap the filter leaves: a body of nothing but
-    // whitespace is truthy, so it gets here, and clean() answers null for it.
-    // Untyped, that was `null.slice(...)` — a TypeError that aborted the whole
-    // post and degraded it to oEmbed over one blank comment.
-    .map(c => `u/${c.author || 'someone'}: ${(clean(c.body) || '').slice(0, MAX_COMMENT_CHARS)}`)
-  if (comments.length) parts.push(`Top comments:\n${comments.join('\n')}`)
-
-  return {
-    siteTitle: clean(post.title)?.slice(0, 300) || null,
-    // The post body, capped like an Instagram caption is — the short,
-    // creator-written field. The uncapped version lives in `article`.
-    siteDesc: selftext ? selftext.slice(0, 2000) : null,
-    siteName: 'Reddit',
-    article: parts.length ? parts.join('\n\n').slice(0, MAX_ARTICLE) : null,
-    thumbUrl: redditThumbUrl(post),
-  }
-}
-
-function clean(text: string | null | undefined): string | null {
-  const t = (text || '').toString().trim()
-  return t || null
-}
-
-// `thumbnail` is a sentinel word ('self', 'default', 'nsfw', 'spoiler') for
-// anything Reddit did not generate a preview for, so the preview block is
-// tried first and the sentinel forms are rejected rather than fetched.
-function redditThumbUrl(post: RedditPost): string | null {
-  const preview = post.preview?.images?.[0]?.source?.url
-  if (preview && isSafeFetchUrl(preview)) return preview
-  if (post.thumbnail && isSafeFetchUrl(post.thumbnail)) return post.thumbnail
-  // A direct image submission: the post's own url IS the picture.
-  if (post.url && /\.(jpe?g|png|gif|webp)(\?|$)/i.test(post.url) && isSafeFetchUrl(post.url)) return post.url
-  return null
-}
-
-// parseRedditPost's shape with the remote thumbnail already downloaded: the
-// note stores a local /uploads path, never the redd.it URL.
-interface RedditLinkMeta {
-  siteTitle: string | null
-  siteDesc: string | null
-  siteName: string
-  article: string | null
-  thumb: string | null
-}
-
-// Returns null when the JSON route is unavailable, so fetchLinkMeta can fall
-// through to the generic path rather than leaving the note with nothing.
-async function fetchRedditMeta(url: string, noteId: string): Promise<RedditLinkMeta | null> {
-  let parsed: RedditMeta
-  try {
-    const jsonUrl = redditJsonUrl(url)
-    // Unreachable: the caller reaches here past isRedditPost(), which already
-    // parsed this URL. Thrown rather than returned so it degrades exactly as
-    // the untyped version did — get(null) fetched the string 'null' and threw
-    // out of the same try, landing on the same warning and the same fallback.
-    if (!jsonUrl) throw new Error(`not a URL: ${url}`)
-    const payload = await (await get(jsonUrl, 'application/json')).json()
-    parsed = parseRedditPost(payload)
-  } catch (e) {
-    const why = e instanceof Error ? e.message : String(e)
-    console.warn('[meta] reddit json unavailable for', url, '-', why, '— falling back to oEmbed/OpenGraph')
-    return null
-  }
-  // A payload that parses to nothing is the same situation as a failed fetch:
-  // a login wall can answer 200 with a body that has no post in it.
-  if (!parsed.siteTitle && !parsed.article) return null
-
-  const { thumbUrl, ...meta } = parsed
-  const out: RedditLinkMeta = { ...meta, thumb: null }
-  if (thumbUrl) out.thumb = await saveThumbSafe(thumbUrl, url, noteId)
-  return out
 }
 
 // ---- YouTube captions ----------------------------------------------------
@@ -806,14 +620,9 @@ export interface LinkMeta {
 // /uploads path). Throws on total failure; partial results are fine.
 export async function fetchLinkMeta(rawUrl: string, noteId: string): Promise<LinkMeta> {
   if (isInstagramPost(rawUrl)) return fetchInstagramMeta(rawUrl, noteId)
-  // Resolved before anything else looks at it, so oEmbed, the .json fetch and
-  // the OpenGraph scrape all see a canonical post URL — see isRedditShare.
+  // Resolved before anything else looks at it, so oEmbed and the OpenGraph
+  // scrape both see a canonical post URL — see isRedditShare.
   const url = isRedditShare(rawUrl) ? (await resolveRedditShare(rawUrl)) || rawUrl : rawUrl
-  if (isRedditPost(url)) {
-    const reddit = await fetchRedditMeta(url, noteId)
-    if (reddit) return reddit
-    // else: fall through to oEmbed + OpenGraph, which is what still works.
-  }
   const meta: LinkMeta = { siteTitle: null, siteDesc: null, siteName: null, thumb: null, article: null, author: null }
   let thumbUrl: string | null = null
 

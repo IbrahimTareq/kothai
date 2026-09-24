@@ -44,8 +44,8 @@
     "exports": 29
   },
   "server/ai/meta.ts": {
-    "lines": 972,
-    "exports": 25
+    "lines": 781,
+    "exports": 23
   },
   "server/ai/prompts.ts": {
     "lines": 363,
@@ -87,6 +87,6 @@
     "claudeMdLines": 45,
     "cleanCodeRulesLines": 41,
     "baselineEntries": 21,
-    "exportTotal": 508
+    "exportTotal": 506
   }
 }
