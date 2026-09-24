@@ -27,7 +27,7 @@
  *
  * The same ratchet also covers four numbers about the governance system
  * itself (docs/development.md, "The governance budget") — CLAUDE.md's and
- * clean-code-rules.md's line counts, the size of this file's own debt
+ * clean-code.md's line counts, the size of this file's own debt
  * register, and the total export count across client/ + server/. They live
  * under the `_governance` key below, in this same file rather than a second
  * one, and are checked and tightened exactly like a per-file entry.
@@ -131,12 +131,12 @@ export const sourceFiles = (root: string = ROOT) =>
 const fileEntries = (baseline: Baseline) => Object.keys(baseline).filter(k => k !== '_governance')
 
 // The four governance numbers, measured fresh: CLAUDE.md's and
-// clean-code-rules.md's line counts, the debt register's own entry count,
+// clean-code.md's line counts, the debt register's own entry count,
 // and the total export statements across every measured client/+server file.
 function measureGovernance(measurements: Record<string, Shape>, baselineEntryCount: number): Governance {
   return {
     claudeMdLines: readFileSync(join(ROOT, 'CLAUDE.md'), 'utf8').split('\n').length,
-    cleanCodeRulesLines: readFileSync(join(ROOT, '.claude', 'clean-code-rules.md'), 'utf8').split('\n').length,
+    cleanCodeRulesLines: readFileSync(join(ROOT, '.claude', 'rules', 'clean-code.md'), 'utf8').split('\n').length,
     baselineEntries: baselineEntryCount,
     exportTotal: Object.values(measurements).reduce((sum, m) => sum + m.exports, 0),
   }
@@ -147,7 +147,7 @@ function measureGovernance(measurements: Record<string, Shape>, baselineEntryCou
 // comparison then reads undefined, compares false, and lets that first run
 // pass instead of failing four times over numbers nobody has recorded.
 //
-// CLAUDE.md and clean-code-rules.md get the same line headroom a baselined
+// CLAUDE.md and clean-code.md get the same line headroom a baselined
 // file gets, for the same reason (room for the explanatory comment this
 // change itself needs). The debt register's entry count and the export total
 // get none — "should not gain entries" and "should trend down" are absolute,
@@ -158,7 +158,7 @@ export function checkGovernance(gov: Record<string, number>, current: Governance
     failures.push(`CLAUDE.md: grew to ${current.claudeMdLines} lines, baseline is ${gov.claudeMdLines}`)
   if (current.cleanCodeRulesLines > gov.cleanCodeRulesLines + headroom.lines)
     failures.push(
-      `.claude/clean-code-rules.md: grew to ${current.cleanCodeRulesLines} lines, baseline is ${gov.cleanCodeRulesLines}`,
+      `.claude/rules/clean-code.md: grew to ${current.cleanCodeRulesLines} lines, baseline is ${gov.cleanCodeRulesLines}`,
     )
   if (current.baselineEntries > gov.baselineEntries)
     failures.push(

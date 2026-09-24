@@ -140,10 +140,10 @@ test('CLAUDE.md beyond headroom fails, naming both numbers', () => {
   assert.match(r[0], /45/)
 })
 
-test('clean-code-rules.md beyond headroom fails', () => {
+test('clean-code.md beyond headroom fails', () => {
   const r = checkGovernance(GOV, { ...GOV, cleanCodeRulesLines: 41 + HEADROOM.lines + 1 }, HEADROOM)
   assert.equal(r.length, 1)
-  assert.match(r[0], /clean-code-rules\.md/)
+  assert.match(r[0], /clean-code\.md/)
 })
 
 test('shape-baseline.json gaining a single entry fails — no headroom on the debt register', () => {

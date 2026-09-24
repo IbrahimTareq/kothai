@@ -1,13 +1,13 @@
 ---
 name: amend
-description: Add or remove a rule in the constitution (CLAUDE.md / .claude/clean-code-rules.md) following the case-law process. Use when a standard was violated and should be codified, or when reviewing whether the rules have gone stale.
+description: Add or remove a rule in the constitution (CLAUDE.md / .claude/rules/clean-code.md) following the case-law process. Use when a standard was violated and should be codified, or when reviewing whether the rules have gone stale.
 ---
 
 # Amend the constitution
 
 ## The governing property
 
-`CLAUDE.md` and `.claude/clean-code-rules.md` are meant to **shrink**.
+`CLAUDE.md` and `.claude/rules/clean-code.md` are meant to **shrink**.
 Growth means rules are accreting instead of being pushed down into something
 mechanical — and a long rulebook is the documented way to make an agent (or a
 person) stop reading the rules that actually matter. Every amendment is
@@ -28,7 +28,7 @@ in order and stop at the first step that applies:
 3. **Can a test assert it?** Then write the test, under `test/`. No line
    added to either file.
 4. **Only if none of the above apply** does it become a line of prose:
-   - `.claude/clean-code-rules.md` if it's about how code is written.
+   - `.claude/rules/clean-code.md` if it's about how code is written.
    - `CLAUDE.md` if it's about architecture, commands, or etiquette.
 
 A rule that reaches step 4 must **cite the violation that earned it** — the
@@ -45,7 +45,7 @@ is not optional cleanup; it's the other half of why the ordered test exists.
 
 ## Size
 
-`CLAUDE.md`'s and `.claude/clean-code-rules.md`'s line counts are
+`CLAUDE.md`'s and `.claude/rules/clean-code.md`'s line counts are
 machine-enforced by `scripts/lint-shape.ts` against the baseline recorded
 under `_governance` in `scripts/shape-baseline.json` — see
 docs/development.md's Governance section. If an addition would fail that

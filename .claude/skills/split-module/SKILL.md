@@ -10,9 +10,7 @@ filename, split it — one noun per file.
 
 `scripts/shape-baseline.json` is the debt register: every file over the flat
 budget (400 lines / 12 export statements, set in `scripts/lint-shape.ts`) is
-listed there with the size it's grandfathered at. As of this writing it holds
-20 entries (9 client, 11 server) — read the file for the current count and
-list, it changes as debt is paid down or newly incurred.
+listed there with the size it's grandfathered at.
 
 ## Procedure
 

@@ -1,9 +1,8 @@
 # Working in this repo
 
-@.claude/clean-code-rules.md
-
-These rules bind everyone — human and agent alike. They hold only what no
-checker can verify; everything mechanizable lives in `pnpm test`. See `docs/`.
+These rules, and how code is written in `.claude/rules/clean-code.md`, bind
+everyone — human and agent alike. They hold only what no checker can verify;
+everything mechanizable lives in `pnpm test`. See `docs/`.
 
 ## Commands
 
