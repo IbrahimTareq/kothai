@@ -18,18 +18,8 @@
 .space-card .tile-title { font-size: var(--text-sm); }
 .space-card .tile-meta { font-size: var(--text-xs); }
 
-/* ---- Add-to-space popover (grid card) ---- */
+/* ---- Add-to-space trigger (grid card); its menu is <Menu> ---- */
 .card-act-plus { font-size:var(--text-base); line-height: 1; }
-.coll-pop-backdrop { position: fixed; inset: 0; z-index:var(--z-backdrop); }
-.coll-pop { position: absolute; bottom: 40px; right: 6px; z-index:var(--z-popover); width: 190px; max-height: 240px; overflow-y: auto; background: var(--surface-popover); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-6); box-shadow: var(--shadow-popover); }
-.coll-pop-h { font-size:var(--text-xs); letter-spacing: var(--tracking-label); text-transform: uppercase; opacity: 0.6; padding: var(--space-4) var(--space-6) var(--space-6); }
-.coll-pop-empty { font-size:var(--text-xs); opacity: 0.6; padding: var(--space-4) var(--space-6); }
-.coll-pop-row { display: flex; align-items: center; gap: var(--space-8); width: 100%; background: none; border: none; color: var(--ink); border-radius: var(--radius-md); padding: var(--space-8) var(--space-6); cursor: pointer; font-size:var(--text-sm); text-align: left; } /* token-lint-ignore: space-picker popover row, toggled on/off — not a
-   standalone button */
-.coll-pop-row:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }
-.coll-pop-check { width: 12px; display: inline-flex; justify-content: center; opacity: 0.85; }
-.coll-pop-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.coll-pop-smart { opacity: 0.6; display: inline-flex; }
 
 /* ---- Collection detail ---- */
 .collection-view { display: flex; flex-direction: column; height: 100%; padding-top: var(--topbar-h); }
@@ -90,8 +80,7 @@
 
 /* Rule builder — turns "add a rule tag" into a contextual pick from the vault:
    each row is a real tag with its live item-count (the rule's reach). */
-.coll-ruleadd { position: relative; display: inline-flex; }
-.rulepop { position: absolute; top: calc(100% + 6px); left: 0; z-index:var(--z-popover); width: 244px; display: flex; flex-direction: column; gap: var(--space-8); background: var(--surface-popover); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-10); box-shadow: var(--shadow-popover); }
+.coll-ruleadd { display: inline-flex; }
 .rulepop-hint { margin: 0; font-size:var(--text-xs); line-height: 1.45; color: var(--ink-dim); }
 .rulepop-input { width: 100%; box-sizing: border-box; background: transparent; border: 1px solid var(--line); color: var(--ink); border-radius: var(--radius-md); padding: var(--space-6) var(--space-10); font-size:var(--text-xs); }
 .rulepop-input:focus { outline: none; border-color: var(--ink-dim); }
@@ -103,8 +92,6 @@
 .rulepop-new .rulepop-tag { color: var(--ink-dim); }
 .rulepop-empty { margin: 0; padding: var(--space-4) var(--space-8); font-size:var(--text-xs); color: var(--ink-dim); }
 
-.menu-backdrop { position: fixed; inset: 0; z-index:var(--z-backdrop); }
-
 /* ---- Expanded sidebar: Spaces membership ----
    The list is the item's memberships only — every row is a space it is in, on
    the same quiet surface as the tag chips above it. The row itself is inert;
@@ -115,14 +102,9 @@
 .exp-coll-x { display: flex; padding: 0; border: 0; background: transparent; color: var(--ink-faint); cursor: pointer; transition: var(--dur-fast); }
 .exp-coll-x:hover { color: var(--danger); }
 
-/* add button + its menu of the spaces this item is not in yet. The menu opens
-   upward: Spaces is the last section, and .exp-side-scroll would otherwise have
-   to scroll to reveal it. */
-.exp-coll-add { position: relative; }
+/* add button for the spaces this item is not in yet. Its <Menu> is portaled,
+   so it no longer has to open upward to avoid scrolling .exp-side-scroll —
+   Radix flips it above the button when there is no room below. */
 .exp-coll-plus { display: flex; align-items: center; justify-content: center; gap: var(--space-6); width: 100%; padding: var(--space-8) var(--space-10); border: 1px dashed var(--line); border-radius: var(--radius-md); background: transparent; color: var(--ink-mute); font: inherit; font-size:var(--text-sm); cursor: pointer; transition: var(--dur-fast); } /* token-lint-ignore: dashed empty-state add affordance, full width — not a
    .btn box */
-.exp-coll-plus:hover, .exp-coll-plus.open { border-color: var(--ink-faint); color: var(--ink); }
-.exp-coll-menu { position: absolute; left: 0; right: 0; bottom: calc(100% + var(--space-6)); z-index: var(--z-sticky); display: flex; flex-direction: column; gap: var(--space-2); max-height: 216px; overflow-y: auto; padding: var(--space-6); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg-raise); box-shadow: 0 12px 32px rgba(0,0,0,.35); }
-.exp-coll-opt { display: flex; align-items: center; gap: var(--space-8); width: 100%; padding: var(--space-8); border: 0; border-radius: var(--radius); background: transparent; color: var(--ink-dim); font: inherit; font-size:var(--text-sm); text-align: left; cursor: pointer; } /* token-lint-ignore: collection-picker list option — not a standalone button */
-.exp-coll-opt:hover { background: var(--panel-2); color: var(--ink); }
-.exp-coll-menu-empty { display: block; padding: var(--space-8); font-size:var(--text-xs); }
+.exp-coll-plus:hover, .exp-coll-plus[data-state="open"] { border-color: var(--ink-faint); color: var(--ink); }

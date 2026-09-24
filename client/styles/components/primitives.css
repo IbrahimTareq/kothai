@@ -11,7 +11,7 @@
    every button-shaped class in the app: .seg-btn, .residency-btn, .rail-btn,
    .send-btn and .attach-btn are distinct components with their own box, not
    .btn under another name. A view may still add a rule for genuine layout
-   (.chat-more's full width) on top of .btn. */
+   (.mf-delete pinning itself right) on top of .btn. */
 
 /* ── button ───────────────────────────────────────────────────────────────── */
 .btn{
@@ -173,3 +173,30 @@
 .tile-meta{font-family:var(--font-mono);font-size:var(--text-2xs);
   letter-spacing:var(--tracking-mono);color:var(--ink-faint);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── menu and popover ─────────────────────────────────────────────────────
+   The floating layers behind <Menu> and <Popover> in client/ui/. Three
+   pickers each drew their own before: two surfaces (--surface-popover and a
+   bare --bg-raise with a hand-mixed shadow), two radii, three row fills, and
+   a z-index that left one of them under its neighbours. Radix portals both to
+   <body>, so they stack on --z-portal rather than inside whatever opened them,
+   and size themselves against the viewport through its --radix-* variables.
+   Those are set by Radix at runtime, so each carries a fallback: an undefined
+   var() with none drops the whole declaration (see lint-tokens.ts). */
+.menu,
+.pop{z-index:var(--z-portal);background:var(--surface-popover);border:1px solid var(--line);
+  border-radius:var(--radius-lg);box-shadow:var(--shadow-popover);color:var(--ink)}
+.menu{min-width:max(190px,var(--radix-dropdown-menu-trigger-width,0px));
+  max-height:min(240px,var(--radix-dropdown-menu-content-available-height,240px));
+  overflow-y:auto;padding:var(--space-6)}
+.pop{width:244px;max-width:var(--radix-popover-content-available-width,none);
+  display:flex;flex-direction:column;gap:var(--space-8);padding:var(--space-10)}
+.menu-title{padding:var(--space-4) var(--space-6) var(--space-6);font-size:var(--text-xs);
+  letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--ink-mute)}
+.menu-empty{padding:var(--space-4) var(--space-6);font-size:var(--text-xs);color:var(--ink-mute)}
+.menu-item{display:flex;align-items:center;gap:var(--space-8);padding:var(--space-8) var(--space-6);
+  border-radius:var(--radius-md);font-size:var(--text-sm);cursor:pointer;outline:none;user-select:none}
+.menu-item[data-highlighted]{background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.menu-check{width:12px;display:inline-flex;justify-content:center}
+.menu-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.menu-trailing{display:inline-flex;color:var(--ink-mute)}

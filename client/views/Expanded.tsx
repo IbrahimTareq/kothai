@@ -12,6 +12,7 @@ import { lockAxis, shouldDismiss, navDirection, type Axis } from '../layout/swip
 import { useScrollEdges } from '../layout/useScrollEdges'
 import type { Collection, UIItem } from '../types'
 import { Button } from '../ui/Button'
+import { Menu } from '../ui/Menu'
 
 function openUrl(url?: string | null) {
   if (url) window.open(url, '_blank')
@@ -251,8 +252,6 @@ export function ExpandedView({
   const [note, setNote] = useState<string>(item.mindNote || '')
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState('')
-  const [picking, setPicking] = useState(false)
-  const pickRef = useRef<HTMLDivElement>(null)
   const brand = sourceGlyph(item)
 
   // ---- touch gestures on the main panel: swipe down to dismiss, swipe
@@ -290,7 +289,6 @@ export function ExpandedView({
     setNote(item.mindNote || '')
     setAdding(false)
     setDraft('')
-    setPicking(false)
     // A nav swipe already resets these itself before the item changes, but a
     // deep link or a jump from an Ask citation opens a different item without
     // going through that path — this is the backstop that guarantees no
@@ -363,26 +361,16 @@ export function ExpandedView({
     setDragY(0)
   }
 
-  // Esc closes the space picker first, then the overlay
+  // Esc closes a menu open inside the overlay first, then the overlay. Radix
+  // sees the key first (a capture listener on document) and marks the event
+  // handled when it dismisses one of its layers.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      if (picking) setPicking(false)
-      else onClose()
+      if (e.key === 'Escape' && !e.defaultPrevented) onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose, picking])
-
-  // a click anywhere outside the picker dismisses it
-  useEffect(() => {
-    if (!picking) return
-    const onDown = (e: MouseEvent) => {
-      if (!pickRef.current?.contains(e.target as Node)) setPicking(false)
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [picking])
+  }, [onClose])
 
   const commitTags = (next: string[]) => {
     setTags(next)
@@ -511,38 +499,24 @@ export function ExpandedView({
                     </button>
                   </div>
                 ))}
-                <div className="exp-coll-add" ref={pickRef}>
-                  <button
-                    className={`exp-coll-plus${picking ? ' open' : ''}`}
-                    aria-expanded={picking}
-                    onClick={() => setPicking(!picking)}
-                  >
-                    <Icon name="plus" size={12} /> Add to space
-                  </button>
-                  {picking && (
-                    <div className="exp-coll-menu">
-                      {openSpaces.length === 0 ? (
-                        <span className="exp-coll-menu-empty mono dim">
-                          {collections.length === 0 ? 'No spaces yet' : 'In every space'}
-                        </span>
-                      ) : (
-                        openSpaces.map(c => (
-                          <button
-                            key={c.id}
-                            className="exp-coll-opt"
-                            onClick={() => {
-                              onAddTo(c.id, item.id)
-                              setPicking(false)
-                            }}
-                          >
-                            {c.tags.length > 0 && <Icon name="spark" size={11} />}
-                            <span className="exp-coll-name">{c.name}</span>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
+                <Menu
+                  empty={collections.length === 0 ? 'No spaces yet' : 'In every space'}
+                  trigger={
+                    <button className="exp-coll-plus">
+                      <Icon name="plus" size={12} /> Add to space
+                    </button>
+                  }
+                  items={openSpaces.map(c => ({
+                    key: c.id,
+                    label: c.name,
+                    trailing: c.tags.length > 0 && (
+                      <span title="Smart space">
+                        <Icon name="spark" size={11} />
+                      </span>
+                    ),
+                    onSelect: () => onAddTo(c.id, item.id),
+                  }))}
+                />
               </div>
             </section>
           </div>

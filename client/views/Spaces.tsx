@@ -12,6 +12,7 @@ import type { NoteSource } from '../data/useNotes'
 import { isPlaceholder } from '../data/pager'
 import type { CanvasDoc, Collection, UIItem, ViewMode } from '../types'
 import { Button } from '../ui/Button'
+import { Popover } from '../ui/Popover'
 
 interface SpacesViewProps {
   collections: Collection[]
@@ -352,56 +353,46 @@ export function CollectionView({
               </button>
             ))}
             <div className="coll-ruleadd">
-              <button
-                className={`chip coll-addtag${addingTag ? ' on' : ''}`}
-                aria-haspopup="dialog"
-                aria-expanded={addingTag}
-                onClick={() => (addingTag ? closeRuleAdd() : setAddingTag(true))}
+              <Popover
+                label="Add rule tag"
+                open={addingTag}
+                onOpenChange={open => (open ? setAddingTag(true) : closeRuleAdd())}
+                trigger={<button className={`chip coll-addtag${addingTag ? ' on' : ''}`}>+ rule tag</button>}
               >
-                + rule tag
-              </button>
-              {addingTag && (
-                <>
-                  <div className="menu-backdrop" onClick={closeRuleAdd} />
-                  <div className="rulepop" role="dialog" aria-label="Add rule tag">
-                    <p className="rulepop-hint">Items tagged with any of these automatically join this space.</p>
-                    <input
-                      className="rulepop-input mono"
-                      autoFocus
-                      value={tagDraft}
-                      placeholder="filter or add a tag…"
-                      onChange={e => setTagDraft(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          const pick = suggestions[0]?.tag ?? q
-                          if (pick) addRule(pick)
-                        }
-                        if (e.key === 'Escape') closeRuleAdd()
-                      }}
-                    />
-                    <div className="rulepop-list">
-                      {suggestions.map(({ tag, count }) => (
-                        <button key={tag} className="rulepop-item" onClick={() => addRule(tag)}>
-                          <span className="rulepop-tag">{tag}</span>
-                          <span className="rulepop-count">
-                            {count} item{count === 1 ? '' : 's'}
-                          </span>
-                        </button>
-                      ))}
-                      {canAddNew && (
-                        <button className="rulepop-item rulepop-new" onClick={() => addRule(q)}>
-                          <span className="rulepop-tag">+ add “{q}”</span>
-                          <span className="rulepop-count">new</span>
-                        </button>
-                      )}
-                      {!suggestions.length && !canAddNew && (
-                        <p className="rulepop-empty">{poolSize ? 'No matching tags' : 'No tags in your vault yet'}</p>
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
+                <p className="rulepop-hint">Items tagged with any of these automatically join this space.</p>
+                <input
+                  className="rulepop-input mono"
+                  value={tagDraft}
+                  placeholder="filter or add a tag…"
+                  onChange={e => setTagDraft(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      const pick = suggestions[0]?.tag ?? q
+                      if (pick) addRule(pick)
+                    }
+                  }}
+                />
+                <div className="rulepop-list">
+                  {suggestions.map(({ tag, count }) => (
+                    <button key={tag} className="rulepop-item" onClick={() => addRule(tag)}>
+                      <span className="rulepop-tag">{tag}</span>
+                      <span className="rulepop-count">
+                        {count} item{count === 1 ? '' : 's'}
+                      </span>
+                    </button>
+                  ))}
+                  {canAddNew && (
+                    <button className="rulepop-item rulepop-new" onClick={() => addRule(q)}>
+                      <span className="rulepop-tag">+ add “{q}”</span>
+                      <span className="rulepop-count">new</span>
+                    </button>
+                  )}
+                  {!suggestions.length && !canAddNew && (
+                    <p className="rulepop-empty">{poolSize ? 'No matching tags' : 'No tags in your vault yet'}</p>
+                  )}
+                </div>
+              </Popover>
             </div>
           </div>
 

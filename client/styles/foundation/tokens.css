@@ -195,6 +195,8 @@
   --z-topbar:50;
   --z-overlay:80;         /* capture overlay */
   --z-modal:100;          /* expanded item — the top of the app */
+  --z-portal:110;         /* menus and popovers portaled to <body> — above the
+                             expanded item, which can open them */
 
   /* ── Breakpoints ──
      Reference values only. CSS custom properties cannot be evaluated inside

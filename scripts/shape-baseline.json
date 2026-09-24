@@ -8,7 +8,7 @@
     "exports": 1
   },
   "client/components/Cards.tsx": {
-    "lines": 472,
+    "lines": 444,
     "exports": 4
   },
   "client/data/api.ts": {
@@ -24,7 +24,7 @@
     "exports": 1
   },
   "client/views/Expanded.tsx": {
-    "lines": 588,
+    "lines": 567,
     "exports": 1
   },
   "client/views/Settings.tsx": {
@@ -32,7 +32,7 @@
     "exports": 1
   },
   "client/views/Spaces.tsx": {
-    "lines": 489,
+    "lines": 480,
     "exports": 2
   },
   "server/ai/enrich.ts": {
@@ -83,6 +83,6 @@
     "claudeMdLines": 45,
     "cleanCodeRulesLines": 41,
     "baselineEntries": 20,
-    "exportTotal": 503
+    "exportTotal": 505
   }
 }

@@ -1,11 +1,12 @@
 // Cards.tsx — per-type item rendering for gallery (card) + list (row) views,
 // plus the compact "cited" card used in Ask answers.
-import { Fragment, useState } from 'react'
+import { Fragment } from 'react'
 import type { ReactElement } from 'react'
 import { Icon, CAT } from './icons'
 import { relTime, imgGradient } from '../util/format'
 import { isMediaFirst, isAwaitingContent, sourceGlyph, sourceLabel } from '../domain/source'
 import type { Collection, UIItem } from '../types'
+import { Menu } from '../ui/Menu'
 
 // Deterministic placeholder height so gradient tiles stagger like real media.
 function phHeight(seed: number) {
@@ -216,43 +217,6 @@ export function CardInner({ item, overlay }: { item: UIItem; overlay?: ReactElem
   }
 }
 
-function CollectionPopover({
-  item,
-  collections,
-  onAddTo,
-  onRemoveFrom,
-}: {
-  item: UIItem
-  collections: Collection[]
-  onAddTo: (cid: string, itemId: string) => void
-  onRemoveFrom: (cid: string, itemId: string) => void
-}) {
-  return (
-    <div className="coll-pop" onClick={e => e.stopPropagation()}>
-      <div className="coll-pop-h">Add to space</div>
-      {collections.length === 0 && <div className="coll-pop-empty">No spaces yet</div>}
-      {collections.map(c => {
-        const on = c.itemIds.includes(item.id)
-        return (
-          <button
-            key={c.id}
-            className={`coll-pop-row${on ? ' on' : ''}`}
-            onClick={() => (on ? onRemoveFrom(c.id, item.id) : onAddTo(c.id, item.id))}
-          >
-            <span className="coll-pop-check">{on ? '✓' : ''}</span>
-            <span className="coll-pop-name">{c.name}</span>
-            {c.tags.length > 0 && (
-              <span className="coll-pop-smart" title="Smart space">
-                <Icon name="spark" size={11} />
-              </span>
-            )}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
 export function ItemCard({
   item,
   onDelete,
@@ -275,7 +239,6 @@ export function ItemCard({
   // The headline tile draws its own source mark inline, so the floating corner
   // badge would be a second copy of the same glyph.
   const headline = item.type === 'link' && !isMediaFirst(item)
-  const [popOpen, setPopOpen] = useState(false)
   const canCollect = !!(collections && onAddTo && onRemoveFrom)
   const overlay = (
     <Fragment>
@@ -286,16 +249,37 @@ export function ItemCard({
       )}
       <div className="card-actions">
         {canCollect && (
-          <button
-            className="card-act add"
+          <Menu
             title="Add to space"
-            onClick={e => {
-              e.stopPropagation()
-              setPopOpen(v => !v)
-            }}
-          >
-            <span className="card-act-plus">＋</span>
-          </button>
+            empty="No spaces yet"
+            trigger={
+              // The card's own click and Enter open the expanded view, and
+              // Radix opens this menu on Enter too, so both must stop here or
+              // the keyboard would open the menu and the item at once.
+              <button
+                className="card-act add"
+                title="Add to space"
+                onClick={e => e.stopPropagation()}
+                onKeyDown={e => e.stopPropagation()}
+              >
+                <span className="card-act-plus">＋</span>
+              </button>
+            }
+            items={collections!.map(c => {
+              const on = c.itemIds.includes(item.id)
+              return {
+                key: c.id,
+                label: c.name,
+                checked: on,
+                trailing: c.tags.length > 0 && (
+                  <span title="Smart space">
+                    <Icon name="spark" size={11} />
+                  </span>
+                ),
+                onSelect: () => (on ? onRemoveFrom!(c.id, item.id) : onAddTo!(c.id, item.id)),
+              }
+            })}
+          />
         )}
         <button
           className="card-act del"
@@ -308,18 +292,6 @@ export function ItemCard({
           <Icon name="trash" size={13} />
         </button>
       </div>
-      {canCollect && popOpen && (
-        <Fragment>
-          <div
-            className="coll-pop-backdrop"
-            onClick={e => {
-              e.stopPropagation()
-              setPopOpen(false)
-            }}
-          />
-          <CollectionPopover item={item} collections={collections!} onAddTo={onAddTo!} onRemoveFrom={onRemoveFrom!} />
-        </Fragment>
-      )}
     </Fragment>
   )
   return (

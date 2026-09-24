@@ -77,6 +77,16 @@ each hand-rolled the same box separately; all are gone now, and
 box, but each is still a raw `<button>` a view drew. They sit on a ratchet
 (below) until each becomes `<Button>` or its own primitive in `client/ui/`.
 
+**Menus and popovers are `<Menu>` and `<Popover>`** (`client/ui/`), on Radix,
+which owns focus, arrow keys, Escape and outside clicks. `<Menu>` is a list of
+actions and takes its items as data (`label`, `trailing`, `checked`,
+`onSelect`), so every row is drawn the same way; a checkable item keeps the
+menu open to toggle several in a row. `<Popover>` is for anything else: a
+field, a hint, a list you filter. Both are portaled to `<body>` on `--z-portal`,
+above the expanded item, and styled by `.menu`/`.pop` in `primitives.css`. They
+replaced three hand-built pickers that had two surfaces, two radii, three row
+fills and a z-index that put one of them under its neighbours.
+
 A view may still pass a `className` for genuine layout, the way `.mf-delete`
 pins itself right. What it may not do is rebuild the box. (`.chat-more`,
 `.remote-model-toggle` and Expanded's `.del` restyle it today — debt, not
@@ -123,11 +133,10 @@ It also fails any rule outside `primitives.css` that declares a whole button box
 rule that keeps `.btn` the default. It keys on the chrome rather than the class
 name, because a name-shaped rule would be satisfied by calling the next
 hand-rolled button `.wizard-test`, which is precisely how the last one happened.
-Sixteen controls are annotated exceptions: a floating action circle, a segment,
-an inline citation ref, a scroll affordance, two tag pills, a three-control
-danger-zone arm/confirm pattern, five popover/combobox list rows, an armed
-icon-delete, and a canvas toolbar (the last two — a tag pill and the canvas
-toolbar — annotated as deferred future migrations, not permanent exceptions).
+Ten controls are annotated exceptions: a floating action circle, a segment, an
+inline citation ref, a scroll affordance, two tag pills (one annotated as a
+deferred move onto `.chip`), two combobox list rows, an armed icon-delete, and
+a dashed add affordance.
 
 The markup half of the same rule: outside `client/ui/`, any `className`
 carrying `btn` or `btn--*` fails. It has no escape hatch — use `<Button>`.
