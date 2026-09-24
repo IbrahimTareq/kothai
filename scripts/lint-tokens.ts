@@ -11,11 +11,18 @@
  * Use it for values that genuinely cannot be tokens — media overlays sitting on
  * imagery, brand colours, letterbox backgrounds — and always say why.
  */
-import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { join, dirname, basename, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { checkRaw, countRawButtons, countRawFields, findBtnClass, findButtonChrome } from './button-chrome.ts'
+import {
+  checkRaw,
+  countRawButtons,
+  countRawFields,
+  countRawSizes,
+  findBtnClass,
+  findButtonChrome,
+} from './button-chrome.ts'
 import { checkAgainstHead } from './lint-shape.ts'
 
 const CLIENT = join(dirname(fileURLToPath(import.meta.url)), '..', 'client')
@@ -73,6 +80,13 @@ const RULES = [
     // only the rhythm range; >48px is layout and stays literal by design
     re: /(?:padding|margin|gap)(?:-(?:top|right|bottom|left))?:\s*[^;}]*(?<![\w.#-])(?:[0-9]|[1-4][0-9])px/g,
     msg: 'raw spacing <=48px — use a --space-* token',
+  },
+  // The leading scale existed and nothing held it: 25 hand-written values
+  // across nine sheets, as 1.35, 1.4, 1.45, 1.55, 1.6 and 1.625 for five rungs.
+  {
+    id: 'line-height',
+    re: /line-height:\s*[0-9.]+(?![\w.%])/g,
+    msg: 'raw line-height — use a --leading-* token',
   },
   { id: 'z-index', re: /z-index:\s*[0-9]/g, msg: 'raw z-index — use a --z-* token' },
   {
@@ -203,31 +217,58 @@ for (const full of walk(CLIENT)) {
   }
 }
 
-/* ── raw controls, on a ratchet ────────────────────────────────────────────
+/* ── raw controls and sizes, on a ratchet ─────────────────────────────────
  * The check above keeps .btn's spelling in <Button>; it cannot stop a raw
  * <button> with a class of its own, which is how every other button box in
  * the app began — and fields drifted the same way, seven boxed ones into five
  * backgrounds and three focus colours. Raw <button>s and raw fields (<input>,
- * <textarea>, <select>) are counted per file in raw-controls-baseline.json and
- * each count may only fall. A new control is a <Button>, an <Input>, or a new
+ * <textarea>, <select>) are counted per file in raw-baseline.json and each
+ * count may only fall. A new control is a <Button>, an <Input>, or a new
  * primitive in client/ui/ — never a fresh box in a view.
+ *
+ * Fixed pixel sizes in the stylesheets go on the same ratchet. They were the
+ * one value nothing held (117 of them), and many are right — a thumbnail, an
+ * icon box — so they are counted per sheet rather than banned.
  *
  * Raising a count by hand is what an agent reaches for when this fails, so
  * the baseline is also diffed against HEAD, exactly as lint-shape's is: a
  * higher number cannot pass until it has been committed. */
-const CONTROLS_BASELINE = join(dirname(fileURLToPath(import.meta.url)), 'raw-controls-baseline.json')
-const RAW_CONTROLS = [
-  { key: 'buttons', what: '<button>', count: countRawButtons, use: '<Button>' },
-  { key: 'fields', what: 'field', count: countRawFields, use: '<Input> or <Textarea>' },
-]
+const RAW_BASELINE = join(dirname(fileURLToPath(import.meta.url)), 'raw-baseline.json')
 const viewSources = walk(CLIENT)
   .filter(f => !f.startsWith(`${join(CLIENT, 'ui')}/`))
   .map(f => [relative(join(CLIENT, '..'), f), readFileSync(f, 'utf8')])
-const controlsBaseline: Record<string, Record<string, number>> = JSON.parse(readFileSync(CONTROLS_BASELINE, 'utf8'))
-let controlsHead = {}
+const styleSources = files.map(f => [
+  relative(join(CLIENT, '..'), join(STYLES, f)),
+  readFileSync(join(STYLES, f), 'utf8'),
+])
+const RAW = [
+  {
+    key: 'buttons',
+    what: '<button>',
+    count: countRawButtons,
+    sources: viewSources,
+    use: 'use <Button>, or add a primitive to client/ui/',
+  },
+  {
+    key: 'fields',
+    what: 'field',
+    count: countRawFields,
+    sources: viewSources,
+    use: 'use <Input> or <Textarea>, or add a primitive to client/ui/',
+  },
+  {
+    key: 'sizes',
+    what: 'px size',
+    count: countRawSizes,
+    sources: styleSources,
+    use: 'use a --control-* token, a %, or let layout size it',
+  },
+]
+const rawBaseline: Record<string, Record<string, number>> = JSON.parse(readFileSync(RAW_BASELINE, 'utf8'))
+let rawHead = {}
 try {
-  controlsHead = JSON.parse(
-    execFileSync('git', ['show', 'HEAD:scripts/raw-controls-baseline.json'], {
+  rawHead = JSON.parse(
+    execFileSync('git', ['show', 'HEAD:scripts/raw-baseline.json'], {
       cwd: join(CLIENT, '..'),
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
@@ -236,16 +277,20 @@ try {
 } catch {
   // not committed yet — every entry then reads as new, and fails below
 }
-for (const raw of RAW_CONTROLS) {
-  const counts = Object.fromEntries(viewSources.map(([f, src]) => [f, raw.count(src)]))
-  const base = Object.fromEntries(Object.entries(controlsBaseline).map(([f, v]) => [f, v[raw.key] ?? 0]))
+for (const raw of RAW) {
+  const counts = Object.fromEntries(raw.sources.map(([f, src]) => [f, raw.count(src)]))
+  const base = Object.fromEntries(
+    Object.entries(rawBaseline)
+      .filter(([f]) => raw.sources.some(([g]) => g === f) || !existsSync(join(CLIENT, '..', f)))
+      .map(([f, v]) => [f, v[raw.key] ?? 0]),
+  )
   for (const f of checkRaw(counts, base, raw.what)) {
-    report.push(`  ${f}  [raw-${raw.key}]\n      use ${raw.use}, or add a primitive to client/ui/`)
+    report.push(`  ${f}  [raw-${raw.key}]\n      ${raw.use}`)
     failures++
   }
 }
-for (const f of checkAgainstHead(controlsBaseline, controlsHead)) {
-  report.push(`  ${f}  [raw-controls]\n      a count in scripts/raw-controls-baseline.json may only fall`)
+for (const f of checkAgainstHead(rawBaseline, rawHead)) {
+  report.push(`  ${f}  [raw-baseline]\n      a count in scripts/raw-baseline.json may only fall`)
   failures++
 }
 

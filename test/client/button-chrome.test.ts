@@ -11,6 +11,7 @@ import {
   checkRaw,
   countRawButtons,
   countRawFields,
+  countRawSizes,
   findBtnClass,
   findButtonChrome,
 } from '../../scripts/button-chrome.ts'
@@ -127,4 +128,21 @@ test('counts raw fields of all three kinds, not their client/ui components', () 
 
 test('names the tag it is ratcheting in its report', () => {
   assert.match(checkRaw({ 'a.tsx': 2 }, { 'a.tsx': 1 }, 'field')[0], /a\.tsx: 2 raw field, baseline is 1/)
+})
+
+// Fixed pixel sizes are the one value the token lint never held: 117 of them,
+// many legitimate (a thumbnail, an icon box), so they are counted per sheet on
+// the same ratchet rather than banned.
+
+test('counts width and height declarations that fix a pixel size', () => {
+  assert.equal(countRawSizes('.a{width:26px;height:26px;max-width:360px;min-height:calc(100% - 44px)}'), 4)
+})
+
+test('does not count tokens, percentages, border widths or custom properties', () => {
+  const css = '.a{width:var(--control-md);height:100%;min-width:0;border-width:1px;--w:12px}'
+  assert.equal(countRawSizes(css), 0)
+})
+
+test('does not count a size written in a comment', () => {
+  assert.equal(countRawSizes('/* was width:26px */ .a{width:auto}'), 0)
 })

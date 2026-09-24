@@ -16,7 +16,7 @@
 .space-card .tile-meta { font-size: var(--text-xs); }
 
 /* ---- Add-to-space trigger (grid card); its menu is <Menu> ---- */
-.card-act-plus { font-size:var(--text-base); line-height: 1; }
+.card-act-plus { font-size:var(--text-base); line-height: var(--leading-none); }
 
 /* ---- Collection detail ---- */
 .collection-view { display: flex; flex-direction: column; height: 100%; padding-top: var(--topbar-h); }
@@ -48,7 +48,7 @@
 /* Rule builder — turns "add a rule tag" into a contextual pick from the vault:
    each row is a real tag with its live item-count (the rule's reach). */
 .coll-ruleadd { display: inline-flex; }
-.rulepop-hint { margin: 0; font-size:var(--text-xs); line-height: 1.45; color: var(--ink-dim); }
+.rulepop-hint { margin: 0; font-size:var(--text-xs); line-height: var(--leading-normal); color: var(--ink-dim); }
 .rulepop-input { width: 100%; }
 .rulepop-list { display: flex; flex-direction: column; gap: var(--space-2); max-height: 210px; overflow-y: auto; }
 .rulepop-item { display: flex; align-items: center; justify-content: space-between; gap: var(--space-10); background: transparent; border: 0; color: var(--ink); font: inherit; font-size:var(--text-sm); text-align: left; padding: var(--space-8) var(--space-8); border-radius: var(--radius); cursor: pointer; } /* token-lint-ignore: rule-tag popover list item — not a standalone button */

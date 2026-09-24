@@ -179,7 +179,7 @@ Runs automatically as part of `npm run build` and `npm test`, and covers two
 surfaces.
 
 Across every sheet under `client/styles/` it fails on raw font sizes, colours, radii, spacing
-under 48px, z-index values, durations under .5s, and on any `var(--x)` with no
+under 48px, line-heights, z-index values, durations under .5s, and on any `var(--x)` with no
 definition and no fallback — that last one silently drops the property, which is
 how an undefined `--fg` once made the "Create space" button render
 white-on-transparent.
@@ -205,9 +205,11 @@ The markup half of the same rule: outside `client/ui/`, any `className`
 carrying `btn` or `btn--*` fails. It has no escape hatch — use `<Button>`.
 
 And a raw `<button>` or raw field (`<input>`, `<textarea>`, `<select>`)
-outside `client/ui/` is debt on a ratchet. `scripts/raw-controls-baseline.json`
-records each file's counts (65 buttons across 14 files when it landed; fields
-joined at 11), and a count must match it exactly: one above is new debt, one
+outside `client/ui/`, or a fixed pixel width or height in a stylesheet, is debt
+on a ratchet. `scripts/raw-baseline.json` records each file's counts (65
+buttons across 14 files when it landed; fields joined at 11, pixel sizes at
+140 — many of those legitimate, a thumbnail or an icon box, which is why they
+are counted rather than banned), and a count must match it exactly: one above is new debt, one
 below means the baseline has to be lowered to record the payment. A new control
 is a `<Button>` or a new primitive in `client/ui/`, never a fresh box in a view.
 The baseline is diffed against `HEAD` like the shape ratchet's, so raising a

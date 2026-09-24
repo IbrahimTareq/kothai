@@ -83,7 +83,7 @@
 .chat-row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--space-4)}
 /* Two lines, not one ellipsised line — see Chats.tsx for why the single line
    could not identify a conversation on a phone. */
-.chat-title{font-size:var(--text-sm);line-height:1.4;
+.chat-title{font-size:var(--text-sm);line-height:var(--leading-snug);
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .chat-meta{font-size:var(--text-2xs);letter-spacing:var(--tracking-mono)}
 .chat-row .card-del{opacity:0;display:grid;place-items:center}
@@ -98,7 +98,7 @@
   letter-spacing:var(--tracking-tight);line-height:var(--leading-normal)}
 .msg-ai{display:flex}
 .msg-ai .ai-body{flex:1;min-width:0}
-.ai-lead{font-size:var(--text-md);line-height:1.6;letter-spacing:var(--tracking-tight);
+.ai-lead{font-size:var(--text-md);line-height:var(--leading-chat);letter-spacing:var(--tracking-tight);
   color:var(--ink)}
 .ai-lead .q{color:var(--ink)}
 /* Answer body blocks (see lib/markdown.ts). The gap between them is the same
@@ -164,7 +164,7 @@
   border-radius:var(--radius-sm);background:var(--panel-2);color:var(--ink-dim)}
 .cited:hover .cited-icon{color:var(--ink)}
 .cited-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--space-4)}
-.cited-summary{font-size:var(--text-sm);line-height:1.35;overflow:hidden;
+.cited-summary{font-size:var(--text-sm);line-height:var(--leading-snug);overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 .cited-meta{font-family:var(--font-mono);font-size:var(--text-2xs);letter-spacing:var(--tracking-mono);
   color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -204,7 +204,7 @@
 .core .input-shell.focus{background:var(--chat-surface);border-color:var(--line);
   box-shadow:var(--shadow-composer-focus)}
 .core .input-shell textarea{flex:1 0 100%;width:100%;
-  font-size:var(--text-chat);letter-spacing:normal;line-height:1.625;
+  font-size:var(--text-chat);letter-spacing:normal;line-height:var(--leading-chat);
   min-height:96px;max-height:192px;padding:var(--space-14) var(--space-8) var(--space-6)}
 .core .input-shell .attach-preview{margin:var(--space-12) var(--space-8) 0}
 .core .attach-btn,.core .send-btn{width:28px;height:28px;flex-shrink:0;

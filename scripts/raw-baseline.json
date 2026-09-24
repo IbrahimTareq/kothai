@@ -31,6 +31,39 @@
   "client/components/RailButton.tsx": {
     "buttons": 1
   },
+  "client/styles/components/capture.css": {
+    "sizes": 9
+  },
+  "client/styles/components/card.css": {
+    "sizes": 17
+  },
+  "client/styles/components/primitives.css": {
+    "sizes": 14
+  },
+  "client/styles/foundation/responsive.css": {
+    "sizes": 12
+  },
+  "client/styles/views/canvas.css": {
+    "sizes": 6
+  },
+  "client/styles/views/core.css": {
+    "sizes": 26
+  },
+  "client/styles/views/expanded.css": {
+    "sizes": 29
+  },
+  "client/styles/views/gallery.css": {
+    "sizes": 5
+  },
+  "client/styles/views/settings.css": {
+    "sizes": 15
+  },
+  "client/styles/views/shell.css": {
+    "sizes": 4
+  },
+  "client/styles/views/spaces.css": {
+    "sizes": 3
+  },
   "client/views/Core.tsx": {
     "buttons": 9,
     "fields": 2

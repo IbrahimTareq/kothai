@@ -78,6 +78,12 @@ export const countRawButtons = (tsx: string) => (tsx.replace(COMMENTS, '').match
 export const countRawFields = (tsx: string) =>
   (tsx.replace(COMMENTS, '').match(/<(?:input|textarea|select)(?=[\s>/])/g) || []).length
 
+/** Width and height declarations that fix a pixel size in a stylesheet. The
+ *  lookbehind keeps border-width and --custom-width out; a px anywhere in the
+ *  value counts, calc() included, since that is still a size chosen by hand. */
+export const countRawSizes = (css: string) =>
+  (css.replace(/\/\*[\s\S]*?\*\//g, '').match(/(?<![\w-])(?:min-|max-)?(?:width|height)\s*:[^;}]*?\d+px/g) || []).length
+
 /** Compare per-file raw counts of one control against the ratchet's baseline.
  *  It must match exactly: a count above it is new debt, and one below it is
  *  paid-down debt the baseline has to record, or the room would be spent again

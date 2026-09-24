@@ -120,7 +120,7 @@
   height:var(--control-md);box-sizing:border-box;padding:var(--space-4);
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md)}
 .seg-btn{display:grid;place-items:center;height:100%;padding:0 var(--space-10);border:0;
-  background:transparent;color:var(--ink-mute);font:inherit;font-size:var(--text-xs);line-height:1;
+  background:transparent;color:var(--ink-mute);font:inherit;font-size:var(--text-xs);line-height:var(--leading-none);
   border-radius:var(--radius);cursor:pointer;transition:var(--dur-fast)}
 .seg-btn:has(> svg:only-child){width:28px;padding:0}
 .seg-btn[data-state="off"]:not(:disabled):hover{color:var(--ink)}
@@ -177,7 +177,7 @@
 
 .tile-cap{flex:1;display:flex;flex-direction:column;gap:var(--space-4);
   padding:var(--space-8) var(--space-10) var(--space-10)}
-.tile-title{font-size:var(--text-xs);line-height:1.35;color:var(--ink);
+.tile-title{font-size:var(--text-xs);line-height:var(--leading-snug);color:var(--ink);
   letter-spacing:var(--tracking-tight);
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .tile-meta{font-family:var(--font-mono);font-size:var(--text-2xs);

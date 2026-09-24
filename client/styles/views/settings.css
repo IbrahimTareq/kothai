@@ -43,7 +43,7 @@
 .remote-model-desc {
   font-size: var(--text-xs);
   color: var(--ink-dim);
-  line-height: 1.55;
+  line-height: var(--leading-normal);
   letter-spacing: var(--tracking-tight);
 }
 .model-size,
@@ -81,7 +81,7 @@
 /* modular settings group — one reusable block, drop in a new group to extend */
 .settings-group{margin-top:var(--space-22)}
 .settings-group:first-child{margin-top:var(--space-16)}
-.settings-group-sub{font-size:var(--text-sm);color:var(--ink-dim);line-height:1.55;
+.settings-group-sub{font-size:var(--text-sm);color:var(--ink-dim);line-height:var(--leading-normal);
   letter-spacing:var(--tracking-tight);margin:var(--space-8) 0 var(--space-2)}
 /* collapsible model role — header shows role + purpose + selected model */
 .role-acc{margin-top:var(--space-10);background:var(--panel);border:1px solid var(--line);
@@ -130,7 +130,7 @@
 .onboarding-mark{display:inline-grid;place-items:center;width:44px;height:44px;margin-bottom:var(--space-14);
   border:1px solid var(--line);border-radius:var(--radius-lg);color:var(--ink-dim);background:var(--panel)}
 .onboarding-head h1{font-size:var(--text-2xl);letter-spacing:var(--tracking-heading);margin:0 0 var(--space-10)}
-.onboarding-lede{font-size:var(--text-sm);color:var(--ink-dim);line-height:1.6;
+.onboarding-lede{font-size:var(--text-sm);color:var(--ink-dim);line-height:var(--leading-normal);
   letter-spacing:var(--tracking-tight);max-width:44ch;margin:0 auto}
 .onboarding-err{margin-bottom:var(--space-14);padding:var(--space-10) var(--space-14);border:1px solid var(--line);
   border-radius:var(--radius-lg);background:var(--panel);color:var(--ink);font-family:var(--font-mono);
@@ -235,10 +235,10 @@
   background: var(--panel);
   color: var(--ink);
   font-size: var(--text-sm);
-  line-height: 1.5;
+  line-height: var(--leading-normal);
 }
 .import-warnings { margin: var(--space-6) 0 0; padding-left: var(--space-18); color: var(--ink-dim);
-  font-size: var(--text-xs); line-height: 1.55; letter-spacing: var(--tracking-tight); }
+  font-size: var(--text-xs); line-height: var(--leading-normal); letter-spacing: var(--tracking-tight); }
 .import-warnings li { margin-top: var(--space-2); }
 .row-error {
   margin-top: var(--space-10);
@@ -248,7 +248,7 @@
   background: var(--panel);
   color: var(--danger);
   font-size: var(--text-sm);
-  line-height: 1.5;
+  line-height: var(--leading-normal);
 }
 
 /* Onboarding skip link */
@@ -417,7 +417,7 @@
 .conn-warn{margin:var(--space-12) 0 0}
 /* Full --ink, not the desc role's --ink-dim: this is the failure the user
    has to read before the field above it means anything. */
-.conn-err{margin-top:var(--space-10);font-size:var(--text-xs);line-height:1.55;
+.conn-err{margin-top:var(--space-10);font-size:var(--text-xs);line-height:var(--leading-normal);
   letter-spacing:var(--tracking-tight);color:var(--ink)}
 
 /* The Telegram pairing code: sized to read off the screen at a glance and
