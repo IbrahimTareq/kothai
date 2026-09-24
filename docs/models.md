@@ -43,7 +43,7 @@ KOTHAI_AI_BASE_URL=http://localhost:11434/v1
 KOTHAI_AI_API_KEY=…        # not needed for Ollama
 ```
 
-Or pick an endpoint during setup and paste the key there. Either way, model names are picked in Settings. An endpoint set by environment variable wins over one set in the app. A key entered in the app is kept in `data/credentials.json`, outside the database but in plain text, so any backup of `data/` carries it.
+Or pick an endpoint during setup and paste the key there. Either way, model names are picked in Settings; clear one to switch that role off. An endpoint set by environment variable wins over one set in the app. A key entered in the app is kept in `data/credentials.json`, outside the database but in plain text, so any backup of `data/` carries it.
 
 ### Remote defaults
 

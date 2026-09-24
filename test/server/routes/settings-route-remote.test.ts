@@ -4,9 +4,16 @@
 // string is treated as secret and only the hostname is returned.
 import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { initProvider, _reset } from '../../../server/ai/index.ts'
-import { handleGetSettings, handleStatus, handleSetup, _validateModels } from '../../../server/routes/settings.ts'
+import { initProvider, roleEnabled, _reset } from '../../../server/ai/index.ts'
+import {
+  handleGetSettings,
+  handleSaveSettings,
+  handleStatus,
+  handleSetup,
+  _validateModels,
+} from '../../../server/routes/settings.ts'
 import { _resetDb } from '../../../server/data/db.ts'
+import { setAiCredentials } from '../../../server/config.ts'
 import * as settings from '../../../server/data/settings.ts'
 import { mockReq, mockRes, record } from '../../helpers/http.ts'
 
@@ -152,17 +159,16 @@ test('POST /api/setup refuses once first run is already closed', async () => {
   assert.equal(settings.getRemote().llm, 'gpt-oss:120b')
 })
 
-// Regression. First run posts a model id for every role the endpoint serves,
-// but an empty name is rejected — so the screen sends only the ones actually
-// filled in. Sending untouched blanks blocked mixed first run entirely, and a
-// blank has to stay legitimate: that role is simply named later in Settings.
-test('a blank endpoint id is rejected, so first run omits rather than sends it', async () => {
+// Regression. Sending untouched blanks once blocked mixed first run entirely,
+// because a blank endpoint id was rejected. A blank now means "this role is
+// off" (see the Settings test below), so it validates — and first run still
+// sends only the names actually filled in.
+test('a blank endpoint id validates as the role being off', async () => {
   await initProvider('remote', {}, { localAvailable: true })
   const local = settings.get()
 
   const withBlanks = _validateModels({ ...local, remote: { llm: '', embed: '', vision: '' } })
-  assert.ok(withBlanks.error, 'a blank endpoint id must be rejected with a message')
-  assert.match(withBlanks.error, /cannot be empty/)
+  assert.equal(withBlanks.error, undefined)
 
   // What a mixed first run sends once the endpoint's models are named: local
   // keys at the root, endpoint ids under remote, each to its own store.
@@ -175,4 +181,25 @@ test('a blank endpoint id is rejected, so first run omits rather than sends it',
   const omitted = _validateModels(local)
   assert.equal(omitted.error, undefined)
   assert.deepEqual(omitted.remote, {})
+})
+
+// Regression, from a Railway install whose vision role named llama3.2:3b, a
+// text-only model, on an endpoint serving no vision model at all. Clearing the
+// field was the only way out, and it came back 400 "vision model name cannot
+// be empty" — so the one broken role could never be switched off.
+test('clearing an endpoint model name in Settings turns that role off', async t => {
+  // Port 1 refuses at once: the boot probe fails fast, and nothing here needs
+  // the endpoint to answer — only to be configured.
+  setAiCredentials({ baseUrl: 'http://127.0.0.1:1/v1' })
+  t.after(() => setAiCredentials(null))
+  await settings.save({ remote: { llm: 'llama3.2:3b', embed: 'nomic-embed-text', vision: 'llama3.2:3b' } })
+  await initProvider('remote', { remote: settings.getRemote() }, LITE)
+  assert.equal(roleEnabled('vision'), true)
+
+  const { res, sent } = mockRes()
+  await handleSaveSettings(mockReq({ body: JSON.stringify({ remote: { vision: '' } }) }), res)
+  assert.equal(sent.code, 200, JSON.stringify(sent.json()))
+  assert.equal(settings.getRemote().vision, '')
+  assert.equal(roleEnabled('vision'), false)
+  assert.equal(roleEnabled('llm'), true, 'the other roles are untouched')
 })

@@ -183,7 +183,11 @@ export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath =
 
     validateModel(role: Role, key: string): ValidationResult {
       const k = (key || '').trim()
-      if (!k) return { ok: false, error: `${role} model name cannot be empty` }
+      // Empty is how a role is switched off: an endpoint has no residency to
+      // set, so a blank name is the only "off" there is. Rejecting it left a
+      // Railway install stuck with vision naming a text-only model and no way
+      // to clear it — every thumbnail drew a 400 from Ollama.
+      if (!k) return { ok: true }
       if (k.length > 200) return { ok: false, error: `${role} model name is too long` }
       // Deliberately a warning, not a rejection: the catalogue can be stale
       // or unavailable, and saving settings must not depend on the endpoint

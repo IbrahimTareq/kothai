@@ -359,7 +359,7 @@ test('a model one role cannot use fails that role alone, not the whole endpoint'
   assert.equal(p.available(), true)
 })
 
-test('validateModel accepts any non-empty string and warns on one the endpoint does not list', async () => {
+test('validateModel accepts any name, warns on one the endpoint does not list, and reads blank as off', async () => {
   const p = make()
   await p.init()
   assert.deepEqual(p.validateModel('llm', 'llama3.2:3b'), { ok: true })
@@ -367,7 +367,7 @@ test('validateModel accepts any non-empty string and warns on one the endpoint d
   assert.equal(r.ok, true, 'must not reject — the endpoint list can be stale or unavailable')
   assert.ok(r.warning, 'a model the endpoint does not list must carry a warning')
   assert.match(r.warning, /not listed/)
-  assert.equal(p.validateModel('llm', '').ok, false)
+  assert.deepEqual(p.validateModel('llm', ''), { ok: true }, 'blank is how an endpoint role is switched off')
 })
 
 test('listModels returns the endpoint catalogue for every role', async () => {
