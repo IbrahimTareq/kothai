@@ -16,6 +16,7 @@ import { fetchLinkMeta, isYouTubeVideo, fetchYouTubeCaptions } from '../links/me
 import { isInstagramPost } from '../links/instagram.ts'
 import type { LinkMeta } from '../links/meta.ts'
 import { applyMeta } from '../links/meta-fields.ts'
+import { queueThumbRetry } from '../links/thumb-retry.ts'
 import * as collections from '../data/collections.ts'
 import * as settings from '../data/settings.ts'
 import { stepsFor } from './backlog.ts'
@@ -143,6 +144,7 @@ async function runMetaJob({ noteId, url }: MetaJob) {
   if (m.author && !existing.account) patch.account = m.author
   try {
     await store.updateNote(noteId, patch)
+    if (patch.thumbSrc) queueThumbRetry(noteId)
   } catch (e) {
     console.error('[enrich] fast meta write failed:', e instanceof Error ? e.message : e)
   }
@@ -347,9 +349,14 @@ export function queueMetaBackfill() {
             console.error('[enrich] meta backfill failed for', url, '-', e instanceof Error ? e.message : e)
           }
           await store.updateNote(n.id, patch)
+          if (patch.thumbSrc) queueThumbRetry(n.id)
         })
       }
     }
+    // An image that was only rate-limited or unreachable last time. Put on
+    // thumb-retry's own timers rather than fetched here: at boot, every such
+    // note at once is the burst that got it rate-limited in the first place.
+    if (n.thumbSrc && !n.thumb) queueThumbRetry(n.id)
     // Separate sweep, not an `else if`: a note can have its caption (from a
     // completed IG fetch) while still lacking a reclassify — e.g. the
     // process restarted between queueIgMeta's store.updateNote and its
@@ -577,6 +584,7 @@ async function enrichNote(id: string, url: string) {
   // collection's itemIds — nothing ever calls deleteItemEverywhere for a
   // note that was never really there to begin with.
   if (!(await store.updateNote(id, patch))) return
+  if (patch.thumbSrc) queueThumbRetry(id)
   // Smart-collection auto-add: the LLM only sets tags on success, so
   // heuristic-only notes carry none and simply match nothing.
   if (Array.isArray(patch.tags) && patch.tags.length) {

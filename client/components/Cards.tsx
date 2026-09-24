@@ -50,6 +50,13 @@ function LoadingCard({ item, overlay }: { item: UIItem; overlay?: ReactElement }
   )
 }
 
+// A thumbnail's stored width / height (server/links/fetch.ts's saveThumb) as
+// its box's aspect ratio. Without it the image is zero-high until the file
+// arrives, so every card was measured short, then grew as its picture loaded
+// and repacked the board around it. Absent on thumbnails saved before shapes
+// were recorded, which keep the old behaviour.
+const shape = (it: UIItem) => (it.thumbRatio ? { aspectRatio: it.thumbRatio } : undefined)
+
 // The picture-led card, kept for links whose content IS the picture (Instagram
 // posts, TikTok). Unchanged from the card every link used to get.
 function MediaLinkCard({ item, overlay }: { item: UIItem; overlay?: ReactElement }): ReactElement {
@@ -58,7 +65,7 @@ function MediaLinkCard({ item, overlay }: { item: UIItem; overlay?: ReactElement
     <Fragment>
       {item.thumb ? (
         <div className="link-thumb">
-          <img src={item.thumb} alt="" loading="lazy" />
+          <img src={item.thumb} alt="" loading="lazy" style={shape(item)} />
           <div className="img-scan"></div>
           {overlay}
         </div>
@@ -110,7 +117,7 @@ function LinkTile({ item, overlay }: { item: UIItem; overlay?: ReactElement }): 
       </div>
       {item.thumb && (
         <div className="lt-shot">
-          <img src={item.thumb} alt="" loading="lazy" />
+          <img src={item.thumb} alt="" loading="lazy" style={shape(item)} />
         </div>
       )}
     </Fragment>
@@ -142,7 +149,7 @@ export function CardInner({ item, overlay }: { item: UIItem; overlay?: ReactElem
             className={`img-thumb vid${it.thumb ? ' real' : ''}`}
             style={it.thumb ? undefined : { background: imgGradient(tileSeed(it)), height: phHeight(tileSeed(it)) }}
           >
-            {it.thumb && <img className="vid-thumb-img" src={it.thumb} alt="" loading="lazy" />}
+            {it.thumb && <img className="vid-thumb-img" src={it.thumb} alt="" loading="lazy" style={shape(it)} />}
             <div className="img-scan"></div>
             <div className="play-btn">
               <Icon name="play" size={20} />

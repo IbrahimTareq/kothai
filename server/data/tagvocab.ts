@@ -202,14 +202,20 @@ export async function canonicalize(tags: unknown, { embed = ai.embedText }: { em
   const out: string[] = []
   const seen = new Set<string>()
   try {
+    // Every unknown tag is embedded at once, before the loop: awaited one by one
+    // inside it, a fresh library paid a round trip per tag, in series, on every
+    // note it classified. Only the requests moved; the snapping below still
+    // runs in order.
+    const fresh = [...new Set(tags.filter(t => !registry.has(t)))]
+    const vecs = new Map(await Promise.all(fresh.map(async t => [t, await embed(t)] as const)))
     // A tag registered earlier in this loop becomes a snap target for later tags
     // in the same list, so near-synonyms within one note collapse together. The
     // winner is therefore order-dependent (whichever the LLM emitted first) — fine
     // here since either way they converge to a single canonical tag.
     for (const tag of tags) {
       let canonical = tag
-      if (!registry.has(tag)) {
-        const vec = await embed(tag)
+      const vec = vecs.get(tag)
+      if (vec && !registry.has(tag)) {
         const match = nearestTag(vec, registry.entries(), THRESHOLD)
         if (match) {
           canonical = match.tag

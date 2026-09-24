@@ -4,12 +4,17 @@
 // why it is not in either.
 import { writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import sharp from 'sharp'
 import { UPLOAD_DIR } from '../config.ts'
 import { safeFetch } from '../lib/ssrf.ts'
 
 const FETCH_TIMEOUT_MS = 8000
 export const MAX_HTML = 1024 * 1024 // only scan the first 1 MB for meta tags
 const MAX_THUMB = 5 * 1024 * 1024
+// Long edge, in pixels, of every stored thumbnail. The largest place one is
+// drawn is the 620px article hero in the expanded view, and cards are ~250px,
+// so 960 covers both on a 2x screen with one file.
+const THUMB_EDGE = 960
 const UA = 'Mozilla/5.0 (compatible; Kothai/1.0; local notes app)'
 
 // A cheap synchronous http(s)-only check, used to filter scraped URL lists
@@ -52,6 +57,16 @@ export async function get(url: string, accept: string): Promise<Response> {
   return res
 }
 
+// Whether a failed get() is worth asking again later. A rate limit, a server
+// error and a dropped or timed-out connection pass; a 404, an address the SSRF
+// guard refuses, and bytes that do not decode as an image do not, and retrying
+// them would only hammer a host for an answer that cannot change.
+export function isTransient(e: unknown): boolean {
+  const status = typeof e === 'object' && e !== null && 'status' in e ? e.status : undefined
+  if (typeof status === 'number') return status === 408 || status === 429 || status >= 500
+  return e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError' || e.message === 'fetch failed')
+}
+
 export function decodeEntities(s: string): string {
   return (s || '')
     .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n))
@@ -68,14 +83,13 @@ export function decodeEntities(s: string): string {
 // bare note id, its carousel slides off `<noteId>-<i>`. Every file still starts
 // `meta-` so the uploads wipe and the per-note delete sweep keep matching them.
 // saveThumbSafe wraps saveThumb in the "a missing thumbnail is not a failure"
-// policy its three callers each wrote out for themselves — resolve against the
-// page URL, swallow anything that goes wrong, answer null. saveThumb already
-// returns null for a non-image or oversized body, so null was the existing
-// failure value at all three; this only stops the policy being re-decided per
-// call site. (The carousel loop in fetchInstagramSlides deliberately stays
-// open-coded: it needs to tell a failed slide from a skipped one to keep the
-// rest of the deck.)
-export async function saveThumbSafe(thumbUrl: string, base: string, key: string): Promise<string | null> {
+// policy — resolve against the page URL, swallow anything that goes wrong,
+// answer null. saveThumb already returns null for a non-image or oversized
+// body, so null was the existing failure value. Two callers stay open-coded
+// because they need to tell failures apart: the carousel loop in
+// fetchInstagramSlides, to keep the rest of the deck past a failed slide, and
+// fetchLinkMeta, to retry an image that was only rate-limited (thumb-retry.ts).
+export async function saveThumbSafe(thumbUrl: string, base: string, key: string): Promise<SavedThumb | null> {
   try {
     return await saveThumb(new URL(thumbUrl, base).href, key)
   } catch {
@@ -83,14 +97,43 @@ export async function saveThumbSafe(thumbUrl: string, base: string, key: string)
   }
 }
 
-export async function saveThumb(url: string, key: string): Promise<string | null> {
+// Named as the note fields they land in, so a caller can assign them straight
+// on. `thumbRatio` is width over height: with it a card holds its shape before
+// the image arrives, where it used to grow when the image loaded and repack
+// the board around it.
+interface SavedThumb {
+  thumb: string
+  thumbRatio: number
+}
+
+export async function saveThumb(url: string, key: string): Promise<SavedThumb | null> {
   const res = await get(url, 'image/*')
   const ct = res.headers.get('content-type') || ''
   if (!ct.startsWith('image/')) return null
   const buf = Buffer.from(await res.arrayBuffer())
   if (!buf.length || buf.length > MAX_THUMB) return null
-  const ext = ct.includes('png') ? 'png' : ct.includes('webp') ? 'webp' : ct.includes('gif') ? 'gif' : 'jpg'
+  const { data, ext, width, height } = await shrinkThumb(buf)
   const name = `meta-${key}.${ext}`
-  await writeFile(path.join(UPLOAD_DIR, name), buf)
-  return `/uploads/${name}`
+  await writeFile(path.join(UPLOAD_DIR, name), data)
+  return { thumb: `/uploads/${name}`, thumbRatio: Math.round((width / height) * 1000) / 1000 }
+}
+
+// Stored as published, the demo's twenty-one thumbnails came to 3.7 MB for
+// cards ~250px wide: Wikipedia sends 1280px JPEGs of up to 510 KB, and NN/g an
+// 8001x4188 PNG that costs the browser ~134 MB to decode. Shrunk once here,
+// every later view, and every vision call that reads the file, pays for 960px.
+//
+// JPEG, or PNG when the image really is see-through (a logo flattened into a
+// JPEG gets a box behind it). Never WebP, though it is smaller: local vision
+// decodes these files with llama.cpp's stb_image, which cannot read it.
+// rotate() applies the EXIF orientation before the metadata carrying it is
+// dropped, or a phone photo lands on its side.
+async function shrinkThumb(buf: Buffer) {
+  const { hasAlpha } = await sharp(buf).metadata()
+  const img = sharp(buf).rotate().resize(THUMB_EDGE, THUMB_EDGE, { fit: 'inside', withoutEnlargement: true })
+  const png = hasAlpha && !(await img.clone().stats()).isOpaque
+  const { data, info } = await (png ? img.png() : img.jpeg({ quality: 80, mozjpeg: true })).toBuffer({
+    resolveWithObject: true,
+  })
+  return { data, ext: png ? 'png' : 'jpg', width: info.width, height: info.height }
 }

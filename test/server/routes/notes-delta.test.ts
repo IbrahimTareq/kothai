@@ -88,3 +88,19 @@ test('paged /api/notes response includes rev and bootId matching revState', asyn
   assert.equal(body.rev, state.rev)
   assert.equal(body.bootId, state.bootId)
 })
+
+// Polled every few seconds while anything is pending, so what the list leaves
+// out (notes-route.test.ts) matters even more here.
+test('GET /api/notes/delta leaves out the fields only the server reads', async () => {
+  store._reset()
+  const { bootId } = store.revState()
+  const a = await store.addNote({ type: 'link', content: 'a' })
+  const { rev: r1 } = store.revState()
+  await store.updateNote(a.id, { title: 'patched', article: 'x'.repeat(8000), ai: { classify: true } })
+  const { res, sent } = mockRes()
+  handleNotesDelta(res, urlOf(`?since=${r1}&boot=${encodeURIComponent(bootId)}`), null)
+  const [card] = records(sent.json().notes)
+  assert.equal(card.title, 'patched')
+  assert.ok(!('article' in card))
+  assert.ok(!('ai' in card))
+})

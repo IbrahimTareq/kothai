@@ -65,6 +65,37 @@ test('canonicalize: dedups when two inputs collapse to one canonical', async () 
   assert.deepEqual(out, ['recipes'])
 })
 
+// Every tag is new on a fresh library, so a classified note paid one embedding
+// round trip per tag, one after another: three to six per note on the demo's
+// seed, all ahead of its thumbnail in the one-at-a-time queue.
+test("canonicalize: embeds a note's new tags at once, not one round trip after another", async () => {
+  tagvocab._reset()
+  let inFlight = 0
+  let most = 0
+  const slow = async (t: string) => {
+    most = Math.max(most, ++inFlight)
+    await new Promise(r => setImmediate(r))
+    inFlight--
+    return VECS[t] || [0, 0, 1]
+  }
+  await tagvocab.canonicalize(['recipes', 'travel', 'baking'], { embed: slow })
+  assert.equal(most, 3)
+})
+
+// Embedding up front must not change what snaps to what: a tag registered
+// earlier in the list is still a target for a later one in the same list.
+test('canonicalize: a near-duplicate later in the same list snaps to the earlier tag', async () => {
+  tagvocab._reset()
+  let calls = 0
+  const counting = async (t: string) => {
+    calls++
+    return VECS[t] || [0, 0, 1]
+  }
+  assert.deepEqual(await tagvocab.canonicalize(['recipes', 'cooking', 'recipes'], { embed: counting }), ['recipes'])
+  assert.equal(tagvocab.size(), 1)
+  assert.equal(calls, 2, 'a repeated tag is embedded once')
+})
+
 test('canonicalize: embed failure returns input unchanged', async () => {
   tagvocab._reset()
   const throwing = async () => {

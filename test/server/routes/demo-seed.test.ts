@@ -6,9 +6,10 @@
 // The data dir is a temp one, set before the dynamic imports because
 // server/config.ts freezes it at import time. The settings store keeps its
 // state for the life of the process, so the model tests below run in order.
-import { mkdtempSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 
@@ -28,12 +29,19 @@ mock.module('../../../server/capture.ts', {
 
 const store = await import('../../../server/data/notes.ts')
 const settings = await import('../../../server/data/settings.ts')
+const tagvocab = await import('../../../server/data/tagvocab.ts')
+const { UPLOAD_DIR } = await import('../../../server/config.ts')
+const { EMBED_RECIPE } = await import('../../../server/ai/prompts.ts')
 const { configureDemo, seedDemo } = await import('../../../server/routes/demo.ts')
+
+// A snapshot directory that does not exist: live seeding, as on a checkout
+// that has not built one.
+const NONE = pathToFileURL(path.join(os.tmpdir(), 'kothai-no-demo-snapshot/'))
 
 test('an empty demo library is seeded with every save in the list, in order', async () => {
   store._reset()
   saved.length = 0
-  await seedDemo()
+  await seedDemo({ snapshot: NONE })
   assert.equal(saved[0], 'https://en.wikipedia.org/wiki/Spirited_Away')
   assert.equal(
     saved[saved.length - 1],
@@ -52,7 +60,7 @@ test('a demo library that already holds notes is left alone', async () => {
   store._reset()
   await store.addNote({ type: 'link', content: 'already here' })
   saved.length = 0
-  await seedDemo()
+  await seedDemo({ snapshot: NONE })
   assert.equal(saved.length, 0)
 })
 
@@ -82,4 +90,63 @@ test('models an operator already chose are kept', async () => {
     'openai/gpt-4o-mini',
     'must not be replaced by the OpenAI preset’s gpt-4o-mini',
   )
+})
+
+// ---- the prebuilt library ------------------------------------------------------
+// With no volume, every deploy seeded from nothing: every link fetched, and a
+// classify, a vision call and an embed per note, before a visitor saw a
+// finished card. scripts/demo-snapshot.ts builds the finished library once;
+// boot restores it. These run after the model tests above, so the settings
+// hold the OpenRouter preset's embedding model.
+const LIBRARY = readFileSync(new URL('../../../server/demo-library.txt', import.meta.url), 'utf8')
+const b64 = (v: number[]) => Buffer.from(Float32Array.from(v).buffer).toString('base64')
+
+function snapshot(over: Record<string, unknown> = {}) {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'kothai-demo-snapshot-'))
+  mkdirSync(path.join(dir, 'uploads'))
+  writeFileSync(path.join(dir, 'uploads', 'meta-s2.jpg'), 'jpeg bytes')
+  const older = { id: 's1', createdAt: '2026-01-01T00:00:00.000Z', type: 'link', url: 'https://a.example/' }
+  const newer = { id: 's2', createdAt: '2026-01-02T00:00:00.000Z', type: 'link', url: 'https://b.example/' }
+  const built = {
+    library: LIBRARY,
+    embed: 'openai/text-embedding-3-small',
+    recipe: EMBED_RECIPE,
+    notes: [
+      { ...older, title: 'Older', tags: ['recipes'], embedding: b64([1, 0, 0]) },
+      { ...newer, title: 'Newer', tags: ['travel'], thumb: '/uploads/meta-s2.jpg', embedding: b64([0, 1, 0]) },
+    ],
+    tags: { recipes: b64([1, 0, 0]), travel: b64([0, 1, 0]) },
+  }
+  writeFileSync(path.join(dir, 'library.json'), JSON.stringify({ ...built, ...over }))
+  return pathToFileURL(`${dir}/`)
+}
+
+test('a prebuilt library is restored as built: no save queued, no model asked', async () => {
+  store._reset()
+  tagvocab._reset()
+  saved.length = 0
+  await seedDemo({ snapshot: snapshot() })
+  assert.equal(saved.length, 0)
+  assert.deepEqual(
+    store.allNotes().map(n => n.id),
+    ['s2', 's1'],
+    'newest first, as it was built',
+  )
+  assert.equal(store.getNote('s2')?.thumb, '/uploads/meta-s2.jpg')
+  assert.ok(existsSync(path.join(UPLOAD_DIR, 'meta-s2.jpg')), 'its thumbnail is copied into uploads')
+  assert.equal(tagvocab.size(), 2, 'the tag registry comes with it, so a visitor’s tags snap to the seed’s')
+  const [top] = store.hybridSearch([1, 0, 0], 'zzz')
+  assert.equal(top?.id, 's1', 'the vectors survived, so Ask can retrieve by them')
+})
+
+// Each of these would restore a library whose vectors or contents no longer
+// match what boot would build, so a stale snapshot seeds live instead.
+test('a prebuilt library from another list, embedding model or recipe is passed over for a live seed', async () => {
+  for (const stale of [{ library: 'https://old.example/\n' }, { embed: 'text-embedding-3-large' }, { recipe: 'v1' }]) {
+    store._reset()
+    saved.length = 0
+    await seedDemo({ snapshot: snapshot(stale) })
+    assert.equal(store.count(), 0, `nothing restored for ${JSON.stringify(stale)}`)
+    assert.ok(saved.length > 0, `seeded live for ${JSON.stringify(stale)}`)
+  }
 })

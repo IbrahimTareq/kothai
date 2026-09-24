@@ -1,7 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { normalizeTags } from '../lib/tags.ts'
 import * as store from '../data/notes.ts'
-import type { NoteRecord } from '../data/notes.ts'
+import type { NoteRecord, PublicNote } from '../data/notes.ts'
+import type { ServerNote } from '../types.ts'
 import * as ai from '../ai/index.ts'
 import * as enrich from '../ai/enrich.ts'
 import { isInstagramPost } from '../links/instagram.ts'
@@ -16,6 +17,16 @@ import { demoLimits, visibleTo } from './demo.ts'
 // posted, and an annotation here would be a claim nothing checks at runtime.
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null
+}
+
+// A note as the grid needs it. The record's server-only fields rode along on
+// every page and every delta poll, and the grid reads none of them: on a fresh
+// demo the extracted article alone was 162 KB of a 180 KB page of thirty notes.
+// The single-note responses below still send the whole record; they are one
+// note each.
+function card(n: PublicNote): ServerNote {
+  const { ai, article, thumbDescription, metaTries, metaNextTry, slidesFetched, thumbSrc, ...rest } = n
+  return rest
 }
 
 // ---- API handlers ------------------------------------------------------
@@ -67,7 +78,7 @@ export function handleNotes(res: ServerResponse, url: URL, viewer: string | null
   const offset = Math.max(0, parseInt(p.get('offset') || '0', 10) || 0)
   const sorted = query.sortNotes(matching, p.get('sort') || undefined)
   json(res, 200, {
-    notes: query.pageOf(sorted, offset, parseInt(p.get('limit') || '120', 10)),
+    notes: query.pageOf(sorted, offset, parseInt(p.get('limit') || '120', 10)).map(card),
     total: matching.length,
     offset,
     facets: query.facetsOf(facetBase),
@@ -95,7 +106,7 @@ export function handleNotesDelta(res: ServerResponse, url: URL, viewer: string |
     rev,
     bootId,
     pendingTotal,
-    notes: store.changedSince(since).filter(visible),
+    notes: store.changedSince(since).filter(visible).map(card),
     deleted: store.deletedSince(since),
   })
 }

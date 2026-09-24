@@ -7,17 +7,20 @@
 // inside the host's network. So the demo is read-only apart from the two
 // things it exists to show: saving a link and asking a question.
 import { randomUUID } from 'node:crypto'
-import { readFile } from 'node:fs/promises'
+import { cp, mkdir, readFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { json } from '../lib/http.ts'
 import { isSecureRequest, parseCookies } from '../lib/auth.ts'
 import * as store from '../data/notes.ts'
+import type { NoteRecord } from '../data/notes.ts'
+import * as tagvocab from '../data/tagvocab.ts'
 import * as chats from '../data/chats.ts'
 import { removeNote } from '../data/remove.ts'
 import * as settings from '../data/settings.ts'
 import { saveCapture } from '../capture.ts'
-import { getAiConfig } from '../config.ts'
+import { UPLOAD_DIR, getAiConfig } from '../config.ts'
 import { ENDPOINTS } from '../ai/endpoints.ts'
+import { EMBED_RECIPE } from '../ai/prompts.ts'
 
 // Read here rather than in config.ts, which holds paths and the port: this
 // module is where the demo lives, and every later demo check imports it from
@@ -141,11 +144,67 @@ export async function configureDemo(): Promise<void> {
 // After the provider starts, so each save's enrichment has a model to run on.
 // Only into an empty library: with a volume, the second boot finds the first
 // one's library, and it costs a classify and an embed a line to build.
-export async function seedDemo(): Promise<void> {
+//
+// The live seed is the fallback. With no volume, as on Railway, every deploy
+// built the library from nothing: every link fetched, and a classify, a vision
+// call and an embed per note, over a minute before the grid had its pictures
+// and on the operator's key each time. So a prebuilt one (`snapshot`, made by
+// scripts/demo-snapshot.ts) is restored instead whenever it still matches.
+export async function seedDemo({ snapshot = SNAPSHOT }: { snapshot?: URL } = {}): Promise<void> {
   if (store.count() > 0) return
   const list = await readFile(new URL('../demo-library.txt', import.meta.url), 'utf8')
+  if (await restoreSnapshot(snapshot, list)) return
   for (const line of list.split('\n')) {
     const url = line.trim()
     if (url && !url.startsWith('#')) await saveCapture({ url })
   }
+}
+
+// ---- the prebuilt library -------------------------------------------------------
+// scripts/demo-snapshot.ts writes library.json and uploads/ here: every note as
+// enrichment left it, its vector and the tag registry's as base64 float32.
+const SNAPSHOT = new URL('../demo-seed/', import.meta.url)
+
+interface Snapshot {
+  library: string // the demo-library.txt it was built from
+  embed: string // the embedding model its vectors came from
+  recipe: string // ai/prompts.ts's EMBED_RECIPE when it was built
+  notes: (Omit<NoteRecord, 'embedding'> & { embedding: string })[] // oldest first
+  tags: Record<string, string>
+}
+
+const vector = (b64: string) => store.decodeEmbedding(Buffer.from(b64, 'base64'))
+
+async function restoreSnapshot(dir: URL, list: string): Promise<boolean> {
+  let snap: Snapshot
+  try {
+    snap = JSON.parse(await readFile(new URL('library.json', dir), 'utf8'))
+  } catch {
+    return false // never built: the live seed is all there is
+  }
+  // Any of these and the vectors, or the cards themselves, are not what a live
+  // seed would build now, and search would quietly compare across two spaces.
+  const stale =
+    snap.library !== list
+      ? 'demo-library.txt has changed since'
+      : snap.embed !== settings.getRemote().embed
+        ? `its vectors are from ${snap.embed}`
+        : snap.recipe !== EMBED_RECIPE
+          ? `its vectors are from embedding recipe ${snap.recipe}`
+          : null
+  if (stale) {
+    console.warn(`[demo] not using the prebuilt library (${stale}); seeding live. Rebuild it: scripts/demo-snapshot.ts`)
+    return false
+  }
+  await mkdir(UPLOAD_DIR, { recursive: true })
+  await cp(new URL('uploads/', dir), UPLOAD_DIR, { recursive: true })
+  // The registry as it was, not rebuilt from the notes' tags: an account tag
+  // never goes through canonicalize, so it has no vector here to restore.
+  await tagvocab.rebuildFromNotes([{ tags: Object.keys(snap.tags) }], {
+    embed: async tag => Array.from(vector(snap.tags[tag]) ?? []),
+  })
+  for (const { embedding, ...note } of snap.notes)
+    await store.addNote({ ...note, embedding: vector(embedding) }, { persist: false })
+  await store.flush()
+  return true
 }

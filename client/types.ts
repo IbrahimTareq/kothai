@@ -32,6 +32,7 @@ export interface ServerNote {
   siteDesc?: string | null
   siteName?: string | null
   thumb?: string | null
+  thumbRatio?: number | null // width / height of `thumb`; see Cards.tsx's shape()
   // Local paths to an Instagram carousel's slides, in post order. Absent until
   // the item has been opened once (slides are fetched lazily) and for any post
   // that turned out to be a single image.
@@ -62,6 +63,7 @@ export interface UIItem {
   title?: string
   note?: string
   thumb?: string | null
+  thumbRatio?: number | null
   slides?: string[]
   siteName?: string | null
   seed?: number

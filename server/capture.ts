@@ -24,6 +24,12 @@ export async function saveCapture({
     pending: true,
     ...(visitor ? { visitor } : {}),
   })
+  // Both lanes, as the importer does (routes/import.ts). With only the serial
+  // chain, a link's thumbnail waited out every earlier note's vision, classify
+  // and embed calls: a fresh demo seeding its library took over a minute to
+  // show any images. The fast lane goes first so it is fetching before the
+  // chain takes the model.
+  enrich.queueLinkMeta(note.id, url)
   enrich.queueEnrich(note.id, url)
   return note
 }

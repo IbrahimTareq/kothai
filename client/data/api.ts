@@ -40,6 +40,7 @@ export function mapNote(n: ServerNote): UIItem {
     title: n.siteTitle || n.title,
     note: n.siteDesc || '',
     thumb: n.thumb || null,
+    thumbRatio: n.thumbRatio || null,
     slides: n.slides,
     siteName: n.siteName || null,
   }

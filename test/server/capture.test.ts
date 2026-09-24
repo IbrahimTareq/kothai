@@ -9,6 +9,7 @@ import assert from 'node:assert/strict'
 
 const added: Record<string, unknown>[] = []
 const queued: { id: string; url: string }[] = []
+const metaQueued: { id: string; url: string }[] = []
 
 mock.module('../../server/data/notes.ts', {
   namedExports: {
@@ -21,6 +22,7 @@ mock.module('../../server/data/notes.ts', {
 mock.module('../../server/ai/enrich.ts', {
   namedExports: {
     queueEnrich: (id: string, url: string) => queued.push({ id, url }),
+    queueLinkMeta: (id: string, url: string) => metaQueued.push({ id, url }),
   },
 })
 
@@ -48,4 +50,13 @@ test('saveCapture: a demo visitor’s link is stamped as theirs, and an ordinary
   await saveCapture({ url: 'https://example.com/c' })
   assert.equal(added[0].visitor, 'v1')
   assert.ok(!('visitor' in added[1]), 'an ordinary install must write notes exactly as before')
+})
+
+// The demo seeded its library through here with only the serial chain behind
+// it, so each card's thumbnail waited out every earlier note's vision,
+// classify and embed calls: over a minute before the demo's grid had images.
+test('saveCapture: a link also goes to the fast metadata lane, so its thumbnail skips the model queue', async () => {
+  metaQueued.length = 0
+  const note = await saveCapture({ url: 'https://example.com/d' })
+  assert.deepEqual(metaQueued, [{ id: note.id, url: 'https://example.com/d' }])
 })

@@ -35,6 +35,7 @@ export interface ServerNote {
   siteDesc?: string | null
   siteName?: string | null
   thumb?: string | null
+  thumbRatio?: number | null // width / height of `thumb`, so a card can hold its shape before it loads
   // Local paths to an Instagram carousel's slides, in post order. Absent until
   // the item has been opened once (slides are fetched lazily) and for any post
   // that turned out to be a single image.

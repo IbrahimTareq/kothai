@@ -95,3 +95,30 @@ test('deleting a note that owns uploaded files still removes the note', async ()
   assert.deepEqual(sent.json(), { ok: true })
   assert.equal(store.allNotes().length, 0)
 })
+
+// The list is what the grid renders, and the grid never reads a note's
+// extracted article (up to 8,000 chars), its thumbnail description or its
+// enrichment bookkeeping. Sent anyway, the article alone was 89% of a fresh
+// demo's /api/notes: 162 KB of a 180 KB page of thirty notes.
+test('/api/notes sends what a card shows, not the fields only the server reads', async () => {
+  store._reset()
+  const n = await store.addNote({ type: 'link', url: 'https://example.com/a', content: 'https://example.com/a' })
+  await store.updateNote(n.id, {
+    siteTitle: 'A page',
+    siteDesc: 'What it is about',
+    thumb: '/uploads/meta-a.jpg',
+    article: 'x'.repeat(8000),
+    thumbDescription: 'a photo of a page',
+    thumbSrc: 'https://cdn.example.com/og.png',
+    ai: { classify: true, embed: true },
+    metaTries: 1,
+  })
+  const { res, sent } = mockRes()
+  handleNotes(res, urlOf(''), null)
+  const [card] = records(sent.json().notes)
+  for (const k of ['article', 'thumbDescription', 'thumbSrc', 'ai', 'metaTries'])
+    assert.ok(!(k in card), `${k} is server-only`)
+  assert.equal(card.siteTitle, 'A page')
+  assert.equal(card.siteDesc, 'What it is about')
+  assert.equal(card.thumb, '/uploads/meta-a.jpg')
+})

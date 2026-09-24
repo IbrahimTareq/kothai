@@ -230,7 +230,7 @@ export async function fetchInstagramMeta(url: string, noteId: string): Promise<I
     meta.siteDesc = captionToMeta(caption).siteDesc
   }
   meta = withLocation(meta, location)
-  if (thumbUrl) meta.thumb = await saveThumbSafe(thumbUrl, url, noteId)
+  if (thumbUrl) Object.assign(meta, await saveThumbSafe(thumbUrl, url, noteId))
   return meta
 }
 
@@ -296,7 +296,7 @@ export async function fetchInstagramSlides(url: string, noteId: string): Promise
   for (const [i, src] of parseInstagramCarousel(html).entries()) {
     try {
       const local = await saveThumb(new URL(src, url).href, `${noteId}-${i}`)
-      if (local) slides.push(local)
+      if (local) slides.push(local.thumb)
     } catch {
       /* one unreachable slide shouldn't sink the rest of the deck */
     }

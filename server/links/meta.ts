@@ -13,7 +13,7 @@ import {
   YoutubeTranscriptVideoUnavailableError,
 } from 'youtube-transcript'
 import type { TranscriptResponse } from 'youtube-transcript'
-import { MAX_HTML, decodeEntities, get, isSafeFetchUrl, saveThumbSafe } from './fetch.ts'
+import { MAX_HTML, decodeEntities, get, isSafeFetchUrl, isTransient, saveThumb } from './fetch.ts'
 import { fetchInstagramMeta, isInstagramPost } from './instagram.ts'
 
 const MAX_ARTICLE = 8000 // chars of extracted body text persisted per note
@@ -322,6 +322,8 @@ export interface LinkMeta {
   siteDesc: string | null
   siteName: string | null
   thumb: string | null
+  thumbRatio?: number | null // width / height; see fetch.ts's saveThumb
+  thumbSrc?: string | null // an image that failed only for now; see thumb-retry.ts
   article?: string | null
   author?: string | null
 }
@@ -385,6 +387,8 @@ export async function fetchLinkMeta(rawUrl: string, noteId: string): Promise<Lin
     meta.siteDesc = oembedDesc
   }
 
-  if (thumbUrl) meta.thumb = await saveThumbSafe(thumbUrl, url, noteId)
+  // Not saveThumbSafe: a 429 is not "no thumbnail" (a demo's GitHub card, for good).
+  const src = thumbUrl && URL.canParse(thumbUrl, url) ? new URL(thumbUrl, url).href : null
+  if (src) Object.assign(meta, await saveThumb(src, noteId).catch(e => ({ thumbSrc: isTransient(e) ? src : null })))
   return meta
 }
