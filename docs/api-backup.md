@@ -19,11 +19,11 @@ Flushes pending writes and truncates the WAL. Call this before external backup t
 <TypeTable
   type={{
     confirm: {
-      description: 'Confirmation token returned by a dry-run call',
+      description: 'Must be exactly the string DELETE',
       type: 'string',
       required: true,
     },
   }}
 />
 
-Permanently deletes all data. Requires the confirmation token to prevent accidental wipes.
+Permanently deletes all data. The fixed confirmation string guards against accidental wipes.

@@ -18,7 +18,7 @@ Every URL Kothai fetches for a link preview is attacker-influenced. The SSRF gua
 
 `KOTHAI_PASSWORD` is env-only and never written to SQLite, so it can't leak via backup.
 
-The inference endpoint and key go to `data/credentials.json`, never into the database.
+An inference endpoint and key entered in the app go to `data/credentials.json`, never into the database. The file is plain text, so treat a backup of `data/` as holding your key.
 
 ## Deployment guidance
 

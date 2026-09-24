@@ -18,7 +18,7 @@ curl -s localhost:5173/api/status
 
 <Accordions>
 <Accordion title="Container exits immediately on a Raspberry Pi or under emulation">
-Almost certainly the ARM SVE issue. Make sure you're on a current image (`docker compose pull`) rather than a locally built old one.
+Older images crashed at startup on ARM CPUs without SVE instructions, which includes the Raspberry Pi. Pull a current image (`docker compose pull`).
 </Accordion>
 
 <Accordion title="Killed, or the container restarts during model loading">
@@ -34,6 +34,6 @@ The entrypoint repairs ownership at startup, but only when it starts as root. If
 </Accordion>
 
 <Accordion title="Port already in use">
-Change the host side of the mapping in `docker-compose.yml`, e.g. `"8080:5173"`, or set `PORT`.
+Change the host side of the mapping in `docker-compose.yml`, e.g. `"8080:5173"`. Don't set `PORT` for this: it moves the port inside the container and the mapping stops reaching it.
 </Accordion>
 </Accordions>

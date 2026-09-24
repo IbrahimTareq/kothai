@@ -39,12 +39,11 @@ All three are swappable live from Settings.
 ## Remote inference
 
 ```bash
-KOTHAI_AI_PROVIDER=remote
 KOTHAI_AI_BASE_URL=http://localhost:11434/v1
 KOTHAI_AI_API_KEY=…        # not needed for Ollama
 ```
 
-Model names are picked in Settings. Credentials are env-only and never written to SQLite.
+Or pick an endpoint during setup and paste the key there. Either way, model names are picked in Settings. An endpoint set by environment variable wins over one set in the app. A key entered in the app is kept in `data/credentials.json`, outside the database but in plain text, so any backup of `data/` carries it.
 
 ### Remote defaults
 

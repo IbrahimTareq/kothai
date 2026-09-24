@@ -25,10 +25,18 @@ Any directory-based backup tool (restic, Borg, Time Machine, a NAS snapshot) can
 
 ### Without stopping the container
 
-Settings → **BACKUP** → *Download backup*, or the endpoint directly:
+Settings → **YOUR DATA** → *Download backup*, or the endpoint directly:
 
 ```bash
 curl -fO -J http://localhost:5173/api/backup
+```
+
+With `KOTHAI_PASSWORD` set, that answers 401. Log in first and send the session cookie:
+
+```bash
+curl -fs -c kothai.cookies -H 'Content-Type: application/json' \
+  -d '{"password":"your-password"}' http://localhost:5173/api/login
+curl -fO -J -b kothai.cookies http://localhost:5173/api/backup
 ```
 
 This uses SQLite's `VACUUM INTO`, which reads one consistent snapshot and writes a fresh, compacted database file. No stopping, no three-file dance. Use it on a PaaS where you can't stop the container, or whenever you just want a copy right now.

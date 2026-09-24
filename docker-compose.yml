@@ -27,18 +27,16 @@ services:
     #   # is the default and fine on a LAN or tailnet. Set it before putting
     #   # Kothai on a public hostname.
     #   KOTHAI_PASSWORD: "choose-something-long"
-    #   # KOTHAI_HOME sets one root that the three paths below derive from —
+    #   # KOTHAI_HOME sets one root that the paths below derive from —
     #   # use it on hosts that allow only a single volume.
     #   KOTHAI_HOME: /app
     #   KOTHAI_DATA_DIR: /app/data
     #   KOTHAI_MODELS_DIR: /app/models
-    #   KOTHAI_CONFIG_PATH: /app/qvac.config.json
     #   # Bring your own AI: the language and vision roles go to an
     #   # OpenAI-compatible endpoint, embedding stays on this machine. That
     #   # split is the point — Ollama Cloud, Groq, Anthropic and OpenRouter
     #   # serve no embeddings route, and semantic search needs one. Keeps the
     #   # models volume, but only for the ~300 MB embedding model.
-    #   KOTHAI_AI_PROVIDER: remote
     #   KOTHAI_AI_BASE_URL: https://ollama.com/v1
     #   # Credentials are env-only: never written to the database and never
     #   # returned by the API, so they cannot leak via a backup or an export.
@@ -61,7 +59,6 @@ services:
   #   volumes:
   #     - ./data:/app/data
   #   environment:
-  #     KOTHAI_AI_PROVIDER: remote
   #     KOTHAI_AI_BASE_URL: http://ollama:11434/v1
   #     # KOTHAI_AI_API_KEY: sk-...   # not needed for Ollama or llama.cpp
   #   # Model NAMES are picked in Settings, not here.
