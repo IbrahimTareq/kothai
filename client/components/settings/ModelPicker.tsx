@@ -3,13 +3,13 @@
 // (pick models before the initial download). A role is a collapsible accordion
 // of presets; each preset is a radio-style row showing its label, blurb, and size.
 import { useState, useEffect } from 'react'
-import { Icon } from './icons'
-import type { ModelPreset, Residency } from '../types'
-import { relevantModels } from '../domain/modelRelevance'
-import { Button } from '../ui/Button'
-import { Segmented } from '../ui/Segmented'
-import { Input } from '../ui/Input'
-import { Popover } from '../ui/Popover'
+import { Icon } from '../icons'
+import type { ModelPreset, Residency } from '../../types'
+import { relevantModels } from '../../domain/modelRelevance'
+import { Button } from '../../ui/Button'
+import { Segmented } from '../../ui/Segmented'
+import { Input } from '../../ui/Input'
+import { Popover } from '../../ui/Popover'
 
 export type Role = 'llm' | 'embed' | 'vision'
 

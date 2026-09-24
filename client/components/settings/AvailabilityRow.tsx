@@ -9,9 +9,9 @@
 // something you chose to keep, silently and permanently.
 import { useState } from 'react'
 import { SettingsRow, RowStatus } from './SettingsRow'
-import { API, apiError } from '../data/api'
-import { Button } from '../ui/Button'
-import { Confirm } from '../ui/Confirm'
+import { API, apiError } from '../../data/api'
+import { Button } from '../../ui/Button'
+import { Confirm } from '../../ui/Confirm'
 
 type Scan = Awaited<ReturnType<typeof API.scanAvailability>>
 

@@ -4,7 +4,7 @@
 // actual POST, so there is exactly one place that talks to /api/setup.
 import { useState } from 'react'
 import { Icon } from '../components/icons'
-import { EndpointPicker, type EndpointChoice } from '../components/EndpointPicker'
+import { EndpointPicker, type EndpointChoice } from '../components/settings/EndpointPicker'
 import { API } from '../data/api'
 import type { EndpointOption } from '../types'
 import { Button } from '../ui/Button'

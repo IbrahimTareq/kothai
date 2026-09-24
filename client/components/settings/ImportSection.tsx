@@ -13,9 +13,9 @@
 import { useState, useRef } from 'react'
 import type { ChangeEvent, DragEvent, ReactNode } from 'react'
 import { SettingsGroup, SettingsRow, RowStatus } from './SettingsRow'
-import { API, apiError } from '../data/api'
-import { IMPORT_SOURCES, validateImportFiles, type ImportSource } from '../domain/importFile'
-import { Button } from '../ui/Button'
+import { API, apiError } from '../../data/api'
+import { IMPORT_SOURCES, validateImportFiles, type ImportSource } from '../../domain/importFile'
+import { Button } from '../../ui/Button'
 
 type ImportResult = Awaited<ReturnType<typeof API.importFile>>
 

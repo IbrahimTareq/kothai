@@ -12,9 +12,9 @@ import { useState } from 'react'
 import { RoleAccordion, fmtGB, type Role } from './ModelPicker'
 import { SettingsGroup } from './SettingsRow'
 import { EndpointPicker, type EndpointChoice } from './EndpointPicker'
-import { API } from '../data/api'
-import type { SettingsResponse } from '../types'
-import { Button } from '../ui/Button'
+import { API } from '../../data/api'
+import type { SettingsResponse } from '../../types'
+import { Button } from '../../ui/Button'
 
 const ROLES = ['llm', 'embed', 'vision'] as const
 

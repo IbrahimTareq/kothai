@@ -4,10 +4,10 @@
 // see the rule in server/telegram/ingest.ts, which the code shown here feeds.
 import { useEffect, useState } from 'react'
 import { SettingsGroup, SettingsRow, RowStatus } from './SettingsRow'
-import { API, apiError } from '../data/api'
-import type { TelegramState } from '../types'
-import { Button } from '../ui/Button'
-import { Input } from '../ui/Input'
+import { API, apiError } from '../../data/api'
+import type { TelegramState } from '../../types'
+import { Button } from '../../ui/Button'
+import { Input } from '../../ui/Input'
 
 export function TelegramSection() {
   const [state, setState] = useState<TelegramState | null>(null)

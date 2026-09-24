@@ -6,7 +6,7 @@
 // control to the main app.
 import { useState, useEffect } from 'react'
 import { Icon } from '../components/icons'
-import { RoleAccordion, RemoteModelField, ROLE_META, fmtGB, type Role } from '../components/ModelPicker'
+import { RoleAccordion, RemoteModelField, ROLE_META, fmtGB, type Role } from '../components/settings/ModelPicker'
 import { API } from '../data/api'
 import type { SettingsResponse, ModelLoad } from '../types'
 import { SetupWizard } from './SetupWizard'

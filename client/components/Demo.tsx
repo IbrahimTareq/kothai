@@ -8,7 +8,7 @@
 import { useSyncExternalStore } from 'react'
 import type { DemoAllowance } from '../types'
 import { Button } from '../ui/Button'
-import { SettingsGroup, SettingsRow } from './SettingsRow'
+import { SettingsGroup, SettingsRow } from './settings/SettingsRow'
 
 const GET_YOUR_OWN = 'https://getkothai.com/'
 

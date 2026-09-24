@@ -1,8 +1,8 @@
 // Settings.tsx — the app's settings surface. Built around two primitives so new
 // settings can be dropped in as the app grows: <SettingsGroup> for a labelled
 // block, and <SettingsRow> for one action inside a bordered row list (both in
-// components/SettingsRow.tsx, so per-section components can use them too —
-// Import is one, see components/ImportSection.tsx).
+// components/settings/SettingsRow.tsx, so per-section components can use them too —
+// Import is one, see components/settings/ImportSection.tsx).
 // Model Cores is a group: each model role (language / embedding / vision) is a
 // collapsible <RoleAccordion> whose header shows the role, its purpose, and the
 // currently selected model. Picking applies via /api/settings; the server swaps
@@ -10,13 +10,13 @@
 // re-tag, erase — is one row list, each row a title + explanation on the left
 // and its control on the right, expanding in place when a step needs confirming.
 import { useState, useEffect } from 'react'
-import { RoleAccordion, RemoteModelField, ROLE_META, fmtGB, type Role } from '../components/ModelPicker'
-import { SettingsGroup, SettingsRow, RowStatus } from '../components/SettingsRow'
-import { ConnectionPanel } from '../components/ConnectionPanel'
-import { ImportSection } from '../components/ImportSection'
-import { TelegramSection } from '../components/TelegramSection'
-import { AvailabilityRow } from '../components/AvailabilityRow'
-import { ModelFilesRow } from '../components/ModelFilesRow'
+import { RoleAccordion, RemoteModelField, ROLE_META, fmtGB, type Role } from '../components/settings/ModelPicker'
+import { SettingsGroup, SettingsRow, RowStatus } from '../components/settings/SettingsRow'
+import { ConnectionPanel } from '../components/settings/ConnectionPanel'
+import { ImportSection } from '../components/settings/ImportSection'
+import { TelegramSection } from '../components/settings/TelegramSection'
+import { AvailabilityRow } from '../components/settings/AvailabilityRow'
+import { ModelFilesRow } from '../components/settings/ModelFilesRow'
 import { API, apiError } from '../data/api'
 import type { Residency, SettingsResponse, ModelLoad } from '../types'
 import { Button } from '../ui/Button'

@@ -4,8 +4,8 @@
 // exactly this, and two copies would drift the moment a provider is added or
 // the probe's wording changes.
 import { useId, useState } from 'react'
-import type { EndpointOption } from '../types'
-import { Input } from '../ui/Input'
+import type { EndpointOption } from '../../types'
+import { Input } from '../../ui/Input'
 
 export interface EndpointChoice {
   providerId: string

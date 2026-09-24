@@ -14,12 +14,12 @@
 // instead of a button, and the server refuses them regardless (409 `in_use`).
 import { useState, useEffect } from 'react'
 import { SettingsRow, RowStatus } from './SettingsRow'
-import { API, apiError } from '../data/api'
-import { fileLabel, fmtSize, storageSummary } from '../domain/modelFiles'
+import { API, apiError } from '../../data/api'
+import { fileLabel, fmtSize, storageSummary } from '../../domain/modelFiles'
 import { ROLE_META } from './ModelPicker'
-import type { ModelFilesResponse } from '../types'
-import { Button } from '../ui/Button'
-import { Confirm } from '../ui/Confirm'
+import type { ModelFilesResponse } from '../../types'
+import { Button } from '../../ui/Button'
+import { Confirm } from '../../ui/Confirm'
 
 export function ModelFilesRow() {
   const [data, setData] = useState<ModelFilesResponse | null>(null)

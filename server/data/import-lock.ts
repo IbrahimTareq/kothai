@@ -38,7 +38,7 @@ export async function runExclusiveImport<T>(fn: () => Promise<T>): Promise<{ res
 }
 
 // The refusal itself. Three routes answered with this same sentence and code,
-// and the client matches on the code (client/components/ImportSection.tsx,
+// and the client matches on the code (client/components/settings/ImportSection.tsx,
 // client/views/Settings.tsx) — three copies is three chances to drift from a
 // string another codebase is reading.
 export const IMPORT_BUSY = {

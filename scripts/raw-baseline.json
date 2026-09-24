@@ -19,13 +19,13 @@
     "buttons": 2,
     "fields": 1
   },
-  "client/components/EndpointPicker.tsx": {
+  "client/components/settings/EndpointPicker.tsx": {
     "buttons": 1
   },
-  "client/components/ImportSection.tsx": {
+  "client/components/settings/ImportSection.tsx": {
     "fields": 1
   },
-  "client/components/ModelPicker.tsx": {
+  "client/components/settings/ModelPicker.tsx": {
     "buttons": 4
   },
   "client/components/RailButton.tsx": {
