@@ -38,6 +38,8 @@ const hadTagRegistry = await tagvocab.load()
 // Before any provider is resolved: a stored endpoint decides which provider
 // kind initProvider picks, so loading it later would boot the wrong one.
 setAiCredentials(readCredentials())
+// Before the provider starts, which reads the model names once.
+if (demo.DEMO) await demo.configureDemo()
 // Both selections are passed; each provider reads only its own half.
 await ai.initProvider(undefined, { local: settings.get(), remote: settings.getRemote() })
 if (ai.capabilities().managesResidency) await ai.applyResidency(settings.getResidency())
@@ -65,6 +67,9 @@ if (settings.isConfigured()) {
     })
   }
 }
+// Last, after the re-embed checks above: they only mark an EMPTY library as
+// current, and seeded notes arriving first would be queued to embed twice.
+if (demo.DEMO) await demo.seedDemo()
 server.listen(PORT, () => {
   console.log(`\n  📒 Kothai running at  http://localhost:${PORT}\n`)
   // Stated on every boot, both ways round: "no password" is the historical

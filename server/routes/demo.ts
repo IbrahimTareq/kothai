@@ -7,12 +7,17 @@
 // inside the host's network. So the demo is read-only apart from the two
 // things it exists to show: saving a link and asking a question.
 import { randomUUID } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { json } from '../lib/http.ts'
 import { isSecureRequest, parseCookies } from '../lib/auth.ts'
 import * as store from '../data/notes.ts'
 import * as chats from '../data/chats.ts'
 import { removeNote } from '../data/remove.ts'
+import * as settings from '../data/settings.ts'
+import { saveCapture } from '../capture.ts'
+import { getAiConfig } from '../config.ts'
+import { ENDPOINTS } from '../ai/endpoints.ts'
 
 // Read here rather than in config.ts, which holds paths and the port: this
 // module is where the demo lives, and every later demo check imports it from
@@ -115,4 +120,32 @@ export async function resetDemo(): Promise<void> {
   for (const c of chats.all()) if (c.visitor) await chats.remove(c.id)
   demoLimits.save.reset()
   demoLimits.ask.reset()
+}
+
+// ---- a fresh deploy -----------------------------------------------------------
+// A new demo has to work with nothing done by hand. The gate above refuses
+// /api/setup, so a visitor could never finish the first-run screen, and an
+// empty library leaves them nothing to ask about.
+
+// Before the provider starts (server/index.ts), since it reads the model names
+// once. Taken from the preset whose URL the endpoint is, so an operator sets
+// only KOTHAI_AI_BASE_URL and its key; an endpoint with no preset is left for
+// them, as are models already chosen.
+export async function configureDemo(): Promise<void> {
+  if (settings.getRemote().llm) return
+  const preset = ENDPOINTS.find(e => e.baseUrl === getAiConfig().baseUrl)
+  if (!preset) return
+  await settings.save({ configured: true, remote: preset.defaults })
+}
+
+// After the provider starts, so each save's enrichment has a model to run on.
+// Only into an empty library: with a volume, the second boot finds the first
+// one's library, and it costs a classify and an embed a line to build.
+export async function seedDemo(): Promise<void> {
+  if (store.count() > 0) return
+  const list = await readFile(new URL('../demo-library.txt', import.meta.url), 'utf8')
+  for (const line of list.split('\n')) {
+    const text = line.trim()
+    if (text && !text.startsWith('#')) await saveCapture({ text })
+  }
 }
