@@ -2,13 +2,14 @@
 // tab (hot-swap an already-running model) and the first-run Onboarding flow
 // (pick models before the initial download). A role is a collapsible accordion
 // of presets; each preset is a radio-style row showing its label, blurb, and size.
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Icon } from './icons'
 import type { ModelPreset, Residency } from '../types'
 import { relevantModels } from '../domain/modelRelevance'
 import { Button } from '../ui/Button'
 import { Segmented } from '../ui/Segmented'
 import { Input } from '../ui/Input'
+import { Popover } from '../ui/Popover'
 
 export type Role = 'llm' | 'embed' | 'vision'
 
@@ -175,19 +176,7 @@ export function RemoteModelField({
   const [open, setOpen] = useState(false)
   const [showAll, setShowAll] = useState(false)
   const [active, setActive] = useState(0)
-  const box = useRef<HTMLDivElement>(null)
   useEffect(() => setDraft(value), [value])
-
-  // Close on an outside click. Without this the list survives a click on the
-  // next field and two can be open at once.
-  useEffect(() => {
-    if (!open) return
-    const away = (e: MouseEvent) => {
-      if (box.current && !box.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', away)
-    return () => document.removeEventListener('mousedown', away)
-  }, [open])
 
   const ids = options.map(o => o.key)
   const { matched, rest } = relevantModels(role, ids)
@@ -216,49 +205,58 @@ export function RemoteModelField({
       if (open && shown[active]) return commit(shown[active])
       return commit(draft.trim())
     }
-    if (e.key === 'Escape' && open) {
-      e.preventDefault()
+    // Not gated on `open`: <Popover> sees Escape first (a capture listener on
+    // document) and closes the list, and React re-renders before the key
+    // reaches this field — so a check for an open list found it already shut
+    // and left the half-typed draft in place, to be committed on blur.
+    if (e.key === 'Escape') {
       setOpen(false)
       setDraft(value)
     }
   }
 
   return (
-    <div className="remote-model" ref={box}>
-      <div className="remote-model-box">
-        <Input
-          compact
-          className="remote-model-input mono"
-          value={draft}
-          disabled={busy}
-          role="combobox"
-          aria-expanded={open}
-          aria-controls={`models-${role}`}
-          placeholder={ROLE_PLACEHOLDER[role]}
-          onChange={e => {
-            setDraft(e.target.value)
-            setOpen(true)
-            setActive(0)
-          }}
-          onFocus={() => setOpen(true)}
-          onKeyDown={onKey}
-          onBlur={() => {
-            if (!open && draft.trim() !== value) onCommit(draft.trim())
-          }}
-        />
-        <Button
-          size="icon"
-          className="remote-model-toggle"
-          type="button"
-          disabled={busy || !ids.length}
-          aria-label={open ? 'Hide models' : 'Show models'}
-          onClick={() => setOpen(o => !o)}
-        >
-          <Icon name="chevron" size={14} />
-        </Button>
-      </div>
-
-      {open && Boolean(ids.length) && (
+    <div className="remote-model">
+      {/* An outside press closes the list (<Popover> owns that now): without
+          it the list survived a click on the next field, and two were open. */}
+      <Popover
+        open={open && Boolean(ids.length)}
+        onOpenChange={setOpen}
+        anchor={
+          <div className="remote-model-box">
+            <Input
+              compact
+              className="remote-model-input mono"
+              value={draft}
+              disabled={busy}
+              role="combobox"
+              aria-expanded={open}
+              aria-controls={`models-${role}`}
+              placeholder={ROLE_PLACEHOLDER[role]}
+              onChange={e => {
+                setDraft(e.target.value)
+                setOpen(true)
+                setActive(0)
+              }}
+              onFocus={() => setOpen(true)}
+              onKeyDown={onKey}
+              onBlur={() => {
+                if (!open && draft.trim() !== value) onCommit(draft.trim())
+              }}
+            />
+            <Button
+              size="icon"
+              className="remote-model-toggle"
+              type="button"
+              disabled={busy || !ids.length}
+              aria-label={open ? 'Hide models' : 'Show models'}
+              onClick={() => setOpen(o => !o)}
+            >
+              <Icon name="chevron" size={14} />
+            </Button>
+          </div>
+        }
+      >
         <ul className="remote-model-list" id={`models-${role}`} role="listbox">
           {shown.map((id, i) => (
             <li key={id}>
@@ -295,7 +293,7 @@ export function RemoteModelField({
             </li>
           )}
         </ul>
-      )}
+      </Popover>
 
       <div className="remote-model-desc">
         {!ids.length
