@@ -72,7 +72,7 @@ export function ConnectionPanel({
   const saveEndpoint = () =>
     choice &&
     commit(async () => {
-      await API.checkEndpoint(choice.baseUrl, choice.apiKey)
+      await API.checkEndpoint(choice.providerId, choice.baseUrl, choice.apiKey)
       await API.saveEndpoint(
         { providerId: choice.providerId, baseUrl: choice.baseUrl, apiKey: choice.apiKey },
         choice.defaults,

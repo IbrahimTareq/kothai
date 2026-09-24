@@ -49,11 +49,15 @@ function fakeReq(body: unknown): IncomingMessage {
 }
 
 // A stand-in endpoint: /models answers only with the right bearer token.
+// Under /open it behaves like OpenRouter instead — /models answers anyone, and
+// only /key cares whose key it is.
 let endpoint: Server
 let base: string
+let open: string
 before(async () => {
   endpoint = createServer((req, res) => {
-    if (req.url === '/v1/models' && req.headers.authorization === 'Bearer good-key') {
+    const good = req.headers.authorization === 'Bearer good-key'
+    if ((req.url === '/v1/models' && good) || req.url === '/open/v1/models' || (req.url === '/open/v1/key' && good)) {
       res.writeHead(200, { 'content-type': 'application/json' })
       return res.end(JSON.stringify({ data: [{ id: 'model-a' }, { id: 'model-b' }] }))
     }
@@ -64,6 +68,7 @@ before(async () => {
   const addr = endpoint.address()
   assert.ok(addr !== null && typeof addr === 'object', 'listening on a TCP port, so address() is an AddressInfo')
   base = `http://127.0.0.1:${addr.port}/v1`
+  open = `http://127.0.0.1:${addr.port}/open/v1`
 })
 after(() => endpoint.close())
 
@@ -91,6 +96,18 @@ test('a refused key is reported as the key, with no env var to go and set', asyn
   await handleSetupTest(fakeReq({ baseUrl: base, apiKey: 'wrong' }), res.raw)
   assert.match(res.sent.body.error || '', /key was refused/)
   assert.doesNotMatch(res.sent.body.error || '', /KOTHAI_/)
+})
+
+// OpenRouter lists its models to anyone, so probing /models passed a wrong
+// key, and the wizard saved it as if it worked.
+test('a provider whose model list is public is checked where the key matters', async () => {
+  const bad = fakeRes()
+  await handleSetupTest(fakeReq({ providerId: 'openrouter', baseUrl: open, apiKey: 'wrong' }), bad.raw)
+  assert.equal(bad.sent.body.ok, false)
+  assert.match(bad.sent.body.error || '', /key was refused/)
+  const good = fakeRes()
+  await handleSetupTest(fakeReq({ providerId: 'openrouter', baseUrl: open, apiKey: 'good-key' }), good.raw)
+  assert.equal(good.sent.body.ok, true)
 })
 
 test('an unreachable endpoint reports that rather than hanging', async () => {

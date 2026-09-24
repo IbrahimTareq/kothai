@@ -354,9 +354,9 @@ export const API = {
   saveTelegram: (botToken: string): Promise<TelegramState> => apiPost<TelegramState>('/api/telegram', { botToken }),
   clearTelegram: (): Promise<TelegramState> => apiDel<TelegramState>('/api/telegram'),
   // first-run: commit the chosen models and kick off their initial download
-  // Throws if the endpoint refuses the key. OpenRouter lists models to anyone, so a wrong key there passes.
-  async checkEndpoint(baseUrl: string, apiKey: string): Promise<void> {
-    const r = await apiPost<{ ok: boolean; error?: string }>('/api/setup/test', { baseUrl, apiKey })
+  // Throws if the endpoint refuses the key; providerId lets it check one /models would take from anyone.
+  async checkEndpoint(providerId: string, baseUrl: string, apiKey: string): Promise<void> {
+    const r = await apiPost<{ ok: boolean; error?: string }>('/api/setup/test', { providerId, baseUrl, apiKey })
     if (!r.ok) throw new Error(r.error || 'Could not reach that service.')
   },
   // Apply an endpoint mid-first-run, BEFORE the model picker is drawn: which

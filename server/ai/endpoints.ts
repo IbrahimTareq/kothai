@@ -50,6 +50,9 @@ export interface Endpoint {
   // Only the endpoints whose embedding catalogue lives off /v1/models carry
   // this — see the OpenRouter entry below.
   embeddingsPath?: string
+  // A route that answers only to a valid key, for an endpoint whose /models
+  // answers anyone — without it the connection check passes any key at all.
+  keyCheckPath?: string
   defaults: Record<Role, string>
 }
 
@@ -84,6 +87,9 @@ export const ENDPOINTS: Endpoint[] = [
     // four hundred wrong ones. Verify with:
     //   curl -s https://openrouter.ai/api/v1/embeddings/models | jq '.data[].id'
     embeddingsPath: '/embeddings/models',
+    // /models answers a made-up key with 200; /key answers it with 401.
+    //   curl -s -o /dev/null -w '%{http_code}' -H 'Authorization: Bearer x' https://openrouter.ai/api/v1/key
+    keyCheckPath: '/key',
     defaults: { llm: 'openai/gpt-4o-mini', embed: 'openai/text-embedding-3-small', vision: 'openai/gpt-4o-mini' },
   },
   {

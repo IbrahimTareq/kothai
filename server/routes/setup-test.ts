@@ -10,6 +10,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { getJson, RemoteError, TIMEOUTS } from '../ai/providers/remote-http.ts'
 import { json, readBody } from '../lib/http.ts'
+import { findEndpoint } from '../ai/endpoints.ts'
 
 // readBody and getJson both hand back `unknown` — the request body is whatever
 // the wizard posted and the response is whatever the endpoint under test
@@ -43,6 +44,8 @@ export async function handleSetupTest(req: IncomingMessage, res: ServerResponse)
     const out = await getJson(baseUrl, '/models', { apiKey: apiKey || null, timeoutMs: TIMEOUTS.probe, retries: 0 })
     const rows = isRecord(out) && Array.isArray(out.data) ? out.data : []
     const models = rows.map(m => (isRecord(m) ? m.id : null)).filter(Boolean)
+    const keyCheck = findEndpoint(typeof fields.providerId === 'string' ? fields.providerId : null)?.keyCheckPath
+    if (keyCheck) await getJson(baseUrl, keyCheck, { apiKey: apiKey || null, timeoutMs: TIMEOUTS.probe, retries: 0 })
     return json(res, 200, { ok: true, models })
   } catch (e) {
     // e.message is already written for a person — remote-http.ts turns a 404

@@ -40,7 +40,7 @@ export function SetupWizard({
     setBusy(true)
     setErr(null)
     try {
-      await API.checkEndpoint(choice.baseUrl, choice.apiKey)
+      await API.checkEndpoint(choice.providerId, choice.baseUrl, choice.apiKey)
       await onConnected(choice)
     } catch (e) {
       setErr((e as Error).message || 'Could not connect.')
