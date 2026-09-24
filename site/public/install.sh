@@ -142,7 +142,7 @@ choose_setup() {
   # test passes and the first prompt then dies on a redirect.
   ( : < /dev/tty ) 2>/dev/null || return 0
 
-  printf '\n  Kothai\'s search capabilities requires AI. Where should the AI be hosted?\n\n' > /dev/tty
+  printf '\n  Search in Kothai needs AI. Where should it run?\n\n' > /dev/tty
   printf '    1) A cloud service like OpenAI — nothing to download, needs an API key\n' > /dev/tty
   printf '    2) On this machine — private, no key, no bills but expect about ~3 GB of models\n\n' > /dev/tty
   where=$(ask '  > ')
@@ -280,14 +280,20 @@ case ${1:-help} in
     img=$(docker inspect -f '{{.Config.Image}}' "$NAME")
     p=$(port)
     restart=$(docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$NAME")
-    mounts=$(docker inspect -f '{{range .Mounts}}-v {{.Source}}:{{.Destination}} {{end}}' "$NAME")
+    mounts=$(docker inspect -f '{{range .Mounts}}{{.Source}}:{{.Destination}}{{println}}{{end}}' "$NAME")
     envs=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$NAME" | grep -E '^(KOTHAI_|PORT=)' || true)
     printf '  Pulling %s…\n' "$img"
     docker pull "$img" >/dev/null || die "Pull failed."
     docker rm -f "$NAME" >/dev/null
-    # shellcheck disable=SC2086
-    set -- run -d --name "$NAME" --restart "${restart:-unless-stopped}" -p "$p:5173" $mounts
+    set -- run -d --name "$NAME" --restart "${restart:-unless-stopped}" -p "$p:5173"
+    # One per line, split on newlines only and never globbed: a data directory
+    # or password with a space in it used to come apart here, after the old
+    # container was already removed.
+    set -f; IFS='
+'
+    for m in $mounts; do set -- "$@" -v "$m"; done
     for e in $envs; do set -- "$@" -e "$e"; done
+    unset IFS; set +f
     set -- "$@" "$img"
     docker "$@" >/dev/null || die "Could not recreate the container. Your data directory is untouched."
     wait_up "$p" || die "Updated, but it never answered. Try: kothai logs"
