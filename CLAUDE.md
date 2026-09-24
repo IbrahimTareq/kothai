@@ -29,11 +29,10 @@ misuse that only fails on 22 — switch first.
   and a 401 there restart-loops the container forever.
 - `server/lib/` is the security floor (`auth.ts`, `ssrf.ts`, `http.ts`). A
   change there needs a test that fails without it.
-- The server ships as `.ts` and node strips the types at load — there is no
-  build step. So no `enum`, `namespace` or parameter properties (not erasable:
-  `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX` at load), and every type import says
-  `import type`, or node dies at load with "does not provide an export named".
-  `erasableSyntaxOnly` and `verbatimModuleSyntax` catch both.
+- `client/ui/` is the component layer (`docs/design-system.md`). A menu,
+  popover, tooltip or page header comes from there, never from a view's own
+  `div`s — three pickers, three tips and four headers were hand-built that way
+  (b54dd71, 4b0109e, 5c4b91a). `lint:tokens` holds buttons and fields itself.
 
 ## Etiquette
 
