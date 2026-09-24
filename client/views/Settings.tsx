@@ -10,7 +10,6 @@
 // re-tag, erase — is one row list, each row a title + explanation on the left
 // and its control on the right, expanding in place when a step needs confirming.
 import { useState, useEffect } from 'react'
-import { Icon } from '../components/icons'
 import { RoleAccordion, RemoteModelField, ROLE_META, fmtGB, type Role } from '../components/ModelPicker'
 import { SettingsGroup, SettingsRow, RowStatus } from '../components/SettingsRow'
 import { ConnectionPanel } from '../components/ConnectionPanel'
@@ -21,6 +20,7 @@ import { ModelFilesRow } from '../components/ModelFilesRow'
 import { API, apiError } from '../data/api'
 import type { Residency, SettingsResponse, VaultStatus } from '../types'
 import { Button } from '../ui/Button'
+import { PageHeader } from '../ui/PageHeader'
 import { Segmented } from '../ui/Segmented'
 
 export function SettingsView({
@@ -217,16 +217,7 @@ export function SettingsView({
 
   return (
     <div className="settings-view">
-      <header className="gal-head">
-        <div className="gal-title">
-          <span className="gt-icon">
-            <Icon name="settings" size={20} />
-          </span>
-          <div>
-            <h2>Settings</h2>
-          </div>
-        </div>
-      </header>
+      <PageHeader title="Settings" />
 
       {switching && (
         <div className="settings-progress">

@@ -12,6 +12,7 @@ import type { NoteSource } from '../data/useNotes'
 import { isPlaceholder } from '../data/pager'
 import type { CanvasDoc, Collection, UIItem, ViewMode } from '../types'
 import { Button } from '../ui/Button'
+import { PageHeader } from '../ui/PageHeader'
 import { Segmented } from '../ui/Segmented'
 import { Popover } from '../ui/Popover'
 
@@ -53,10 +54,11 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
 
   return (
     <div className="spaces-view">
-      <header className="spaces-head">
-        <h1 className="spaces-title">Spaces</h1>
-        <Button onClick={() => setCreating(v => !v)}>＋ New space</Button>
-      </header>
+      <PageHeader
+        title="Spaces"
+        meta={`${collections.length} space${collections.length === 1 ? '' : 's'}`}
+        actions={<Button onClick={() => setCreating(v => !v)}>＋ New space</Button>}
+      />
 
       {creating && (
         <div className="space-form">
@@ -279,11 +281,29 @@ export function CollectionView({
 
   return (
     <div className="collection-view">
-      <header className="coll-head">
-        {/* Tier 1 — identity: what this space is called and how big it is.
-            The board below is the content; this tier only ever says that. */}
-        <div className="coll-head-top">
-          {renaming ? (
+      {/* The count belongs to the name, so it sits against it. Rename and
+          delete are what you do to the SPACE, so they sit on its identity row
+          — delete used to be on the view toolbar with only a hairline between
+          it and "Canvas", which gave an irreversible action the same weight as
+          a view switch. The toolbar is what fills the space on the left and
+          how you look at it on the right; density sits at the left of the
+          display group so dropping it in canvas mode never moves the view
+          switch. */}
+      <PageHeader
+        lead={
+          !renaming &&
+          collection.tags.length > 0 && (
+            <span className="coll-smart" tabIndex={0} aria-label="Smart space">
+              <Icon name="spark" size={13} />
+              <span className="coll-smart-pop" role="tooltip">
+                <b>Smart space</b>
+                Any item tagged with a rule below joins this space automatically.
+              </span>
+            </span>
+          )
+        }
+        title={
+          renaming ? (
             <input
               className="coll-name-input"
               autoFocus
@@ -296,56 +316,34 @@ export function CollectionView({
               onBlur={commitName}
             />
           ) : (
-            // The name, its pencil and the count are one group: the pencil
-            // stays faint until the group is hovered, so the title reads as
-            // a title rather than as a row of controls.
-            <div className="coll-title">
-              {collection.tags.length > 0 && (
-                <span className="coll-smart" tabIndex={0} aria-label="Smart space">
-                  <Icon name="spark" size={13} />
-                  <span className="coll-smart-pop" role="tooltip">
-                    <b>Smart space</b>
-                    Any item tagged with a rule below joins this space automatically.
-                  </span>
-                </span>
-              )}
-              <h1 className="coll-name" onClick={startRename}>
-                {collection.name}
-              </h1>
-              {/* The count belongs to the name, so it sits against it — with
-                    the pencil between them it read as a detached third thing. */}
-              <span className="coll-count mono">
-                {collItems.length} item{collItems.length === 1 ? '' : 's'}
-              </span>
-              {/* Rename and delete are what you do to the SPACE, so they live
-                    with its name. Delete used to sit on the view toolbar with
-                    only a hairline between it and "Canvas", which gave an
-                    irreversible action the same weight as a view switch. */}
-              <span className="coll-idactions">
-                <button className="coll-rename" title="Rename space" aria-label="Rename space" onClick={startRename}>
-                  <Icon name="edit" size={14} />
-                </button>
-                <button
-                  className={`coll-del${armed ? ' armed' : ''}`}
-                  aria-label={armed ? 'Confirm delete space' : 'Delete space'}
-                  title={armed ? '' : 'Delete space'}
-                  onClick={() => (armed ? del() : setArmed(true))}
-                  onBlur={() => setArmed(false)}
-                  onKeyDown={e => {
-                    if (e.key === 'Escape') setArmed(false)
-                  }}
-                >
-                  {armed ? 'Delete space?' : <Icon name="trash" size={16} />}
-                </button>
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Tier 2 — one bar: what fills the space on the left, how you look at
-            it on the right. Density sits at the left of the tool group so that
-            dropping it in canvas mode never moves the view switch or the bin. */}
-        <div className="coll-bar">
+            <span className="coll-name" onClick={startRename}>
+              {collection.name}
+            </span>
+          )
+        }
+        meta={renaming ? null : `${collItems.length} item${collItems.length === 1 ? '' : 's'}`}
+        actions={
+          !renaming && (
+            <>
+              <Button size="icon" tone="ghost" title="Rename space" aria-label="Rename space" onClick={startRename}>
+                <Icon name="edit" size={14} />
+              </Button>
+              <button
+                className={`coll-del${armed ? ' armed' : ''}`}
+                aria-label={armed ? 'Confirm delete space' : 'Delete space'}
+                title={armed ? '' : 'Delete space'}
+                onClick={() => (armed ? del() : setArmed(true))}
+                onBlur={() => setArmed(false)}
+                onKeyDown={e => {
+                  if (e.key === 'Escape') setArmed(false)
+                }}
+              >
+                {armed ? 'Delete space?' : <Icon name="trash" size={16} />}
+              </button>
+            </>
+          )
+        }
+        filters={
           <div className={`coll-rule${ruleFade}`} ref={ruleRef}>
             {collection.tags.map(t => (
               <button key={t} className="chip coll-tag" title="Remove rule tag" onClick={() => removeTag(t)}>
@@ -396,8 +394,9 @@ export function CollectionView({
               </Popover>
             </div>
           </div>
-
-          <div className="coll-tools">
+        }
+        display={
+          <>
             {!board && (
               <Segmented
                 label="Columns"
@@ -420,9 +419,9 @@ export function CollectionView({
                 { value: 'canvas', label: 'Canvas' },
               ]}
             />
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {board ? (
         membersReady ? (

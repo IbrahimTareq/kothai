@@ -198,3 +198,30 @@
 .menu-check{width:12px;display:inline-flex;justify-content:center}
 .menu-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .menu-trailing{display:inline-flex;color:var(--ink-mute)}
+
+/* ── page header ──────────────────────────────────────────────────────────
+   What <PageHeader> in client/ui/ draws: identity on one row, the toolbar on
+   the next, the same gutter, sizes and gaps on every page. Settings used to
+   set its title at --text-2xl in a 38px icon tile and Spaces at --text-xl
+   bare; a space ruled a hairline under its header that no other page had.
+   One size, no tile, no rule — the toolbar row is the edge.
+
+   The identity row is held at the tallest control an action can be — a
+   .btn or the search field on the desktop, --control-md once touch grows it
+   past that — so a page with actions and a page with none put their titles
+   at the same height. Held at --control-md alone, Everything's and Spaces'
+   titles sat 3px below a space's and Settings'.
+
+   The header has no bottom padding: what comes under it owns that gap, so
+   there is one gap and not a header margin stacked on a scroller's. */
+.page-head{flex:none;display:flex;flex-direction:column;gap:var(--space-14);
+  padding:var(--space-20) var(--space-28) 0}
+.page-id{display:flex;align-items:center;gap:var(--space-10);min-width:0;
+  min-height:max(var(--control-lg),var(--control-md))}
+.page-title{min-width:0;margin:0;font-size:var(--text-xl);line-height:var(--leading-tight);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.page-meta{flex:none;font-size:var(--text-xs);color:var(--ink-faint);white-space:nowrap}
+.page-actions{flex:none;margin-left:auto;display:flex;align-items:center;gap:var(--space-8)}
+.page-toolbar{display:flex;align-items:center;gap:var(--space-16);min-height:var(--control-md)}
+.page-filters{flex:1;min-width:0;display:flex;align-items:center}
+.page-display{flex:none;display:flex;align-items:center;gap:var(--space-8)}

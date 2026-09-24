@@ -1,11 +1,9 @@
 /* spaces.css — spaces, collections, add-to-space popover
    Part of the Kothai design system. Loaded via style.css. */
 /* ---- Spaces landing ---- */
-.spaces-view { display: flex; flex-direction: column; height: 100%; overflow: hidden; padding: calc(var(--topbar-h) + var(--space-22)) var(--space-28) 0; }
-.spaces-scroll { flex: 1; overflow-y: auto; padding-bottom: var(--space-22); }
-.spaces-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-18); }
-.spaces-title { font-size:var(--text-xl); letter-spacing: var(--tracking-tight); margin: 0; }
-.space-form { display: flex; gap: var(--space-8); margin-bottom: var(--space-18); flex-wrap: wrap; }
+.spaces-view { display: flex; flex-direction: column; height: 100%; overflow: hidden; padding-top: var(--topbar-h); }
+.spaces-scroll { flex: 1; overflow-y: auto; padding: var(--space-20) var(--space-28) var(--space-22); }
+.space-form { display: flex; gap: var(--space-8); padding: var(--space-20) var(--space-28) 0; flex-wrap: wrap; }
 .space-form-name, .space-form-tags { background: var(--panel); border: 1px solid var(--line); color: var(--ink); border-radius: var(--radius-md); padding: var(--space-10) var(--space-12); font-size:var(--text-sm); }
 .space-form-name { min-width: 200px; }
 .space-form-tags { flex: 1; min-width: 220px; }
@@ -23,28 +21,14 @@
 
 /* ---- Collection detail ---- */
 .collection-view { display: flex; flex-direction: column; height: 100%; padding-top: var(--topbar-h); }
-/* Header in two tiers. Tier 1 is identity only — what this space is called and
-   how big it is; the rail is the way back to Spaces. Tier 2 is one bar: the
-   rules that fill the space on the left, the controls that view it on the
-   right. Gutters are --space-28 to match .gal-scroll, so the title, the
-   hairline and the first card in the board all share one left edge. */
-.coll-head { position: relative; display: flex; flex-direction: column; gap: var(--space-10); padding: var(--space-16) var(--space-28) var(--space-12); }
-.coll-head::after { content: ''; position: absolute; left: var(--space-28); right: var(--space-28); bottom: 0; border-bottom: 1px solid var(--line); }
-.coll-head-top { display: flex; align-items: center; gap: var(--space-12); }
-.coll-title { min-width: 0; display: flex; align-items: center; gap: var(--space-8); }
-.coll-name { min-width: 0; font-size:var(--text-xl); letter-spacing: var(--tracking-tight); margin: 0; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* faint at rest, legible once you are anywhere near the name */
-.coll-rename { flex: none; display: grid; place-items: center; width: var(--control-sm); height: var(--control-sm); padding: 0; background: transparent; border: 0; color: var(--ink-faint); border-radius: var(--radius); cursor: pointer; transition: var(--dur-fast); }
-.coll-title:hover .coll-rename { color: var(--ink-mute); }
-.coll-rename:hover { color: var(--ink); background: var(--panel-2); }
-.coll-count { flex: none; font-size:var(--text-xs); color: var(--ink-faint); white-space: nowrap; }
-/* Rename + delete, grouped with the name they act on. flex:none so a long
-   space name truncates before they do. */
-.coll-idactions { flex: none; display: flex; align-items: center; gap: var(--space-4); }
-.coll-name-input { flex: 1; min-width: 0; font-size:var(--text-xl); background: var(--panel); border: 1px solid var(--line); color: var(--ink); border-radius: var(--radius-md); padding: var(--space-4) var(--space-10); margin: 0; }
-
-/* tier 2 */
-.coll-bar { display: flex; align-items: center; gap: var(--space-16); }
+/* The header is <PageHeader>: a smart space's spark, the name (click it to
+   rename), its count, then rename and delete; under them the rules that
+   fill the space and the controls that view it. The rail is the way back
+   to Spaces. */
+.coll-name { cursor: pointer; }
+/* renaming swaps the name for a field that takes the rest of the row */
+.page-title:has(> .coll-name-input) { flex: 1; }
+.coll-name-input { width: 100%; box-sizing: border-box; min-width: 0; font-size:var(--text-xl); background: var(--panel); border: 1px solid var(--line); color: var(--ink); border-radius: var(--radius-md); padding: var(--space-4) var(--space-10); margin: 0; }
 .coll-rule { flex: 1; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-6); }
 /* Scrolled rather than wrapped on phones (see foundation/responsive.css); the
    edge with rules behind it fades, the same way the Everything filter bar
@@ -58,9 +42,7 @@
 .coll-rule.fade-l.fade-r{
   -webkit-mask-image:linear-gradient(to right,transparent,#000 var(--space-32),#000 calc(100% - var(--space-32)),transparent);  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
   mask-image:linear-gradient(to right,transparent,#000 var(--space-32),#000 calc(100% - var(--space-32)),transparent)}
-.coll-tools { flex: none; display: flex; align-items: center; gap: var(--space-8); }
-.coll-tools-sep { width: 1px; height: 18px; background: var(--line); }
-/* Delete is the quietest thing on the bar until you reach for it, and it arms
+/* Delete is the quietest thing in the header until you reach for it, and it arms
    before it fires — one click on a bare icon should not lose a space. */
 .coll-del { display: grid; place-items: center; height: var(--control-md); min-width: var(--control-md); padding: 0; background: transparent; border: 0; border-radius: var(--radius-md); color: var(--ink-faint); font: inherit; font-size:var(--text-xs); cursor: pointer; transition: var(--dur-fast); } /* token-lint-ignore: icon-only delete with a two-step armed state, like the
    wipe control — not a .btn box */

@@ -77,6 +77,15 @@ distinct components with their own box, but each is still a raw `<button>` a
 view drew. They sit on a ratchet
 (below) until each becomes `<Button>` or its own primitive in `client/ui/`.
 
+**Every page opens with `<PageHeader>`** (`client/ui/`). Two rows: identity
+(`lead`, `title`, a mono `meta` count, `actions` on the right) over a toolbar
+of `filters` on the left — what is shown — and `display` on the right — how
+it is shown. One title size (`--text-xl`), one gutter, the title at the same
+height on every page, and no rule under it: the toolbar row is the edge.
+Before, Everything had no title, Settings set its own at `--text-2xl` in an
+icon tile, and a space drew a hairline no other page had. The Ask landing is
+the exception — its headline is the prompt, not a page title.
+
 **Pick-one-of-a-few is `<Segmented>`** (`client/ui/`), on Radix's toggle
 group: a `label`, a `value`, an `onChange` and `options` of `{ value, label,
 title? }`, where `title` is also the accessible name of an icon-only option.

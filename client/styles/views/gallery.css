@@ -2,11 +2,11 @@
    Part of the Kothai design system. Loaded via style.css. */
 /* ─────────────────────────── gallery ─────────────────────────────────────── */
 .gallery-view{height:100%;display:flex;flex-direction:column;overflow:hidden;padding-top:var(--topbar-h)}
-.gal-head{position:relative;display:flex;align-items:center;padding:var(--space-20) var(--space-28) 0}
-
-/* controls row: filter pills (left) + grid density toggle (right) */
-.gal-controls{display:flex;align-items:center;justify-content:space-between;gap:var(--space-16);padding:var(--space-14) var(--space-28) var(--space-6)}
-.gal-filters-spacer{flex:1}
+/* search is the Everything page's action, and the one that should grow: it
+   takes what the identity row has left, up to a comfortable field. Basis 0,
+   not auto — as auto it shrank alongside the title, and on a phone the title
+   gave way first and read "Everyth…". */
+.gallery-view .page-actions{flex:1 1 0;min-width:0;max-width:360px}
 
 /* Everything-page filter bar: single-select type + source pills.
    The strip scrolls sideways — eleven chips measure ~1360px against a ~350px
@@ -35,13 +35,7 @@
 .fc-ico{display:inline-flex;flex-shrink:0;color:currentColor}
 .fc-ico svg{display:block}
 .filter-sep{flex-shrink:0;width:1px;height:18px;background:var(--line);margin:0 var(--space-4)}
-.gal-title{display:flex;align-items:center;gap:var(--space-14)}
-.gal-title .gt-icon{width:38px;height:38px;display:grid;place-items:center;
-  border-radius:var(--radius-lg);background:var(--panel-2);color:var(--ink);
-  border:1px solid var(--line)}
-.gal-title h2{margin:0;font-size:var(--text-2xl);font-weight:var(--fw-heading);
-  letter-spacing:var(--tracking-heading)}
-/* full-width borderless search; faint underline brightens on focus for affordance */
+/* borderless search; a faint underline brightens on focus for affordance */
 .search-box{display:flex;align-items:center;gap:var(--space-10);width:100%;background:transparent;
   border:0;border-bottom:1px solid var(--line-2);border-radius:0;padding:var(--space-8) var(--space-2);
   color:var(--ink-dim);transition:var(--dur-fast)}

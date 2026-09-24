@@ -268,7 +268,7 @@ const EXEMPT = new Map([
   ['--space-44', 'spacing ladder: 4px grid above 24'],
   ['--space-48', 'spacing ladder: its documented top step'],
   ['--z-docked', 'stacking ladder: named so the mobile composer has a level'],
-  ['--control-lg', 'control-size ladder'],
+  ['--control-sm', 'control-size ladder: its bottom rung'],
   ['--control-xl', 'control-size ladder'],
   ['--warn', 'completes the danger/warn/ok status triad'],
   // Reference values. CSS cannot evaluate a custom property inside an @media

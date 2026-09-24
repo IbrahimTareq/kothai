@@ -1,10 +1,10 @@
 /* settings.css — settings view
    Part of the Kothai design system. Loaded via style.css. */
 /* ─────────────────────────── settings ────────────────────────────────────── */
-.settings-view{padding:calc(var(--topbar-h) + var(--space-22)) var(--space-32) var(--space-28);max-width:760px;width:100%;margin:0 auto;
+.settings-view{padding:var(--topbar-h) var(--space-32) var(--space-28);max-width:760px;width:100%;margin:0 auto;
   overflow-y:auto;height:100%}
-/* title aligns with content: drop gal-head's own horizontal padding here */
-.settings-view .gal-head{padding-left:0;padding-right:0}
+/* the column is the gutter here, so the header drops its own */
+.settings-view .page-head{padding-left:0;padding-right:0}
 
 /* ── the four type roles ──────────────────────────────────────────────────
    Every piece of text on this surface plays one of four parts. Each section
