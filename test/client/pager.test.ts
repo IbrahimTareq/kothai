@@ -99,12 +99,41 @@ test('only the newest facets refresh applies, whichever answer lands last', () =
   assert.deepEqual(p.facets.types, { link: 1 })
 })
 
-test('a facets refresh sent before a query switch is dropped', () => {
+test('a page asked for before a facets refresh cannot put back its older counts', () => {
+  const p = new NotePager()
+  p.applyPage({ ...page(0, 2, 240), facets: { types: { link: 2 }, sources: { github: 1 } } })
+  const pageReq = p.requestFacets() // scrolled to page 2 while the delete was in flight
+  p.applyFacets({ types: { link: 1 }, sources: {} }, p.requestFacets())
+  assert.equal(
+    p.applyPage(
+      { ...page(PAGE, 2, 240), facets: { types: { link: 2 }, sources: { github: 1 } } },
+      p.generation,
+      pageReq,
+    ),
+    true,
+  )
+  assert.deepEqual(p.facets, { types: { link: 1 }, sources: {} })
+  assert.equal((p.slots()[PAGE] as UIItem).id, `n${PAGE}`)
+})
+
+test("a facets refresh sent before a query switch is dropped once the new query's page lands", () => {
   const p = new NotePager()
   p.applyPage(page(0, 2, 2))
   const req = p.requestFacets()
-  p.beginQuery()
+  const gen = p.beginQuery()
+  p.applyPage({ ...page(0, 1, 1), facets: { types: { video: 1 }, sources: {} } }, gen, p.requestFacets())
   assert.equal(p.applyFacets({ types: { link: 9 }, sources: {} }, req), false)
+  assert.deepEqual(p.facets.types, { video: 1 })
+})
+
+test("a newer facets refresh survives the new query's first page landing after it", () => {
+  const p = new NotePager()
+  p.applyPage(page(0, 2, 2))
+  const gen = p.beginQuery()
+  const pageReq = p.requestFacets()
+  p.applyFacets({ types: { video: 3 }, sources: {} }, p.requestFacets()) // a capture, mid-switch
+  p.applyPage({ ...page(0, 2, 2), facets: { types: { video: 2 }, sources: {} } }, gen, pageReq)
+  assert.deepEqual(p.facets.types, { video: 3 })
 })
 
 test('reset clears state for a new query', () => {

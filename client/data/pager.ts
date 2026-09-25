@@ -108,6 +108,7 @@ export class NotePager {
   private gen = 0
   private replacing = false
   private facetReq = 0
+  private facetsFrom = 0 // ticket of the counts currently held
 
   get generation(): number {
     return this.gen
@@ -115,7 +116,6 @@ export class NotePager {
 
   beginQuery(): number {
     this.gen++
-    this.facetReq++ // the new query's first page carries its own counts
     this.replacing = true
     this.inflight.clear()
     return this.gen
@@ -125,14 +125,17 @@ export class NotePager {
   // whatever chips are on, so the loaded window can't recount them. They used
   // to arrive only with a page, so deleting the one GitHub note left "GitHub 1"
   // on the strip, opening an empty board. useNotes' refreshFacets re-asks
-  // after each add or remove; only the newest ask is applied, since two quick
-  // deletes send two and the older answer can land last.
+  // after each add or remove. Every request that brings counts back, page or
+  // refresh, takes a ticket as it is sent, and counts are only replaced by a
+  // later ticket's: two quick deletes send two refreshes, and a page asked for
+  // before a delete landed still counts the note, and either can answer last.
   requestFacets(): number {
     return ++this.facetReq
   }
 
   applyFacets(f: Facets, req: number): boolean {
-    if (req !== this.facetReq) return false
+    if (req < this.facetsFrom) return false
+    this.facetsFrom = req
     this.facets = f
     return true
   }
@@ -143,7 +146,8 @@ export class NotePager {
     this.idToIndex.clear()
     this.inflight.clear()
     this.slotCache = null
-    this.facets = { types: {}, sources: {} }
+    // Counts are left to applyFacets: a refresh sent after the query switch
+    // can land before its first page, and its counts are the newer ones.
     this.pendingTotal = 0
     this.awaitingThumb.clear()
     this.watching.clear()
@@ -164,7 +168,7 @@ export class NotePager {
 
   // False when the page was dropped, so the caller does not mark a query
   // ready on the strength of another query's results.
-  applyPage(p: NotesPage, gen = this.gen): boolean {
+  applyPage(p: NotesPage, gen = this.gen, req = this.requestFacets()): boolean {
     // Two quick chip clicks can land the first query's page after the second
     // has begun; applying it would show the wrong filter's results.
     if (gen !== this.gen) return false
@@ -173,7 +177,7 @@ export class NotePager {
       this.replacing = false
     }
     this.total = p.total
-    this.facets = p.facets
+    this.applyFacets(p.facets, req)
     this.pendingTotal = p.pendingTotal
     // Unconditional overwrite, no max-taking against a concurrent delta
     // poll's rev: worst case a stale rev here just makes the next delta

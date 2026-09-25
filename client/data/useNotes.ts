@@ -60,10 +60,11 @@ export function useNotes(query: PagerQuery, enabled = true, members?: number): N
   const fetchPage = (offset: number) => {
     const q = JSON.parse(key) as PagerQuery
     const gen = pager.current.generation
+    const req = pager.current.requestFacets()
     pager.current.markInflight(offset)
     API.page({ offset, limit: PAGE, ...q })
       .then(p => {
-        if (!pager.current.applyPage(p, gen)) return
+        if (!pager.current.applyPage(p, gen, req)) return
         setReady(true)
         rerender()
       })
