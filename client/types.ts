@@ -258,6 +258,13 @@ export interface ModelFilesResponse {
   reclaimableBytes: number
 }
 
+// GET/PATCH /api/backups — what server/backups.ts keeps in data/backups.
+export interface BackupsResponse {
+  enabled: boolean
+  files: { name: string; kind: 'daily' | 'before-restore'; at: string; size: number }[]
+  failure: { at: string; error: string } | null
+}
+
 export interface Collection {
   id: string
   createdAt: string

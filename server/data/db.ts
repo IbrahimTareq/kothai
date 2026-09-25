@@ -69,7 +69,8 @@ CREATE TABLE IF NOT EXISTS settings (
   remote_embed TEXT,
   remote_vision TEXT,
   embed_recipe TEXT,
-  embed_provider TEXT
+  embed_provider TEXT,
+  backups INTEGER NOT NULL DEFAULT 1
 );
 CREATE TABLE IF NOT EXISTS tag_vocab (
   tag TEXT PRIMARY KEY,
@@ -128,6 +129,8 @@ export interface SettingsRow {
   remote_vision: string | null
   embed_recipe: string | null
   embed_provider: string | null
+  // Daily backups to data/backups (server/backups.ts), 0 or 1. On by default.
+  backups: number
 }
 
 export interface TagVocabRow {
@@ -181,6 +184,8 @@ async function open(): Promise<DatabaseSync> {
   // predates the marker — enrich.embedProviderChanged infers the answer from
   // how that install was configured rather than re-embedding on a guess.
   ensureColumns(db, 'settings', { embed_provider: 'TEXT' })
+  // Daily backups, on unless switched off — including on every existing install.
+  ensureColumns(db, 'settings', { backups: 'INTEGER NOT NULL DEFAULT 1' })
   // Existing databases predate the column; notes.ts moves each vector out of
   // the JSON and into it on first load (see migrateEmbeddings there).
   ensureColumns(db, 'notes', { embedding: 'BLOB' })

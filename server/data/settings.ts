@@ -21,6 +21,7 @@ export interface SettingsPatch {
   remote?: Partial<Record<Role, string>> | null
   embedRecipe?: string | null
   embedProvider?: string | null
+  backups?: boolean
 }
 
 // node:sqlite types every column as SQLOutputValue: the connection carries no
@@ -51,6 +52,7 @@ function readRow(row: Record<string, SQLOutputValue>): SettingsRow {
     remote_vision: nullableText(row.remote_vision),
     embed_recipe: nullableText(row.embed_recipe),
     embed_provider: nullableText(row.embed_provider),
+    backups: Number(row.backups),
   }
 }
 
@@ -68,6 +70,7 @@ let remote: Record<Role, string> = { llm: '', embed: '', vision: '' }
 let configured = false
 let embedRecipe: string | null = null
 let embedProvider: string | null = null
+let backups = true
 let loaded = false
 // Whether this install carried endpoint model names BEFORE the first-run gate
 // existed. Captured once, at load, precisely because it must not be re-derived
@@ -92,6 +95,7 @@ export async function load(): Promise<void> {
     remote = { llm: row.remote_llm || '', embed: row.remote_embed || '', vision: row.remote_vision || '' }
     embedRecipe = row.embed_recipe || null
     embedProvider = row.embed_provider || null
+    backups = !!row.backups
     // Names but no `configured` flag means this install was set up before the
     // gate existed. Read once, here, and never again.
     preGate = !configured && ROLES.some(r => Boolean(remote[r]))
@@ -102,6 +106,7 @@ export async function load(): Promise<void> {
     remote = { llm: '', embed: '', vision: '' }
     embedRecipe = null
     embedProvider = null
+    backups = true
     preGate = false
   }
   loaded = true
@@ -147,6 +152,11 @@ export function getEmbedProvider(): string | null {
   return embedProvider
 }
 
+// Whether server/backups.ts writes its daily backup.
+export function backupsOn(): boolean {
+  return backups
+}
+
 // Has the user completed the first-run model picker? Gates the initial download.
 export function isConfigured(): boolean {
   return configured
@@ -163,12 +173,14 @@ export async function save(patch: SettingsPatch): Promise<Record<Role, string>> 
     remote: remotePatch,
     embedRecipe: recipePatch,
     embedProvider: providerPatch,
+    backups: backupsPatch,
     ...rest
   } = patch
   for (const role of ROLES) if (rest[role]) settings[role] = rest[role]
   if (rest.configured) configured = true
   if (recipePatch !== undefined) embedRecipe = recipePatch
   if (providerPatch !== undefined) embedProvider = providerPatch
+  if (backupsPatch !== undefined) backups = backupsPatch
   if (rPatch) {
     const merged = { ...residency }
     // find(), not includes(): a patch value is an unproved string, and find
@@ -185,15 +197,16 @@ export async function save(patch: SettingsPatch): Promise<Record<Role, string>> 
   }
   const db = await getDb()
   db.prepare(`
-    INSERT INTO settings (id, llm, embed, vision, residency_llm, residency_embed, residency_vision, configured, remote_llm, remote_embed, remote_vision, embed_recipe, embed_provider)
-    VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO settings (id, llm, embed, vision, residency_llm, residency_embed, residency_vision, configured, remote_llm, remote_embed, remote_vision, embed_recipe, embed_provider, backups)
+    VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       llm = excluded.llm, embed = excluded.embed, vision = excluded.vision,
       residency_llm = excluded.residency_llm, residency_embed = excluded.residency_embed, residency_vision = excluded.residency_vision,
       configured = excluded.configured,
       remote_llm = excluded.remote_llm, remote_embed = excluded.remote_embed, remote_vision = excluded.remote_vision,
       embed_recipe = excluded.embed_recipe,
-      embed_provider = excluded.embed_provider
+      embed_provider = excluded.embed_provider,
+      backups = excluded.backups
   `).run(
     settings.llm,
     settings.embed,
@@ -207,6 +220,7 @@ export async function save(patch: SettingsPatch): Promise<Record<Role, string>> 
     remote.vision,
     embedRecipe,
     embedProvider,
+    backups ? 1 : 0,
   )
   return get()
 }

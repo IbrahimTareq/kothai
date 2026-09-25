@@ -70,6 +70,14 @@ if (settings.isConfigured()) {
 // Last, after the re-embed checks above: they only mark an EMPTY library as
 // current, and seeded notes arriving first would be queued to embed twice.
 if (demo.DEMO) await demo.seedDemo()
+// Daily backups into data/backups (server/backups.ts): checked hourly, the
+// first time a minute after boot rather than during it, while models load. Not
+// on the demo, whose library resets nightly and whose host keeps no volume.
+if (!demo.DEMO) {
+  const backups = await import('./backups.ts')
+  setTimeout(() => backups.backupIfDue(), 60_000).unref()
+  setInterval(() => backups.backupIfDue(), 60 * 60 * 1000).unref()
+}
 server.listen(PORT, () => {
   console.log(`\n  📒 Kothai running at  http://localhost:${PORT}\n`)
   // Stated on every boot, both ways round: "no password" is the historical

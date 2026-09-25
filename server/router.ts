@@ -18,6 +18,7 @@ import { handleImport } from './routes/import.ts'
 import { handleAvailabilityScan, handleAvailabilityRemove } from './routes/availability.ts'
 import { handleExport } from './routes/export.ts'
 import { handleBackup, handleRestore } from './routes/backup.ts'
+import { handleListBackups, handleSetBackups, handleDownloadBackup } from './routes/backups.ts'
 import { handleCheckpoint } from './routes/checkpoint.ts'
 import { handleWipe } from './routes/wipe.ts'
 import { handleModelFiles, handleDeleteModelFile } from './routes/models.ts'
@@ -104,6 +105,15 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     if (req.method === 'GET' && p === '/api/export') return handleExport(res)
     if (req.method === 'GET' && p === '/api/backup') return await handleBackup(req, res)
     if (req.method === 'POST' && p === '/api/restore') return await handleRestore(req, res)
+    if (p === '/api/backups') {
+      if (req.method === 'GET') return await handleListBackups(res)
+      if (req.method === 'PATCH') return await handleSetBackups(req, res)
+    }
+    // A backup's FILENAME, percent-decoded here; the handler serves it only if
+    // it is one the listing produced.
+    if (req.method === 'GET' && /^\/api\/backups\/[^/]+$/.test(p)) {
+      return await handleDownloadBackup(res, decodeURIComponent(p.slice('/api/backups/'.length)))
+    }
     if (req.method === 'POST' && p === '/api/checkpoint') return await handleCheckpoint(res)
     if (req.method === 'POST' && p === '/api/wipe') return await handleWipe(req, res)
     if (req.method === 'GET' && p === '/api/models/files') return await handleModelFiles(res)

@@ -20,8 +20,12 @@ export function fileLabel(f: ModelFile): string {
 // are all multi-GB so fmtGB is right there; here the list runs from a 278 MB
 // embedding model to a 2.5 GB LLM, and rounding the small end to "0.3 GB"
 // hides exactly the difference the user is weighing up.
+//
+// Below half a megabyte a file that exists would round to "0 MB", which reads
+// as empty — a new library's backup (BackupsRow) is a few KB.
 export function fmtSize(bytes: number): string {
   if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`
+  if (bytes > 0 && bytes < 5e5) return 'under 1 MB'
   return `${Math.round(bytes / 1e6)} MB`
 }
 

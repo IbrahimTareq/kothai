@@ -14,6 +14,7 @@ import type {
   SettingsResponse,
   TelegramState,
   UIItem,
+  BackupsResponse,
 } from '../types'
 
 function hostOf(url: string): string {
@@ -367,6 +368,13 @@ export const API = {
   // cache — see server/routes/models.ts.
   async modelFiles(): Promise<ModelFilesResponse> {
     return apiGet<ModelFilesResponse>('/api/models/files')
+  },
+  // The backups Kothai keeps in data/backups, and the switch for the daily one.
+  async backups(): Promise<BackupsResponse> {
+    return apiGet<BackupsResponse>('/api/backups')
+  },
+  async setBackups(enabled: boolean): Promise<BackupsResponse> {
+    return apiPatch<BackupsResponse>('/api/backups', { enabled })
   },
   async deleteModelFile(name: string): Promise<{ deleted: string; freedBytes: number }> {
     return apiDel(`/api/models/files/${encodeURIComponent(name)}`)

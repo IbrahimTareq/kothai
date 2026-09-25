@@ -18,6 +18,18 @@ Replaces notes, spaces, chats and uploads. Model settings stay as they are on th
 
 Returns `{ restored: { notes, collections, chats }, savedAs }`. Answers `400` (`bad_backup`) for a file that is not a backup or holds a damaged database, with nothing replaced; `409` while an import is running; `415` without the octet-stream content type.
 
+## GET /api/backups
+
+Lists the backups kept in `data/backups`: `{ enabled, files: [{ name, kind, at, size }], failure }`. `kind` is `daily` or `before-restore`; `failure` is why the last daily backup did not happen (`{ at, error }`), or `null`.
+
+## PATCH /api/backups
+
+Turns the daily backup on or off: `{ "enabled": false }`. Answers the same shape as `GET`.
+
+## GET /api/backups/:name
+
+Downloads one kept backup. Only a name from the listing is served.
+
 ## POST /api/checkpoint
 
 Flushes pending writes and truncates the WAL. Call this before external backup tools snapshot `data/`.

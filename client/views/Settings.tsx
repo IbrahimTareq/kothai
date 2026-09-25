@@ -18,6 +18,7 @@ import { TelegramSection } from '../components/settings/TelegramSection'
 import { CaptureTokenSection } from '../components/settings/CaptureTokenSection'
 import { AvailabilityRow } from '../components/settings/AvailabilityRow'
 import { RestoreRow } from '../components/settings/RestoreRow'
+import { BackupsRow } from '../components/settings/BackupsRow'
 import { ModelFilesRow } from '../components/settings/ModelFilesRow'
 import { API, apiError } from '../data/api'
 import type { Residency, SettingsResponse, ModelLoad } from '../types'
@@ -375,6 +376,8 @@ export function SettingsView({
                   </Button>
                 }
               />
+
+              <BackupsRow />
 
               <RestoreRow />
 

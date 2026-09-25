@@ -42,6 +42,11 @@ test('fmtSize keeps sub-gigabyte files readable instead of rounding them to noth
   assert.equal(fmtSize(0), '0 MB')
 })
 
+test('fmtSize never calls a file that exists "0 MB" — a new library\'s backup is a few KB', () => {
+  assert.equal(fmtSize(1183), 'under 1 MB')
+  assert.equal(fmtSize(600000), '1 MB')
+})
+
 test('storageSummary leads with what is on disk and what can be freed', () => {
   assert.equal(
     storageSummary({ totalBytes: 6590000000, reclaimableBytes: 1820000000 }),

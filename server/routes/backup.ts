@@ -1,24 +1,11 @@
-// GET /api/backup — an online backup of the whole library: a .tar.gz holding a
-// snapshot of the live database and every uploaded file. POST /api/restore
-// (below) takes the same file back.
-//
-// Why VACUUM INTO rather than telling people to copy data/kothai.db: the
-// database runs in WAL mode, so the main file on disk is only part of the
-// state, and copying it from under a running server can capture a torn
-// combination of file and log. VACUUM INTO reads one consistent snapshot
-// (committed WAL frames included) and writes a fresh, compacted database — no
-// need to stop the container first. That is the difference between "back this
-// up on a PaaS" being possible and not.
-//
-// Uploads ride along because the database alone was not a backup: while
-// meta-* thumbnails regenerate from their source URLs, images the user pasted
-// or dropped exist nowhere else. A plain tar so that `tar -xzf` — not only
-// this app — can open it.
-import { createReadStream, createWriteStream } from 'node:fs'
-import { mkdir, readdir, rename, rm, stat, unlink } from 'node:fs/promises'
+// GET /api/backup — the whole library as a .tar.gz download, and POST
+// /api/restore (below), which takes the same file back. The archive itself,
+// and why it is built the way it is, lives in server/backups.ts.
+import { createWriteStream } from 'node:fs'
+import { mkdir, rename, rm } from 'node:fs/promises'
 import { pipeline } from 'node:stream/promises'
-import { Readable, type Writable } from 'node:stream'
-import { createGunzip, createGzip } from 'node:zlib'
+import { Readable } from 'node:stream'
+import { createGunzip } from 'node:zlib'
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 import { DatabaseSync, type SQLOutputValue } from 'node:sqlite'
@@ -32,100 +19,9 @@ import * as tagvocab from '../data/tagvocab.ts'
 import * as settings from '../data/settings.ts'
 import * as enrich from '../ai/enrich.ts'
 import { isImportInProgress, IMPORT_BUSY, runExclusiveImport } from '../data/import-lock.ts'
+import { saveBackup, writeBackup } from '../backups.ts'
 import { extractTar } from '../lib/tar.ts'
 import { json } from '../lib/http.ts'
-
-// A backup momentarily needs free space equal to the database's size, so two
-// at once need double. One at a time is also simply all a single-user app can
-// want, and a double-clicked download button is the likely cause of a second.
-let backupInProgress = false
-
-// SQLite has no bind parameter for VACUUM INTO's target — it takes a string
-// literal. The filename itself is server-generated, so the only caller-shaped
-// part of this path is DATA_DIR, from the operator's own environment; doubling
-// quotes keeps a directory name containing one from breaking the statement.
-const sqlLiteral = (value: string) => `'${value.replace(/'/g, "''")}'`
-
-// One ustar header for a plain file — the only entry kind a backup holds, and
-// the only one lib/tar.ts will extract.
-function tarHeader(name: string, size: number, mtimeMs: number): Buffer {
-  const h = Buffer.alloc(512)
-  h.write(name, 0, 100)
-  h.write('0000644\0', 100)
-  h.write('0000000\0', 108)
-  h.write('0000000\0', 116)
-  h.write(`${size.toString(8).padStart(11, '0')}\0`, 124)
-  h.write(
-    `${Math.floor(mtimeMs / 1000)
-      .toString(8)
-      .padStart(11, '0')}\0`,
-    136,
-  )
-  h.write('0', 156)
-  h.write('ustar\u000000', 257)
-  h.fill(' ', 148, 156)
-  const sum = h.reduce((a, b) => a + b, 0)
-  h.write(`${sum.toString(8).padStart(6, '0')}\0 `, 148)
-  return h
-}
-
-async function* tarEntries(files: { name: string; abs: string }[]): AsyncGenerator<Buffer> {
-  for (const { name, abs } of files) {
-    const { size, mtimeMs } = await stat(abs)
-    yield tarHeader(name, size, mtimeMs)
-    // The header has already promised `size` bytes, so exactly that many are
-    // read; a file that shrank meanwhile would otherwise shift every entry
-    // after it and leave an archive that unpacks as garbage.
-    let sent = 0
-    if (size) {
-      for await (const chunk of createReadStream(abs, { end: size - 1 })) {
-        sent += chunk.length
-        yield chunk
-      }
-    }
-    if (sent !== size) throw new Error(`${name} changed while it was being backed up.`)
-    yield Buffer.alloc((512 - (size % 512)) % 512)
-  }
-  yield Buffer.alloc(1024)
-}
-
-// Dot-files skipped: a .DS_Store that Finder left in data/uploads is not the
-// user's, and lib/tar.ts refuses the whole archive over a name like it.
-async function uploadFiles(): Promise<{ name: string; abs: string }[]> {
-  const entries = await readdir(UPLOAD_DIR, { withFileTypes: true }).catch(() => [])
-  return entries
-    .filter(e => e.isFile() && !e.name.startsWith('.'))
-    .map(e => ({ name: `uploads/${e.name}`, abs: path.join(UPLOAD_DIR, e.name) }))
-}
-
-// The whole library into `out`, as a .tar.gz. `onSnapshot` runs once the
-// database copy exists and before a byte is written — the last moment a
-// failure can still be answered with a status code instead of a cut-off
-// download.
-async function writeBackup(out: Writable, onSnapshot: () => void = () => {}): Promise<void> {
-  // Batched writes ({ persist: false }) sit in memory until someone flushes
-  // them. Committing first is what stops a backup from quietly omitting
-  // recent notes; it is safe here only because the one caller with a
-  // rollback path — import — is refused before this runs.
-  await store.flush()
-
-  // Under DATA_DIR because VACUUM INTO's target has to be on the same
-  // filesystem as the database, and because that is the directory the operator
-  // has already sized for it. A UUID name cannot collide — VACUUM INTO refuses
-  // to overwrite an existing file.
-  const snapshot = path.join(DATA_DIR, `backup-${randomUUID()}.db`)
-  try {
-    const db = await getDb()
-    db.exec(`VACUUM INTO ${sqlLiteral(snapshot)}`)
-    onSnapshot()
-    // Streamed rather than buffered: this is the whole library, and reading it
-    // into memory to send it would defeat running on a small box.
-    const files = [{ name: 'kothai.db', abs: snapshot }, ...(await uploadFiles())]
-    await pipeline(tarEntries(files), createGzip(), out)
-  } finally {
-    await unlink(snapshot).catch(() => {}) // absent if VACUUM INTO never got that far
-  }
-}
 
 export async function handleBackup(_req: IncomingMessage, res: ServerResponse): Promise<void> {
   // An import holds a batch of notes in memory and writes them at the end (see
@@ -135,10 +31,6 @@ export async function handleBackup(_req: IncomingMessage, res: ServerResponse): 
   if (isImportInProgress()) {
     return json(res, 409, IMPORT_BUSY)
   }
-  if (backupInProgress) {
-    return json(res, 409, { error: 'A backup is already being prepared.', code: 'backup_in_progress' })
-  }
-  backupInProgress = true
   try {
     // No Content-Length: the archive is compressed as it streams, so its size
     // is not known until the last byte.
@@ -150,15 +42,15 @@ export async function handleBackup(_req: IncomingMessage, res: ServerResponse): 
       }),
     )
   } catch (err) {
+    const code = (err as { code?: string }).code
+    // Refused before a byte was written: another backup holds the disk.
+    if (code === 'backup_in_progress') return json(res, 409, { error: (err as Error).message, code })
     console.error('[backup] failed:', err)
     // Once the headers are out the client is already reading the archive; the
     // only honest signal left is to break the connection so the download
     // fails loudly instead of arriving silently truncated.
     if (res.headersSent) res.destroy()
     else json(res, 500, { error: 'Could not prepare the backup.', code: 'backup_failed' })
-  } finally {
-    // On every path: a guard left set makes the endpoint work once per process.
-    backupInProgress = false
   }
 }
 
@@ -213,7 +105,9 @@ async function restoreFrom(req: IncomingMessage, staging: string): Promise<[numb
     const error = err instanceof Error ? err.message : 'Could not read that backup.'
     return [400, { error, code: 'bad_backup' }]
   }
-  const savedAs = await saveCurrentLibrary()
+  // The library being replaced, kept as an ordinary backup: restoring the
+  // wrong file is undone by restoring this one.
+  const savedAs = await saveBackup('before-restore')
   const restored = await swapIn(stagedDb, uploads)
   return [200, { restored, savedAs }]
 }
@@ -274,21 +168,6 @@ function checkDatabase(file: string): void {
   throw new Error("The backup's database is damaged, or is not a Kothai library.")
 }
 
-// The library being replaced, kept as an ordinary backup: restoring the wrong
-// file is undone by restoring this one.
-async function saveCurrentLibrary(): Promise<string> {
-  await mkdir(path.join(DATA_DIR, 'backups'), { recursive: true })
-  const name = `backups/before-restore-${new Date().toISOString().replace(/[:.]/g, '-')}.tar.gz`
-  const file = path.join(DATA_DIR, name)
-  try {
-    await writeBackup(createWriteStream(file))
-  } catch (err) {
-    await rm(file, { force: true })
-    throw err
-  }
-  return name
-}
-
 async function swapIn(stagedDb: string, stagedUploads: string | null) {
   // Uploads first, by rename: instant, and undoable if the database half fails.
   const setAside = path.join(DATA_DIR, `uploads-replaced-${randomUUID()}`)
@@ -334,7 +213,7 @@ async function swapIn(stagedDb: string, stagedUploads: string | null) {
 // One transaction: the library is wholly the backup's or wholly what it was.
 // seq is copied, not renumbered, because it is what orders every list.
 function copyLibrary(db: DatabaseSync, file: string): boolean {
-  db.exec(`ATTACH DATABASE ${sqlLiteral(file)} AS restored`)
+  db.prepare('ATTACH DATABASE ? AS restored').run(file)
   try {
     db.exec('BEGIN')
     try {

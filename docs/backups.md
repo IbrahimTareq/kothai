@@ -43,6 +43,18 @@ You get one `.tar.gz` holding the whole library: the database and every uploaded
 
 It briefly needs free disk space equal to the database's size, and refuses while an import is running. Credentials (the AI key, the Telegram bot token) are never in it.
 
+### Automatic backups
+
+Kothai also backs itself up, once a day, to `data/backups/`. Each one is the same file *Download backup* gives you. The newest 7 are kept, so budget about seven times your library's size for them.
+
+Settings → **YOUR DATA** → *Automatic backups* shows when the last one ran, lists every kept file with a *Download* link, and turns them off. Turn them off if something else already backs up `data/` (restic, a NAS snapshot), or disk space is tight.
+
+- **It never fills the disk.** A backup that would leave less than 256 MB free is skipped, and the reason is shown in Settings.
+- **Failures are reported.** If one fails and a Telegram bot is connected, Kothai messages you once, then retries every hour.
+- **It is not off-site.** These copies live on the same disk as your library and are lost with it. Download one now and then, especially on a PaaS, where the volume has no other way out.
+
+A restore also saves the library it replaces here (`before-restore-….tar.gz`, newest 3 kept).
+
 ### Restoring a backup
 
 Settings → **YOUR DATA** → *Restore*, and choose the file. Or the endpoint directly:
@@ -56,7 +68,7 @@ It happens while Kothai keeps running:
 
 - **Notes, spaces, chats and uploads** come from the backup.
 - **Model settings stay as they are on this install**, since they describe this machine. If the backup's notes were embedded with a different model, they are re-embedded in the background.
-- **Your current library is saved first**, to `data/backups/before-restore-<time>.tar.gz`. Restoring the wrong file is undone by restoring that one.
+- **Your current library is saved first**, to `data/backups/before-restore-<time>.tar.gz`. Restoring the wrong file is undone by downloading that one from *Automatic backups* and restoring it.
 
 *Restore* takes a file from *Download backup*. A tarball of `data/` made the manual way above is restored the manual way too.
 
