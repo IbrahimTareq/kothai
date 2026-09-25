@@ -11,6 +11,7 @@ import { useScrollEdges } from '../layout/useScrollEdges'
 import { PageHeader } from '../ui/PageHeader'
 import { Chip } from '../ui/Chip'
 import { Segmented } from '../ui/Segmented'
+import { UnavailableBar } from '../components/UnavailableBar'
 
 interface GalleryViewProps {
   nav: string
@@ -172,7 +173,7 @@ export function GalleryView({
                   <span className="filter-sep" />
                   <Chip
                     on={on('unavailable')}
-                    title="Saved links whose content no longer exists"
+                    title="Saved links whose content is gone — deleted, or no longer public"
                     onClick={() => toggle('unavailable')}
                   >
                     <span className="fc-ico">
@@ -220,6 +221,16 @@ export function GalleryView({
           )
         }
       />
+
+      {/* Hidden while a search is typed: the chip counts only matching notes,
+          but removal deletes every marked one, so the number on the bar would
+          not be the number deleted — the server would refuse it. */}
+      {nav === 'all' && on('unavailable') && unavailableCount > 0 && !search && (
+        <UnavailableBar
+          count={unavailableCount}
+          onRemoved={() => setGalFilter(galFilter.filter(k => k !== 'unavailable'))}
+        />
+      )}
 
       <div className="gal-scroll" ref={scrollRef}>
         {total === 0 && ready ? (

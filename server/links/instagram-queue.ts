@@ -17,16 +17,18 @@
 import * as store from '../data/notes.ts'
 import type { NoteRecord } from '../data/notes.ts'
 import { fetchLinkMeta } from './meta.ts'
-import { fetchInstagramSlides, isInstagramPost } from './instagram.ts'
+import { fetchInstagramEmbed, fetchInstagramSlides, isInstagramPost } from './instagram.ts'
 import { applyMeta } from './meta-fields.ts'
 
 // A queued fetch. `slides` picks the carousel job over the thumbnail one;
-// `resolve` settles the promise queueIgSlides handed its caller.
+// `resolve` settles the promise queueIgSlides handed its caller. `embed` makes
+// it an availability check, which hands the page back and writes nothing.
 interface IgJob {
   noteId: string
   url: string
   slides?: boolean
   resolve?: (value?: unknown) => void
+  embed?: { resolve: (html: string) => void; reject: (e: unknown) => void }
 }
 
 // Called with a noteId once a fetch has produced a caption worth
@@ -103,6 +105,13 @@ async function pumpIg() {
   // the job is handed straight to runIgJob/runSlidesJob. Same dequeue order and
   // same stopping point — a shift on an empty queue neither mutates nor loops.
   for (let job = igQueue.shift(); job; job = igQueue.shift()) {
+    // An availability check is not tracked in igQueued or igInFlight: those
+    // mean "this note's meta fetch is spoken for", and a note being checked
+    // may still need one — queueIgMeta would skip it.
+    if (job.embed) {
+      await fetchInstagramEmbed(job.url).then(job.embed.resolve, job.embed.reject)
+      continue
+    }
     // Only thumbnail jobs are tracked in igQueued — a slides job for the same
     // note must not clear a still-pending thumbnail job's marker, which would
     // let queueIgMeta enqueue a second fetch for work already in the queue.
@@ -130,8 +139,21 @@ async function pumpIg() {
 export function queueIgMeta(noteId: string, url: string) {
   if (igQueued.has(noteId) || igInFlight.has(noteId)) return
   igQueued.add(noteId)
-  igQueue.push({ noteId, url })
+  // Ahead of any availability checks: a sweep queues hundreds, and a new
+  // save's caption and thumbnail must not wait out the whole run.
+  const firstCheck = igQueue.findIndex(j => j.embed)
+  igQueue.splice(firstCheck < 0 ? igQueue.length : firstCheck, 0, { noteId, url })
   pumpIg()
+}
+
+// The embed page for an availability check, at the very back of the queue.
+// Rejects when the fetch fails. No note is written, so the url stands in as
+// the id the inspection hook reports.
+export function queueIgEmbed(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    igQueue.push({ noteId: url, url, embed: { resolve, reject } })
+    pumpIg()
+  })
 }
 
 // ---- carousel slides ----------------------------------------------------

@@ -52,7 +52,7 @@ const REFUSED: [string, string][] = [
   ['POST', '/api/checkpoint'],
   ['POST', '/api/enrich/retag-all'],
   ['POST', '/api/enrich/backlog'],
-  ['POST', '/api/availability/scan'],
+  ['POST', '/api/availability/remove'],
   ['DELETE', '/api/models/files/x.gguf'],
 ]
 

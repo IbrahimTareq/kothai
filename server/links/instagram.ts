@@ -162,6 +162,24 @@ async function igThrottle() {
   lastIgFetch = Date.now()
 }
 
+// The embed page, behind the throttle. Every Instagram request goes through
+// here — metadata, carousel slides and the availability check — so none of
+// them can skip igThrottle and put the IP at risk of a soft-ban.
+export async function fetchInstagramEmbed(url: string): Promise<string> {
+  await igThrottle()
+  const embedUrl = instagramEmbedUrl(url)
+  // Unreachable: every caller reaches here past isInstagramPost(), which
+  // already parsed this URL, and instagramEmbedUrl returns null only for a
+  // string that is not a URL at all. The check is here because the type
+  // cannot say that — and it throws rather than skipping, which is what the
+  // untyped version did anyway (get(null) built 'null' as a URL and threw).
+  if (!embedUrl) throw new Error(`not a URL: ${url}`)
+  // Same MAX_HTML-after-.text() tradeoff as the generic HTML branch in meta.ts:
+  // the whole body is buffered into memory before slicing. Matching existing
+  // behavior rather than introducing a streaming reader just for this path.
+  return (await (await get(embedUrl, 'text/html,*/*')).text()).slice(0, MAX_HTML)
+}
+
 // Pure: names which piece(s) parseInstagramEmbed came back without, or null
 // if both are present (exported so this — the `||` vs `&&` distinction —
 // is directly testable without mocking console or the network). `||`, not
@@ -201,18 +219,7 @@ export interface InstagramMeta {
 }
 
 export async function fetchInstagramMeta(url: string, noteId: string): Promise<InstagramMeta> {
-  await igThrottle()
-  const embedUrl = instagramEmbedUrl(url)
-  // Unreachable: the only caller reaches here past isInstagramPost(), which
-  // already parsed this URL, and instagramEmbedUrl returns null only for a
-  // string that is not a URL at all. The check is here because the type
-  // cannot say that — and it throws rather than skipping, which is what the
-  // untyped version did anyway (get(null) built 'null' as a URL and threw).
-  if (!embedUrl) throw new Error(`not a URL: ${url}`)
-  // Same MAX_HTML-after-.text() tradeoff as the generic HTML branch in meta.ts:
-  // the whole body is buffered into memory before slicing. Matching existing
-  // behavior rather than introducing a streaming reader just for this path.
-  const html = (await (await get(embedUrl, 'text/html,*/*')).text()).slice(0, MAX_HTML)
+  const html = await fetchInstagramEmbed(url)
   const { caption, thumbUrl, location } = parseInstagramEmbed(html)
   const missing = describeMissingPieces(caption, thumbUrl)
   if (missing) console.warn(`[meta] instagram embed parse missing ${missing} for`, url)
@@ -287,11 +294,7 @@ export function parseInstagramCarousel(html: string): string[] {
 // in post order. One slide failing to download is survivable — a short deck
 // beats no deck — but a slide that fails is dropped rather than left as a hole.
 export async function fetchInstagramSlides(url: string, noteId: string): Promise<string[]> {
-  await igThrottle()
-  const embedUrl = instagramEmbedUrl(url)
-  // Unreachable, and thrown rather than skipped — see fetchInstagramMeta.
-  if (!embedUrl) throw new Error(`not a URL: ${url}`)
-  const html = (await (await get(embedUrl, 'text/html,*/*')).text()).slice(0, MAX_HTML)
+  const html = await fetchInstagramEmbed(url)
   const slides: string[] = []
   for (const [i, src] of parseInstagramCarousel(html).entries()) {
     try {

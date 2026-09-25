@@ -112,11 +112,12 @@ test('/api/notes sends what a card shows, not the fields only the server reads',
     thumbSrc: 'https://cdn.example.com/og.png',
     ai: { classify: true, embed: true },
     metaTries: 1,
+    availabilityCheckedAt: '2026-01-01T00:00:00.000Z',
   })
   const { res, sent } = mockRes()
   handleNotes(res, urlOf(''), null)
   const [card] = records(sent.json().notes)
-  for (const k of ['article', 'thumbDescription', 'thumbSrc', 'ai', 'metaTries'])
+  for (const k of ['article', 'thumbDescription', 'thumbSrc', 'ai', 'metaTries', 'availabilityCheckedAt'])
     assert.ok(!(k in card), `${k} is server-only`)
   assert.equal(card.siteTitle, 'A page')
   assert.equal(card.siteDesc, 'What it is about')

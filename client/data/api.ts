@@ -418,23 +418,8 @@ export const API = {
   }> {
     return apiPost('/api/import', payload)
   },
-  // Availability: scan marks links whose content is gone, remove deletes the
-  // marked ones. Two calls on purpose — the scan only writes a reversible flag,
-  // and `expected` makes the destructive step refuse if the count moved between
-  // the user seeing it and confirming it.
-  async scanAvailability(): Promise<{
-    checked: number
-    dead: number
-    alive: number
-    unknown: number
-    marked: number
-    cleared?: number
-    unavailable: number
-    aborted: boolean
-    error?: string
-  }> {
-    return apiPost('/api/availability/scan', {})
-  },
+  // Delete the notes the daily sweep marked. `expected` is the count the user
+  // was shown: the server refuses if it moved between seeing and confirming.
   async removeUnavailable(expected: number): Promise<{ removed: number; unavailable: number }> {
     return apiPost('/api/availability/remove', { expected })
   },

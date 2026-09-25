@@ -16,7 +16,6 @@ import { ConnectionPanel } from '../components/settings/ConnectionPanel'
 import { ImportSection } from '../components/settings/ImportSection'
 import { TelegramSection } from '../components/settings/TelegramSection'
 import { CaptureTokenSection } from '../components/settings/CaptureTokenSection'
-import { AvailabilityRow } from '../components/settings/AvailabilityRow'
 import { RestoreRow } from '../components/settings/RestoreRow'
 import { BackupsRow } from '../components/settings/BackupsRow'
 import { DriveRow } from '../components/settings/DriveRow'
@@ -383,8 +382,6 @@ export function SettingsView({
               <DriveRow />
 
               <RestoreRow />
-
-              <AvailabilityRow />
 
               <SettingsRow
                 title="Re-tag everything"

@@ -24,8 +24,24 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 // demo the extracted article alone was 162 KB of a 180 KB page of thirty notes.
 // The single-note responses below still send the whole record; they are one
 // note each.
+//
+// availabilityCheckedAt is stripped alongside them for the same reason though
+// it lives on ServerNote, not just NoteRecord: the sweep (server/links/
+// sweep.ts) bumps it on every checked note — ~440 a day — which would put
+// every one of those notes' cards back on the wire on the next delta poll for
+// a field the UI never reads.
 function card(n: PublicNote): ServerNote {
-  const { ai, article, thumbDescription, metaTries, metaNextTry, slidesFetched, thumbSrc, ...rest } = n
+  const {
+    ai,
+    article,
+    thumbDescription,
+    metaTries,
+    metaNextTry,
+    slidesFetched,
+    thumbSrc,
+    availabilityCheckedAt,
+    ...rest
+  } = n
   return rest
 }
 

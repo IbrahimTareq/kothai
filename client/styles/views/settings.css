@@ -294,9 +294,10 @@
 .remote-model-more:hover { color: var(--ink-dim); }
 .remote-model-desc { margin-top: var(--space-6); }
 
-/* The remove button sits under the scan result rather than in the row's action
-   slot: it only exists once a scan has found something, and it is destructive,
-   so it belongs with the count that justifies it. */
+/* A row's secondary action, conditional on what the status above it found —
+   the old scan's remove button, DriveRow's and BackupsRow's show/hide toggle
+   for a list that only exists once there's something in it. It sits under the
+   status rather than in the row's own action slot, which is unconditional. */
 .avail-actions{margin-top:var(--space-10)}
 
 /* Downloaded models. A row list inside a settings row: one line per cache

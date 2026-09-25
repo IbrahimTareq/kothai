@@ -31,6 +31,10 @@ export interface ServerNote {
   // every note an earlier scan marked, and a mark whose date has been thrown
   // away can neither be explained to the user nor aged out later.
   unavailableAt?: string | null
+  // When the sweep last asked about this link, whatever the answer. The daily
+  // Instagram slice is taken oldest-first from this, and the newest one across
+  // the library is how a restart knows today's sweep already ran.
+  availabilityCheckedAt?: string | null
   siteTitle?: string | null
   siteDesc?: string | null
   siteName?: string | null
