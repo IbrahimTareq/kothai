@@ -108,6 +108,14 @@ export function GalleryView({
   const chipCount = typeChips.length + sourceChips.length + (showUnavailable ? 1 : 0)
   const { ref: filtersRef, className: filtersFade } = useScrollEdges('x', [chipCount, nav])
 
+  // Sort order and column count are ways of looking at a pile, and below three
+  // items there is no pile to look at — an empty board carried a toolbar for
+  // nothing. Facets ignore the chips, so with no search their type counts are
+  // the whole library. A search skips the check: narrowing to one match would
+  // otherwise pull the controls out from under the typing.
+  const libraryCount = Object.values(facets.types).reduce((n, c) => n + c, 0)
+  const showDisplay = search !== '' || libraryCount >= 3
+
   return (
     <div className="gallery-view">
       <PageHeader
@@ -178,8 +186,9 @@ export function GalleryView({
           ) : undefined
         }
         display={
-          <>
-            {/* Sort sits with the density toggle, not with the chips: both answer
+          showDisplay && (
+            <>
+              {/* Sort sits with the density toggle, not with the chips: both answer
             "how is this board presented", where a chip answers "what is on
             it". They share <Segmented> and its height, so the two read
             as one cluster opposite the filters.
@@ -187,27 +196,28 @@ export function GalleryView({
             Unlike the density toggle, this stays visible on a phone — which
             column count you get matters less there than what order you are
             reading in. */}
-            <Segmented
-              label="Sort order"
-              value={galSort}
-              onChange={setGalSort}
-              options={[
-                { value: 'newest', label: 'Newest', title: 'Newest first' },
-                { value: 'oldest', label: 'Oldest', title: 'Oldest first' },
-              ]}
-            />
-            <Segmented
-              label="Columns"
-              className="view-toggle"
-              value={view}
-              onChange={setView}
-              options={[
-                { value: 'grid4', label: <Icon name="grid4" size={16} />, title: '4 columns' },
-                { value: 'grid6', label: <Icon name="grid6" size={16} />, title: '6 columns' },
-                { value: 'grid8', label: <Icon name="grid8" size={16} />, title: '8 columns' },
-              ]}
-            />
-          </>
+              <Segmented
+                label="Sort order"
+                value={galSort}
+                onChange={setGalSort}
+                options={[
+                  { value: 'newest', label: 'Newest', title: 'Newest first' },
+                  { value: 'oldest', label: 'Oldest', title: 'Oldest first' },
+                ]}
+              />
+              <Segmented
+                label="Columns"
+                className="view-toggle"
+                value={view}
+                onChange={setView}
+                options={[
+                  { value: 'grid4', label: <Icon name="grid4" size={16} />, title: '4 columns' },
+                  { value: 'grid6', label: <Icon name="grid6" size={16} />, title: '6 columns' },
+                  { value: 'grid8', label: <Icon name="grid8" size={16} />, title: '8 columns' },
+                ]}
+              />
+            </>
+          )
         }
       />
 
