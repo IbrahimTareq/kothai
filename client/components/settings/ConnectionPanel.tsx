@@ -84,7 +84,7 @@ export function ConnectionPanel({
   const host = cfg.endpoint.configured ? cfg.endpoint.host : ''
 
   return (
-    <SettingsGroup label="CONNECTION">
+    <SettingsGroup label="Connection">
       <div className="conn">
         <div className="conn-state">
           {/* One element, two kinds of content — which is how a plain English

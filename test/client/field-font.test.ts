@@ -34,3 +34,29 @@ test("a space's rename field inherits the title's weight and tracking", () => {
   assert.match(body, /(^|;)\s*font\s*:\s*inherit/)
   assert.match(body, /letter-spacing\s*:\s*inherit/)
 })
+
+// Settings wrote file names and commands in <code>, and nothing gave <code> a
+// face: it rendered in the browser's own monospace, Menlo on a Mac — a third
+// typeface on a page that loads two.
+test('code, kbd, pre and samp take the mono face from base.css', () => {
+  const base = css('foundation/base.css')
+  for (const el of ['code', 'kbd', 'pre', 'samp']) {
+    assert.ok(
+      declarationsFor(base, el).some(d => /font-family\s*:\s*var\(--font-mono\)/.test(d)),
+      `${el} falls back to the browser's monospace`,
+    )
+  }
+})
+
+// Type is never bold (docs/design-system.md), but a bare <b> is 700 by browser
+// default: Settings' "Idle ≈ 4.8 GB" rendered its numbers at 700 because only
+// .settings-row-desc b had been turned down.
+test('b and strong are medium, not the browser bold', () => {
+  const base = css('foundation/base.css')
+  for (const el of ['b', 'strong']) {
+    assert.ok(
+      declarationsFor(base, el).some(d => /font-weight\s*:\s*var\(--fw-medium\)/.test(d)),
+      `${el} renders at the browser's 700`,
+    )
+  }
+})

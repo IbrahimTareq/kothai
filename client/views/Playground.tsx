@@ -201,7 +201,7 @@ export function Playground() {
           <div style={{ ...row, alignItems: 'flex-start' }}>
             <Popover label="Add rule tag" trigger={<Chip add>+ rule tag</Chip>}>
               <p className="eyebrow">Filter</p>
-              <Input compact className="mono" placeholder="filter or add a tag…" />
+              <Input compact placeholder="filter or add a tag…" />
             </Popover>
             <div style={{ flex: 1, maxWidth: '60ch' }}>
               <Popover
@@ -211,7 +211,6 @@ export function Playground() {
                   <div style={row}>
                     <Input
                       compact
-                      className="mono"
                       style={{ flex: 1 }}
                       placeholder="anchored — focus stays here"
                       onFocus={() => setComboOpen(true)}

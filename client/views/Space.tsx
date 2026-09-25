@@ -127,7 +127,7 @@ export function CollectionView({
       <div className="collection-view">
         <div className="empty">
           <Icon name="spark" size={40} />
-          <p>SPACE NOT FOUND</p>
+          <p>Space not found</p>
         </div>
       </div>
     )
@@ -271,7 +271,7 @@ export function CollectionView({
                 <p className="rulepop-hint">Items tagged with any of these automatically join this space.</p>
                 <Input
                   compact
-                  className="rulepop-input mono"
+                  className="rulepop-input"
                   value={tagDraft}
                   placeholder="filter or add a tag…"
                   onChange={e => setTagDraft(e.target.value)}

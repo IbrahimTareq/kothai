@@ -28,7 +28,7 @@
 .gal-filters.fade-l.fade-r{
   -webkit-mask-image:linear-gradient(to right,transparent,#000 var(--space-32),#000 calc(100% - var(--space-32)),transparent);  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
   mask-image:linear-gradient(to right,transparent,#000 var(--space-32),#000 calc(100% - var(--space-32)),transparent)}  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
-.fc-count{font-family:var(--font-mono);font-size:var(--text-2xs);color:var(--ink-faint)}
+.fc-count{font-size:var(--text-2xs);font-variant-numeric:tabular-nums;color:var(--ink-faint)}
 .chip:hover .fc-count{color:var(--ink-mute)}
 .chip.on .fc-count{color:var(--on-accent);opacity:.55}
 .fc-dot{width:7px;height:7px;border-radius:var(--radius-circle);flex-shrink:0}
@@ -41,7 +41,7 @@
   color:var(--ink-dim);transition:var(--dur-fast)}
 .search-box.focus{border-bottom-color:var(--line-focus);color:var(--ink)}
 .search-box input{flex:1;width:100%;background:transparent;border:0;outline:none;color:var(--ink);  /* token-lint-ignore: .search-box.focus brightens the underline */
-  font-family:var(--font-mono);font-size:var(--text-sm);letter-spacing:var(--tracking-mono)}
+  font-size:var(--text-sm)}
 .search-box input::placeholder{color:var(--ink-faint)}
 .gal-scroll{flex:1;overflow-y:auto;padding:var(--under-head) var(--space-28) var(--space-40)}
 /* board (windowed masonry) — every cell is absolutely positioned from

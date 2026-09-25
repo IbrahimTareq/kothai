@@ -42,8 +42,8 @@
 /* Save failure, shown under the (still filled) input rather than as a toast —
    the modal stays open on failure, so the message belongs next to the retry. */
 .cap-error{align-self:flex-start;margin-top:-10px;font-size:var(--text-xs);
-  letter-spacing:var(--tracking-mono);color:var(--danger)}
+  color:var(--danger)}
 /* Where .cap-error sits, but not an error: the demo saying what it will take. */
 .cap-hint{align-self:flex-start;margin-top:-10px;font-size:var(--text-xs);
-  letter-spacing:var(--tracking-mono);color:var(--ink-mute)}
+  color:var(--ink-mute)}
 @media (max-width:720px){ .cap-overlay{padding:var(--space-16)} }

@@ -85,7 +85,7 @@ export function CaptureModal({ onClose, onSave }: CaptureModalProps) {
         />
         {chip && (
           <span className="detect-chip">
-            <Icon name={CAT[chip.type].glyph} size={12} /> {CAT[chip.type].label.replace(/s$/, '').toUpperCase()}
+            <Icon name={CAT[chip.type].glyph} size={12} /> {CAT[chip.type].label.replace(/s$/, '')}
           </span>
         )}
         {/* Named as Ask's is: it is icon-only, and had no name at all, so a
@@ -95,11 +95,11 @@ export function CaptureModal({ onClose, onSave }: CaptureModalProps) {
         </button>
       </div>
       {error && (
-        <div className="cap-error mono" role="alert">
+        <div className="cap-error" role="alert">
           {error}
         </div>
       )}
-      {!error && hint && <div className="cap-hint mono">{hint}</div>}
+      {!error && hint && <div className="cap-hint">{hint}</div>}
     </Dialog>
   )
 }

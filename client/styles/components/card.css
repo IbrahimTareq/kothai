@@ -30,12 +30,12 @@
   letter-spacing:var(--tracking-tight);color:var(--ink);
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .card-title.sm{font-size:var(--text-xs)}
-.card-host{display:flex;align-items:center;gap:var(--space-6);font-family:var(--font-mono);
-  font-size:var(--text-xs);letter-spacing:var(--tracking-mono);color:var(--ink-dim)}
+.card-host{display:flex;align-items:center;gap:var(--space-6);
+  font-size:var(--text-xs);color:var(--ink-dim)}
 .card-host svg{color:var(--ink-dim)}
 .card-favi{width:34px;height:34px;border-radius:var(--radius);display:grid;place-items:center;
   background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
-  font-family:var(--font-mono);font-weight:var(--fw-medium);font-size:var(--text-base)}
+  font-weight:var(--fw-medium);font-size:var(--text-base)}
 
 /* ── link tile ────────────────────────────────────────────────────────────
    Headline-led links (article, Reddit post, repo — everything but the
@@ -88,7 +88,7 @@
   height:100%;color:var(--ink-faint)}
 .empty svg{opacity:.5}
 .empty img{object-fit:contain}
-.empty p{font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:var(--tracking-mono);margin:0}
+.empty p{font-size:var(--text-xs);margin:0}
 
 /* floating capture (gallery) */
 .fab{position:absolute;bottom:28px;right:30px;z-index:var(--z-float);display:flex;align-items:center;gap:var(--space-10);

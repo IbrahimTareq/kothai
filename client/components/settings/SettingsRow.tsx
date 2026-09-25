@@ -3,7 +3,7 @@
 // without importing the view that renders them.
 import type { HTMLAttributes, ReactNode } from 'react'
 
-// Reusable settings block: a mono label + optional sub-line, hosting any content.
+// Reusable settings block: a label + optional sub-line, hosting any content.
 // Drop a new <SettingsGroup label="…">…</SettingsGroup> to add a section.
 export function SettingsGroup({
   label,

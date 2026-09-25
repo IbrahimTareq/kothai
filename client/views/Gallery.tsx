@@ -219,7 +219,7 @@ export function GalleryView({
             ) : (
               <Icon name={cat.glyph} size={40} />
             )}
-            {search ? <p>{`NO ${cat.label.toUpperCase()} MATCH FILTER`}</p> : <p>{`NOTHING ADDED YET`}</p>}
+            {search ? <p>{`No ${cat.label.toLowerCase()} match this filter`}</p> : <p>Nothing added yet</p>}
           </div>
         ) : (
           <WindowedBoard

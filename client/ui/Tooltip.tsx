@@ -10,9 +10,8 @@ import type { ReactElement } from 'react'
 // It is never the accessible name: the trigger carries its own aria-label, as
 // the rail's buttons must on a phone, where they are tabs and no tip shows.
 //
-// label is a mono chip, like every other label in the app. detail adds a
-// sentence under it in the text face, for the one tip that explains rather
-// than names.
+// label is a short name. detail adds a sentence under it, for the one tip
+// that explains rather than names.
 export function Tooltip({
   label,
   detail,
@@ -32,7 +31,7 @@ export function Tooltip({
         <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
         <RadixTooltip.Portal>
           <RadixTooltip.Content
-            className={detail ? 'tip tip--detail' : 'tip mono'}
+            className={detail ? 'tip tip--detail' : 'tip'}
             side={side}
             sideOffset={8}
             collisionPadding={8}

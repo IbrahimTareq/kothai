@@ -14,14 +14,20 @@
    here, as one selector list each, is what stops that: a new section joins a
    list rather than writing a fifth variant.
 
-     eyebrow  mono 10        a card's own header (.recent-h, .role-acc-title)
-     title    sans 14/500    the name of the thing a row acts on
-     desc     sans 12/1.55   the sentence explaining it
-     meta     mono 10 faint  a size or an id — read, never written
+     eyebrow  12/500 mute    a group's name (.eyebrow, in primitives.css)
+     title    14/500         the name of the thing a row acts on
+     desc     12/1.55 dim    the sentence explaining it
+     meta     12 faint       a size or a count — tabular, so a column lines up
 
-   Mono always comes from the .mono class in markup, which carries
-   --tracking-mono with it; never from a hand-written font-family here. */
+   All four are the text face. The model-core rows once titled themselves in
+   mono caps ("LANGUAGE") beside sans titles in every other group, and set the
+   picked model in mono too, so one row switched face twice. Mono is only for
+   literal text in a field or <code> (see base.css).
+
+   The title list sets its size rather than inheriting it: the accordion
+   header is a <button>, and a button's font-size does not come from the page. */
 .settings-row-title,
+.role-acc-title,
 .conn-where,
 .model-name,
 .wizard-choice-title {
@@ -49,15 +55,9 @@
 .mf-size,
 .onboarding-size,
 .role-acc-current {
-  font-size: var(--text-2xs);
+  font-size: var(--text-xs);
   color: var(--ink-faint);
-}
-/* The eyebrow's other member, .recent-h, sits with the rest of the section
-   chrome in core.css. Sized here rather than left to inherit: the accordion
-   header is a <button>, and a button's font-size does not come from the page. */
-.role-acc-title {
-  font-size: var(--text-2xs);
-  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Every field here is an <Input> (client/ui/Input.tsx) — the box this surface
@@ -65,16 +65,14 @@
    red and the combobox is compact, both as props, not as rules here. */
 .wizard-input{width:100%}
 
-.settings-loading{font-family:var(--font-mono);color:var(--ink-faint);font-size:var(--text-xs);
-  letter-spacing:var(--tracking-mono);padding:var(--space-32) 0}
+.settings-loading{color:var(--ink-faint);font-size:var(--text-xs);padding:var(--space-32) 0}
 .settings-progress{display:flex;align-items:center;gap:var(--space-14);margin-top:var(--space-14);padding:var(--space-12) var(--space-14);
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg)}
 .settings-progress-track{flex:1;height:5px;border-radius:var(--radius-full);
   background:var(--panel-2);overflow:hidden}
 .settings-progress-bar{height:100%;border-radius:var(--radius-full);background:var(--accent);
   transition:width var(--dur-slower) ease}
-.settings-progress-msg{font-family:var(--font-mono);font-size:var(--text-2xs);
-  letter-spacing:var(--tracking-mono);color:var(--ink-dim);flex-shrink:0;max-width:46%;
+.settings-progress-msg{font-size:var(--text-xs);color:var(--ink-dim);flex-shrink:0;max-width:46%;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .model-dl{color:var(--ink)}
 /* modular settings group — one reusable block, drop in a new group to extend */
@@ -118,9 +116,7 @@
 
 /* ─────────────────────────── first-run onboarding ─────────────────────────── */
 /* brief splash while the first /api/status poll resolves */
-.app-splash{display:grid;place-items:center;height:100%}
-.app-splash .mono{font-family:var(--font-mono);font-size:var(--text-xs);color:var(--ink-faint);
-  letter-spacing:var(--tracking-mono)}
+.app-splash{display:grid;place-items:center;height:100%;font-size:var(--text-xs);color:var(--ink-faint)}
 /* full-screen picker shown before any model has downloaded */
 .onboarding{height:100%;width:100%;overflow-y:auto;display:flex;align-items:flex-start;
   justify-content:center;padding:60px var(--space-24)}
@@ -132,8 +128,7 @@
 .onboarding-lede{font-size:var(--text-sm);color:var(--ink-dim);line-height:var(--leading-normal);
   letter-spacing:var(--tracking-tight);max-width:44ch;margin:0 auto}
 .onboarding-err{margin-bottom:var(--space-14);padding:var(--space-10) var(--space-14);border:1px solid var(--line);
-  border-radius:var(--radius-lg);background:var(--panel);color:var(--ink);font-family:var(--font-mono);
-  font-size:var(--text-2xs);letter-spacing:var(--tracking-mono)}
+  border-radius:var(--radius-lg);background:var(--panel);color:var(--ink);font-size:var(--text-xs)}
 .onboarding-picker{display:flex;flex-direction:column}
 .onboarding-foot{display:flex;align-items:center;justify-content:space-between;gap:var(--space-16);margin-top:var(--space-22)}
 .onboarding-foot .btn:last-child{margin-left:auto}

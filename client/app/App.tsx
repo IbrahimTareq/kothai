@@ -346,7 +346,7 @@ export default function App() {
   if (needsSetup === null)
     return (
       <div className="app app-splash">
-        <span className="mono">BOOTING…</span>
+        <span>Starting…</span>
       </div>
     )
   if (needsSetup) return <Onboarding modelLoad={modelLoad} onComplete={() => setNeedsSetup(false)} />

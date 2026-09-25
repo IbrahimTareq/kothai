@@ -168,16 +168,16 @@ export function Onboarding({ modelLoad, onComplete }: { modelLoad: ModelLoad; on
           </p>
         </header>
 
-        {err && <div className="onboarding-err mono">{err}</div>}
+        {err && <div className="onboarding-err">{err}</div>}
 
         {!cfg || !sel ? (
-          <div className="settings-loading mono">LOADING…</div>
+          <div className="settings-loading">Loading…</div>
         ) : submitted ? (
           <div className="onboarding-progress">
             <div className="settings-progress-track">
               <div className="settings-progress-bar" style={{ width: `${modelLoad.pct || 0}%` }}></div>
             </div>
-            <span className="settings-progress-msg mono">
+            <span className="settings-progress-msg">
               {modelLoad.state === 'error'
                 ? modelLoad.msg || 'Model load failed'
                 : modelLoad.msg || 'Downloading models…'}
@@ -205,7 +205,7 @@ export function Onboarding({ modelLoad, onComplete }: { modelLoad: ModelLoad; on
                 <div key={role} className="role-acc open">
                   <div className="role-acc-head">
                     <span className="role-acc-info">
-                      <span className="role-acc-title mono">{ROLE_META[role].title}</span>
+                      <span className="role-acc-title">{ROLE_META[role].title}</span>
                       <span className="role-acc-sub">{ROLE_META[role].sub}</span>
                     </span>
                   </div>
@@ -222,7 +222,7 @@ export function Onboarding({ modelLoad, onComplete }: { modelLoad: ModelLoad; on
               ))}
             </div>
             <footer className="onboarding-foot">
-              <span className="onboarding-size mono">
+              <span className="onboarding-size">
                 {!noneLocal && upfrontBytes ? `Initial download ≈ ${fmtGB(upfrontBytes)}` : ''}
               </span>
               <Button tone="solid" size="lg" onClick={start}>

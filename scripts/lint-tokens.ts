@@ -167,6 +167,26 @@ for (const file of files) {
   }
 }
 
+/* ── the mono face written by hand ────────────────────────────────────────
+ * Geist Mono is for literal text — code, a file name, a token, a model id —
+ * and reaches it through <code> or the .mono class, both in base.css. Twenty
+ * rules across seven sheets set it by hand instead, on section labels, counts,
+ * hosts, sizes and loading text, until one Settings row switched face twice
+ * and the app read as a terminal costume. */
+for (const file of files) {
+  if (file === join('foundation', 'base.css')) continue
+  readFileSync(join(STYLES, file), 'utf8')
+    .split('\n')
+    .forEach((line, i) => {
+      if (line.includes('token-lint-ignore')) return
+      if (!/font-family:\s*var\(--font-mono\)/.test(line.replace(/\/\*.*?\*\//g, ''))) return
+      report.push(
+        `  ${file}:${i + 1}  [mono] the mono face is set by hand\n      literal text takes <code> or .mono; everything else is the text face`,
+      )
+      failures++
+    })
+}
+
 /* ── motion with no reduced-motion counterpart ─────────────────────────────
  * The fab's reduced-motion block states the rule: keep the state change, drop
  * the movement. It was honoured for the fab, the view swap and Ask's mode

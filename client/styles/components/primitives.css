@@ -160,7 +160,7 @@
 .tile-plate{position:absolute;top:var(--space-6);left:var(--space-6);z-index:var(--z-content);
   min-width:18px;height:18px;padding:0 var(--space-4);display:grid;place-items:center;
   border-radius:var(--radius-sm);background:var(--scrim);color:var(--color-white);
-  font-family:var(--font-mono);font-size:var(--text-2xs);letter-spacing:normal}
+  font-size:var(--text-2xs);font-variant-numeric:tabular-nums}
 .tile-plate.right{left:auto;right:var(--space-6)}
 .tile-play{position:absolute;right:var(--space-8);bottom:var(--space-8);
   width:22px;height:22px;display:grid;place-items:center;
@@ -180,8 +180,7 @@
 .tile-title{font-size:var(--text-xs);line-height:var(--leading-snug);color:var(--ink);
   letter-spacing:var(--tracking-tight);
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.tile-meta{font-family:var(--font-mono);font-size:var(--text-2xs);
-  letter-spacing:var(--tracking-mono);color:var(--ink-faint);
+.tile-meta{font-size:var(--text-2xs);color:var(--ink-faint);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ── menu and popover ─────────────────────────────────────────────────────
@@ -290,7 +289,7 @@ textarea.field{resize:vertical;line-height:var(--leading-normal)}
    What <Tooltip> in client/ui/ draws, portaled on --z-portal. The rail's and
    Expanded's labels were the same mono chip written twice; the smart-space
    explainer was a third box with a title and a sentence. One surface now, in
-   two weights: a mono label, or a label over a sentence in the text face. */
+   two weights: a label, or a label over a sentence. */
 .tip{z-index:var(--z-portal);padding:var(--space-6) var(--space-10);
   background:var(--surface-popover);border:1px solid var(--line);border-radius:var(--radius);
   color:var(--ink);font-size:var(--text-xs);white-space:nowrap;pointer-events:none}
@@ -327,10 +326,12 @@ textarea.field{resize:vertical;line-height:var(--leading-normal)}
 .confirm--inline .confirm-actions{flex:none;flex-wrap:nowrap}
 
 /* ── eyebrow ───────────────────────────────────────────────────────────────
-   The small caps name over a section or beside a field: Ask's chat history,
+   The name over a section or beside a field: Ask's chat history,
    Settings' groups, Expanded's Tags / Notes / Spaces and field labels, a menu's
-   title, a code block's language. Settings named this role (mono 10, faint)
-   and thirteen rules wrote it anyway, in three sizes, two trackings and three
-   greys. Add the class; keep only layout in the view's own rule. */
-.eyebrow{font-family:var(--font-mono);font-size:var(--text-2xs);letter-spacing:var(--tracking-label);
-  text-transform:uppercase;color:var(--ink-faint)}
+   title, a code block's language. Settings named this role and thirteen rules
+   wrote it anyway, in three sizes, two trackings and three greys. Add the
+   class; keep only layout in the view's own rule.
+   It was mono 10px in tracked caps until the typeface pass: the most
+   repeated mark in the app, and the one that made every surface read as a
+   terminal costume. Sentence case in the text face, set apart by weight. */
+.eyebrow{font-size:var(--text-xs);font-weight:var(--fw-medium);color:var(--ink-mute)}

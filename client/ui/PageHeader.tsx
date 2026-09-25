@@ -6,7 +6,7 @@ import type { ReactNode } from 'react'
 // and delete tucked against it over a hairline nobody else drew. Four pages,
 // four answers to "where am I and what can I do here".
 //
-//   identity  — an optional lead mark, the title, a mono count beside it,
+//   identity  — an optional lead mark, the title, a count beside it,
 //               page actions on the right
 //   toolbar   — filters on the left (what is shown), display on the right
 //               (how it is shown); omitted when a page has neither
@@ -36,7 +36,7 @@ export function PageHeader({
       <div className="page-id">
         {lead}
         <h1 className="page-title">{title}</h1>
-        {meta != null && <span className="page-meta mono">{meta}</span>}
+        {meta != null && <span className="page-meta">{meta}</span>}
         {actions && <div className="page-actions">{actions}</div>}
       </div>
       {(filters || display) && (

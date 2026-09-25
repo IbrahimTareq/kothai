@@ -239,7 +239,7 @@ export function CoreView({
                       {m.img && <img className="msg-img" src={m.img} alt="attachment" />}
                       {m.text}
                     </div>
-                    {m.ts ? <div className="msg-time mono">{clockTime(m.ts)}</div> : null}
+                    {m.ts ? <div className="msg-time">{clockTime(m.ts)}</div> : null}
                   </div>
                 ) : (
                   <div key={i} className="msg-ai">
@@ -249,14 +249,14 @@ export function CoreView({
                           <span></span>
                           <span></span>
                           <span></span>
-                          {warming && <span className="warming mono">{warming}</span>}
+                          {warming && <span className="warming">{warming}</span>}
                         </div>
                       ) : m.stopped && !m.lead ? (
                         // Stopped before it said anything: a state, not a reply,
                         // so none of the answer furniture applies.
                         <div className="msg-stopped">
                           <span>Stopped.</span>
-                          {m.ts ? <span className="msg-time mono">{clockTime(m.ts)}</span> : null}
+                          {m.ts ? <span className="msg-time">{clockTime(m.ts)}</span> : null}
                         </div>
                       ) : (
                         <AiAnswer m={m} jumpTo={jumpTo} />
@@ -276,9 +276,9 @@ export function CoreView({
 
         {llmOff ? (
           <div className="ask-off">
-            <span className="mono">ASK IS OFF</span>
+            <b>Ask is off</b>
             <span>
-              The language model is disabled, so questions can't be answered. Turn it on under Settings → Model Cores.
+              The language model is disabled, so questions can't be answered. Turn it on under Settings → Model cores.
             </span>
           </div>
         ) : (
@@ -358,7 +358,7 @@ export function CoreView({
 
       {!hasThread && chatList.length > 0 && (
         <div className="recent">
-          <div className="recent-h eyebrow">CHAT HISTORY</div>
+          <div className="recent-h eyebrow">Chat history</div>
           <div className="chat-list">
             {chatList.map(c => (
               <ChatRow
@@ -374,7 +374,7 @@ export function CoreView({
           {chatList.length < chatTotal && (
             <Button className="chat-more" onClick={loadMoreChats}>
               Load more{' '}
-              <span className="mono dim">
+              <span className="dim">
                 {chatList.length} / {chatTotal}
               </span>
             </Button>
@@ -417,7 +417,7 @@ function AiAnswer({ m, jumpTo }: { m: ThreadMsg; jumpTo: (item: UIItem) => void 
         <div className="also">
           <button className="also-toggle eyebrow" onClick={() => setShowOthers(v => !v)} aria-expanded={showOthers}>
             <span className={`also-caret${showOthers ? ' open' : ''}`}></span>
-            {featured.length > 0 ? 'ALSO CONSIDERED' : 'SOURCES SEARCHED'}{' '}
+            {featured.length > 0 ? 'Also considered' : 'Sources searched'}{' '}
             <span className="also-count">{others.length}</span>
           </button>
           {showOthers && (
@@ -432,8 +432,8 @@ function AiAnswer({ m, jumpTo }: { m: ThreadMsg; jumpTo: (item: UIItem) => void 
       {/* Nothing to stamp or copy until the answer has stopped moving. */}
       {!m.streaming && (
         <div className="msg-foot">
-          {m.ts ? <span className="msg-time mono">{clockTime(m.ts)}</span> : null}
-          {m.stopped && <span className="msg-stopped-tag mono">STOPPED</span>}
+          {m.ts ? <span className="msg-time">{clockTime(m.ts)}</span> : null}
+          {m.stopped && <span className="msg-stopped-tag">Stopped</span>}
           <CopyAnswer text={m.lead || ''} />
         </div>
       )}
@@ -478,7 +478,7 @@ function linkifyCites(text: string, m: ThreadMsg, jumpTo: (item: UIItem) => void
     out.push(text.slice(last, match.index))
     out.push(
       item ? (
-        <button key={keyBase + match.index} className="cite-ref mono" title="Show note" onClick={() => jumpTo(item)}>
+        <button key={keyBase + match.index} className="cite-ref" title="Show note" onClick={() => jumpTo(item)}>
           {n}
         </button>
       ) : (

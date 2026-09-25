@@ -115,7 +115,7 @@ function MediaPanel({ item, slidesLoading }: { item: UIItem; slidesLoading?: boo
 // deck being on its way is the one thing worth saying.
 function SlidesLoading(): ReactElement {
   return (
-    <div className="exp-slides-loading mono" role="status">
+    <div className="exp-slides-loading" role="status">
       <span className="exp-slides-dots">
         <span />
         <span />
@@ -150,7 +150,7 @@ function ArticlePanel({ item }: { item: UIItem }): ReactElement {
           onClick={() => openUrl(item.url)}
         />
       )}
-      <div className="exp-article-src mono">
+      <div className="exp-article-src">
         <Icon name={brand || 'article'} size={15} />
         {item.siteName || item.host || sourceLabel(item)}
       </div>
@@ -422,7 +422,7 @@ export function ExpandedView({
                 ))}
                 {adding && (
                   <input
-                    className="exp-tag-input mono"
+                    className="exp-tag-input"
                     autoFocus
                     value={draft}
                     placeholder="tag…"

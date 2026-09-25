@@ -15,15 +15,25 @@ value is not a token, it is either a documented exception or a bug —
    which the whole app was aligned to.
 3. **Body text tracks neutral.** `--tracking-normal`. Tracking tightens only as
    type gets larger — `--tracking-tight` for small UI text, `--tracking-tighter`
-   at 28px+, `--tracking-tightest` for display.
+   at 28px+.
 4. **Type is never bold.** `--fw-bold` exists for one third-party brand tag and
-   should not spread.
-5. **Surfaces are white at low opacity** (`--panel`, `--panel-2`, `--panel-3`)
+   should not spread. `<b>` and `<strong>` are medium (`--fw-medium`) in
+   `base.css`; a bare `<b>` had been rendering Settings' RAM figures at 700.
+5. **Two faces, two jobs.** Geist is everything a person reads — headers,
+   labels, counts, sizes, times, status. Geist Mono is only literal text they
+   might copy or type: code, a file name, a token, an endpoint, a model id in
+   its field. It arrives through `<code>` or `.mono`, never a hand-written
+   `font-family`; `lint:tokens` fails one. Mono had spread to section labels,
+   counts, hosts and loading text in tracked caps until a single Settings row
+   switched face twice, and `<code>` had no face at all, so file names fell
+   through to the browser's own monospace — a third typeface. Labels are
+   sentence case; hierarchy comes from size, weight and ink, not caps.
+6. **Surfaces are white at low opacity** (`--panel`, `--panel-2`, `--panel-3`)
    over `--bg`, separated by hairlines (`--line`, `--line-2`), not by shadows.
-6. **Both themes always.** Every colour must resolve sensibly under
+7. **Both themes always.** Every colour must resolve sensibly under
    `:root` and `:root[data-theme="light"]`. A hardcoded white is a light-theme
    bug waiting to happen — this is how the send button once became invisible.
-7. **The accent is tintable.** Users can set a custom `--accent` in Settings,
+8. **The accent is tintable.** Users can set a custom `--accent` in Settings,
    written onto `documentElement` at runtime (`App.tsx`). Anything that fills
    with the accent must use `--accent` / `--accent-hover` / `--on-accent`, never
    a literal, or it will not follow their choice.
@@ -35,9 +45,9 @@ the right move is to use the nearest step, not to add one.
 
 | Axis | Tokens | Notes |
 |---|---|---|
-| Type size | `--text-3xs` (9px) → `--text-display-lg` (40px) | `--text-display-fluid` for hero headings |
-| Weight | `--fw-light` `--fw-normal` `--fw-medium` `--fw-heading` `--fw-bold` | headings use `--fw-heading` |
-| Tracking | `--tracking-normal` `--tracking-heading` `--tracking-tight` `--tracking-tighter` `--tracking-tightest` `--tracking-mono` `--tracking-label` | tightens as size grows |
+| Type size | `--text-3xs` (9px) → `--text-3xl` (28px) | `--text-display-fluid` for hero headings |
+| Weight | `--fw-normal` `--fw-medium` `--fw-heading` `--fw-bold` | headings use `--fw-heading` |
+| Tracking | `--tracking-normal` `--tracking-heading` `--tracking-tight` `--tracking-tighter` `--tracking-mono` `--tracking-label` | tightens as size grows |
 | Leading | `--leading-none` → `--leading-normal`, plus `--leading-chat` | |
 | Spacing | `--space-0` → `--space-48` | named by px on purpose: `--space-12` is 12px, so two people pick the same one |
 | Radius | `--radius-xs` (2px) → `--radius-2xl` (16px), `--radius-full`, `--radius-circle` | `--radius-md` (8px) is the most common |
@@ -106,8 +116,8 @@ confirm. In-place editors — a canvas note, a chat or space rename, a tag pill,
 the composers, Everything's underline search — take the shape of what they edit
 and stay raw fields on the ratchet below.
 
-**A glyph is named by `<Tooltip>`** (`client/ui/`, on Radix): a mono `label`,
-or a `label` over a `detail` sentence in the text face for a tip that explains.
+**A glyph is named by `<Tooltip>`** (`client/ui/`, on Radix): a short `label`,
+or a `label` over a `detail` sentence for a tip that explains.
 It shows on hover and on keyboard focus, closes on Escape, and is portaled on
 `--z-portal`. It is never the accessible name — the trigger carries its own
 `aria-label`, which the rail's buttons need on a phone, where they are tabs and
@@ -137,8 +147,10 @@ word to type first. It moves focus to the decision when it appears, and Escape
 cancels. It replaced six hand-built confirms, of which two answered Escape, one
 moved focus, and one — the chat row's — confirmed with an outline button.
 
-**The small caps name over a section or beside a field is `.eyebrow`**: mono
-10px, label tracking, faint — the role Settings already called the eyebrow.
+**The name over a section or beside a field is `.eyebrow`**: 12px medium in
+`--ink-mute`, sentence case — the role Settings already called the eyebrow. It
+was mono 10px in tracked caps, the most repeated mark in the app and the one
+that most made it read as a terminal costume.
 Ask's chat history, Settings' groups, Expanded's sections and field labels, a
 menu's title and a code block's language all carry it, and keep only layout in
 their own rule. It had been written thirteen times in three sizes, two
@@ -146,7 +158,7 @@ trackings and three greys; `lint:tokens` now fails small text set in caps
 anywhere but `primitives.css`.
 
 **Every page opens with `<PageHeader>`** (`client/ui/`). Two rows: identity
-(`lead`, `title`, a mono `meta` count, `actions` on the right) over a toolbar
+(`lead`, `title`, a `meta` count, `actions` on the right) over a toolbar
 of `filters` on the left — what is shown — and `display` on the right — how
 it is shown. One title size (`--text-xl`), one gutter, the title at the same
 height on every page, and no rule under it: the toolbar row is the edge.

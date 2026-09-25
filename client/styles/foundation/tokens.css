@@ -34,7 +34,7 @@
      .mono and then re-declare letter-spacing on top of it at .05em, .06em and
      .08em — three hand-picked values for one job. Don't override these; if a
      label needs different tracking, it is a different kind of label. */
-  --tracking-mono:.06em;   /* mono eyebrows — applied by .mono, not by hand */
+  --tracking-mono:.06em;   /* literal text — applied by .mono and <code> in base.css */
   --tracking-label:.14em;  /* uppercase micro-labels */
 
   /* Type scale. Everything snaps to these steps — the sweep removed the

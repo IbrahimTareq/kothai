@@ -67,7 +67,7 @@ export function TelegramSection() {
 
   return (
     <SettingsGroup
-      label="TELEGRAM"
+      label="Telegram"
       sub="Save links from your phone by messaging your own bot. Only links are saved, and whatever you send passes through Telegram's servers on the way."
     >
       <div className="settings-rows">

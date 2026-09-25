@@ -51,7 +51,7 @@
 .rail-btn.active{color:var(--ink);background:var(--panel-2)}
 .rail-btn.active::before{content:"";position:absolute;left:-16px;top:50%;
   transform:translateY(-50%);width:2px;height:20px;border-radius:var(--radius-xs);background:var(--ink)}
-.rail-btn .count{position:absolute;top:5px;right:5px;font-family:var(--font-mono);
+.rail-btn .count{position:absolute;top:5px;right:5px;font-variant-numeric:tabular-nums;
   font-size:var(--text-3xs);color:var(--ink-faint);line-height:var(--leading-none)}
 .rail-btn.active .count{color:var(--ink)}
 .rail-spacer{flex:1}

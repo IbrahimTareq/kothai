@@ -44,7 +44,17 @@ body{
 h1,h2,h3,h4{font-weight:var(--fw-heading);letter-spacing:var(--tracking-heading);
   line-height:var(--leading-tight);margin:0}
 
-.mono{font-family:var(--font-mono);letter-spacing:var(--tracking-mono)}
+/* Two faces, two jobs. Geist is everything a person reads; Geist Mono is only
+   literal text they might copy or type — code, a file name, a token, a model
+   id — and arrives through <code> or .mono, never a hand-written font-family
+   (lint-tokens guards it). Mono had spread to section labels, counts, hosts
+   and loading text, and a Settings row switched face twice in one line.
+   <code> is listed because it had no face at all: Settings' file names rendered
+   in the browser's own monospace, a third typeface on a page that loads two. */
+.mono,code,kbd,pre,samp{font-family:var(--font-mono);letter-spacing:var(--tracking-mono)}
+/* Type is never bold, and a bare <b> is 700 by browser default — Settings'
+   "Idle ≈ 4.8 GB" rendered its numbers at 700 for that reason alone. */
+b,strong{font-weight:var(--fw-medium)}
 .dim{color:var(--ink-dim)}
 button{font-family:inherit;letter-spacing:inherit}
 /* Fields get the page's face too; left alone, an input or select falls back to

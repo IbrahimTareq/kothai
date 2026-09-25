@@ -97,7 +97,7 @@ function MediaLinkCard({ item, overlay }: { item: UIItem; overlay?: ReactElement
 // leads. The source mark sits top-left — the platform glyph where there is one,
 // the article glyph otherwise — the title is set large and bottom-anchored so
 // tiles of different title lengths line up along the same edge, the source is
-// named under it in the mono micro-label the badges use, and the thumbnail (if
+// named under it in the label the badges use, and the thumbnail (if
 // any) closes the tile, bled to its edges.
 function LinkTile({ item, overlay }: { item: UIItem; overlay?: ReactElement }): ReactElement {
   const brand = sourceGlyph(item)
@@ -381,7 +381,7 @@ export function CitedCard({ item, onJump }: { item: UIItem; onJump: (item: UIIte
       </span>
       <span className="cited-main">
         <span className="cited-summary">{it.title}</span>
-        <span className="cited-meta mono">{tileMeta(it)}</span>
+        <span className="cited-meta">{tileMeta(it)}</span>
       </span>
       <span className="cited-go">
         <Icon name="external" size={13} />

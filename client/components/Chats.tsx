@@ -113,7 +113,7 @@ export function ChatRow({ chat, active, open, rename, remove }: RowProps) {
           headed CHAT HISTORY. */}
       <div className="chat-row-main">
         <span className="chat-title">{chat.title}</span>
-        <span className="chat-meta mono dim">
+        <span className="chat-meta dim">
           {relTime(Date.parse(chat.updatedAt))} · {chat.questions} question{chat.questions === 1 ? '' : 's'}
         </span>
       </div>

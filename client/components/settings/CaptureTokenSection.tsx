@@ -58,7 +58,7 @@ export function CaptureTokenSection() {
 
   return (
     <SettingsGroup
-      label="CAPTURE TOKEN"
+      label="Capture token"
       sub="Lets a script or an iOS Shortcut save links without signing in. It can only save — it cannot read, change or delete anything in your library."
     >
       <div className="settings-rows">

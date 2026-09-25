@@ -10,7 +10,7 @@ export function CanvasLoading() {
   return (
     <div className="empty">
       <Icon name="spark" size={40} />
-      <p>LOADING CANVAS…</p>
+      <p>Loading canvas…</p>
     </div>
   )
 }

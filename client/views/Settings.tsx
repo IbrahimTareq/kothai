@@ -227,7 +227,7 @@ export function SettingsView({
           <div className="settings-progress-track">
             <div className="settings-progress-bar" style={{ width: `${modelLoad.pct || 0}%` }}></div>
           </div>
-          <span className="settings-progress-msg mono">{modelLoad.msg || modelLoad.txt}</span>
+          <span className="settings-progress-msg">{modelLoad.msg || modelLoad.txt}</span>
         </div>
       )}
 
@@ -237,13 +237,13 @@ export function SettingsView({
       {demo ? (
         <DemoSettings />
       ) : !cfg ? (
-        <div className="settings-loading mono">LOADING…</div>
+        <div className="settings-loading">Loading…</div>
       ) : (
         <div className="settings-body">
           <ConnectionPanel cfg={cfg} onChanged={setCfg} />
 
           <SettingsGroup
-            label="MODEL CORES"
+            label="Model cores"
             sub={
               roles.some(isRemote) ? (
                 // Named by the same titles the accordions below carry, so the
@@ -290,10 +290,10 @@ export function SettingsView({
                 <div key={role} className="role-acc open">
                   <div className="role-acc-head">
                     <span className="role-acc-info">
-                      <span className="role-acc-title mono">{ROLE_META[role].title}</span>
+                      <span className="role-acc-title">{ROLE_META[role].title}</span>
                       <span className="role-acc-sub">{ROLE_META[role].sub}</span>
                     </span>
-                    <span className="role-acc-current mono">{cfg.remote[role] || '—'}</span>
+                    <span className="role-acc-current">{cfg.remote[role] || '—'}</span>
                   </div>
                   <div className="model-list">
                     <RemoteModelField
@@ -326,7 +326,7 @@ export function SettingsView({
           {/* Only where weights exist: a remote-inference install downloads
                 nothing, and the routes behind this row 404 there. */}
           {cfg.capabilities.downloadsWeights && (
-            <SettingsGroup label="STORAGE">
+            <SettingsGroup label="Storage">
               <div className="settings-rows">
                 <ModelFilesRow />
               </div>
@@ -339,7 +339,7 @@ export function SettingsView({
 
           <CaptureTokenSection />
 
-          <SettingsGroup label="YOUR DATA">
+          <SettingsGroup label="Your data">
             <div className="settings-rows">
               <SettingsRow
                 title="Export"
@@ -496,7 +496,7 @@ export function SettingsView({
           Outside the demo branch above: inside it, a demo visitor on a
           phone had no theme switch anywhere, and the theme is this
           device's alone, so the demo has no reason to refuse it. */}
-      <SettingsGroup label="APPEARANCE" className="settings-appearance">
+      <SettingsGroup label="Appearance" className="settings-appearance">
         <div className="settings-rows">
           <SettingsRow
             title="Theme"

@@ -42,7 +42,7 @@ const INSTRUCTIONS: Record<string, ReactNode> = {
 export function ImportSection() {
   return (
     <SettingsGroup
-      label="IMPORT"
+      label="Import"
       sub={
         <>
           Bring across what you've already saved elsewhere. Every platform exports differently, so each has its own

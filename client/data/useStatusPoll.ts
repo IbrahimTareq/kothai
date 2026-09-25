@@ -30,7 +30,7 @@ export interface StatusPoll {
 }
 
 export function useStatusPoll(): StatusPoll {
-  const [modelLoad, setModelLoad] = useState<ModelLoad>({ state: 'loading', txt: 'BOOTING', pct: 0 })
+  const [modelLoad, setModelLoad] = useState<ModelLoad>({ state: 'loading', txt: 'Starting', pct: 0 })
   const [llmOff, setLlmOff] = useState(false)
   const [llmWarming, setLlmWarming] = useState('')
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null)
@@ -51,7 +51,7 @@ export function useStatusPoll(): StatusPoll {
         // message under a text answer that isn't waiting on that role at all.
         setLlmWarming(s.roles.llm.state === 'loading' ? s.roles.llm.message || 'Warming up the language model…' : '')
         const a = s.aggregate
-        if (a.state === 'error') setModelLoad({ state: 'error', txt: 'FAULT', pct: a.progress || 0, msg: a.message })
+        if (a.state === 'error') setModelLoad({ state: 'error', txt: 'Failed', pct: a.progress || 0, msg: a.message })
         else if (a.state === 'loading')
           setModelLoad({
             state: 'loading',
@@ -59,7 +59,7 @@ export function useStatusPoll(): StatusPoll {
             pct: a.progress || 0,
             msg: a.message,
           })
-        else setModelLoad({ state: 'ready', txt: 'ONLINE', pct: 100, msg: '' })
+        else setModelLoad({ state: 'ready', txt: 'Ready', pct: 100, msg: '' })
         if (!stop) window.setTimeout(tick, a.state === 'loading' ? TICK_LOADING_MS : TICK_READY_MS)
       } catch {
         if (!stop) window.setTimeout(tick, TICK_ERROR_MS)

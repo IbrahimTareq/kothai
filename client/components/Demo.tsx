@@ -75,7 +75,7 @@ const OWN_INSTALL: [string, string][] = [
 export function DemoSettings() {
   return (
     <div className="settings-body">
-      <SettingsGroup label="DEMO">
+      <SettingsGroup label="Demo">
         <div className="settings-rows">
           <SettingsRow
             title="Settings are off in the demo"
@@ -90,7 +90,7 @@ export function DemoSettings() {
           />
         </div>
       </SettingsGroup>
-      <SettingsGroup label="IN YOUR OWN KOTHAI">
+      <SettingsGroup label="In your own Kothai">
         <div className="settings-rows">
           {OWN_INSTALL.map(([title, desc]) => (
             <SettingsRow key={title} title={title} desc={desc} />

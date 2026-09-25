@@ -18,9 +18,9 @@ export function fmtGB(bytes: number): string {
 }
 
 export const ROLE_META: Record<Role, { title: string; sub: string }> = {
-  llm: { title: 'LANGUAGE', sub: 'Classifies what you save and answers your questions.' },
-  embed: { title: 'EMBEDDING', sub: 'Powers semantic search. Switching re-indexes every note in the background.' },
-  vision: { title: 'VISION', sub: 'Describes images so they become searchable. Loads only when needed.' },
+  llm: { title: 'Language', sub: 'Classifies what you save and answers your questions.' },
+  embed: { title: 'Embedding', sub: 'Powers semantic search. Switching re-indexes every note in the background.' },
+  vision: { title: 'Vision', sub: 'Describes images so they become searchable. Loads only when needed.' },
 }
 
 // A role-shaped example beats a generic one: the placeholder is the only hint
@@ -84,7 +84,7 @@ function ModelRow({ p, active, busy, switching, pct, onPick }: ModelRowProps) {
         <span className="model-name">{p.label}</span>
         <span className="model-desc">{p.desc}</span>
       </span>
-      <span className="model-size mono">
+      <span className="model-size">
         {active && switching ? <span className="model-dl">↓ {pct}%</span> : fmtGB(p.sizeBytes)}
       </span>
     </button>
@@ -125,10 +125,10 @@ export function RoleAccordion({
     <div className={`role-acc${open ? ' open' : ''}`}>
       <button className="role-acc-head" onClick={() => setOpen(o => !o)} aria-expanded={open}>
         <span className="role-acc-info">
-          <span className="role-acc-title mono">{meta.title}</span>
+          <span className="role-acc-title">{meta.title}</span>
           <span className="role-acc-sub">{meta.sub}</span>
         </span>
-        <span className="role-acc-current mono">
+        <span className="role-acc-current">
           {switching ? <span className="model-dl">↓ {pct}%</span> : policy === 'off' ? 'OFF' : current?.label || '—'}
         </span>
         <span className="role-acc-chev">
@@ -277,12 +277,12 @@ export function RemoteModelField({
               </button>
             </li>
           ))}
-          {!shown.length && <li className="remote-model-empty mono">No match — type the name and press Enter.</li>}
+          {!shown.length && <li className="remote-model-empty">No match — type the name and press Enter.</li>}
           {Boolean(rest.length) && !showAll && (
             <li>
               <button
                 type="button"
-                className="remote-model-more mono"
+                className="remote-model-more"
                 onMouseDown={e => {
                   e.preventDefault()
                   setShowAll(true)

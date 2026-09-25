@@ -89,7 +89,7 @@ export function ModelFilesRow() {
                   <span className="mf-name mono" title={f.name}>
                     {fileLabel(f)}
                   </span>
-                  <span className="mf-size mono">{fmtSize(f.sizeBytes)}</span>
+                  <span className="mf-size">{fmtSize(f.sizeBytes)}</span>
                 </div>
                 {f.inUse ? (
                   // Named by role rather than "in use": the next question after
