@@ -6,16 +6,29 @@
 // KOTHAI_PASSWORD is set before the dynamic import because server/config.ts
 // freezes its resolved config at import time; node --test gives each file its
 // own process, so this env var cannot leak into any other test.
+//
+// Its own data directory for the same reason: routes past the gate open the
+// database and stage files there. Left to default it was the checkout's
+// ./data — the developer's real library, and absent on a fresh clone, where
+// the restore test below failed with a 500 that never showed locally.
 process.env.KOTHAI_PASSWORD = 'hunter2'
+const DATA_DIR = mkdtempSync(path.join(os.tmpdir(), 'kothai-auth-test-'))
+process.env.KOTHAI_DATA_DIR = DATA_DIR
 const { createServer } = await import('../../../server/router.ts')
 
 import test, { after } from 'node:test'
 import assert from 'node:assert/strict'
+import { mkdtempSync, rmSync } from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { jsonBody, listenOnLoopback } from '../../helpers/http.ts'
 
 const server = createServer()
 const BASE = `http://127.0.0.1:${await listenOnLoopback(server)}`
-after(() => server.close())
+after(() => {
+  server.close()
+  rmSync(DATA_DIR, { recursive: true, force: true })
+})
 
 const json = (body: unknown) => ({ headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
 const login = (password: string, extra: RequestInit = {}) =>
