@@ -107,7 +107,7 @@ test('deleting a note that owns uploaded files still removes the note', async ()
     slides: ['/uploads/notes-route-slide-1.png'],
   })
   const { res, sent } = mockRes()
-  await handleDeleteNote(res, note.id)
+  await handleDeleteNote(res, note.id, null)
   assert.equal(sent.code, 200)
   assert.deepEqual(sent.json(), { ok: true })
   assert.equal(store.allNotes().length, 0)

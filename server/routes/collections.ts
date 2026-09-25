@@ -37,7 +37,17 @@ export async function handleCreateCollection(req: IncomingMessage, res: ServerRe
   json(res, 200, { collection: c })
 }
 
-export async function handleUpdateCollection(req: IncomingMessage, res: ServerResponse, id: string) {
+// On the demo, a visitor may change only a space they made. A shared one, or
+// another visitor's, answers exactly like a missing one.
+const notMine = (viewer: string | null, id: string) => !!viewer && collections.get(id)?.visitor !== viewer
+
+export async function handleUpdateCollection(
+  req: IncomingMessage,
+  res: ServerResponse,
+  id: string,
+  viewer: string | null,
+) {
+  if (notMine(viewer, id)) return json(res, 404, { error: 'collection not found' })
   const body = await readBody(req)
   const fields = isRecord(body) ? body : {}
   const patch: CollectionPatch = {}
@@ -59,27 +69,29 @@ export async function handleUpdateCollection(req: IncomingMessage, res: ServerRe
   json(res, 200, { collection: c })
 }
 
-export async function handleAddItem(req: IncomingMessage, res: ServerResponse, id: string) {
+export async function handleAddItem(req: IncomingMessage, res: ServerResponse, id: string, viewer: string | null) {
+  if (notMine(viewer, id)) return json(res, 404, { error: 'collection not found' })
   const body = await readBody(req)
   const fields = isRecord(body) ? body : {}
   const itemId = String(fields.itemId || '')
   if (!itemId) return json(res, 400, { error: 'itemId required' })
-  if (!store.allNotes().some(n => n.id === itemId)) return json(res, 404, { error: 'item not found' })
+  // Another visitor's link would be hidden in the space anyway, but still stored in it.
+  const visible = visibleTo(viewer)
+  if (!store.allNotes().some(n => n.id === itemId && visible(n))) return json(res, 404, { error: 'item not found' })
   const c = await collections.addItem(id, itemId)
   if (!c) return json(res, 404, { error: 'collection not found' })
   json(res, 200, { collection: c })
 }
 
-export async function handleRemoveItem(res: ServerResponse, id: string, itemId: string) {
+export async function handleRemoveItem(res: ServerResponse, id: string, itemId: string, viewer: string | null) {
+  if (notMine(viewer, id)) return json(res, 404, { error: 'collection not found' })
   const c = await collections.removeItem(id, itemId)
   if (!c) return json(res, 404, { error: 'collection not found' })
   json(res, 200, { collection: c })
 }
 
 export async function handleDeleteCollection(res: ServerResponse, id: string, viewer: string | null) {
-  // On the demo, only a space the visitor made. A shared one, or another
-  // visitor's, answers exactly like a missing one.
-  if (viewer && collections.get(id)?.visitor !== viewer) return json(res, 404, { ok: false })
+  if (notMine(viewer, id)) return json(res, 404, { ok: false })
   const ok = await collections.remove(id)
   return json(res, ok ? 200 : 404, { ok })
 }

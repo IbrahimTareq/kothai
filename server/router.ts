@@ -81,9 +81,9 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     if (req.method === 'GET' && p === '/api/chats') return handleChats(res, url.searchParams, viewer)
     if (req.method === 'GET' && p.startsWith('/api/chats/')) return handleChat(res, p.split('/').pop() ?? '', viewer)
     if (req.method === 'PATCH' && p.startsWith('/api/chats/'))
-      return await handleRenameChat(req, res, p.split('/').pop() ?? '')
+      return await handleRenameChat(req, res, p.split('/').pop() ?? '', viewer)
     if (req.method === 'DELETE' && p.startsWith('/api/chats/'))
-      return await handleDeleteChat(res, p.split('/').pop() ?? '')
+      return await handleDeleteChat(res, p.split('/').pop() ?? '', viewer)
     if (req.method === 'GET' && p === '/api/status') return handleStatus(res, viewer)
     if (req.method === 'GET' && p === '/api/settings') return await handleGetSettings(res)
     if (req.method === 'POST' && p === '/api/settings') return await handleSaveSettings(req, res)
@@ -128,24 +128,24 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       const seg = p.split('/').filter(Boolean)
       const id = seg[2]
       if (seg[3] === 'items') {
-        if (req.method === 'POST' && seg.length === 4) return await handleAddItem(req, res, id)
-        if (req.method === 'DELETE' && seg.length === 5) return await handleRemoveItem(res, id, seg[4])
+        if (req.method === 'POST' && seg.length === 4) return await handleAddItem(req, res, id, viewer)
+        if (req.method === 'DELETE' && seg.length === 5) return await handleRemoveItem(res, id, seg[4], viewer)
       } else if (seg.length === 3) {
-        if (req.method === 'PATCH') return await handleUpdateCollection(req, res, id)
+        if (req.method === 'PATCH') return await handleUpdateCollection(req, res, id, viewer)
         if (req.method === 'DELETE') return await handleDeleteCollection(res, id, viewer)
       }
     }
     if (req.method === 'POST' && p === '/api/enrich/retag-all') return await handleRetagAll(res)
     if (req.method === 'POST' && /^\/api\/notes\/[^/]+\/retag$/.test(p)) {
-      return await handleRetagNote(res, p.split('/')[3])
+      return await handleRetagNote(res, p.split('/')[3], viewer)
     }
     if (req.method === 'POST' && /^\/api\/notes\/[^/]+\/slides$/.test(p)) {
       return await handleNoteSlides(res, decodeURIComponent(p.split('/')[3]))
     }
     if (req.method === 'PATCH' && p.startsWith('/api/notes/'))
-      return await handleUpdateNote(req, res, p.split('/').pop() ?? '')
+      return await handleUpdateNote(req, res, p.split('/').pop() ?? '', viewer)
     if (req.method === 'DELETE' && p.startsWith('/api/notes/'))
-      return await handleDeleteNote(res, p.split('/').pop() ?? '')
+      return await handleDeleteNote(res, p.split('/').pop() ?? '', viewer)
     if (req.method === 'GET') return await serveStatic(req, res, p)
     json(res, 405, { error: 'method not allowed' })
   } catch (err) {

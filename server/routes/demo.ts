@@ -4,9 +4,9 @@
 // visitor. Left writable, a visitor could wipe it, re-point the inference
 // endpoint, switch to an expensive model, or re-tag the whole library on the
 // operator's key, and /api/setup/test would fetch any URL they typed from
-// inside the host's network. So the demo is read-only apart from the things
-// it exists to show: saving a link, asking a question, and making a space of
-// your own (and deleting it again; routes/collections.ts checks it is yours).
+// inside the host's network. So the shared library is read-only, and a visitor
+// may save a link, ask a question and make a space, then change or delete
+// what they made. Each of those handlers checks the thing is theirs.
 import { randomUUID } from 'node:crypto'
 import { cp, mkdir, readFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
@@ -38,8 +38,9 @@ const ALLOWED: Record<string, RegExp[]> = {
     /^\/api\/(notes|notes\/delta|tags|status|settings|chats|collections|enrich\/backlog|models\/files)$/,
     /^\/api\/(notes|chats)\/[^/]+$/,
   ],
-  POST: [/^\/api\/(save|ask|collections)$/],
-  DELETE: [/^\/api\/collections\/[^/]+$/],
+  POST: [/^\/api\/(save|ask|collections)$/, /^\/api\/notes\/[^/]+\/retag$/, /^\/api\/collections\/[^/]+\/items$/],
+  PATCH: [/^\/api\/(notes|chats|collections)\/[^/]+$/],
+  DELETE: [/^\/api\/(notes|chats|collections)\/[^/]+$/, /^\/api\/collections\/[^/]+\/items\/[^/]+$/],
 }
 
 // True when it has answered the request itself. Only /api/ is gated: the app

@@ -22,7 +22,7 @@ test('handleRetagNote: 200 with the updated note when retagNote succeeds', async
   // that the route forwards :id rather than retagging something else.
   retagNoteImpl = async id => note({ id, pending: true, tags: ['@natgeo'] })
   const { res, sent } = mockRes()
-  await handleRetagNote(res, 'n1')
+  await handleRetagNote(res, 'n1', null)
   assert.equal(sent.code, 200)
   assert.deepEqual(sent.json().note, note({ id: 'n1', pending: true, tags: ['@natgeo'] }))
 })
@@ -30,7 +30,7 @@ test('handleRetagNote: 200 with the updated note when retagNote succeeds', async
 test('handleRetagNote: 404 when the note does not exist', async () => {
   retagNoteImpl = async () => null
   const { res, sent } = mockRes()
-  await handleRetagNote(res, 'does-not-exist')
+  await handleRetagNote(res, 'does-not-exist', null)
   assert.equal(sent.code, 404)
   assert.equal(sent.json().error, 'note not found')
 })

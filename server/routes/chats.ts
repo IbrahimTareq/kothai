@@ -21,14 +21,25 @@ export function handleChat(res: ServerResponse, id: string, viewer: string | nul
   const chat = chats.get(id)
   return chat && visibleTo(viewer)(chat) ? json(res, 200, { chat }) : json(res, 404, { error: 'chat not found' })
 }
-export async function handleRenameChat(req: IncomingMessage, res: ServerResponse, id: string): Promise<void> {
+// On the demo, a visitor may change only a chat they asked. Anyone else's
+// answers exactly like a missing one.
+const notMine = (viewer: string | null, id: string) => !!viewer && chats.get(id)?.visitor !== viewer
+
+export async function handleRenameChat(
+  req: IncomingMessage,
+  res: ServerResponse,
+  id: string,
+  viewer: string | null,
+): Promise<void> {
+  if (notMine(viewer, id)) return json(res, 404, { error: 'chat not found' })
   const body: unknown = await readBody(req)
   const chat = await chats.rename(id, isRecord(body) ? body.title : undefined)
   return chat
     ? json(res, 200, { chat: { id: chat.id, title: chat.title, updatedAt: chat.updatedAt } })
     : json(res, 400, { error: 'chat not found, or the title was empty' })
 }
-export async function handleDeleteChat(res: ServerResponse, id: string): Promise<void> {
+export async function handleDeleteChat(res: ServerResponse, id: string, viewer: string | null): Promise<void> {
+  if (notMine(viewer, id)) return json(res, 404, { ok: false })
   const ok = await chats.remove(id)
   return json(res, ok ? 200 : 404, { ok })
 }

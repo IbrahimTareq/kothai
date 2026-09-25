@@ -137,9 +137,19 @@ export async function handleNoteSlides(res: ServerResponse, id: string): Promise
   json(res, 200, { note: store.getNote(id) || note })
 }
 
+// On the demo, a visitor may change only a link they saved themselves: the
+// library's links, and another visitor's, answer exactly like missing ones.
+const notMine = (viewer: string | null, id: string) => !!viewer && store.getNote(id)?.visitor !== viewer
+
 // Patch user-editable fields of a note (tags + free-form "mind note"). Used by
 // the expanded item view. Only these two fields are writable from the client.
-export async function handleUpdateNote(req: IncomingMessage, res: ServerResponse, id: string): Promise<void> {
+export async function handleUpdateNote(
+  req: IncomingMessage,
+  res: ServerResponse,
+  id: string,
+  viewer: string | null,
+): Promise<void> {
+  if (notMine(viewer, id)) return json(res, 404, { error: 'note not found' })
   const body = await readBody(req)
   const fields = isRecord(body) ? body : {}
   const patch: Partial<NoteRecord> = {}
@@ -179,13 +189,19 @@ export async function handleUpdateNote(req: IncomingMessage, res: ServerResponse
 
 // Force a full re-tag/re-classify of one note, discarding its current tags —
 // triggered by the "Re-tag" button in the item's detail view.
-export async function handleRetagNote(res: ServerResponse, id: string): Promise<void> {
+export async function handleRetagNote(res: ServerResponse, id: string, viewer: string | null): Promise<void> {
+  if (notMine(viewer, id)) return json(res, 404, { error: 'note not found' })
+  // A re-tag runs the same classify and embed as a save, so it spends one.
+  if (viewer && !demoLimits.save.take(viewer)) {
+    return json(res, 429, { error: 'That’s all the demo saves in a day. Try again tomorrow.', code: 'demo_limit' })
+  }
   const note = await enrich.retagNote(id)
   if (!note) return json(res, 404, { error: 'note not found' })
   json(res, 200, { note })
 }
 
-export async function handleDeleteNote(res: ServerResponse, id: string): Promise<void> {
+export async function handleDeleteNote(res: ServerResponse, id: string, viewer: string | null): Promise<void> {
+  if (notMine(viewer, id)) return json(res, 404, { ok: false })
   const ok = await removeNote(id)
   return json(res, ok ? 200 : 404, { ok })
 }
