@@ -16,13 +16,14 @@ import assert from 'node:assert/strict'
 process.env.KOTHAI_DATA_DIR = mkdtempSync(path.join(os.tmpdir(), 'kothai-demo-seed-'))
 
 // saveCapture is where a save's real work starts, so standing it in keeps the
-// AI pipeline and the network out of these tests.
+// AI pipeline and the network out of these tests. It still adds the bare note,
+// as the real one does before any of that work, so the seed can find it.
 const saved: string[] = []
 mock.module('../../../server/capture.ts', {
   namedExports: {
     saveCapture: async ({ url }: { url: string }) => {
       saved.push(url)
-      return { id: String(saved.length) }
+      return (await import('../../../server/data/notes.ts')).addNote({ type: 'link', content: url, url })
     },
   },
 })
@@ -30,6 +31,7 @@ mock.module('../../../server/capture.ts', {
 const store = await import('../../../server/data/notes.ts')
 const settings = await import('../../../server/data/settings.ts')
 const tagvocab = await import('../../../server/data/tagvocab.ts')
+const collections = await import('../../../server/data/collections.ts')
 const { UPLOAD_DIR } = await import('../../../server/config.ts')
 const { EMBED_RECIPE } = await import('../../../server/ai/prompts.ts')
 const { configureDemo, seedDemo } = await import('../../../server/routes/demo.ts')
@@ -54,6 +56,27 @@ test('an empty demo library is seeded with every save in the list, in order', as
     saved.every(s => /^https?:\/\/\S+$/.test(s)),
     'every save is a link — no comments, blank lines or plain-text notes',
   )
+})
+
+// Spaces opened on "No spaces yet" and Ask had nothing to show a space or its
+// canvas with, until a visitor had made one and found links to put in it.
+test('an empty demo library comes with its shared spaces, each holding its links', async () => {
+  store._reset()
+  collections._reset()
+  await seedDemo({ snapshot: NONE })
+  const spaces = collections.all()
+  assert.deepEqual(
+    spaces.map(c => c.name),
+    ['Kyoto trip', 'Weekend baking', 'Design reading'],
+  )
+  assert.ok(
+    spaces.every(c => !c.visitor),
+    'shared, so every visitor sees them and the nightly reset keeps them',
+  )
+  const links = spaces.flatMap(c => c.itemIds.map(id => store.getNote(id)?.url))
+  // 3 + 4 + 4: a link mistyped in the list would quietly leave its space short.
+  assert.equal(links.length, 11)
+  assert.ok(links.every(u => u && LIBRARY.includes(u)))
 })
 
 test('a demo library that already holds notes is left alone', async () => {
@@ -146,7 +169,7 @@ test('a prebuilt library from another list, embedding model or recipe is passed 
     store._reset()
     saved.length = 0
     await seedDemo({ snapshot: snapshot(stale) })
-    assert.equal(store.count(), 0, `nothing restored for ${JSON.stringify(stale)}`)
+    assert.equal(store.getNote('s1'), null, `nothing restored for ${JSON.stringify(stale)}`)
     assert.ok(saved.length > 0, `seeded live for ${JSON.stringify(stale)}`)
   }
 })

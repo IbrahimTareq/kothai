@@ -174,10 +174,56 @@ export async function configureDemo(): Promise<void> {
 export async function seedDemo({ snapshot = SNAPSHOT }: { snapshot?: URL } = {}): Promise<void> {
   if (store.count() > 0) return
   const list = await readFile(new URL('../demo-library.txt', import.meta.url), 'utf8')
-  if (await restoreSnapshot(snapshot, list)) return
-  for (const line of list.split('\n')) {
-    const url = line.trim()
-    if (url && !url.startsWith('#')) await saveCapture({ url })
+  if (!(await restoreSnapshot(snapshot, list))) {
+    for (const line of list.split('\n')) {
+      const url = line.trim()
+      if (url && !url.startsWith('#')) await saveCapture({ url })
+    }
+  }
+  await seedSpaces()
+}
+
+// The shared spaces, each named with the links of demo-library.txt it holds.
+// Without them Spaces opened on "No spaces yet", and a visitor saw a space, or
+// its canvas, only once they had made one and found links to put in it.
+const SPACES: [string, string[]][] = [
+  [
+    'Kyoto trip',
+    [
+      'https://en.wikipedia.org/wiki/Kyoto',
+      'https://en.wikipedia.org/wiki/T%C5%8Dfuku-ji',
+      'https://www.japan-guide.com/e/e3915.html',
+    ],
+  ],
+  [
+    'Weekend baking',
+    [
+      'https://en.wikipedia.org/wiki/Sourdough',
+      'https://www.kingarthurbaking.com/recipes/sourdough-starter-recipe',
+      'https://www.kingarthurbaking.com/recipes/classic-sandwich-bread-recipe',
+      'https://www.bbcgoodfood.com/recipes/best-ever-chocolate-brownies-recipe',
+    ],
+  ],
+  [
+    'Design reading',
+    [
+      'https://www.nngroup.com/articles/ten-usability-heuristics/',
+      'https://lawsofux.com/',
+      'https://www.vitsoe.com/us/about/good-design',
+      'https://www.joshwcomeau.com/css/interactive-guide-to-flexbox/',
+    ],
+  ],
+]
+
+async function seedSpaces() {
+  const byUrl = new Map(store.allNotes().map(n => [n.url, n.id]))
+  // Last first: each new space goes on top, so the list reads as written.
+  for (const [name, urls] of [...SPACES].reverse()) {
+    const c = await collections.create({ name })
+    await collections.addItems(
+      c.id,
+      urls.flatMap(u => byUrl.get(u) ?? []),
+    )
   }
 }
 
