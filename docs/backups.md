@@ -55,6 +55,30 @@ Settings → **YOUR DATA** → *Automatic backups* shows when the last one ran, 
 
 A restore also saves the library it replaces here (`before-restore-….tar.gz`, newest 3 kept).
 
+### Google Drive
+
+Settings → **YOUR DATA** → *Google Drive* → *Connect Google Drive*. Kothai shows a code; enter it at [google.com/device](https://www.google.com/device) on any device and approve. No redirect back to Kothai is involved, so this works the same on localhost, a tailnet or a PaaS.
+
+After that, each daily backup is also copied to a **Kothai Backups** folder in your Drive, and the newest 7 are kept there.
+
+- **Kothai sees only its own files.** It asks for Google's `drive.file` permission: the files it created, nothing else in your Drive.
+- **The files are ordinary backups**, not encrypted: the same `.tar.gz` as *Download backup*. Anyone who can open your Drive can open them.
+- **Restoring on a new machine:** install Kothai, connect the same Google account, and pick a backup from *Show backups on Drive*. It goes through the same restore as an uploaded file, and saves the library it replaces first.
+- **Disconnecting** revokes Kothai's access and forgets it. The backups stay in your Drive.
+- If a copy fails (Google unreachable, access revoked), Settings says why, the connected Telegram bot tells you once, and Kothai retries every hour.
+
+Needs `KOTHAI_GOOGLE_CLIENT_ID` and `KOTHAI_GOOGLE_CLIENT_SECRET`. Without them the row says it isn't set up.
+
+#### Creating the Google client
+
+Once per Google Cloud project, not per install:
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), create a project and enable the **Google Drive API**.
+2. Set up the **OAuth consent screen** (Google Auth Platform → Branding and Audience): user type **External**; add the scopes `.../auth/drive.file`, `openid` and `email`.
+3. **Publish it to "In production".** While it is in *Testing*, Google expires every refresh token after 7 days, and Drive backups would quietly disconnect each week. `drive.file` is a non-sensitive scope, so publishing needs no security review.
+4. Credentials → **Create OAuth client ID** → application type **TVs and Limited Input devices**.
+5. Set the client ID and secret as `KOTHAI_GOOGLE_CLIENT_ID` and `KOTHAI_GOOGLE_CLIENT_SECRET`. A device client's secret is not confidential: Google treats these as public clients, since the secret ships inside every copy of the app.
+
 ### Restoring a backup
 
 Settings → **YOUR DATA** → *Restore*, and choose the file. Or the endpoint directly:

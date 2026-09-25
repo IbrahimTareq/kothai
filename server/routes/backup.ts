@@ -20,8 +20,9 @@ import * as settings from '../data/settings.ts'
 import * as enrich from '../ai/enrich.ts'
 import { isImportInProgress, IMPORT_BUSY, runExclusiveImport } from '../data/import-lock.ts'
 import { saveBackup, writeBackup } from '../backups.ts'
+import { openDriveBackup } from '../drive.ts'
 import { extractTar } from '../lib/tar.ts'
-import { json } from '../lib/http.ts'
+import { json, readBody } from '../lib/http.ts'
 
 export async function handleBackup(_req: IncomingMessage, res: ServerResponse): Promise<void> {
   // An import holds a batch of notes in memory and writes them at the end (see
@@ -79,7 +80,37 @@ export async function handleRestore(req: IncomingMessage, res: ServerResponse): 
   if (!ran) json(res, 409, IMPORT_BUSY)
 }
 
-async function restore(req: IncomingMessage, res: ServerResponse): Promise<void> {
+// POST /api/drive/restore — the same restore, reading a backup straight from
+// Google Drive (server/drive.ts) instead of an upload: on a new machine the
+// backup is on Drive, not on the device in hand.
+export async function handleDriveRestore(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  // JSON required here too, for handleRestore's reason: without a password
+  // nothing else stops another site POSTing text/plain at this route.
+  if (!(req.headers['content-type'] || '').toLowerCase().startsWith('application/json')) {
+    return json(res, 415, { error: 'Send the request as application/json.', code: 'content_type_required' })
+  }
+  let body: unknown
+  try {
+    body = await readBody(req, 1024)
+  } catch {
+    return json(res, 400, { error: 'Could not read the request.' })
+  }
+  const id = typeof body === 'object' && body !== null && 'id' in body ? body.id : undefined
+  if (typeof id !== 'string') return json(res, 400, { error: 'Say which backup: { "id": "…" }.' })
+  const ran = await runExclusiveImport(async () => {
+    let source: Readable
+    try {
+      source = await openDriveBackup(id)
+    } catch (err) {
+      const error = err instanceof Error ? err.message : 'Could not open that backup on Google Drive.'
+      return json(res, 400, { error, code: 'drive_backup_unavailable' })
+    }
+    await restore(source, res)
+  })
+  if (!ran) json(res, 409, IMPORT_BUSY)
+}
+
+async function restore(source: AsyncIterable<Buffer>, res: ServerResponse): Promise<void> {
   // Under DATA_DIR so the staged uploads can be renamed into place, which only
   // works within one filesystem.
   const staging = path.join(DATA_DIR, `restore-${randomUUID()}`)
@@ -88,18 +119,18 @@ async function restore(req: IncomingMessage, res: ServerResponse): Promise<void>
   // reply sent first let the client's next request find both still held.
   let answer: [number, unknown]
   try {
-    answer = await restoreFrom(req, staging)
+    answer = await restoreFrom(source, staging)
   } finally {
     await rm(staging, { recursive: true, force: true })
   }
   json(res, ...answer)
 }
 
-async function restoreFrom(req: IncomingMessage, staging: string): Promise<[number, unknown]> {
+async function restoreFrom(source: AsyncIterable<Buffer>, staging: string): Promise<[number, unknown]> {
   const stagedDb = path.join(staging, 'kothai.db')
   let uploads: string | null
   try {
-    uploads = await stage(req, staging)
+    uploads = await stage(source, staging)
     checkDatabase(stagedDb)
   } catch (err) {
     const error = err instanceof Error ? err.message : 'Could not read that backup.'
@@ -112,12 +143,12 @@ async function restoreFrom(req: IncomingMessage, staging: string): Promise<[numb
   return [200, { restored, savedAs }]
 }
 
-// Unpacks the upload into `staging` and answers where its uploads went, or null
+// Unpacks the backup into `staging` and answers where its uploads went, or null
 // for a backup that carries none. The first bytes decide the format: gzip is a
 // backup from GET /api/backup; SQLite's own header is a bare database, which is
 // what that route returned before it carried uploads — people have those.
-async function stage(req: IncomingMessage, staging: string): Promise<string | null> {
-  const chunks = req[Symbol.asyncIterator]()
+async function stage(source: AsyncIterable<Buffer>, staging: string): Promise<string | null> {
+  const chunks = source[Symbol.asyncIterator]()
   let head = Buffer.alloc(0)
   while (head.length < SQLITE_MAGIC.length) {
     const next = await chunks.next()

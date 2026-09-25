@@ -265,6 +265,18 @@ export interface BackupsResponse {
   failure: { at: string; error: string } | null
 }
 
+// GET /api/drive — server/drive.ts's connection, and the backups it holds.
+export interface DriveResponse {
+  configured: boolean
+  connected: boolean
+  email: string | null
+  pending: { userCode: string; verificationUrl: string } | null
+  error: string | null
+  failure: { at: string; error: string } | null
+  backups: { id: string; name: string; size: number; at: string }[]
+  listError: string | null
+}
+
 export interface Collection {
   id: string
   createdAt: string

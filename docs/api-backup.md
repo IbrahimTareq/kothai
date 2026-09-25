@@ -30,6 +30,22 @@ Turns the daily backup on or off: `{ "enabled": false }`. Answers the same shape
 
 Downloads one kept backup. Only a name from the listing is served.
 
+## GET /api/drive
+
+Google Drive's state: `{ configured, connected, email, pending, error, failure, backups, listError }`. `pending` is `{ userCode, verificationUrl }` while a sign-in waits for the code to be entered; `backups` lists the daily backups in the **Kothai Backups** folder, newest first (`{ id, name, size, at }`).
+
+## POST /api/drive/connect
+
+Starts Google's device sign-in and answers `{ userCode, verificationUrl }`. The server waits for the code to be entered; poll `GET /api/drive` until `connected`. `409` (`drive_not_configured`) without a Google client.
+
+## DELETE /api/drive
+
+Disconnects: revokes Kothai's access and forgets the token. The backups stay on Drive. Also cancels a sign-in in progress.
+
+## POST /api/drive/restore
+
+Restores the library from a Drive backup: `{ "id": "…" }`, an id from `GET /api/drive`. The same restore as `POST /api/restore`, with the same answers; `400` (`drive_backup_unavailable`) for an id not in the folder.
+
 ## POST /api/checkpoint
 
 Flushes pending writes and truncates the WAL. Call this before external backup tools snapshot `data/`.

@@ -15,6 +15,7 @@ import type {
   TelegramState,
   UIItem,
   BackupsResponse,
+  DriveResponse,
 } from '../types'
 
 function hostOf(url: string): string {
@@ -370,12 +371,13 @@ export const API = {
     return apiGet<ModelFilesResponse>('/api/models/files')
   },
   // The backups Kothai keeps in data/backups, and the switch for the daily one.
-  async backups(): Promise<BackupsResponse> {
-    return apiGet<BackupsResponse>('/api/backups')
-  },
-  async setBackups(enabled: boolean): Promise<BackupsResponse> {
-    return apiPatch<BackupsResponse>('/api/backups', { enabled })
-  },
+  backups: (): Promise<BackupsResponse> => apiGet<BackupsResponse>('/api/backups'),
+  setBackups: (enabled: boolean): Promise<BackupsResponse> => apiPatch<BackupsResponse>('/api/backups', { enabled }),
+  // Google Drive (server/drive.ts): connect with a device code, list, restore.
+  drive: (): Promise<DriveResponse> => apiGet<DriveResponse>('/api/drive'),
+  connectDrive: (): Promise<DriveResponse['pending']> => apiPost('/api/drive/connect', {}),
+  disconnectDrive: (): Promise<DriveResponse> => apiDel<DriveResponse>('/api/drive'),
+  restoreFromDrive: (id: string): Promise<{ savedAs: string }> => apiPost('/api/drive/restore', { id }),
   async deleteModelFile(name: string): Promise<{ deleted: string; freedBytes: number }> {
     return apiDel(`/api/models/files/${encodeURIComponent(name)}`)
   },

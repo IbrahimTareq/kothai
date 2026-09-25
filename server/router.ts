@@ -17,7 +17,8 @@ import {
 import { handleImport } from './routes/import.ts'
 import { handleAvailabilityScan, handleAvailabilityRemove } from './routes/availability.ts'
 import { handleExport } from './routes/export.ts'
-import { handleBackup, handleRestore } from './routes/backup.ts'
+import { handleBackup, handleRestore, handleDriveRestore } from './routes/backup.ts'
+import { handleGetDrive, handleConnectDrive, handleDisconnectDrive } from './routes/drive.ts'
 import { handleListBackups, handleSetBackups, handleDownloadBackup } from './routes/backups.ts'
 import { handleCheckpoint } from './routes/checkpoint.ts'
 import { handleWipe } from './routes/wipe.ts'
@@ -109,6 +110,12 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       if (req.method === 'GET') return await handleListBackups(res)
       if (req.method === 'PATCH') return await handleSetBackups(req, res)
     }
+    if (p === '/api/drive') {
+      if (req.method === 'GET') return await handleGetDrive(res)
+      if (req.method === 'DELETE') return await handleDisconnectDrive(res)
+    }
+    if (req.method === 'POST' && p === '/api/drive/connect') return await handleConnectDrive(res)
+    if (req.method === 'POST' && p === '/api/drive/restore') return await handleDriveRestore(req, res)
     // A backup's FILENAME, percent-decoded here; the handler serves it only if
     // it is one the listing produced.
     if (req.method === 'GET' && /^\/api\/backups\/[^/]+$/.test(p)) {

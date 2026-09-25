@@ -13,6 +13,8 @@ All settings are optional. The defaults are what the image ships with.
 | `KOTHAI_AI_BASE_URL` | *(unset)* | Inference endpoint URL, e.g. `http://ollama:11434/v1`. Setting it sends inference there instead of running models on-device. |
 | `KOTHAI_AI_API_KEY` | *(unset)* | Bearer token for the endpoint. Not needed for Ollama. |
 | `KOTHAI_PASSWORD` | *(unset)* | Require this password before anything is served. Unset means no auth. Set it before exposing Kothai publicly. |
+| `KOTHAI_GOOGLE_CLIENT_ID` | *(unset)* | The Google OAuth client that *Google Drive* backups sign in through. Needs `KOTHAI_GOOGLE_CLIENT_SECRET` too; either alone counts as unset. See [Backups](./backups.md#google-drive). |
+| `KOTHAI_GOOGLE_CLIENT_SECRET` | *(unset)* | That client's secret. |
 | `KOTHAI_ALLOW_PRIVATE_FETCH` | *(unset)* | Set to `1` to let link previews reach private/loopback addresses. Off by default as an SSRF guard. Enable only on a trusted network where you stash intranet links. |
 
 A specific variable wins over `KOTHAI_HOME`, which wins over the default.
@@ -27,5 +29,5 @@ The default is embedding always-on (~300 MB) with language and vision on demand.
 
 | Path | Contents | Back up? |
 |---|---|---|
-| `./data` | `kothai.db`, `uploads/`, and `credentials.json` if you entered an API key in the app (plain text) | **Yes** |
+| `./data` | `kothai.db`, `uploads/`, `backups/`, and `credentials.json` if you entered an API key in the app (plain text), `google-drive.json` if you connected Google Drive | **Yes** |
 | `./models` | Model weights | No, they re-download |
