@@ -1,5 +1,5 @@
 // Canvas.tsx — the freeform board for a space (Milanote-style): member cards,
-// text notes and columns on an infinite React Flow surface, with lines drawn
+// text notes and frames on an infinite React Flow surface, with lines drawn
 // between them. Geometry and doc conversion live in ../layout/canvas; this
 // file is the React Flow shell, the node renderers, and autosave.
 //
@@ -14,6 +14,7 @@ import {
   Controls,
   Handle,
   Position,
+  NodeResizer,
   NodeResizeControl,
   ResizeControlVariant,
   ConnectionMode,
@@ -29,18 +30,7 @@ import '@xyflow/react/dist/style.css'
 import { CardInner } from './Cards'
 import { Icon } from './icons'
 import { sourceGlyph, isMediaFirst } from '../domain/source'
-import {
-  EMPTY_DOC,
-  TEXT_W,
-  COL_W,
-  COL_MIN_H,
-  reconcile,
-  toFlow,
-  fromFlow,
-  columnOf,
-  stackColumn,
-  tidy,
-} from '../layout/canvas'
+import { EMPTY_DOC, TEXT_W, FRAME_W, FRAME_H, reconcile, toFlow, fromFlow, frameAround, tidy } from '../layout/canvas'
 import type { FlowNode, FlowEdge, FlowData } from '../layout/canvas'
 import type { CanvasDoc, UIItem } from '../types'
 import { Button } from '../ui/Button'
@@ -53,9 +43,9 @@ const uid = () => Math.random().toString(36).slice(2, 10)
 interface Ctx {
   items: Map<string, UIItem>
   setData: (id: string, patch: Partial<FlowData>) => void
-  restack: (groupId: string) => void
+  reparent: () => void
 }
-const CanvasCtx = createContext<Ctx>({ items: new Map(), setData: () => {}, restack: () => {} })
+const CanvasCtx = createContext<Ctx>({ items: new Map(), setData: () => {}, reparent: () => {} })
 
 const SIDES = [
   ['top', Position.Top],
@@ -136,25 +126,22 @@ function TextNode({ id, data, selected }: NodeProps<FlowNode>) {
   )
 }
 
-function ColumnNode({ id, data, selected }: NodeProps<FlowNode>) {
-  const { setData, restack } = useContext(CanvasCtx)
+function FrameNode({ id, data, selected }: NodeProps<FlowNode>) {
+  const { setData, reparent } = useContext(CanvasCtx)
   return (
-    <div className={`cv-col${selected ? ' selected' : ''}`}>
-      <NodeResizeControl
-        position="right"
-        variant={ResizeControlVariant.Line}
-        resizeDirection="horizontal"
-        minWidth={180}
-        className="cv-resize"
-        onResizeEnd={() => restack(id)}
-      />
-      {/* The header is the drag handle (see dragHandle in toFlow); the label input opts out with nodrag. */}
-      <div className="cv-col-head">
-        <span className="cv-col-grip" aria-hidden />
+    <div className={`cv-frame${selected ? ' selected' : ''}`}>
+      {/* Children keep their absolute spots while resizing; on release, anything
+          whose centre ended up outside leaves the frame. */}
+      <NodeResizer isVisible={selected} minWidth={160} minHeight={96} onResizeEnd={reparent} />
+      {/* The title strip is the drag handle (see dragHandle in toFlow). The
+          label is nodrag and sized to its text: stretched across the strip it
+          left nothing to grab, and the frame could not be moved. */}
+      <div className="cv-frame-head">
         <input
           className="nodrag"
+          size={Math.max(6, String(data.label ?? '').length + 1)}
           value={String(data.label ?? '')}
-          placeholder="Column"
+          placeholder="Frame"
           onChange={e => setData(id, { label: e.target.value })}
         />
       </div>
@@ -164,7 +151,7 @@ function ColumnNode({ id, data, selected }: NodeProps<FlowNode>) {
 }
 
 // Stable registry (must not be recreated per render).
-const nodeTypes = { item: ItemNode, text: TextNode, group: ColumnNode }
+const nodeTypes = { item: ItemNode, text: TextNode, group: FrameNode }
 const edgeOptions = { markerEnd: { type: MarkerType.ArrowClosed, width: 12, height: 12 } }
 
 // ---- shell ----------------------------------------------------------------
@@ -248,12 +235,7 @@ function CanvasInner({ collectionId, items, doc, onSave, onExpand, onRemoveItem 
     if (loadedFor.current !== collectionId || memberKey === loadedKey.current) return
     loadedKey.current = memberKey
     const { nodes: pn, edges: pe } = latest.current
-    const before = fromFlow(pn, pe)
-    let after = reconcile(before, items)
-    if (after.nodes.length < before.nodes.length) {
-      for (const g of after.nodes.filter(n => n.type === 'group')) after = stackColumn(after, g.id)
-    }
-    const f = toFlow(after, pn)
+    const f = toFlow(reconcile(fromFlow(pn, pe), items), pn)
     setNodes(f.nodes)
     setEdges(f.edges)
     markDirty()
@@ -272,25 +254,20 @@ function CanvasInner({ collectionId, items, doc, onSave, onExpand, onRemoveItem 
   )
 
   // ---- change handlers ------------------------------------------------------
-  // Columns whose children were just measured (a card's thumbnail arrived,
-  // a note grew): restack them once the new sizes are in state.
-  const pendingStack = useRef(new Set<string>())
-  useEffect(() => {
-    if (!pendingStack.current.size) return
-    const ids = [...pendingStack.current]
-    pendingStack.current.clear()
-    applyDoc(d => ids.reduce((acc, g) => stackColumn(acc, g), d), false)
-  }, [nodes, applyDoc])
-
   const onNodesChange = useCallback(
     (changes: NodeChange<FlowNode>[]) => {
-      const settled = changes.some(c => (c.type === 'position' && c.dragging === false) || c.type === 'remove')
+      // A resize ends with `resizing: false`; without it here a resized frame
+      // or note only reached the server if some other edit happened to follow.
+      const settled = changes.some(
+        c =>
+          (c.type === 'position' && c.dragging === false) ||
+          (c.type === 'dimensions' && c.resizing === false) ||
+          c.type === 'remove',
+      )
       const removed = new Set(changes.filter(c => c.type === 'remove').map(c => c.id))
-      const measured = new Set(changes.filter(c => c.type === 'dimensions').map(c => c.id))
       setNodes(prev => {
-        // A deleted column leaves its children behind at their absolute spot.
+        // A deleted frame leaves its children behind at their absolute spot.
         const gone = new Map(prev.filter(n => n.type === 'group' && removed.has(n.id)).map(n => [n.id, n]))
-        for (const n of prev) if (measured.has(n.id) && n.parentId) pendingStack.current.add(n.parentId)
         return applyNodeChanges(changes, prev).map(n => {
           const p = n.parentId ? gone.get(n.parentId) : undefined
           return p
@@ -324,25 +301,12 @@ function CanvasInner({ collectionId, items, doc, onSave, onExpand, onRemoveItem 
     [markDirty],
   )
 
-  // Dropping into or out of a column: containment is recomputed by toFlow, so
-  // this only has to restack every column touched (old parent and new).
-  const onNodeDragStop = useCallback(
-    (_e: unknown, _n: FlowNode, dragged: FlowNode[]) => {
-      const touched = new Set(dragged.map(n => n.parentId).filter((x): x is string => !!x))
-      applyDoc(d => {
-        for (const n of dragged) {
-          const g = columnOf(d, n.id)
-          if (g) touched.add(g)
-        }
-        let out = d
-        for (const g of touched) out = stackColumn(out, g)
-        return out
-      })
-    },
-    [applyDoc],
-  )
+  // Dropping into or out of a frame: toFlow recomputes membership from
+  // geometry, so a round trip through the doc is the whole job. Absolute
+  // positions don't change, so there is nothing new to save.
+  const reparent = useCallback(() => applyDoc(d => d, false), [applyDoc])
 
-  // Backspace/Delete: notes, columns and lines go; a column's children stay;
+  // Backspace/Delete: notes, frames and lines go; a frame's children stay;
   // a selected card is removed from the space (reconcile then drops its node).
   const onBeforeDelete: OnBeforeDelete<FlowNode, FlowEdge> = useCallback(
     async ({ nodes: del, edges: delEdges }) => {
@@ -390,22 +354,21 @@ function CanvasInner({ collectionId, items, doc, onSave, onExpand, onRemoveItem 
     [markDirty],
   )
 
-  const addColumn = useCallback(() => {
-    const at = centre()
-    setNodes(prev => [
-      {
-        id: `n:${uid()}`,
-        type: 'group',
-        position: { x: at.x - COL_W / 2, y: at.y - COL_MIN_H / 2 },
-        width: COL_W,
-        height: COL_MIN_H,
-        dragHandle: '.cv-col-head',
-        data: { kind: 'group', label: '', h: COL_MIN_H },
-      },
-      ...prev, // groups stay ahead of their (future) children
-    ])
-    markDirty()
-  }, [centre, markDirty])
+  // Wraps the selection when there is one, else drops an empty frame at the
+  // viewport centre. Either way membership falls out of geometry in toFlow.
+  const addFrame = useCallback(() => {
+    applyDoc(d => {
+      const selected = latest.current.nodes.filter(n => n.selected).map(n => n.id)
+      const at = centre()
+      const rect = frameAround(d, selected) ?? {
+        x: at.x - FRAME_W / 2,
+        y: at.y - FRAME_H / 2,
+        width: FRAME_W,
+        height: FRAME_H,
+      }
+      return { ...d, nodes: [{ id: `n:${uid()}`, type: 'group', ...rect }, ...d.nodes] }
+    })
+  }, [applyDoc, centre])
 
   const setData = useCallback(
     (id: string, patch: Partial<FlowData>) => {
@@ -414,8 +377,7 @@ function CanvasInner({ collectionId, items, doc, onSave, onExpand, onRemoveItem 
     },
     [markDirty],
   )
-  const restack = useCallback((gid: string) => applyDoc(d => stackColumn(d, gid)), [applyDoc])
-  const ctx = useMemo<Ctx>(() => ({ items: itemsById, setData, restack }), [itemsById, setData, restack])
+  const ctx = useMemo<Ctx>(() => ({ items: itemsById, setData, reparent }), [itemsById, setData, reparent])
 
   const onDoubleClick = (e: MouseEvent) => {
     if (!(e.target as HTMLElement).classList.contains('react-flow__pane')) return
@@ -452,8 +414,8 @@ function CanvasInner({ collectionId, items, doc, onSave, onExpand, onRemoveItem 
             <Button size="xs" tone="ghost" onClick={() => addText(centre())}>
               + Note
             </Button>
-            <Button size="xs" tone="ghost" onClick={addColumn}>
-              + Column
+            <Button size="xs" tone="ghost" onClick={addFrame}>
+              + Frame
             </Button>
           </div>
           <div className="cv-cmds">
@@ -477,7 +439,7 @@ function CanvasInner({ collectionId, items, doc, onSave, onExpand, onRemoveItem 
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
-            onNodeDragStop={onNodeDragStop}
+            onNodeDragStop={reparent}
             onNodeDoubleClick={onNodeDoubleClick}
             onBeforeDelete={onBeforeDelete}
             connectionMode={ConnectionMode.Loose}

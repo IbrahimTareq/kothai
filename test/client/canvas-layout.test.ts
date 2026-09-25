@@ -4,18 +4,16 @@ import {
   flowPack,
   bounds,
   reconcile,
-  columnOf,
-  childrenOf,
-  stackColumn,
+  frameOf,
+  frameAround,
   tidy,
   toFlow,
   fromFlow,
   ITEM_W,
   DEFAULT_H,
   GAP,
-  COL_HEAD,
-  COL_PAD,
-  COL_MIN_H,
+  FRAME_HEAD,
+  FRAME_PAD,
 } from '../../client/layout/canvas.ts'
 import type { FlowEdge, FlowNode } from '../../client/layout/canvas.ts'
 import type { CanvasDoc } from '../../client/types.ts'
@@ -110,7 +108,7 @@ test('reconcile places new members in a row below existing content, keeping old 
   assert.deepEqual([b.x, b.y], [40, 10 + 100 + GAP])
 })
 
-const col = (id: string, x: number, y: number, w = 260, h = 400) => ({
+const frame = (id: string, x: number, y: number, w = 480, h = 320) => ({
   id,
   type: 'group' as const,
   label: id,
@@ -129,54 +127,46 @@ const card = (id: string, x: number, y: number, h = 100) => ({
   height: h,
 })
 
-test('columnOf: a node belongs to the smallest column containing its centre', () => {
+test('frameOf: a node belongs to the smallest frame containing its centre', () => {
   const doc = {
     nodes: [
-      col('big', 0, 0, 1000, 1000),
-      col('small', 100, 100, 300, 300),
+      frame('big', 0, 0, 1000, 1000),
+      frame('small', 100, 100, 300, 300),
       card('a', 150, 150),
       card('b', 700, 700),
       card('c', 2000, 2000),
     ],
     edges: [],
   }
-  assert.equal(columnOf(doc, 'a'), 'small')
-  assert.equal(columnOf(doc, 'b'), 'big')
-  assert.equal(columnOf(doc, 'c'), null)
-  assert.equal(columnOf(doc, 'small'), null) // columns never nest
+  assert.equal(frameOf(doc, 'a'), 'small')
+  assert.equal(frameOf(doc, 'b'), 'big')
+  assert.equal(frameOf(doc, 'c'), null)
+  assert.equal(frameOf(doc, 'small'), null) // frames never nest
 })
 
-test('stackColumn stacks children top to bottom, sets their width and grows the column', () => {
-  const doc = {
-    nodes: [col('g', 0, 0, 260, 400), card('late', 20, 300, 80), card('early', 20, 60, 100), card('out', 900, 900)],
-    edges: [],
-  }
-  const d = stackColumn(doc, 'g')
-  const g = need(d.nodes.find(n => n.id === 'g'))
-  const early = need(d.nodes.find(n => n.id === 'early'))
-  const late = need(d.nodes.find(n => n.id === 'late'))
-  assert.deepEqual([early.x, early.y, early.width], [COL_PAD, COL_HEAD + COL_PAD, 260 - 2 * COL_PAD])
-  assert.deepEqual([late.x, late.y], [COL_PAD, COL_HEAD + COL_PAD + 100 + COL_PAD])
-  assert.equal(g.height, COL_HEAD + COL_PAD + 100 + COL_PAD + 80 + COL_PAD)
-  assert.deepEqual(
-    childrenOf(d, 'g').map(n => n.id),
-    ['late', 'early'],
-  )
-  assert.deepEqual([need(d.nodes.find(n => n.id === 'out')).x], [900]) // untouched
+test('frameAround wraps the selection with padding and room for the title strip', () => {
+  const doc = { nodes: [card('a', 100, 200), card('b', 400, 500, 60), card('out', 2000, 2000)], edges: [] }
+  assert.deepEqual(frameAround(doc, ['a', 'b']), {
+    x: 100 - FRAME_PAD,
+    y: 200 - FRAME_PAD - FRAME_HEAD,
+    width: 400 + 220 - 100 + 2 * FRAME_PAD,
+    height: 500 + 60 - 200 + 2 * FRAME_PAD + FRAME_HEAD,
+  })
 })
 
-test('stackColumn keeps an empty column at its minimum height', () => {
-  const d = stackColumn({ nodes: [col('g', 0, 0, 260, 500)], edges: [] }, 'g')
-  assert.equal(d.nodes[0].height, COL_MIN_H)
+test('frameAround ignores selected frames, and has nothing to wrap without other nodes', () => {
+  const doc = { nodes: [frame('f', -500, -500, 2000, 2000), card('a', 0, 0)], edges: [] }
+  assert.deepEqual(frameAround(doc, ['f', 'a']), frameAround(doc, ['a']))
+  assert.equal(frameAround(doc, ['f']), null)
 })
 
-test('tidy re-packs top-level nodes in reading order and carries column children along', () => {
+test('tidy re-packs top-level nodes in reading order and carries frame children along', () => {
   const doc = {
     nodes: [
       card('second', 600, 5), // same visual row as first, further right
       card('first', 0, 0),
-      col('g', 0, 500, 260, 200),
-      card('kid', COL_PAD, 500 + COL_HEAD + COL_PAD), // inside g
+      frame('g', 0, 500, 480, 320),
+      card('kid', 40, 600), // inside g
     ],
     edges: [],
   }
@@ -188,27 +178,34 @@ test('tidy re-packs top-level nodes in reading order and carries column children
   assert.deepEqual(at('first'), [0, 0])
   assert.deepEqual(at('second'), [244, 0])
   assert.deepEqual(at('g'), [488, 0])
-  // the child moved by the same delta as its column and is still inside it
-  assert.deepEqual(at('kid'), [488 + COL_PAD, COL_HEAD + COL_PAD])
-  assert.equal(columnOf(d, 'kid'), 'g')
+  // the child moved by the same delta as its frame and is still inside it
+  assert.deepEqual(at('kid'), [488 + 40, 100])
+  assert.equal(frameOf(d, 'kid'), 'g')
 })
 
-test('toFlow gives column children a parentId and relative position, groups first', () => {
+test('toFlow gives frame children a parentId and relative position, frames first', () => {
   const doc = {
-    nodes: [card('kid', 100 + COL_PAD, 200 + COL_HEAD + COL_PAD), col('g', 100, 200), card('loose', 900, 900)],
+    nodes: [card('kid', 130, 260), frame('g', 100, 200), card('loose', 900, 900)],
     edges: [{ id: 'e1', fromNode: 'kid', toNode: 'loose', fromSide: 'right' as const, toSide: 'left' as const }],
   }
   const f = toFlow(doc)
   assert.equal(f.nodes[0].id, 'g')
   const kid = need(f.nodes.find(n => n.id === 'kid'))
   assert.equal(kid.parentId, 'g')
-  assert.deepEqual(kid.position, { x: COL_PAD, y: COL_HEAD + COL_PAD })
+  assert.deepEqual(kid.position, { x: 30, y: 60 })
   assert.equal(kid.width, 220)
   assert.deepEqual(kid.data, { kind: 'item', itemId: 'kid', h: 100 })
   const g = need(f.nodes.find(n => n.id === 'g'))
-  assert.deepEqual([g.width, g.height, g.dragHandle], [260, 400, '.cv-col-head'])
+  assert.deepEqual([g.width, g.height, g.dragHandle], [480, 320, '.cv-frame-head'])
   assert.equal(need(f.nodes.find(n => n.id === 'loose')).parentId, undefined)
   assert.deepEqual(f.edges, [{ id: 'e1', source: 'kid', target: 'loose', sourceHandle: 'right', targetHandle: 'left' }])
+})
+
+test('toFlow drops a child from a frame shrunk until its centre is outside', () => {
+  const doc = { nodes: [frame('g', 0, 0, 200, 200), card('kid', 150, 150)], edges: [] }
+  const kid = need(toFlow(doc).nodes.find(n => n.id === 'kid'))
+  assert.equal(kid.parentId, undefined)
+  assert.deepEqual(kid.position, { x: 150, y: 150 })
 })
 
 test('toFlow keeps selection and measurements from the previous flow nodes', () => {
@@ -259,9 +256,9 @@ test('fromFlow restores absolute coordinates, measured heights and edge sides', 
   assert.deepEqual(d.edges, [{ id: 'e1', fromNode: 'item:a', toNode: 'n1', fromSide: 'bottom', toSide: undefined }])
 })
 
-test('toFlow then fromFlow round-trips a doc with a column', () => {
+test('toFlow then fromFlow round-trips a doc with a frame', () => {
   const doc = {
-    nodes: [col('g', 100, 200), card('kid', 100 + COL_PAD, 200 + COL_HEAD + COL_PAD), card('loose', 900, 900)],
+    nodes: [frame('g', 100, 200), card('kid', 237, 311), card('loose', 900, 900)],
     edges: [{ id: 'e1', fromNode: 'kid', toNode: 'loose' }],
   }
   const f = toFlow(doc)

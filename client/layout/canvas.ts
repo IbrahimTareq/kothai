@@ -1,17 +1,17 @@
 // canvas.ts — pure geometry for the space canvas: row packing, membership
-// reconciliation, column containment and stacking, and the conversion between
-// the persisted JSON-Canvas-style doc (absolute coordinates) and React Flow's
-// node list (children positioned relative to their column). No React, no DOM;
+// reconciliation, frame containment, and the conversion between the persisted
+// JSON-Canvas-style doc (absolute coordinates) and React Flow's node list
+// (children positioned relative to their frame). No React, no DOM;
 // the only import from @xyflow/react is type-only so node --test can load it.
 import type { Node, Edge } from '@xyflow/react'
 import type { CanvasDoc, CanvasNode, CanvasSide } from '../types.ts'
 
 export const ITEM_W = 220 // member cards are a fixed width
 export const TEXT_W = 220 // default text note width (resizable)
-export const COL_W = 260 // default column width (resizable)
-export const COL_MIN_H = 120
-export const COL_HEAD = 36 // column header height; must match .cv-col-head in canvas.css
-export const COL_PAD = 12
+export const FRAME_W = 480 // default size of an empty frame (resizable)
+export const FRAME_H = 320
+export const FRAME_HEAD = 36 // frame title strip height; must match .cv-frame-head in canvas.css
+export const FRAME_PAD = 24 // margin a new frame leaves round the selection it wraps
 export const GAP = 24
 const PACK_MAX_W = 1200
 export const DEFAULT_H = 160 // assumed card height until React Flow has measured it
@@ -92,7 +92,9 @@ export function reconcile(doc: CanvasDoc, items: { id: string }[]): CanvasDoc {
   return { nodes, edges }
 }
 
-// --- columns ---------------------------------------------------------------
+// --- frames ------------------------------------------------------------------
+// A frame is a JSON Canvas `group`: a labelled rectangle whose contents are
+// whatever sits inside it. Contents keep their own positions and sizes.
 
 function inside(n: CanvasNode, g: CanvasNode): boolean {
   const cx = n.x + n.width / 2
@@ -100,9 +102,9 @@ function inside(n: CanvasNode, g: CanvasNode): boolean {
   return cx >= g.x && cx <= g.x + g.width && cy >= g.y && cy <= g.y + g.height
 }
 
-// The column a node sits in: the smallest group whose rectangle contains the
-// node's centre, or null. Groups never nest, so a group is never a child.
-export function columnOf(doc: CanvasDoc, nodeId: string): string | null {
+// The frame a node sits in: the smallest group whose rectangle contains the
+// node's centre, or null. Frames never nest, so a frame is never a child.
+export function frameOf(doc: CanvasDoc, nodeId: string): string | null {
   const n = doc.nodes.find(x => x.id === nodeId)
   if (!n || n.type === 'group') return null
   let best: CanvasNode | null = null
@@ -113,31 +115,29 @@ export function columnOf(doc: CanvasDoc, nodeId: string): string | null {
   return best ? best.id : null
 }
 
-export function childrenOf(doc: CanvasDoc, groupId: string): CanvasNode[] {
-  return doc.nodes.filter(n => n.type !== 'group' && columnOf(doc, n.id) === groupId)
-}
-
-// Lays a column's children out vertically in their current top-to-bottom
-// order, full column width minus padding, and grows the column to fit.
-export function stackColumn(doc: CanvasDoc, groupId: string): CanvasDoc {
-  const g = doc.nodes.find(n => n.id === groupId)
-  if (g?.type !== 'group') return doc
-  const kids = childrenOf(doc, groupId).sort((a, b) => a.y - b.y || a.x - b.x)
-  const moved = new Map<string, CanvasNode>()
-  let y = g.y + COL_HEAD + COL_PAD
-  for (const k of kids) {
-    moved.set(k.id, { ...k, x: g.x + COL_PAD, y, width: g.width - 2 * COL_PAD })
-    y += k.height + COL_PAD
+// The rectangle for a new frame wrapping `ids`, with room above for its title
+// strip; selected frames are skipped since frames never nest. Null when
+// nothing wrappable is selected.
+export function frameAround(
+  doc: CanvasDoc,
+  ids: string[],
+): { x: number; y: number; width: number; height: number } | null {
+  const want = new Set(ids)
+  const b = bounds(doc.nodes.filter(n => want.has(n.id) && n.type !== 'group'))
+  if (!b) return null
+  return {
+    x: b.minX - FRAME_PAD,
+    y: b.minY - FRAME_PAD - FRAME_HEAD,
+    width: b.maxX - b.minX + 2 * FRAME_PAD,
+    height: b.maxY - b.minY + 2 * FRAME_PAD + FRAME_HEAD,
   }
-  const height = Math.max(COL_MIN_H, y - g.y)
-  return { ...doc, nodes: doc.nodes.map(n => (n.id === groupId ? { ...n, height } : (moved.get(n.id) ?? n))) }
 }
 
-// Re-packs every top-level node (anything not inside a column) in reading
+// Re-packs every top-level node (anything not inside a frame) in reading
 // order — rows of ~50px, then left to right — from the content's top-left.
-// Column contents are not re-laid; they move with their column.
+// Frame contents are not re-laid; they move with their frame.
 export function tidy(doc: CanvasDoc): CanvasDoc {
-  const parentOf = new Map<string, string | null>(doc.nodes.map(n => [n.id, columnOf(doc, n.id)]))
+  const parentOf = new Map<string, string | null>(doc.nodes.map(n => [n.id, frameOf(doc, n.id)]))
   const top = doc.nodes.filter(n => parentOf.get(n.id) === null)
   const row = (n: CanvasNode) => Math.round(n.y / 50)
   const ordered = [...top].sort((a, b) => row(a) - row(b) || a.x - b.x)
@@ -175,8 +175,10 @@ function dataOf(n: CanvasNode): FlowData {
   return { kind: 'group', label: n.label ?? '', h: n.height }
 }
 
-// Doc → React Flow nodes. Children of a column carry `parentId` and a position
-// relative to it so dragging the column moves its contents. Groups come first
+// Doc → React Flow nodes. Children of a frame carry `parentId` and a position
+// relative to it so dragging the frame moves its contents. Membership is
+// recomputed from geometry on every call, so a drop, a drag out or a shrink
+// that leaves a child's centre outside is all the re-parenting there is. Groups come first
 // (React Flow wants parents before children). `prev` lets a rebuild keep each
 // node's selection and measured size, so a reconcile never flashes or deselects.
 export function toFlow(doc: CanvasDoc, prev: FlowNode[] = []): { nodes: FlowNode[]; edges: FlowEdge[] } {
@@ -184,7 +186,7 @@ export function toFlow(doc: CanvasDoc, prev: FlowNode[] = []): { nodes: FlowNode
   const old = new Map(prev.map(n => [n.id, n]))
   const groupsFirst = [...doc.nodes].sort((a, b) => Number(b.type === 'group') - Number(a.type === 'group'))
   const nodes: FlowNode[] = groupsFirst.map(n => {
-    const parentId = columnOf(doc, n.id)
+    const parentId = frameOf(doc, n.id)
     const p = parentId ? byId.get(parentId) : undefined
     const o = old.get(n.id)
     return {
@@ -194,7 +196,7 @@ export function toFlow(doc: CanvasDoc, prev: FlowNode[] = []): { nodes: FlowNode
       position: p ? { x: n.x - p.x, y: n.y - p.y } : { x: n.x, y: n.y },
       width: n.width,
       ...(parentId ? { parentId } : {}),
-      ...(n.type === 'group' ? { height: n.height, dragHandle: '.cv-col-head' } : {}),
+      ...(n.type === 'group' ? { height: n.height, dragHandle: '.cv-frame-head' } : {}),
       ...(o?.selected ? { selected: true } : {}),
       ...(o?.measured ? { measured: o.measured } : {}),
     }
@@ -214,7 +216,7 @@ const sideOf = (h: string | null | undefined): CanvasSide | undefined =>
   SIDES.includes(h as CanvasSide) ? (h as CanvasSide) : undefined
 
 // React Flow nodes → doc. Positions become absolute; a node's height is what
-// React Flow measured (a column's is the one we set), width is the node's own.
+// React Flow measured (a frame's is the one it was resized to), width is the node's own.
 export function fromFlow(nodes: FlowNode[], edges: FlowEdge[]): CanvasDoc {
   const byId = new Map(nodes.map(n => [n.id, n]))
   const abs = (n: FlowNode): { x: number; y: number } => {

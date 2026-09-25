@@ -274,7 +274,7 @@ export interface Collection {
 // ── Space canvas ────────────────────────────────────────────────────────────
 // JSON Canvas (jsoncanvas.org) shape with one extension: an `item` node is a
 // member card. Coordinates are absolute canvas pixels; a node sits inside a
-// column (`group`) when its centre lies inside the column's rectangle.
+// frame (`group`) when its centre lies inside the frame's rectangle.
 export type CanvasSide = 'top' | 'right' | 'bottom' | 'left'
 interface CanvasNodeBase {
   id: string
