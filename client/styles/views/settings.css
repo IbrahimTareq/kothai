@@ -224,6 +224,8 @@
      trough spans, and its pills split what it spans. */
   .settings-row-action .seg { width: 100%; }
   .settings-row-action .seg-btn { flex: 1; }
+  .settings-row-action .telegram-connect { flex-direction: column; align-items: stretch; }
+  .settings-row-action .telegram-connect .wizard-input { width: 100%; }
 }
 
 .row-result {
@@ -405,10 +407,29 @@
 .conn-err{margin-top:var(--space-10);font-size:var(--text-xs);line-height:var(--leading-normal);
   letter-spacing:var(--tracking-tight);color:var(--ink)}
 
-/* The Telegram pairing code: sized to read off the screen at a glance and
-   type into a phone's chat with the bot, rather than sitting at body size
-   like the rest of the row. */
-.telegram-pairing-code{display:inline-block;font-size:var(--text-2xl);letter-spacing:var(--tracking-mono);
-  padding:var(--space-8) var(--space-12);background:var(--panel-3);border-radius:var(--radius-md);color:var(--ink)}
-
+/* Telegram. The token field and Connect sit side by side, like a single
+   control — stacked, as the row's action column did by default, the button
+   read as belonging to the row below. */
+.telegram-connect,
+.telegram-actions{display:flex;gap:var(--space-8);align-items:center}
+.telegram-connect .wizard-input{width:15rem}
+/* Pairing is the one thing left to do, so it sits in its own inset panel
+   under the row instead of trailing the description as more grey text. */
+.telegram-pair{display:flex;flex-direction:column;gap:var(--space-12);padding:var(--space-14) var(--space-16);
+  background:var(--panel-2);border-radius:var(--radius-md)}
+.telegram-pair-step{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-10)}
+.telegram-pair-step .settings-row-desc{margin:0}
+/* Sized to read off the screen and type into a phone's chat with the bot,
+   rather than sitting at body size like the rest of the row. */
+.telegram-pairing-code{font-size:var(--text-lg);letter-spacing:var(--tracking-mono);color:var(--ink);
+  padding:var(--space-2) var(--space-8);background:var(--panel-3);border-radius:var(--radius-sm)}
+.telegram-waiting{display:flex;align-items:center;justify-content:space-between;gap:var(--space-8);
+  padding-top:var(--space-10);border-top:1px solid var(--line);color:var(--ink-mute);
+  font-size:var(--text-xs);letter-spacing:var(--tracking-tight)}
+.telegram-waiting > span,
+.telegram-live{display:inline-flex;align-items:center;gap:var(--space-8)}
+.telegram-waiting > span::before,
+.telegram-live::before{content:"";width:.5em;height:.5em;border-radius:var(--radius-circle);flex-shrink:0}
+.telegram-waiting > span::before{background:var(--ink-mute);animation:slides-dot 1.4s ease-in-out infinite}
+.telegram-live::before{background:var(--ok)}
 .capture-token-actions{display:flex;gap:var(--space-8)}

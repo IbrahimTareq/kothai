@@ -48,6 +48,24 @@ test('attack: an unbound bot ignores a first message that is not the pairing cod
   assert.deepEqual(d.sent, [], 'a reply would confirm the bot exists to whoever is guessing')
 })
 
+// Settings' t.me link carries the code as the start payload, which Telegram
+// delivers as "/start CODE" once the owner taps Start.
+test('an unbound bot binds to a chat that sends /start with the pairing code', async () => {
+  const d = deps()
+  await ingestUpdate(msg(99, { text: '/start secret-code' }), { boundChatId: null, pairingCode: 'secret-code' }, d.io)
+  assert.deepEqual(d.bound, [99])
+  assert.equal(d.sent.length, 1)
+})
+
+test('attack: /start with a wrong code, or with none, binds nothing and gets no reply', async () => {
+  for (const text of ['/start wrong-code', '/start', '/start ', '/startsecret-code']) {
+    const d = deps()
+    await ingestUpdate(msg(1234, { text }), { boundChatId: null, pairingCode: 'secret-code' }, d.io)
+    assert.deepEqual(d.bound, [], `${JSON.stringify(text)} must not claim the bot`)
+    assert.deepEqual(d.sent, [], `${JSON.stringify(text)} must get the same silence as a wrong code`)
+  }
+})
+
 test('an unbound bot with no pairing code set cannot be claimed by anyone', async () => {
   const d = deps()
   await ingestUpdate(msg(99, { text: 'anything' }), { boundChatId: null, pairingCode: null }, d.io)

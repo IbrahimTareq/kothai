@@ -41,8 +41,14 @@ export async function ingestUpdate(
   //
   // A wrong code is dropped in silence for the same reason a wrong chat is:
   // an error would confirm the bot is live to whoever is guessing.
+  //
+  // `/start CODE` is the same code arriving by Settings' t.me deep link, which
+  // Telegram turns into that message when the owner taps Start — pairing in
+  // one tap instead of copying six characters between two screens. The code
+  // must still match exactly; a bare `/start` binds nothing.
   if (state.boundChatId === null) {
-    if (!state.pairingCode || text !== state.pairingCode) return
+    const offered = text.startsWith('/start ') ? text.slice('/start '.length).trim() : text
+    if (!state.pairingCode || offered !== state.pairingCode) return
     io.bind(chatId)
     await io.sendMessage(chatId, '🔗 Connected. Any link you send here is saved to Kothai.')
     return

@@ -4,7 +4,8 @@
 import { randomBytes } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { readTelegram, writeTelegram, clearTelegram, type TelegramConfig } from '../data/telegram.ts'
-import { isCaptureStopped } from '../telegram/index.ts'
+import { isCaptureStopped, startTelegramCapture } from '../telegram/index.ts'
+import { getMe } from '../telegram/api.ts'
 import { json, readBody } from '../lib/http.ts'
 
 // No I/O/0/1 — a code shown on a settings screen has to survive being read
@@ -32,6 +33,7 @@ function stateOf(config: TelegramConfig | null) {
   // chat" indefinitely after capture has actually died.
   return {
     connected: Boolean(config?.botToken) && !isCaptureStopped(),
+    botUsername: config?.botUsername ?? null,
     boundChatId: config?.boundChatId ?? null,
     pairingCode: config?.pairingCode ?? null,
   }
@@ -49,14 +51,25 @@ export async function handleSaveTelegram(req: IncomingMessage, res: ServerRespon
   const fields = isRecord(body) ? body : {}
   const botToken = typeof fields.botToken === 'string' ? fields.botToken.trim() : ''
   if (!botToken) return json(res, 400, { error: 'a bot token is required' })
+  const me = await getMe(botToken)
+  if (!me.ok) return json(res, 400, { error: me.error })
   // A different bot has never spoken to anyone, so carrying a binding forward
   // would point at a chat that has never messaged it — the binding resets and
   // a fresh pairing code is issued for the owner to claim it with.
-  const config = writeTelegram({ botToken, boundChatId: null, pairingCode: generatePairingCode() })
-  json(res, 200, { ...stateOf(config), restartRequired: true })
+  const config = writeTelegram({
+    botToken,
+    botUsername: me.username,
+    boundChatId: null,
+    pairingCode: generatePairingCode(),
+  })
+  startTelegramCapture()
+  json(res, 200, stateOf(config))
 }
 
 export function handleClearTelegram(res: ServerResponse): void {
   clearTelegram()
-  json(res, 200, { ...stateOf(null), restartRequired: true })
+  // Stops the running loop, which holds its own copy of the token: clearing
+  // the file alone left the bot saving until the next restart.
+  startTelegramCapture()
+  json(res, 200, stateOf(null))
 }

@@ -8,7 +8,7 @@
 // "captures sometimes arrive twice".
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { getUpdates, sendMessage } from '../../../server/telegram/api.ts'
+import { getMe, getUpdates, sendMessage } from '../../../server/telegram/api.ts'
 
 function stubFetch(handler: (url: string, init?: RequestInit) => Response | Promise<Response>) {
   const original = globalThis.fetch
@@ -67,4 +67,40 @@ test('sendMessage: POSTs the chat id and text', async t => {
 test('sendMessage: a rejected fetch does not throw', async t => {
   t.after(stubFetch(() => Promise.reject(new Error('network down'))))
   await assert.doesNotReject(sendMessage('TOKEN', 42, 'saved'))
+})
+
+test('getUpdates: passes the abort signal through, so a reconnect can end the long poll in flight', async t => {
+  let seen: AbortSignal | null | undefined
+  t.after(
+    stubFetch((_url, init) => {
+      seen = init?.signal
+      return jsonRes({ ok: true, result: [] })
+    }),
+  )
+  const controller = new AbortController()
+  await getUpdates('TOKEN', 0, 30, controller.signal)
+  assert.equal(seen, controller.signal)
+})
+
+test('getMe: a valid token answers with the bot username', async t => {
+  let seenUrl = ''
+  t.after(
+    stubFetch(url => {
+      seenUrl = url
+      return jsonRes({ ok: true, result: { id: 1, is_bot: true, username: 'kothai_bot' } })
+    }),
+  )
+  assert.deepEqual(await getMe('TOKEN'), { ok: true, username: 'kothai_bot' })
+  assert.equal(seenUrl, 'https://api.telegram.org/botTOKEN/getMe')
+})
+
+test('getMe: a token Telegram rejects is an error the person pasting it can read', async t => {
+  t.after(stubFetch(() => jsonRes({ ok: false, error_code: 401, description: 'Unauthorized' }, 401)))
+  assert.deepEqual(await getMe('TOKEN'), { ok: false, error: 'Telegram did not recognise that token.' })
+})
+
+test('getMe: an unreachable Telegram is an error, not a throw', async t => {
+  t.after(stubFetch(() => Promise.reject(new Error('network down'))))
+  const res = await getMe('TOKEN')
+  assert.equal(res.ok, false)
 })

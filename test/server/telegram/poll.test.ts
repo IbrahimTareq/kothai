@@ -3,7 +3,7 @@
 // persisted — a duplicate capture is recoverable by hand, a lost one is not.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { pollOnce, nextBackoff } from '../../../server/telegram/poll.ts'
+import { pollOnce, nextBackoff, startPolling } from '../../../server/telegram/poll.ts'
 import type { TelegramUpdate } from '../../../server/telegram/api.ts'
 
 const update = (id: number): TelegramUpdate => ({
@@ -152,4 +152,22 @@ test('nextBackoff: a new stuck offset restarts the ladder rather than inheriting
 test('nextBackoff: a successful pass resets the ladder entirely', () => {
   const next = nextBackoff({ failures: 4, stuckAt: 7 }, { offset: 8, conflict: false, failed: false })
   assert.deepEqual(next, { state: { failures: 0, stuckAt: null }, delay: 0 })
+})
+
+// A reconnect from Settings stops the old loop and starts a new one on the
+// same token. If the old loop's long poll ran on, the two would collide and
+// Telegram would stop one of them with a 409.
+test('startPolling: stop aborts the pass in flight and schedules no further pass', async () => {
+  let passes = 0
+  let signal: AbortSignal | undefined
+  const stop = startPolling((_giveUp, s) => {
+    passes++
+    signal = s
+    return new Promise((_resolve, reject) => s.addEventListener('abort', () => reject(new Error('aborted'))))
+  })
+  assert.equal(passes, 1)
+  stop()
+  assert.equal(signal?.aborted, true)
+  await new Promise(r => setTimeout(r, 1_100))
+  assert.equal(passes, 1, 'an aborted pass must not back off and retry — the first backoff tier is 1s')
 })

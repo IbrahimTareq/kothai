@@ -74,19 +74,25 @@ export function nextBackoff(state: BackoffState, result: PollResult): { state: B
   }
 }
 
-// Started at boot when a token exists. Runs until the process ends or Telegram
-// reports a conflict.
-export function startPolling(run: (giveUp: boolean) => Promise<PollResult>): void {
+// Started at boot when a token exists, and again whenever Settings saves or
+// clears one. Runs until the returned stop is called or Telegram reports a
+// conflict. Stop aborts the long poll in flight rather than letting it run
+// out its timeout: a new loop on the same token would otherwise collide with
+// it — the 409 below — and stop itself before it had polled once.
+export function startPolling(run: (giveUp: boolean, signal: AbortSignal) => Promise<PollResult>): () => void {
+  const controller = new AbortController()
+  let timer: NodeJS.Timeout | undefined
   let state: BackoffState = { failures: 0, stuckAt: null }
   const tick = async () => {
     // Past the top of BACKOFF_MS means this specific update has already been
     // retried at every tier — it has had its full chance to recover on its
     // own before the next pass gives up on it.
     const giveUp = state.failures >= BACKOFF_MS.length
-    const result = await run(giveUp).catch(e => {
-      console.error('[telegram] poll pass threw:', e)
+    const result = await run(giveUp, controller.signal).catch(e => {
+      if (!controller.signal.aborted) console.error('[telegram] poll pass threw:', e)
       return { conflict: false, failed: true, offset: state.stuckAt ?? 0 }
     })
+    if (controller.signal.aborted) return
     if (result.conflict) {
       // Another poller (a second container, or a webhook) owns this bot. Two
       // processes racing for every message is worse than none, and no amount
@@ -100,7 +106,11 @@ export function startPolling(run: (giveUp: boolean) => Promise<PollResult>): voi
     if (!result.failed && state.failures > 0) console.log('[telegram] polling recovered')
     const next = nextBackoff(state, result)
     state = next.state
-    setTimeout(tick, next.delay).unref()
+    timer = setTimeout(tick, next.delay).unref()
   }
   void tick()
+  return () => {
+    controller.abort()
+    clearTimeout(timer)
+  }
 }

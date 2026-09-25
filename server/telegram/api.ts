@@ -71,8 +71,18 @@ async function fetchOrNull(url: string, init?: RequestInit): Promise<Response | 
 // 409 is singled out because it means something the caller must not retry: a
 // second poller (another container, or a webhook) is already consuming this
 // bot's updates. Retrying makes two processes fight over every message.
-export async function getUpdates(token: string, offset: number, timeoutSec = 30): Promise<UpdatesResult> {
-  const res = await fetch(`${API}/bot${token}/getUpdates?offset=${offset}&timeout=${timeoutSec}`)
+//
+// `signal` is how a reconnect from Settings ends the old loop: the long poll
+// in flight holds its connection for up to `timeoutSec`, and the new loop's
+// first getUpdates on the same token would otherwise collide with it and
+// earn a 409.
+export async function getUpdates(
+  token: string,
+  offset: number,
+  timeoutSec = 30,
+  signal?: AbortSignal,
+): Promise<UpdatesResult> {
+  const res = await fetch(`${API}/bot${token}/getUpdates?offset=${offset}&timeout=${timeoutSec}`, { signal })
   // Read once, whatever the status: a 409's body still carries `description`,
   // and re-reading a Response body a second time throws.
   const body = (await res.json().catch(() => null)) as {
@@ -87,6 +97,27 @@ export async function getUpdates(token: string, offset: number, timeoutSec = 30)
   }
   console.error(`[telegram] getUpdates failed: ${res.status}${body?.description ? ` — ${body.description}` : ''}`)
   return { ok: false, conflict: false }
+}
+
+// Asked once, when Settings saves a token. A mistyped or revoked token used to
+// be accepted without a word: Settings showed a pairing code, the poll loop
+// logged a 401 into the container, and the code sent to the bot was met with
+// the silence ingest.ts gives a wrong code. The username it answers with is
+// what Settings needs to name the bot and link straight to its chat.
+export async function getMe(token: string): Promise<{ ok: true; username: string } | { ok: false; error: string }> {
+  const res = await fetchOrNull(`${API}/bot${token}/getMe`)
+  if (!res) return { ok: false, error: 'Could not reach Telegram — check the server can get online.' }
+  const body = (await res.json().catch(() => null)) as {
+    ok?: boolean
+    result?: { username?: unknown }
+    description?: unknown
+  } | null
+  if (body?.ok && typeof body.result?.username === 'string') return { ok: true, username: body.result.username }
+  // 401 for a well-formed token Telegram has revoked or never issued, 404 for
+  // one that isn't token-shaped at all — to the person pasting it, the same.
+  if (res.status === 401 || res.status === 404) return { ok: false, error: 'Telegram did not recognise that token.' }
+  const detail = typeof body?.description === 'string' ? ` — ${body.description}` : ''
+  return { ok: false, error: `Telegram refused the token: ${res.status}${detail}` }
 }
 
 // A failed send never throws: the caller (a completed capture, or the

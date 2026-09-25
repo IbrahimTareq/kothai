@@ -14,10 +14,16 @@ import assert from 'node:assert/strict'
 import type { TelegramUpdate } from '../../../server/telegram/api.ts'
 
 type PollResult = { offset: number; conflict: boolean; failed: boolean }
-type Config = { botToken: string | null; boundChatId: number | null; pairingCode: string | null }
+type Config = {
+  botToken: string | null
+  botUsername: string | null
+  boundChatId: number | null
+  pairingCode: string | null
+}
 
 let telegramConfig: Config | null = null
 let pollStarted = 0
+let pollStopped = 0
 let capturedRun: ((giveUp: boolean) => Promise<PollResult>) | null = null
 
 const writes: Config[] = []
@@ -61,6 +67,9 @@ mock.module('../../../server/telegram/poll.ts', {
     startPolling: (run: (giveUp: boolean) => Promise<PollResult>) => {
       pollStarted++
       capturedRun = run
+      return () => {
+        pollStopped++
+      }
     },
   },
 })
@@ -86,21 +95,47 @@ test('startTelegramCapture: no config on disk — returns false and never polls'
 })
 
 test('startTelegramCapture: a config with no token — returns false and never polls', () => {
-  telegramConfig = { botToken: null, boundChatId: null, pairingCode: null }
+  telegramConfig = { botToken: null, botUsername: null, boundChatId: null, pairingCode: null }
   pollStarted = 0
   assert.equal(startTelegramCapture(), false)
   assert.equal(pollStarted, 0)
 })
 
 test('startTelegramCapture: a token is configured — returns true and starts polling', () => {
-  telegramConfig = { botToken: '123:abc', boundChatId: null, pairingCode: 'swordfish' }
+  telegramConfig = { botToken: '123:abc', botUsername: 'kothai_bot', boundChatId: null, pairingCode: 'swordfish' }
   pollStarted = 0
   assert.equal(startTelegramCapture(), true)
   assert.equal(pollStarted, 1)
 })
 
+// Settings calls startTelegramCapture after every save and clear, so the
+// running loop — which holds its own copy of the token — has to go first.
+// Before, capture started only at boot: a new token did nothing until a
+// restart, and a cleared one kept saving until then.
+test('startTelegramCapture: a second start stops the running loop before polling again', () => {
+  telegramConfig = { botToken: '123:abc', botUsername: 'kothai_bot', boundChatId: null, pairingCode: 'swordfish' }
+  startTelegramCapture()
+  pollStarted = 0
+  pollStopped = 0
+  telegramConfig = { botToken: '456:def', botUsername: 'other_bot', boundChatId: null, pairingCode: 'marlin' }
+  assert.equal(startTelegramCapture(), true)
+  assert.equal(pollStopped, 1, 'the old loop must stop')
+  assert.equal(pollStarted, 1, 'and exactly one new loop starts')
+})
+
+test('startTelegramCapture: with the config cleared, the running loop stops and none replaces it', () => {
+  telegramConfig = { botToken: '123:abc', botUsername: 'kothai_bot', boundChatId: 42, pairingCode: null }
+  startTelegramCapture()
+  pollStarted = 0
+  pollStopped = 0
+  telegramConfig = null
+  assert.equal(startTelegramCapture(), false)
+  assert.equal(pollStopped, 1, 'a disconnected bot must stop saving now, not at the next restart')
+  assert.equal(pollStarted, 0)
+})
+
 test('startTelegramCapture: a second chat replaying the pairing code after the first has bound is dropped, and the bind persists pairingCode: null', async () => {
-  telegramConfig = { botToken: '123:abc', boundChatId: null, pairingCode: 'secret-code' }
+  telegramConfig = { botToken: '123:abc', botUsername: 'kothai_bot', boundChatId: null, pairingCode: 'secret-code' }
   writes.length = 0
   throwOnWrite = false
   sent.length = 0
@@ -116,7 +151,7 @@ test('startTelegramCapture: a second chat replaying the pairing code after the f
   assert.equal(result.failed, false)
   assert.deepEqual(
     writes,
-    [{ botToken: '123:abc', boundChatId: 111, pairingCode: null }],
+    [{ botToken: '123:abc', botUsername: 'kothai_bot', boundChatId: 111, pairingCode: null }],
     'only the first chat binds, and the code is cleared so it cannot be replayed',
   )
   assert.deepEqual(
@@ -127,7 +162,7 @@ test('startTelegramCapture: a second chat replaying the pairing code after the f
 })
 
 test('startTelegramCapture: a write that fails on bind leaves the chat unbound, so the redelivered pairing message takes the bind path again on retry', async () => {
-  telegramConfig = { botToken: '123:abc', boundChatId: null, pairingCode: 'secret-code' }
+  telegramConfig = { botToken: '123:abc', botUsername: 'kothai_bot', boundChatId: null, pairingCode: 'secret-code' }
   writes.length = 0
   sent.length = 0
   const pairingMessage: TelegramUpdate = {
@@ -154,7 +189,7 @@ test('startTelegramCapture: a write that fails on bind leaves the chat unbound, 
   assert.equal(second.failed, false)
   assert.deepEqual(
     writes,
-    [{ botToken: '123:abc', boundChatId: 111, pairingCode: null }],
+    [{ botToken: '123:abc', botUsername: 'kothai_bot', boundChatId: 111, pairingCode: null }],
     'bound stayed null after the throw, so the redelivered message still took the bind path instead of being saved as a note containing the live pairing code',
   )
   assert.deepEqual(

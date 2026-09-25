@@ -1,5 +1,6 @@
-// Assembles the pieces and owns the one piece of mutable state: the bound chat
-// id, which is read at boot and written the first time the owner pairs.
+// Assembles the pieces and owns the mutable state: the running loop, and the
+// bound chat id, which is read when the loop starts and written the first time
+// the owner pairs.
 import { readTelegram, writeTelegram } from '../data/telegram.ts'
 import { saveCapture } from '../capture.ts'
 import { getUpdates, sendMessage } from './api.ts'
@@ -11,16 +12,25 @@ import { pollOnce, startPolling } from './poll.ts'
 // stopped the loop (see poll.ts's conflict handling) — without this, the only
 // evidence the owner has that capture died is one log line in the container.
 let stopped = false
+let stopLoop: (() => void) | null = null
 
 export function isCaptureStopped(): boolean {
   return stopped
 }
 
+// (Re)starts capture from whatever is on disk, stopping any loop already
+// running first. Called at boot and by routes/telegram.ts after every save or
+// clear. Capture used to start only at boot, so connecting a bot meant a
+// container restart before it answered — and disconnecting left the old loop
+// saving from its own copy of the token until one.
 export function startTelegramCapture(): boolean {
+  stopLoop?.()
+  stopLoop = null
+  stopped = false
   const config = readTelegram()
   if (!config?.botToken) return false
-  stopped = false
   const token = config.botToken
+  const botUsername = config.botUsername
   let bound = config.boundChatId
   // Read once and never refreshed — unlike `bound`, this one doesn't need it.
   // ingestUpdate only ever looks at pairingCode while boundChatId is null,
@@ -32,10 +42,10 @@ export function startTelegramCapture(): boolean {
   const pairingCode = config.pairingCode
   let offset = 0
 
-  startPolling(async giveUp => {
+  stopLoop = startPolling(async (giveUp, signal) => {
     const result = await pollOnce({
       offset,
-      getUpdates: at => getUpdates(token, at),
+      getUpdates: at => getUpdates(token, at, 30, signal),
       giveUp,
       handle: update =>
         ingestUpdate(
@@ -51,7 +61,7 @@ export function startTelegramCapture(): boolean {
               // `ingestUpdate` treating the chat as already bound and saving the
               // still-live pairing code as note content — see IngestIO.bind's
               // comment in ingest.ts.
-              writeTelegram({ botToken: token, boundChatId: chatId, pairingCode: null })
+              writeTelegram({ botToken: token, botUsername, boundChatId: chatId, pairingCode: null })
               // Clearing the pairing code is what stops it being replayed — see
               // the binding rule in ingest.ts.
               bound = chatId

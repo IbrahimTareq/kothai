@@ -227,6 +227,7 @@ export interface SettingsResponse {
 // token itself (see server/routes/telegram.ts).
 export interface TelegramState {
   connected: boolean
+  botUsername: string | null
   boundChatId: number | null
   pairingCode: string | null
 }

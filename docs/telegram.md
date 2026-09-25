@@ -5,10 +5,9 @@ Message a bot from your phone and it becomes a note. Kothai long-polls Telegram'
 ## Set it up
 
 1. Message `@BotFather` on Telegram and send it `/newbot`. Follow the prompts and copy the token it gives you.
-2. Paste the token into Settings → **TELEGRAM** and click **Connect**.
-3. Restart Kothai. Polling only starts at boot, so the bot won't respond to anything until you do.
-4. Settings now shows a six-character pairing code. Send exactly that, as a message, to your bot.
-5. The bot replies "🔗 Connected. Any link you send here is saved to Kothai." — from then on, any link you send it is saved.
+2. Paste the token into Settings → **TELEGRAM** and click **Connect**. Kothai checks the token with Telegram before saving it, so a typo is refused on the spot, and the bot starts listening straight away. No restart needed.
+3. Pair your chat. Click **Open in Telegram** and tap **Start** in the chat that opens. Or send the bot the six-character code Settings shows, exactly as shown.
+4. The bot replies "🔗 Connected. Any link you send here is saved to Kothai.", and Settings switches to **Paired** by itself. From then on, any link you send it is saved.
 
 ## What gets saved
 
@@ -16,7 +15,7 @@ Links only: a message whose whole text is one `http(s)://` link. Anything else �
 
 ## Why the pairing code
 
-A bot's username is public from the moment BotFather creates it, and it's usually easy to guess from the bot's display name. Without a pairing step, whoever messages the bot first — a stranger, a scraper — would bind it to their own chat, gain write access to your archive, and lock you out, silently, since the bot never explains why it isn't responding to you. The pairing code, shown only on your own Settings screen, is what proves the chat binding the bot is the one that set it up.
+A bot's username is public from the moment BotFather creates it, and it's usually easy to guess from the bot's display name. Without a pairing step, whoever messages the bot first — a stranger, a scraper — would bind it to their own chat, gain write access to your archive, and lock you out, silently, since the bot never explains why it isn't responding to you. The pairing code, shown only on your own Settings screen, is what proves the chat binding the bot is the one that set it up. The **Open in Telegram** link carries the same code, and Telegram sends it to the bot as `/start` followed by the code when you tap Start. A bare `/start`, or one with the wrong code, pairs nothing.
 
 ## If nothing happens
 
@@ -26,7 +25,7 @@ Once a chat is bound, that silence still protects it from everyone else — mess
 
 ## If capture has stopped
 
-Only one process can long-poll a bot's token at a time. If Telegram sees a second poller — a second Kothai instance pointed at the same bot, for example — it answers with a conflict, and Kothai stops polling for the rest of that run rather than fight the other poller over every message. Settings will show the bot as disconnected even though the token is still saved on disk; only a restart, with just one poller left running, brings capture back.
+Only one process can long-poll a bot's token at a time. If Telegram sees a second poller — a second Kothai instance pointed at the same bot, for example — it answers with a conflict, and Kothai stops polling for the rest of that run rather than fight the other poller over every message. Settings will show the bot as disconnected even though the token is still saved on disk. Once only one poller is left running, paste the token and click **Connect** again (or restart Kothai) to bring capture back.
 
 ## The privacy tradeoff
 
@@ -38,11 +37,11 @@ Telegram holds unacknowledged updates for you. If Kothai is stopped, restarting,
 
 ## Disconnecting
 
-Clicking Disconnect in Settings deletes the saved token, but the poll loop that's already running holds its own copy of the token and the bound chat, and keeps saving until Kothai restarts. If you're disconnecting for privacy — handing your phone to someone, say — the token disappearing from Settings doesn't mean the bot stopped listening. Restart to actually stop it.
+Clicking **Disconnect** in Settings deletes the saved token and stops the bot listening immediately. Anything sent to it afterwards stays on Telegram's side and is never saved.
 
 ## Rotating the token
 
-Revoke the old token in BotFather, paste the new one into Settings, and reconnect. Saving a new token resets the binding — the chat that was bound to the old bot has never spoken to the new one, so there's nothing to carry forward — and issues a fresh pairing code. Restart, then pair again as in step 4 above.
+Revoke the old token in BotFather, paste the new one into Settings, and reconnect. Saving a new token resets the binding — the chat that was bound to the old bot has never spoken to the new one, so there's nothing to carry forward — and issues a fresh pairing code. Pair again as in step 3 above.
 
 ## Group chats
 

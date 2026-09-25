@@ -10,6 +10,7 @@ import { mockReq, mockRes, record } from '../../helpers/http.ts'
 
 interface FakeConfig {
   botToken: string | null
+  botUsername: string | null
   boundChatId: number | null
   pairingCode: string | null
 }
@@ -18,6 +19,8 @@ let stored: FakeConfig | null = null
 const writes: FakeConfig[] = []
 let clears = 0
 let stopped = false
+let starts = 0
+let getMeResult: { ok: true; username: string } | { ok: false; error: string } = { ok: true, username: 'kothai_bot' }
 
 mock.module('../../../server/data/telegram.ts', {
   namedExports: {
@@ -25,6 +28,7 @@ mock.module('../../../server/data/telegram.ts', {
     writeTelegram: (patch: Partial<FakeConfig>) => {
       const next: FakeConfig = {
         botToken: patch.botToken ?? null,
+        botUsername: patch.botUsername ?? null,
         boundChatId: patch.boundChatId ?? null,
         pairingCode: patch.pairingCode ?? null,
       }
@@ -39,7 +43,16 @@ mock.module('../../../server/data/telegram.ts', {
   },
 })
 mock.module('../../../server/telegram/index.ts', {
-  namedExports: { isCaptureStopped: () => stopped },
+  namedExports: {
+    isCaptureStopped: () => stopped,
+    startTelegramCapture: () => {
+      starts++
+      return stored !== null
+    },
+  },
+})
+mock.module('../../../server/telegram/api.ts', {
+  namedExports: { getMe: async () => getMeResult },
 })
 
 const { handleGetTelegram, handleSaveTelegram, handleClearTelegram } = await import(
@@ -53,6 +66,8 @@ beforeEach(() => {
   writes.length = 0
   clears = 0
   stopped = false
+  starts = 0
+  getMeResult = { ok: true, username: 'kothai_bot' }
 })
 
 test('GET reports disconnected on an unconfigured install', () => {
@@ -66,12 +81,13 @@ test('GET reports disconnected on an unconfigured install', () => {
 })
 
 test('GET reports connection state and the pairing code, and never the token', () => {
-  stored = { botToken: 'secret-token-123', boundChatId: null, pairingCode: 'ABC234' }
+  stored = { botToken: 'secret-token-123', botUsername: 'kothai_bot', boundChatId: null, pairingCode: 'ABC234' }
   const { res, sent } = mockRes()
   handleGetTelegram(res)
   const body = sent.json()
   assert.equal(body.connected, true)
   assert.equal(body.pairingCode, 'ABC234')
+  assert.equal(body.botUsername, 'kothai_bot')
   // Asserted on the serialised body, not the parsed object: a field merely
   // absent from the parsed shape would still pass a `'botToken' in body`
   // check if the server had serialised it under another name.
@@ -79,7 +95,7 @@ test('GET reports connection state and the pairing code, and never the token', (
 })
 
 test('GET reports disconnected once the poll loop has permanently stopped, even with a token still on disk', () => {
-  stored = { botToken: 'secret-token-123', boundChatId: 42, pairingCode: null }
+  stored = { botToken: 'secret-token-123', botUsername: null, boundChatId: 42, pairingCode: null }
   stopped = true
   const { res, sent } = mockRes()
   handleGetTelegram(res)
@@ -87,16 +103,31 @@ test('GET reports disconnected once the poll loop has permanently stopped, even 
 })
 
 test('POST stores the token, clears any previous binding, and generates a pairing code', async () => {
-  stored = { botToken: 'old-token', boundChatId: 999, pairingCode: null }
+  stored = { botToken: 'old-token', botUsername: 'old_bot', boundChatId: 999, pairingCode: null }
   const { res, sent } = mockRes()
   await handleSaveTelegram(fakeReq({ botToken: '  new-token  ' }), res)
   assert.equal(sent.code, 200)
   const body = record(sent.json())
   assert.equal(body.connected, true)
   assert.equal(body.boundChatId, null, 'a different bot has never spoken to the old chat')
-  assert.equal(body.restartRequired, true)
+  assert.equal(body.botUsername, 'kothai_bot', 'the username comes from getMe on the new token')
   assert.equal(writes[0].botToken, 'new-token', 'the token is trimmed')
   assert.match(String(body.pairingCode), /^[A-Z0-9]{6}$/)
+})
+
+test('POST starts capture on the new token straight away — no restart', async () => {
+  await handleSaveTelegram(fakeReq({ botToken: 'new-token' }), mockRes().res)
+  assert.equal(starts, 1)
+})
+
+test('POST refuses a token Telegram rejects, and neither saves nor starts anything', async () => {
+  getMeResult = { ok: false, error: 'Telegram did not recognise that token.' }
+  const { res, sent } = mockRes()
+  await handleSaveTelegram(fakeReq({ botToken: 'typo-token' }), res)
+  assert.equal(sent.code, 400)
+  assert.equal(record(sent.json()).error, 'Telegram did not recognise that token.')
+  assert.equal(writes.length, 0)
+  assert.equal(starts, 0)
 })
 
 test('POST generates a different pairing code on a second call', async () => {
@@ -122,13 +153,13 @@ test('POST rejects a whitespace-only token', async () => {
 })
 
 test('DELETE clears the configuration', () => {
-  stored = { botToken: 'token', boundChatId: 5, pairingCode: null }
+  stored = { botToken: 'token', botUsername: 'kothai_bot', boundChatId: 5, pairingCode: null }
   const { res, sent } = mockRes()
   handleClearTelegram(res)
   assert.equal(sent.code, 200)
   const body = sent.json()
   assert.equal(body.connected, false)
-  assert.equal(body.restartRequired, true)
   assert.equal(clears, 1)
   assert.equal(stored, null)
+  assert.equal(starts, 1, 'restarting on an empty config is what stops the running loop')
 })
