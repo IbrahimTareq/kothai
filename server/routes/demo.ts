@@ -255,7 +255,10 @@ async function restoreSnapshot(dir: URL, list: string): Promise<boolean> {
   try {
     snap = JSON.parse(await readFile(new URL('library.json', dir), 'utf8'))
   } catch {
-    return false // never built: the live seed is all there is
+    // Never built. Said out loud because it went unnoticed: every deploy
+    // seeded live on the operator's key while this stayed silent.
+    console.warn('[demo] no prebuilt library; seeding live. Build one: scripts/demo-snapshot.ts')
+    return false
   }
   // Any of these and the vectors, or the cards themselves, are not what a live
   // seed would build now, and search would quietly compare across two spaces.

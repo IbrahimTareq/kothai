@@ -79,6 +79,17 @@ test('an empty demo library comes with its shared spaces, each holding its links
   assert.ok(links.every(u => u && LIBRARY.includes(u)))
 })
 
+// It had never been built, and nothing said so: every deploy seeded live on
+// the operator's key while the log stayed quiet.
+test('a demo with no prebuilt library says so in the log', async () => {
+  store._reset()
+  collections._reset()
+  const warn = mock.method(console, 'warn', () => {})
+  await seedDemo({ snapshot: NONE })
+  warn.mock.restore()
+  assert.match(String(warn.mock.calls[0]?.arguments[0]), /no prebuilt library/)
+})
+
 test('a demo library that already holds notes is left alone', async () => {
   store._reset()
   await store.addNote({ type: 'link', content: 'already here' })
