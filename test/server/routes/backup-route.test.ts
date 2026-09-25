@@ -1,4 +1,5 @@
-// GET /api/backup — an online backup of the live database.
+// GET /api/backup — an online backup of the whole library: the live database
+// and every uploaded file, as one .tar.gz.
 //
 // The point of VACUUM INTO rather than copying the file: the database runs in
 // WAL mode, so kothai.db on disk is only part of the story. Copying it while
@@ -8,13 +9,17 @@
 // a PaaS where you cannot stop-and-tar.
 //
 // Driven through a real listening server: the response is a binary stream, and
-// the assertion that matters is that the bytes coming out open as a database.
+// the assertion that matters is that the bytes coming out unpack with an
+// ordinary `tar` into a database that opens. That tool, not the extractor the
+// restore uses, is what someone with only the file and a terminal has.
 import { test, after, mock } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import { gunzipSync } from 'node:zlib'
 import { jsonBody, listenOnLoopback } from '../../helpers/http.ts'
 
 // Its own data directory, set before anything imports config.ts (which freezes
@@ -22,6 +27,7 @@ import { jsonBody, listenOnLoopback } from '../../helpers/http.ts'
 // DATA_DIR, and pointing that at the developer's real ./data would litter it.
 const DATA_DIR = mkdtempSync(path.join(os.tmpdir(), 'kothai-backup-test-'))
 process.env.KOTHAI_DATA_DIR = DATA_DIR
+const SCRATCH = mkdtempSync(path.join(os.tmpdir(), 'kothai-backup-scratch-'))
 
 // The backup refuses to run mid-import; mocked so that state can be driven
 // without actually importing anything. Must be installed before router.ts
@@ -45,13 +51,18 @@ const BASE = `http://127.0.0.1:${await listenOnLoopback(server)}`
 after(() => {
   server.close()
   rmSync(DATA_DIR, { recursive: true, force: true })
+  rmSync(SCRATCH, { recursive: true, force: true })
 })
 
-// Save the downloaded bytes and open them as a database.
-async function downloadAndOpen(res: Response) {
-  const file = path.join(DATA_DIR, `downloaded-${Math.trunc(performance.now() * 1000)}.db`)
+// Save the downloaded bytes, unpack them with the system tar, and open the
+// database inside. Unpacked outside DATA_DIR so the next test's listing of it
+// sees only what the route left behind.
+async function downloadAndExtract(res: Response) {
+  const dir = mkdtempSync(path.join(SCRATCH, 'extract-'))
+  const file = path.join(dir, 'backup.tar.gz')
   writeFileSync(file, Buffer.from(await res.arrayBuffer()))
-  return new DatabaseSync(file, { readOnly: true })
+  execFileSync('tar', ['-xzf', file, '-C', dir])
+  return { dir, db: new DatabaseSync(path.join(dir, 'kothai.db'), { readOnly: true }) }
 }
 
 const leftoverTemps = () => readdirSync(DATA_DIR).filter(f => f.startsWith('backup-'))
@@ -75,17 +86,30 @@ async function backup() {
   return fetch(`${BASE}/api/backup`)
 }
 
-test('the response is a real SQLite database containing the live notes', async () => {
+test('the response unpacks into a real SQLite database containing the live notes', async () => {
   store._reset()
   await store.addNote({ type: 'link', content: 'in the backup' })
 
   const res = await backup()
   assert.equal(res.status, 200)
 
-  const db = await downloadAndOpen(res)
+  const { db } = await downloadAndExtract(res)
   const rows = db.prepare('SELECT data FROM notes').all()
   assert.equal(rows.length, 1)
   assert.equal(JSON.parse(String(rows[0].data)).content, 'in the backup')
+})
+
+test('every uploaded file is in it, byte for byte — pasted images exist nowhere else', async () => {
+  store._reset()
+  mkdirSync(path.join(DATA_DIR, 'uploads'), { recursive: true })
+  const image = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1, 2, 3])
+  writeFileSync(path.join(DATA_DIR, 'uploads', 'pasted.png'), image)
+  try {
+    const { dir } = await downloadAndExtract(await backup())
+    assert.deepEqual(readFileSync(path.join(dir, 'uploads', 'pasted.png')), image)
+  } finally {
+    rmSync(path.join(DATA_DIR, 'uploads', 'pasted.png'))
+  }
 })
 
 test('it is served as a dated file download, not rendered inline', async () => {
@@ -94,18 +118,9 @@ test('it is served as a dated file download, not rendered inline', async () => {
   const disposition = res.headers.get('content-disposition')
   assert.ok(disposition, 'the download header must be present at all')
   assert.match(disposition, /^attachment;/)
-  assert.match(disposition, /filename="kothai-backup-\d{4}-\d{2}-\d{2}\.db"/)
+  assert.match(disposition, /filename="kothai-backup-\d{4}-\d{2}-\d{2}\.tar\.gz"/)
   assert.doesNotMatch(res.headers.get('content-type') || '', /text|html/)
   await res.arrayBuffer()
-})
-
-test('Content-Length matches the bytes actually sent, so the browser can show progress', async () => {
-  store._reset()
-  await store.addNote({ type: 'link', content: 'x' })
-  const res = await backup()
-  const declared = Number(res.headers.get('content-length'))
-  const actual = (await res.arrayBuffer()).byteLength
-  assert.equal(declared, actual)
 })
 
 test('the temp snapshot is deleted afterwards — a backup must not double disk use forever', async () => {
@@ -123,8 +138,7 @@ test('writes queued by a batched operation are committed first, so they are in t
   // recent data is worse than one that fails.
   store._reset()
   await store.addNote({ type: 'link', content: 'queued not yet written' }, { persist: false })
-  const res = await backup()
-  const db = await downloadAndOpen(res)
+  const { db } = await downloadAndExtract(await backup())
   assert.equal(db.prepare('SELECT count(*) n FROM notes').get()?.n, 1)
 })
 
@@ -177,9 +191,10 @@ test('a downloaded backup contains no part of a stored credential', async () => 
   const res = await backup()
   assert.equal(res.status, 200)
 
-  // latin1 so every byte of the binary database maps to a character and a
-  // substring search cannot miss a key that straddles a chunk boundary.
-  const dump = Buffer.from(await res.arrayBuffer()).toString('latin1')
+  // Unzipped, or the search would be through compressed bytes and could not
+  // find anything. latin1 so every byte of the binary database maps to a
+  // character and a substring search cannot miss a key.
+  const dump = gunzipSync(Buffer.from(await res.arrayBuffer())).toString('latin1')
   assert.ok(!dump.includes('sk-MUST-NOT-APPEAR'), 'the API key must not be in the backup')
   assert.ok(!dump.includes('api.openai.com'), 'nor the endpoint it points at')
   assert.ok(dump.includes('gpt-4o-mini'), 'model names ARE settings and should be in it')

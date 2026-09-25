@@ -17,7 +17,7 @@ import {
 import { handleImport } from './routes/import.ts'
 import { handleAvailabilityScan, handleAvailabilityRemove } from './routes/availability.ts'
 import { handleExport } from './routes/export.ts'
-import { handleBackup } from './routes/backup.ts'
+import { handleBackup, handleRestore } from './routes/backup.ts'
 import { handleCheckpoint } from './routes/checkpoint.ts'
 import { handleWipe } from './routes/wipe.ts'
 import { handleModelFiles, handleDeleteModelFile } from './routes/models.ts'
@@ -103,6 +103,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     if (req.method === 'POST' && p === '/api/import') return await handleImport(req, res)
     if (req.method === 'GET' && p === '/api/export') return handleExport(res)
     if (req.method === 'GET' && p === '/api/backup') return await handleBackup(req, res)
+    if (req.method === 'POST' && p === '/api/restore') return await handleRestore(req, res)
     if (req.method === 'POST' && p === '/api/checkpoint') return await handleCheckpoint(res)
     if (req.method === 'POST' && p === '/api/wipe') return await handleWipe(req, res)
     if (req.method === 'GET' && p === '/api/models/files') return await handleModelFiles(res)

@@ -51,8 +51,8 @@ const rowData = (v: SQLOutputValue): ChatRow['data'] => String(v)
 let chats: Chat[] = []
 let loaded = false
 
-export async function load(): Promise<void> {
-  if (loaded) return
+export async function load({ reload = false } = {}): Promise<void> {
+  if (loaded && !reload) return
   const db = await getDb()
   chats = db
     .prepare('SELECT data FROM chats ORDER BY seq DESC')

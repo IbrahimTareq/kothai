@@ -39,14 +39,30 @@ curl -fs -c kothai.cookies -H 'Content-Type: application/json' \
 curl -fO -J -b kothai.cookies http://localhost:5173/api/backup
 ```
 
-This uses SQLite's `VACUUM INTO`, which reads one consistent snapshot and writes a fresh, compacted database file. No stopping, no three-file dance. Use it on a PaaS where you can't stop the container, or whenever you just want a copy right now.
+You get one `.tar.gz` holding the whole library: the database and every uploaded image. The database part uses SQLite's `VACUUM INTO`, which reads one consistent snapshot and writes a fresh, compacted file. No stopping, no three-file dance. Use it on a PaaS where you can't stop the container, or whenever you just want a copy right now.
 
-Two things to know:
+It briefly needs free disk space equal to the database's size, and refuses while an import is running. Credentials (the AI key, the Telegram bot token) are never in it.
 
-- **It's the database only.** `data/uploads/` is not in it. Thumbnails and carousel slides live there, so keep a copy of that directory too.
-- It briefly needs free disk space equal to the database's size, and refuses while an import is running.
+### Restoring a backup
 
-To restore, stop the container and put the downloaded file in place of `data/kothai.db`, deleting any `kothai.db-wal` and `kothai.db-shm` beside it.
+Settings → **YOUR DATA** → *Restore*, and choose the file. Or the endpoint directly:
+
+```bash
+curl -f -H 'Content-Type: application/octet-stream' \
+  --data-binary @kothai-backup-2026-09-26.tar.gz http://localhost:5173/api/restore
+```
+
+It happens while Kothai keeps running:
+
+- **Notes, spaces, chats and uploads** come from the backup.
+- **Model settings stay as they are on this install**, since they describe this machine. If the backup's notes were embedded with a different model, they are re-embedded in the background.
+- **Your current library is saved first**, to `data/backups/before-restore-<time>.tar.gz`. Restoring the wrong file is undone by restoring that one.
+
+*Restore* takes a file from *Download backup*. A tarball of `data/` made the manual way above is restored the manual way too.
+
+A backup from an older version (a bare `.db` file) restores too. It carries no uploads, so the ones already in `data/uploads` are left alone.
+
+A backup is also an ordinary archive: `tar -xzf kothai-backup-….tar.gz` gives you `kothai.db` and `uploads/`, which is exactly the `data/` directory's shape.
 
 ## Upgrading
 

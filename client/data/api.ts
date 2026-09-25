@@ -428,6 +428,19 @@ export const API = {
   async removeUnavailable(expected: number): Promise<{ removed: number; unavailable: number }> {
     return apiPost('/api/availability/remove', { expected })
   },
+  // The backup file itself is the body, not JSON: it is the whole library,
+  // which base64 would inflate by a third and the server would have to buffer.
+  // octet-stream still forces the preflight that JSON_HEADERS exists for.
+  async restoreBackup(
+    file: File,
+  ): Promise<{ restored: { notes: number; collections: number; chats: number }; savedAs: string }> {
+    const r = await fetch('/api/restore', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: file,
+    })
+    return _json(r)
+  },
   // danger zone: erase all content (notes, spaces, chats, tags, uploads).
   // Model settings survive — see server/routes/wipe.ts.
   async wipeAll(

@@ -25,6 +25,9 @@
   "client/components/settings/ImportSection.tsx": {
     "fields": 1
   },
+  "client/components/settings/RestoreRow.tsx": {
+    "fields": 1
+  },
   "client/components/settings/ModelPicker.tsx": {
     "buttons": 4
   },

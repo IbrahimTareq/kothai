@@ -24,7 +24,7 @@ Common codes: `unauthorized`, `not_found`, `invalid_input`, `llm_off`, `import_i
 
 ## Content types
 
-Requests and responses use `application/json` unless noted otherwise. File uploads use `multipart/form-data`.
+Requests and responses use `application/json` unless noted otherwise. The one exception is `POST /api/restore`, which takes the backup file itself as `application/octet-stream`.
 
 ## Endpoints
 

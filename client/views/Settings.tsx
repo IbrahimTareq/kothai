@@ -17,6 +17,7 @@ import { ImportSection } from '../components/settings/ImportSection'
 import { TelegramSection } from '../components/settings/TelegramSection'
 import { CaptureTokenSection } from '../components/settings/CaptureTokenSection'
 import { AvailabilityRow } from '../components/settings/AvailabilityRow'
+import { RestoreRow } from '../components/settings/RestoreRow'
 import { ModelFilesRow } from '../components/settings/ModelFilesRow'
 import { API, apiError } from '../data/api'
 import type { Residency, SettingsResponse, ModelLoad } from '../types'
@@ -362,9 +363,8 @@ export function SettingsView({
                 title="Backup"
                 desc={
                   <>
-                    A snapshot of the database itself, exactly as stored, safe to download while Kothai is running.
-                    Images you pasted or dropped live outside the database, so keep a copy of <code>data/uploads</code>{' '}
-                    alongside it.
+                    Your whole library — the database and every image — as one file, safe to download while Kothai is
+                    running. Restore it below, on this install or a new one.
                   </>
                 }
                 action={
@@ -375,6 +375,8 @@ export function SettingsView({
                   </Button>
                 }
               />
+
+              <RestoreRow />
 
               <AvailabilityRow />
 

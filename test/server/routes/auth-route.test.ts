@@ -161,6 +161,17 @@ test('a mutation without a JSON content-type is refused even with a valid sessio
   assert.equal(res.status, 415)
 })
 
+test('a backup upload (application/octet-stream) passes the rule — it forces the same preflight JSON does', async () => {
+  // A restore body is an archive, not JSON. What the rule protects is the
+  // preflight, and octet-stream is no more CORS-safelisted than JSON is.
+  const res = await fetch(`${BASE}/api/restore`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/octet-stream', cookie: await sessionOf() },
+    body: 'not a backup',
+  })
+  assert.equal(res.status, 400, 'reached the route, which refused the body itself')
+})
+
 test('the same rule covers DELETE and PATCH, which carry no body of their own', async () => {
   const cookie = await sessionOf()
   for (const method of ['DELETE', 'PATCH']) {

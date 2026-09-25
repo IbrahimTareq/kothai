@@ -69,7 +69,7 @@ const OWN_INSTALL: [string, string][] = [
   ['AI', 'Run the models on your own machine, where nothing leaves it, or connect a service such as OpenRouter.'],
   ['Import', "Bring across what you've already saved on Instagram and TikTok."],
   ['Telegram', 'Save links from your phone by messaging your own bot.'],
-  ['Your data', 'Export or back up the whole library, re-tag every note, or erase it all.'],
+  ['Your data', 'Export, back up or restore the whole library, re-tag every note, or erase it all.'],
 ]
 
 export function DemoSettings() {

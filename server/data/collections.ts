@@ -49,8 +49,8 @@ const rowData = (v: SQLOutputValue): CollectionRow['data'] => String(v)
 let collections: Collection[] = []
 let loaded = false
 
-export async function load() {
-  if (loaded) return
+export async function load({ reload = false } = {}) {
+  if (loaded && !reload) return
   const db = await getDb()
   collections = db
     .prepare('SELECT data FROM collections ORDER BY seq DESC')

@@ -59,8 +59,13 @@ function hasSession(req: IncomingMessage, password: string): boolean {
 // surfaces as a syntax error in the console instead of a login form.
 const isNavigation = (p: string) => !p.startsWith('/api/') && !path.extname(p)
 
-const isJson = (req: IncomingMessage) =>
-  (req.headers['content-type'] || '').toLowerCase().startsWith('application/json')
+// Types a browser must preflight before sending cross-origin — neither is
+// CORS-safelisted. octet-stream is a restore's backup archive, which is not JSON.
+const PREFLIGHTED = ['application/json', 'application/octet-stream']
+const isPreflighted = (req: IncomingMessage) => {
+  const type = (req.headers['content-type'] || '').toLowerCase()
+  return PREFLIGHTED.some(t => type.startsWith(t))
+}
 
 function send(res: ServerResponse, code: number, headers: Record<string, string>, body: unknown) {
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', ...headers })
@@ -112,12 +117,13 @@ export async function authGate(
   // `?? ''` only satisfies the type: IncomingMessage.method is optional
   // because the type is shared with client-side responses, and neither
   // undefined nor '' is in MUTATIONS, so the test answers exactly as before.
-  if (MUTATIONS.has(req.method ?? '') && !isJson(req)) {
+  if (MUTATIONS.has(req.method ?? '') && !isPreflighted(req)) {
     // CSRF. SameSite=Lax on the cookie blocks the cross-SITE case, but "site"
     // ignores the port — a page on http://localhost:3000 is same-site with a
     // Kothai on :5173 and its cookie would ride along. application/json is not
     // a CORS-safelisted content type, so requiring it forces a preflight that
     // the router answers with 405, and an HTML form cannot produce it at all.
+    // The same holds for application/octet-stream, the one other type allowed.
     json(res, 415, {
       error: 'Requests that change data must be sent as application/json.',
       code: 'content_type_required',

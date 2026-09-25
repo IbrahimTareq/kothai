@@ -134,8 +134,9 @@ function migrateEmbeddings(db: DatabaseSync, records: NoteRecord[]): void {
   }
 }
 
-export async function load(): Promise<void> {
-  if (loaded) return
+export async function load({ reload = false } = {}): Promise<void> {
+  if (loaded && !reload) return
+  if (reload) replaced()
   const db = await getDb()
   const rows = db.prepare('SELECT data, embedding FROM notes ORDER BY seq DESC').all()
   // Rows written before the embedding column existed still carry the vector
@@ -290,14 +291,18 @@ export async function deleteNote(id: string): Promise<boolean> {
 export async function clearAll(): Promise<number> {
   const removed = notes.length
   notes = []
-  pendingWrites = []
+  replaced()
   ;(await getDb()).prepare('DELETE FROM notes').run()
-  // Everything gone at once — no point tracking individual tombstones;
-  // clients just resync from here.
+  return removed
+}
+
+// The whole library changed at once (a wipe, a restore): clients resync rather
+// than read tombstones, and queued writes go with the library they were for.
+function replaced(): void {
+  pendingWrites = []
   rev++
   tombstoneFloor = rev
   tombstones = []
-  return removed
 }
 
 // Deletes the uploaded image files that pasted/dropped notes referenced. Kept

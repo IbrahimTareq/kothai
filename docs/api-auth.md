@@ -33,7 +33,7 @@ curl -X POST https://kothai.example.com/api/save \
   -d '{"text":"https://example.com/article"}'
 ```
 
-The `Content-Type: application/json` header is required, the same as for every request that changes data.
+The `Content-Type: application/json` header is required, the same as for every request that changes data (a restore's `application/octet-stream` is the one other type accepted).
 
 ### GET /api/capture-token
 
