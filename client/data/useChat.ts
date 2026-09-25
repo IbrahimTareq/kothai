@@ -90,8 +90,10 @@ export function useChat(nav: string) {
   }, [nav])
 
   // Ask: query the vault; used by the Ask (core) view composer.
-  const sendQuestion = async () => {
-    const raw = text.trim()
+  // `ask` is a question picked rather than typed (the demo's suggestions in
+  // views/Core.tsx); anything else sends what is in the box.
+  const sendQuestion = async (ask = text) => {
+    const raw = ask.trim()
     const img = pendingImg
     if (asking || (!raw && !img)) return
     // The pending bubble is claimed by id, not by position: a reply used to be

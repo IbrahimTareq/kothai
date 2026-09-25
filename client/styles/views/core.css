@@ -17,6 +17,8 @@
 .core-prompt h1 em{font-style:normal;color:var(--ink)}
 .core-prompt p{margin:var(--space-10) 0 0;color:var(--ink-mute);font-size:var(--text-sm);
   line-height:var(--leading-normal)}
+/* The demo's suggested questions (views/Core.tsx). */
+.core-suggest{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--space-8);margin-top:var(--space-16)}
 
 /* console / the one chat box */
 .console{width:min(680px,100%);margin-top:var(--space-8);flex-shrink:0}

@@ -23,12 +23,11 @@
    What a visitor made is theirs to change, so their own space ([data-mine])
    keeps every control; Cards.tsx and Expanded.tsx decide the same per item. */
 :root[data-demo] .attach-btn{display:none}
-/* A shared space loses whatever edits it: rename and delete, its rule tags
-   (the spark still marks a smart space), and the canvas, since every drag and
-   every first open of it autosaves. The view-mode switch is the page's one
-   Segmented without .view-toggle. Its way to Everything goes as well: nothing
-   there can put a link in a space that is not the visitor's. */
-:root[data-demo] .collection-view:not([data-mine]) :is(.page-actions, .coll-rule, .page-display .seg:not(.view-toggle), .coll-browse){display:none}
+/* A shared space loses whatever edits it: rename and delete, and its rule tags
+   (the spark still marks a smart space). Its canvas stays, arranged but never
+   saved (views/Space.tsx). Its way to Everything goes as well: nothing there
+   can put a link in a space that is not the visitor's. */
+:root[data-demo] .collection-view:not([data-mine]) :is(.page-actions, .coll-rule, .coll-browse){display:none}
 :root[data-demo] .collection-view:not([data-mine]) .coll-name{pointer-events:none}
 /* What it locks instead, where the value itself is worth seeing: the tags and
    note of a link the visitor did not save. A disabled fieldset takes every

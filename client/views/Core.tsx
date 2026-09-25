@@ -11,7 +11,16 @@ import { writeClipboard } from '../util/clipboard'
 import type { Inline } from '../util/markdown'
 import type { ChatSummary, ThreadMsg, UIItem } from '../types'
 import { Button } from '../ui/Button'
+import { Chip } from '../ui/Chip'
 import { useDemo } from '../components/Demo'
+
+// The demo's, one per shelf of server/demo-library.txt: a visitor meets an
+// empty box over a library they did not build, with no idea what is in it.
+const DEMO_QUESTIONS = [
+  'What should I see in Kyoto?',
+  'How do I get a sourdough starter going?',
+  'What makes an interface easy to use?',
+]
 
 interface CoreViewProps {
   focus: boolean
@@ -20,7 +29,7 @@ interface CoreViewProps {
   onKey: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
   text: string
   setText: (s: string) => void
-  submit: () => void
+  submit: (question?: string) => void
   taRef: React.RefObject<HTMLTextAreaElement | null>
   coreRef: React.RefObject<HTMLDivElement | null>
   thread: ThreadMsg[]
@@ -165,9 +174,9 @@ export function CoreView({
   // Sending always pulls the view back to the bottom, however far up the user
   // had scrolled — their own message is the one thing they always want to see.
   const demo = useDemo() // its limits (server/routes/ask.ts): text only, under 500 characters, a few a day
-  const send = () => {
+  const send = (question?: string) => {
     setStick(true)
-    submit()
+    submit(question)
   }
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) setStick(true)
@@ -188,6 +197,15 @@ export function CoreView({
         <div className="core-prompt">
           <h1>What do you want to find?</h1>
           <p>Ask a question. Answers are pulled from what you've saved.</p>
+          {demo && (
+            <div className="core-suggest">
+              {DEMO_QUESTIONS.map(q => (
+                <Chip key={q} disabled={llmOff || demo.asksLeft === 0} onClick={() => send(q)}>
+                  {q}
+                </Chip>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -329,7 +347,7 @@ export function CoreView({
                 className="send-btn"
                 aria-label="Send question"
                 disabled={llmOff || demo?.asksLeft === 0 || (!text.trim() && !pendingImg)}
-                onClick={send}
+                onClick={() => send()}
               >
                 <Icon name="ask" size={18} />
               </button>

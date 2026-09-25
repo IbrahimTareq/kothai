@@ -18,6 +18,7 @@ import { Chip } from '../ui/Chip'
 import { Segmented } from '../ui/Segmented'
 import { Popover } from '../ui/Popover'
 import { Input } from '../ui/Input'
+import { useDemo } from '../components/Demo'
 import { Tooltip } from '../ui/Tooltip'
 import { Confirm } from '../ui/Confirm'
 
@@ -117,6 +118,10 @@ export function CollectionView({
   // The rule strip scrolls sideways on phones, so it carries the same fade
   // hints the Everything filter bar does — one module, one behaviour.
   const { ref: ruleRef, className: ruleFade } = useScrollEdges('x', [collection?.tags.length])
+  // On the demo a shared space's canvas is the visitor's to arrange but not to
+  // keep: the server refuses its writes (server/routes/demo.ts), so none are
+  // sent. It was hidden outright before, and a visitor never saw a canvas.
+  const keeps = !useDemo() || !!collection?.visitor
   if (!collection) {
     return (
       <div className="collection-view">
@@ -335,9 +340,9 @@ export function CollectionView({
             collectionId={collection.id}
             items={collItems}
             doc={collection.canvas}
-            onSave={d => saveCanvas(collection.id, d)}
+            onSave={d => keeps && saveCanvas(collection.id, d)}
             onExpand={onExpand}
-            onRemoveItem={id => handleRemoveFrom(collection.id, id)}
+            onRemoveItem={id => keeps && handleRemoveFrom(collection.id, id)}
           />
         ) : (
           // Membership isn't fully loaded yet — mounting Canvas now would have
