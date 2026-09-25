@@ -193,3 +193,13 @@ test('a visitor can rename and delete their own chat, and no one else’s', asyn
   assert.equal((await as(ME, 'DELETE', `/api/chats/${mine.chat}`)).status, 200)
   assert.equal(chats.get(mine.chat), null)
 })
+
+// The item view asks for an Instagram post's slides when it opens one, and the
+// seeded library carries posts. The handler answers with the note, so it has
+// to hide another visitor's as the reads do.
+test('a visitor can open a post’s slides, but never reach another visitor’s link through them', async () => {
+  const { mine, others } = await fixtures()
+  assert.equal((await as(ME, 'POST', `/api/notes/${mine.note.id}/slides`)).status, 200)
+  assert.equal((await as(ME, 'POST', `/api/notes/${others[0].note.id}/slides`)).status, 200)
+  assert.equal((await as(ME, 'POST', `/api/notes/${others[1].note.id}/slides`)).status, 404)
+})

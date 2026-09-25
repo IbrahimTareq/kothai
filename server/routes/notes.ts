@@ -127,9 +127,10 @@ export function handleNotesDelta(res: ServerResponse, url: URL, viewer: string |
 // lazy rather than a bulk backfill. Always answers with the current note, so a
 // single-image post or a failed scrape just comes back deck-less rather than
 // erroring; the view keeps showing its single thumbnail either way.
-export async function handleNoteSlides(res: ServerResponse, id: string): Promise<void> {
+// `viewer` as in handleGetNote: this answers with the whole note too.
+export async function handleNoteSlides(res: ServerResponse, id: string, viewer: string | null): Promise<void> {
   const note = store.getNote(id)
-  if (!note) return json(res, 404, { error: 'not found' })
+  if (!note || !visibleTo(viewer)(note)) return json(res, 404, { error: 'not found' })
   if (note.slidesFetched || !note.url || !isInstagramPost(note.url)) {
     return json(res, 200, { note })
   }

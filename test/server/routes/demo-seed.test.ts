@@ -74,8 +74,8 @@ test('an empty demo library comes with its shared spaces, each holding its links
     'shared, so every visitor sees them and the nightly reset keeps them',
   )
   const links = spaces.flatMap(c => c.itemIds.map(id => store.getNote(id)?.url))
-  // 3 + 4 + 4: a link mistyped in the list would quietly leave its space short.
-  assert.equal(links.length, 11)
+  // 5 + 6 + 4: a link mistyped in the list would quietly leave its space short.
+  assert.equal(links.length, 15)
   assert.ok(links.every(u => u && LIBRARY.includes(u)))
 })
 

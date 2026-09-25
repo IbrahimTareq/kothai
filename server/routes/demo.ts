@@ -38,7 +38,11 @@ const ALLOWED: Record<string, RegExp[]> = {
     /^\/api\/(notes|notes\/delta|tags|status|settings|chats|collections|enrich\/backlog|models\/files)$/,
     /^\/api\/(notes|chats)\/[^/]+$/,
   ],
-  POST: [/^\/api\/(save|ask|collections)$/, /^\/api\/notes\/[^/]+\/retag$/, /^\/api\/collections\/[^/]+\/items$/],
+  POST: [
+    /^\/api\/(save|ask|collections)$/,
+    /^\/api\/notes\/[^/]+\/(retag|slides)$/,
+    /^\/api\/collections\/[^/]+\/items$/,
+  ],
   PATCH: [/^\/api\/(notes|chats|collections)\/[^/]+$/],
   DELETE: [/^\/api\/(notes|chats|collections)\/[^/]+$/, /^\/api\/collections\/[^/]+\/items\/[^/]+$/],
 }
@@ -193,6 +197,8 @@ const SPACES: [string, string[]][] = [
       'https://en.wikipedia.org/wiki/Kyoto',
       'https://en.wikipedia.org/wiki/T%C5%8Dfuku-ji',
       'https://www.japan-guide.com/e/e3915.html',
+      'https://www.instagram.com/p/C9xW2yZtw_2/',
+      'https://www.tiktok.com/@jessicajayneturner/video/7534747656497777942',
     ],
   ],
   [
@@ -202,6 +208,8 @@ const SPACES: [string, string[]][] = [
       'https://www.kingarthurbaking.com/recipes/sourdough-starter-recipe',
       'https://www.kingarthurbaking.com/recipes/classic-sandwich-bread-recipe',
       'https://www.bbcgoodfood.com/recipes/best-ever-chocolate-brownies-recipe',
+      'https://www.instagram.com/p/Cas3Z3RD7TY/',
+      'https://www.tiktok.com/@chefgenevieve/video/7262414443835919659',
     ],
   ],
   [

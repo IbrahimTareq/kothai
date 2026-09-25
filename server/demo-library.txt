@@ -5,6 +5,9 @@
 # Every link was checked against Kothai's own fetcher (its user agent, not a
 # browser's): Serious Eats, UNESCO and Atlas Obscura answered it with a bot
 # wall, so the demo would have shown them as bare URLs, and they are not here.
+#
+# The Instagram posts and TikToks are there to show what an import brings
+# across; each answered that fetcher with its caption and its picture.
 https://en.wikipedia.org/wiki/Spirited_Away
 https://www.youtube.com/watch?v=UF8uR6Z6KLc
 https://en.wikipedia.org/wiki/James_Webb_Space_Telescope
@@ -25,8 +28,12 @@ https://xkcd.com/1205/
 https://en.wikipedia.org/wiki/AeroPress
 https://www.youtube.com/watch?v=AI4ynXzkSQo
 https://en.wikipedia.org/wiki/Kyoto
+https://www.instagram.com/p/C9xW2yZtw_2/
 https://en.wikipedia.org/wiki/T%C5%8Dfuku-ji
+https://www.tiktok.com/@jessicajayneturner/video/7534747656497777942
 https://www.japan-guide.com/e/e3915.html
 https://www.kingarthurbaking.com/recipes/classic-sandwich-bread-recipe
+https://www.tiktok.com/@chefgenevieve/video/7262414443835919659
 https://www.kingarthurbaking.com/recipes/sourdough-starter-recipe
+https://www.instagram.com/p/Cas3Z3RD7TY/
 https://en.wikipedia.org/wiki/Sourdough

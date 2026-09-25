@@ -140,7 +140,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       return await handleRetagNote(res, p.split('/')[3], viewer)
     }
     if (req.method === 'POST' && /^\/api\/notes\/[^/]+\/slides$/.test(p)) {
-      return await handleNoteSlides(res, decodeURIComponent(p.split('/')[3]))
+      return await handleNoteSlides(res, decodeURIComponent(p.split('/')[3]), viewer)
     }
     if (req.method === 'PATCH' && p.startsWith('/api/notes/'))
       return await handleUpdateNote(req, res, p.split('/').pop() ?? '', viewer)
