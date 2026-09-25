@@ -13,7 +13,6 @@ import {
   countRawFields,
   countRawSizes,
   findBtnClass,
-  findEyebrowChrome,
   findButtonChrome,
   findUnreducedMotion,
 } from '../../scripts/button-chrome.ts'
@@ -147,23 +146,6 @@ test('does not count tokens, percentages, border widths or custom properties', (
 
 test('does not count a size written in a comment', () => {
   assert.equal(countRawSizes('/* was width:26px */ .a{width:auto}'), 0)
-})
-
-// The small caps label was written thirteen times across five sheets, in three
-// sizes, two trackings and three greys. .eyebrow in primitives.css is the one;
-// a rule elsewhere that sets eyebrow-sized text in caps is rebuilding it.
-
-test('flags a rule that sets small text in caps', () => {
-  const css = `.sec-h{font-size:var(--text-2xs);letter-spacing:var(--tracking-label);text-transform:uppercase}`
-  assert.deepEqual(
-    findEyebrowChrome(css).map(h => h.selector),
-    ['.sec-h'],
-  )
-})
-
-test('leaves caps at control size alone, and small text that is not in caps', () => {
-  assert.deepEqual(findEyebrowChrome(`.cta{font-size:var(--text-xs);text-transform:uppercase}`), [])
-  assert.deepEqual(findEyebrowChrome(`.meta{font-size:var(--text-2xs);color:var(--ink-faint)}`), [])
 })
 
 // The rule the fab's reduced-motion block states — keep the state change, drop

@@ -101,7 +101,6 @@
   min-width: 0; max-width: 100%; border: 0; background: transparent; color: var(--ink-dim);
   outline: none; /* token-lint-ignore: the frame's box shows focus, below */
   font: inherit; font-size: var(--text-xs); font-weight: var(--fw-medium);
-  letter-spacing: var(--tracking-label); text-transform: uppercase;
 }
 .cv-frame-head input::placeholder { color: var(--ink-faint); }
 
@@ -110,5 +109,5 @@
 
 .cv-hint {
   position: absolute; inset: 0; display: grid; place-items: center; margin: 0; pointer-events: none;
-  color: var(--ink-faint); font-size: var(--text-xs); letter-spacing: var(--tracking-label); text-transform: uppercase;
+  color: var(--ink-faint); font-size: var(--text-xs);
 }

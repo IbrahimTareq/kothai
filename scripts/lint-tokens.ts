@@ -22,7 +22,6 @@ import {
   countRawSizes,
   findBtnClass,
   findButtonChrome,
-  findEyebrowChrome,
   findUnreducedMotion,
 } from './button-chrome.ts'
 import { checkAgainstHead } from './lint-shape.ts'
@@ -91,6 +90,15 @@ const RULES = [
     msg: 'raw line-height — use a --leading-* token',
   },
   { id: 'z-index', re: /z-index:\s*[0-9]/g, msg: 'raw z-index — use a --z-* token' },
+  // Labels are sentence case. The small caps label was written thirteen times
+  // across five sheets before .eyebrow existed, and a check that only caught
+  // it at 10px left a canvas frame's name and hint in tracked caps at 12px.
+  // .eyebrow is sentence case now, so caps at any size are the old costume.
+  {
+    id: 'caps',
+    re: /text-transform:\s*uppercase/g,
+    msg: 'caps — labels are sentence case; a section or field name is .eyebrow',
+  },
   // Twelve rules set outline:none, and keyboard focus went with most of them:
   // a tile, a card and a smart-space spark showed it only as their hover
   // state, and a combobox row reached by Tab showed nothing. Everything else
@@ -147,21 +155,6 @@ for (const file of files) {
     report.push(
       `  ${file}:${hit.line}  [button-chrome] ${hit.selector} builds a button box` +
         `\n      use <Button> (client/ui/Button.tsx) with its size/tone/danger props`,
-    )
-    failures++
-  }
-}
-
-/* ── eyebrows built from scratch ──────────────────────────────────────────
- * The small caps label — a section's or a field's name — was written thirteen
- * times across five sheets, in three sizes, two trackings and three greys,
- * though Settings had already named it the eyebrow. .eyebrow in
- * primitives.css is the one; small text set in caps anywhere else rebuilds it. */
-for (const file of files) {
-  if (basename(file) === 'primitives.css') continue
-  for (const hit of findEyebrowChrome(readFileSync(join(STYLES, file), 'utf8'))) {
-    report.push(
-      `  ${file}:${hit.line}  [eyebrow] ${hit.selector} rebuilds the eyebrow\n      add the .eyebrow class and keep only layout here`,
     )
     failures++
   }

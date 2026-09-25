@@ -47,7 +47,7 @@ the right move is to use the nearest step, not to add one.
 |---|---|---|
 | Type size | `--text-2xs` 11 · `--text-xs` 12 · `--text-sm` 14 · `--text-md` 16 · `--text-xl` 20 · `--text-3xl` 28 | one role per step: counts · labels · UI body · reading text · titles · article headline (roles in `tokens.css`); `--text-display-fluid` for the Ask hero |
 | Weight | `--fw-normal` `--fw-medium` `--fw-heading` `--fw-bold` | headings use `--fw-heading` |
-| Tracking | `--tracking-normal` `--tracking-heading` `--tracking-tight` `--tracking-tighter` `--tracking-mono` `--tracking-label` | tightens as size grows |
+| Tracking | `--tracking-normal` `--tracking-heading` `--tracking-tight` `--tracking-tighter` `--tracking-mono` | tightens as size grows |
 | Leading | `--leading-none` → `--leading-normal`, plus `--leading-chat` | |
 | Spacing | `--space-0` → `--space-48` | named by px on purpose: `--space-12` is 12px, so two people pick the same one |
 | Radius | `--radius-xs` (2px) → `--radius-2xl` (16px), `--radius-full`, `--radius-circle` | `--radius-md` (8px) is the most common |
@@ -154,8 +154,9 @@ that most made it read as a terminal costume.
 Ask's chat history, Settings' groups, Expanded's sections and field labels, a
 menu's title and a code block's language all carry it, and keep only layout in
 their own rule. It had been written thirteen times in three sizes, two
-trackings and three greys; `lint:tokens` now fails small text set in caps
-anywhere but `primitives.css`.
+trackings and three greys; `lint:tokens` now fails `text-transform:uppercase`
+in any sheet. It once failed only 10px caps outside `primitives.css`, which let
+a canvas frame's name and hint keep tracked caps at 12px.
 
 **Every page opens with `<PageHeader>`** (`client/ui/`). Two rows: identity
 (`lead`, `title`, a `meta` count, `actions` on the right) over a toolbar

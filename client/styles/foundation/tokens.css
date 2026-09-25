@@ -28,14 +28,13 @@
   --tracking-heading:-.025em;  /* h1–h4 — the Ask headline's value */
   --tracking-tight:-.02em;     /* small UI text; ~29 sites still on this */
   --tracking-tighter:-.03em;   /* 28px+ */
-  /* Positive tracking has exactly two jobs, and the class that applies each is
-     named after it. Anything mono-family gets --tracking-mono via .mono; any
-     uppercase micro-label gets --tracking-label. Three elements used to carry
-     .mono and then re-declare letter-spacing on top of it at .05em, .06em and
-     .08em — three hand-picked values for one job. Don't override these; if a
-     label needs different tracking, it is a different kind of label. */
+  /* Positive tracking has exactly one job: mono text gets --tracking-mono via
+     .mono and <code>. Three elements used to carry .mono and then re-declare
+     letter-spacing on top of it at .05em, .06em and .08em — three hand-picked
+     values for one job. Don't override it. A --tracking-label:.14em spaced the
+     uppercase micro-labels; labels are sentence case now, so it went with
+     them. */
   --tracking-mono:.06em;   /* literal text — applied by .mono and <code> in base.css */
-  --tracking-label:.14em;  /* uppercase micro-labels */
 
   /* Type scale. Everything snaps to these steps — the sweep removed the
      8.5/9.5/10.5/11.5/12.5px half-pixel sizes and the un-tokenized 9/11/13px
