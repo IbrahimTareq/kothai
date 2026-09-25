@@ -18,6 +18,7 @@ export interface NoteSource {
   insertLocal: (item: UIItem) => void
   removeLocal: (id: string) => void
   patchLocal: (id: string, patch: Partial<UIItem>) => void
+  refreshFacets: () => void
 }
 
 // `members` is for results that change server-side under an unchanged query —
@@ -73,6 +74,20 @@ export function useNotes(query: PagerQuery, enabled = true, members?: number): N
       })
   }
 
+  // Read at call time: App calls refreshFacets once a delete lands, from a
+  // closure that may predate a search typed meanwhile.
+  const liveKey = useRef(key)
+  liveKey.current = key
+  // One note is the smallest page the server will send; only its facets are used.
+  const refreshFacets = () => {
+    const req = pager.current.requestFacets()
+    API.page({ offset: 0, limit: 1, ...(JSON.parse(liveKey.current) as PagerQuery) })
+      .then(p => {
+        if (pager.current.applyFacets(p.facets, req)) rerender()
+      })
+      .catch(() => {}) // counts stay stale until the next add, remove or page
+  }
+
   // The old results stay on screen until the new query's first page lands
   // (see beginQuery in pager.ts), but `ready` still drops: it means "these
   // slots are the CURRENT query's", and Spaces' canvas relies on that to know
@@ -124,6 +139,9 @@ export function useNotes(query: PagerQuery, enabled = true, members?: number): N
           )
           pager.current.rev = d.rev
           pager.current.bootId = d.bootId
+          // Enrichment can turn a fresh link into a video, and another device
+          // can add or delete, so any change can move a chip's count.
+          if (d.notes?.length || d.deleted?.length) refreshFacets()
           rerender()
         }
       } catch {
@@ -183,8 +201,11 @@ export function useNotes(query: PagerQuery, enabled = true, members?: number): N
         pager.current.patchLocal(id, patch)
         rerender()
       },
+      refreshFacets,
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }),
-    [pager.current.slots(), ready, key],
+    // facets too: a refreshFacets answer changes the counts and no slot, and
+    // without it the chips kept the counts from before.
+    [pager.current.slots(), pager.current.facets, ready, key],
   )
 }

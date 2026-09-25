@@ -1,11 +1,12 @@
 // Gallery.tsx — the Everything grid: search box, type/source filter chips,
 // column toggle, item board, and capture FAB.
 import { useRef } from 'react'
-import { Icon, CAT } from '../components/icons'
+import { Icon, CAT, CATEGORIES } from '../components/icons'
+import { SOURCES } from '../domain/source'
 import { ItemCard } from '../components/Cards'
 import { WindowedBoard } from '../components/Board'
 import type { Collection, UIItem, NoteType, ViewMode } from '../types'
-import type { Slot } from '../data/pager'
+import type { Facets, Slot } from '../data/pager'
 import { useScrollEdges } from '../layout/useScrollEdges'
 import { PageHeader } from '../ui/PageHeader'
 import { Chip } from '../ui/Chip'
@@ -30,9 +31,8 @@ interface GalleryViewProps {
   setGalFilter: (v: string[]) => void
   galSort: 'newest' | 'oldest'
   setGalSort: (v: 'newest' | 'oldest') => void
-  typeChips: { key: string; label: string; glyph: string; count: number }[]
-  sourceChips: { key: string; label: string; dot: string; glyph?: string; count: number }[]
-  unavailableCount: number
+  /** Server counts over the search-filtered set, whatever chips are on. */
+  facets: Facets
   onExpand: (item: UIItem) => void
   collections: Collection[]
   addToCollection: (cid: string, itemId: string) => void
@@ -62,9 +62,7 @@ export function GalleryView({
   setGalFilter,
   galSort,
   setGalSort,
-  typeChips,
-  sourceChips,
-  unavailableCount,
+  facets,
   onExpand,
   collections,
   addToCollection,
@@ -79,13 +77,35 @@ export function GalleryView({
   const on = (key: string) => galFilter.includes(key)
   const toggle = (key: string) => setGalFilter(on(key) ? galFilter.filter(k => k !== key) : [...galFilter, key])
 
+  // Only types/sources actually present in the (search-filtered) set, with
+  // live counts straight from the server. A selected chip stays at 0:
+  // deleting the last GitHub note under the GitHub filter otherwise hid the
+  // chip and kept the filter, an empty board with nothing lit to say why.
+  const shown = (c: { key: string; count: number }) => c.count > 0 || on(c.key)
+  const typeChips = CATEGORIES.map(c => ({
+    key: c.id as string,
+    label: c.label,
+    glyph: c.glyph,
+    count: facets.types[c.id] || 0,
+  })).filter(shown)
+  const sourceChips = SOURCES.map(s => ({
+    key: s.key,
+    label: s.label,
+    dot: s.dot,
+    glyph: s.glyph,
+    count: facets.sources[s.key] || 0,
+  })).filter(shown)
+  const unavailableCount = facets.unavailable || 0
+
   // The filter strip scrolls sideways (11 chips against ~350px on a phone),
   // and did so with no sign that it could: the only hint was a chip clipped
   // mid-word at the edge, which reads as a layout bug rather than an
   // invitation. Fade whichever edge still has chips beyond it.
   // A change to the chips themselves comes through chipCount, since that
   // leaves the container's own box alone and so fires no ResizeObserver.
-  const chipCount = typeChips.length + sourceChips.length + (unavailableCount > 0 ? 1 : 0)
+  // Kept while selected even at 0, like the chips above.
+  const showUnavailable = unavailableCount > 0 || on('unavailable')
+  const chipCount = typeChips.length + sourceChips.length + (showUnavailable ? 1 : 0)
   const { ref: filtersRef, className: filtersFade } = useScrollEdges('x', [chipCount, nav])
 
   return (
@@ -108,7 +128,7 @@ export function GalleryView({
           </div>
         }
         filters={
-          nav === 'all' && (typeChips.length > 0 || sourceChips.length > 0 || unavailableCount > 0) ? (
+          nav === 'all' && (typeChips.length > 0 || sourceChips.length > 0 || showUnavailable) ? (
             <div className={`gal-filters${filtersFade}`} ref={filtersRef}>
               <Chip on={galFilter.length === 0} onClick={() => setGalFilter([])}>
                 All
@@ -139,7 +159,7 @@ export function GalleryView({
               {/* Last, and only once a check has found something: this is a
                   state the library is in, not a kind of thing in it, and an
                   "Unavailable 0" chip would be a filter for an empty set. */}
-              {unavailableCount > 0 && (
+              {showUnavailable && (
                 <>
                   <span className="filter-sep" />
                   <Chip

@@ -1,6 +1,6 @@
 // App.tsx — Kothai shell: capture console, reactor states, gallery, ask thread.
 import { useState, useEffect, useRef } from 'react'
-import { Icon, CATEGORIES, CAT } from '../components/icons'
+import { Icon, CAT } from '../components/icons'
 import { API } from '../data/api'
 import { useNotes, type NoteSource } from '../data/useNotes'
 import { boardQuery } from '../domain/boardQuery'
@@ -14,7 +14,7 @@ import { Onboarding } from '../views/Onboarding'
 import { CaptureModal } from '../components/Capture'
 import { pathToRoute, routeToPath, chatPath } from './router'
 import { applyTheme } from './theme'
-import { SOURCES, SOURCE_BY_KEY, sourceGlyph } from '../domain/source'
+import { SOURCE_BY_KEY, sourceGlyph } from '../domain/source'
 import { CoreView } from '../views/Core'
 import { GalleryView } from '../views/Gallery'
 import { SpacesView } from '../views/Spaces'
@@ -164,6 +164,7 @@ export default function App() {
     try {
       const { note } = await API.save({ text: raw })
       notes.insertLocal(note)
+      notes.refreshFacets()
       flashCaptured()
       return null
     } catch (e) {
@@ -174,7 +175,11 @@ export default function App() {
   const deleteItem = (id: string) => {
     notes.removeLocal(id)
     spaceNotesRef.current?.removeLocal(id)
-    API.del(id).catch(() => {})
+    // After the delete lands, not alongside it: asked any sooner, the server
+    // still counts the note.
+    API.del(id)
+      .then(notes.refreshFacets)
+      .catch(() => {})
   }
   // optimistic tag / mind-note edits from the expanded view; server reconciles
   const updateItem = (id: string, patch: { tags?: string[]; mindNote?: string }) => {
@@ -336,25 +341,6 @@ export default function App() {
   const lastTab = useRef(0)
   if (tabIndex >= 0) lastTab.current = tabIndex
 
-  // filter chips for the Everything nav — only types/sources actually present
-  // in the (search-filtered) set, with live counts straight from the server.
-  const typeChips = CATEGORIES.map(c => ({
-    key: c.id as string,
-    label: c.label,
-    glyph: c.glyph,
-    count: notes.facets.types[c.id] || 0,
-  })).filter(c => c.count > 0)
-  const sourceChips = SOURCES.map(s => ({
-    key: s.key,
-    label: s.label,
-    dot: s.dot,
-    glyph: s.glyph,
-    count: notes.facets.sources[s.key] || 0,
-  })).filter(c => c.count > 0)
-  // Only offered once a check has actually found something — a permanent
-  // "Unavailable 0" chip is a filter for an empty set.
-  const unavailableCount = notes.facets.unavailable || 0
-
   // Hold the app behind the first-run gate: a brief splash until we know the
   // configured state, then the model picker on a fresh install.
   if (needsSetup === null)
@@ -480,9 +466,7 @@ export default function App() {
                 setGalFilter,
                 galSort,
                 setGalSort,
-                typeChips,
-                sourceChips,
-                unavailableCount,
+                facets: notes.facets,
                 onExpand: openExpanded,
                 collections,
                 addToCollection,

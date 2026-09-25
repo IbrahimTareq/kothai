@@ -107,6 +107,7 @@ export class NotePager {
   // results stay on screen and the first page of the new query replaces them.
   private gen = 0
   private replacing = false
+  private facetReq = 0
 
   get generation(): number {
     return this.gen
@@ -114,9 +115,26 @@ export class NotePager {
 
   beginQuery(): number {
     this.gen++
+    this.facetReq++ // the new query's first page carries its own counts
     this.replacing = true
     this.inflight.clear()
     return this.gen
+  }
+
+  // Chip counts are the server's: they cover every note the search matches,
+  // whatever chips are on, so the loaded window can't recount them. They used
+  // to arrive only with a page, so deleting the one GitHub note left "GitHub 1"
+  // on the strip, opening an empty board. useNotes' refreshFacets re-asks
+  // after each add or remove; only the newest ask is applied, since two quick
+  // deletes send two and the older answer can land last.
+  requestFacets(): number {
+    return ++this.facetReq
+  }
+
+  applyFacets(f: Facets, req: number): boolean {
+    if (req !== this.facetReq) return false
+    this.facets = f
+    return true
   }
 
   reset(): void {

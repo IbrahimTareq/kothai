@@ -80,6 +80,33 @@ test('local insert/remove/patch shift and patch slots', () => {
   assert.deepEqual((p.slots()[2] as UIItem).tags, ['x'])
 })
 
+test('a facets refresh replaces the chip counts and leaves the slots alone', () => {
+  const p = new NotePager()
+  p.applyPage({ ...page(0, 2, 2), facets: { types: { link: 2 }, sources: { github: 1 } } })
+  const before = p.slots()
+  assert.equal(p.applyFacets({ types: { link: 1 }, sources: {} }, p.requestFacets()), true)
+  assert.deepEqual(p.facets, { types: { link: 1 }, sources: {} })
+  assert.equal(p.slots(), before)
+})
+
+test('only the newest facets refresh applies, whichever answer lands last', () => {
+  const p = new NotePager()
+  p.applyPage(page(0, 2, 2))
+  const first = p.requestFacets()
+  const second = p.requestFacets()
+  assert.equal(p.applyFacets({ types: { link: 1 }, sources: {} }, second), true)
+  assert.equal(p.applyFacets({ types: { link: 2 }, sources: {} }, first), false)
+  assert.deepEqual(p.facets.types, { link: 1 })
+})
+
+test('a facets refresh sent before a query switch is dropped', () => {
+  const p = new NotePager()
+  p.applyPage(page(0, 2, 2))
+  const req = p.requestFacets()
+  p.beginQuery()
+  assert.equal(p.applyFacets({ types: { link: 9 }, sources: {} }, req), false)
+})
+
 test('reset clears state for a new query', () => {
   const p = new NotePager()
   p.applyPage(page(0, 3, 3))
