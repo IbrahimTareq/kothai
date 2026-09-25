@@ -35,7 +35,7 @@
  * Run: npm run lint:shape   (also runs as part of `npm test`)
  * Tighten after a real reduction: npm run lint:shape -- --update
  */
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -118,13 +118,19 @@ export function nextBaseline(
 // Untracked files count too. A split creates new modules, and --update runs
 // before they are committed: measuring only tracked files let 5d38056 and
 // 9d2f987 record an export total of 500 while the real one was 511.
+//
+// Files missing from disk don't count. `--cached` keeps listing a tracked file
+// deleted but not yet staged, and reading it crashed with ENOENT — failing
+// `pnpm test`, and so the Stop hook, in every session sharing the checkout
+// until someone staged another session's deletion. A deleted file has no
+// shape; leaving it out also keeps it out of the export total.
 export const sourceFiles = (root: string = ROOT) =>
   execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', 'client', 'server'], {
     cwd: root,
     encoding: 'utf8',
   })
     .split('\n')
-    .filter(f => /\.(ts|tsx)$/.test(f))
+    .filter(f => /\.(ts|tsx)$/.test(f) && existsSync(join(root, f)))
 
 // `_governance` is metadata about the governance system, not a file's shape —
 // every place that walks the baseline as a set of files must ignore it.

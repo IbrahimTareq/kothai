@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -274,4 +274,20 @@ test('sourceFiles measures new, uncommitted files but not ignored ones', () => {
   writeFileSync(join(root, 'server', 'new.ts'), 'export const b = 1\n')
   writeFileSync(join(root, 'server', 'ignored.ts'), 'export const c = 1\n')
   assert.deepEqual(sourceFiles(root).sort(), ['server/new.ts', 'server/tracked.ts'])
+})
+
+// `git ls-files --cached` still lists a tracked file deleted from disk until
+// the deletion is staged, and main() then crashed with ENOENT reading it —
+// taking `pnpm test` and the Stop hook down with it in every session sharing
+// the checkout, where another session's unstaged deletion is routine.
+test('sourceFiles skips a tracked file deleted from disk but not yet staged', () => {
+  const root = mkdtempSync(join(tmpdir(), 'shape-'))
+  const git = (...args: string[]) => execFileSync('git', args, { cwd: root, stdio: 'pipe' })
+  git('init', '-q')
+  mkdirSync(join(root, 'server'))
+  writeFileSync(join(root, 'server', 'kept.ts'), 'export const a = 1\n')
+  writeFileSync(join(root, 'server', 'gone.ts'), 'export const b = 1\n')
+  git('add', '.')
+  rmSync(join(root, 'server', 'gone.ts'))
+  assert.deepEqual(sourceFiles(root), ['server/kept.ts'])
 })
