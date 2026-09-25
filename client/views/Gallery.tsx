@@ -34,6 +34,8 @@ interface GalleryViewProps {
   setGalSort: (v: 'newest' | 'oldest') => void
   /** Server counts over the search-filtered set, whatever chips are on. */
   facets: Facets
+  /** Re-ask the server for `facets` — when a count shown is known stale. */
+  refreshFacets: () => void
   onExpand: (item: UIItem) => void
   collections: Collection[]
   addToCollection: (cid: string, itemId: string) => void
@@ -64,6 +66,7 @@ export function GalleryView({
   galSort,
   setGalSort,
   facets,
+  refreshFacets,
   onExpand,
   collections,
   addToCollection,
@@ -222,13 +225,18 @@ export function GalleryView({
         }
       />
 
-      {/* Hidden while a search is typed: the chip counts only matching notes,
-          but removal deletes every marked one, so the number on the bar would
-          not be the number deleted — the server would refuse it. */}
-      {nav === 'all' && on('unavailable') && unavailableCount > 0 && !search && (
+      {/* Only when Unavailable is the one chip on, and no search is typed.
+          Removal deletes every marked note, whatever else is on screen. A
+          search narrows the chip's count to matching notes, so the number on
+          the bar would not be the number deleted — the server would refuse
+          it. Another chip beside it (Instagram + Unavailable) narrows the
+          board instead: the count would still match, but Remove would delete
+          marked TikToks the user never saw on it. */}
+      {nav === 'all' && galFilter.length === 1 && on('unavailable') && unavailableCount > 0 && !search && (
         <UnavailableBar
           count={unavailableCount}
           onRemoved={() => setGalFilter(galFilter.filter(k => k !== 'unavailable'))}
+          onStale={refreshFacets}
         />
       )}
 

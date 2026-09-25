@@ -37,10 +37,11 @@ export async function handleAvailabilityRemove(req: IncomingMessage, res: Server
     return json(res, 400, { error: 'Could not read the request.' })
   }
   const targets = store.allNotes().filter(n => n.unavailable)
-  // The client sends the count it showed the user. If the library changed since
-  // (a scan cleared a mark, another tab deleted something), the number in front
-  // of them was not the number about to be deleted — so refuse rather than
-  // delete a different set than the one they agreed to.
+  // The client sends the count it showed the user. If the library changed
+  // since (the daily sweep marked or cleared a link, another tab deleted
+  // something), the number in front of them was not the number about to be
+  // deleted — so refuse rather than delete a different set than the one they
+  // agreed to.
   if (!isRecord(body) || body.expected !== targets.length) {
     return json(res, 409, {
       error: `That list has changed — ${targets.length} item(s) are marked unavailable now. Look them over again before removing.`,

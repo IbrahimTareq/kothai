@@ -25,11 +25,13 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 // The single-note responses below still send the whole record; they are one
 // note each.
 //
-// availabilityCheckedAt is stripped alongside them for the same reason though
-// it lives on ServerNote, not just NoteRecord: the sweep (server/links/
-// sweep.ts) bumps it on every checked note — ~440 a day — which would put
-// every one of those notes' cards back on the wire on the next delta poll for
-// a field the UI never reads.
+// availabilityCheckedAt is stripped alongside them though it lives on
+// ServerNote, not just NoteRecord. The sweep (server/links/sweep.ts) stamps
+// every checked note — ~440 a day — and updateNote bumps _rev, so those notes
+// still go out on the next delta poll either way. Stripped, each card arrives
+// identical to the one the client already holds, and applyDelta (client/data/
+// pager.ts) leaves it alone; with the stamp on it, every one would differ,
+// be replaced, and re-render for a field the UI never reads.
 function card(n: PublicNote): ServerNote {
   const {
     ai,

@@ -49,15 +49,16 @@ const GONE = new Set([400, 404, 410])
 
 const BROKEN_EMBED = /class="[^"]*\bEmbedBrokenMedia\b/
 
-// A post page, not a profile, a music/audio page under /reels/, or anything
-// else instagram.com serves under those three prefixes. Deliberately
-// narrower than isInstagramPost (server/links/instagram.ts): that function
-// gates import-eligibility for callers this module has no say over, and
-// widening it to match would change what the rest of the app treats as a
-// savable Instagram link. The (?!audio\/) exclusion exists because
-// /reels/audio/<id>/ — a page about a SONG, not a post — otherwise matches
-// the same /reels/<id>/ shape a real post does.
-const IG_POST_PATH = /^\/(p|reels?|tv)\/(?!audio\/)[\w-]+\/?$/
+// Only /p/<id> and /reel/<id> — the two shapes the embed-page reading was
+// measured against (the 2026-09-26 library: 377 /p/, 1,306 /reel/). As with
+// X and YouTube, a shape that was not measured stays 'unknown': /reels/<id>
+// and /tv/<id> are left out, and so is everything else instagram.com serves
+// under those prefixes — /reels/audio/<id>/ is a page about a SONG, not a
+// post. Deliberately narrower than isInstagramPost (server/links/
+// instagram.ts): that function gates import-eligibility for callers this
+// module has no say over, and narrowing it to match would change what the
+// rest of the app treats as a savable Instagram link.
+const IG_POST_PATH = /^\/(p|reel)\/[\w-]+\/?$/
 
 // X's own share link for a single photo or video in a tweet
 // (/status/<id>/photo/1, /video/1, …) is a DIFFERENT resource from the tweet

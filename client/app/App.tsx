@@ -467,6 +467,7 @@ export default function App() {
                 galSort,
                 setGalSort,
                 facets: notes.facets,
+                refreshFacets: notes.refreshFacets,
                 onExpand: openExpanded,
                 collections,
                 addToCollection,

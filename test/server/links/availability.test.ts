@@ -114,7 +114,14 @@ test('a failed Instagram fetch is not a verdict', async () => {
 test('Instagram posts are checkable; other Instagram pages are not', () => {
   assert.equal(isCheckable(IG), true)
   assert.equal(isCheckable('https://www.instagram.com/reel/DcLY4Atje0p/'), true)
+  // Shared from the app, both carry ?igsh=; the check reads only the path.
+  assert.equal(isCheckable('https://www.instagram.com/p/DcLY4Atje0p/?igsh=MWx0b2Z3'), true)
+  assert.equal(isCheckable('https://www.instagram.com/reel/DcLY4Atje0p/?igsh=MWx0b2Z3'), true)
   assert.equal(isCheckable('https://www.instagram.com/someone/'), false)
+  // /reels/<id> and /tv/<id> are Instagram links too, but not shapes the
+  // embed-page reading was measured against.
+  assert.equal(isCheckable('https://www.instagram.com/reels/DcLY4Atje0p/'), false)
+  assert.equal(isCheckable('https://www.instagram.com/tv/DcLY4Atje0p/'), false)
 })
 
 test('X and YouTube links are checkable', () => {

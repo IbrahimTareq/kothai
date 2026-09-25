@@ -7,6 +7,7 @@
 // wrong for reasons that have nothing to do with the content — a throttle, a
 // soft-ban, an API change. A dead tile left in place costs a grid cell; a live
 // save deleted costs something the user chose to keep.
+import { isImportInProgress } from '../data/import-lock.ts'
 import * as store from '../data/notes.ts'
 import type { PublicNote } from '../data/notes.ts'
 import type { ServerNote } from '../types.ts'
@@ -28,6 +29,16 @@ const INSTAGRAM_DAYS = 7
 // whole library for deletion — which the user would then confirm, because the
 // count is all they see. Real rot in a saved library is a slow trickle; a
 // majority verdict is a bug report, not a finding.
+//
+// Judged per lane — the Instagram slice, and the oEmbed checks for everything
+// else — AND over the run as a whole; any one tripping writes nothing. Per
+// lane because each lane fails on its own (a soft-ban, a changed oEmbed API),
+// and a failing lane hides inside a healthy one's average: on the 2026-09-26
+// library, Instagram serving its broken page to every request would have been
+// 262 gone of 439 over the whole run (0.597, 198 TikToks + 241 Instagram) —
+// under the line, and 241 live saves marked that day. Over the whole run as
+// well because two lanes each under RATIO_MIN_SAMPLE are unjudged alone, yet
+// together can still be a sample big enough to be implausible.
 const IMPLAUSIBLE_DEAD_RATIO = 0.6
 // Below this many checks the ratio is noise (3 of 4 dead is entirely normal).
 const RATIO_MIN_SAMPLE = 20
@@ -56,6 +67,12 @@ let lastAttemptAt = 0
 
 // Called hourly; runs at most once a day. null means it did not run.
 export async function maybeSweep(now = Date.now()): Promise<SweepResult | null> {
+  // The sweep's single flush() commits — or on failure discards — the
+  // store-wide pendingWrites queue, which an import batch is filling with its
+  // own unflushed notes: running now would half-commit that import, or throw
+  // it away. Skipped before lastAttemptAt is set, so the next hourly tick
+  // tries again rather than the day being lost (same guard as backupIfDue).
+  if (isImportInProgress()) return null
   if (now - lastAttemptAt < DAY_MS) return null
   const candidates = store.allNotes().flatMap(n => (isCheckable(n.url) ? [{ note: n, url: n.url }] : []))
   // The newest stamp stands in for "when did the last sweep run": it survives
@@ -83,16 +100,16 @@ async function sweep(candidates: Candidate[], now: number): Promise<SweepResult>
   // Every verdict is in before anything is written, so the guard below can see
   // the shape of the whole run and refuse to write at all. Marking as we went
   // would leave a half-marked library behind when the guard trips.
-  const verdicts: { note: PublicNote; verdict: Availability }[] = []
-  const check = async (c: Candidate) => {
-    verdicts.push({ note: c.note, verdict: await checkAvailability(c.url) })
+  const verdicts: { note: PublicNote; verdict: Availability; lane: 'Instagram' | 'oEmbed' }[] = []
+  const check = async (c: Candidate, lane: 'Instagram' | 'oEmbed') => {
+    verdicts.push({ note: c.note, verdict: await checkAvailability(c.url), lane })
   }
   let cursor = 0
   await Promise.all([
     // No pool for Instagram: its queue already runs one request at a time.
-    ...slice.map(check),
+    ...slice.map(c => check(c, 'Instagram')),
     ...Array.from({ length: Math.min(CONCURRENCY, rest.length) }, async () => {
-      while (cursor < rest.length) await check(rest[cursor++])
+      while (cursor < rest.length) await check(rest[cursor++], 'oEmbed')
     }),
   ])
 
@@ -107,10 +124,20 @@ async function sweep(candidates: Candidate[], now: number): Promise<SweepResult>
     cleared: 0,
     aborted: false,
   }
-  const conclusive = dead + alive
-  if (conclusive >= RATIO_MIN_SAMPLE && dead / conclusive > IMPLAUSIBLE_DEAD_RATIO) {
-    console.warn(`[sweep] ${dead} of ${conclusive} links reported gone — too many to believe; nothing written`)
-    return { ...result, aborted: true }
+  const judged = [
+    ['whole run', verdicts],
+    ['Instagram', verdicts.filter(v => v.lane === 'Instagram')],
+    ['oEmbed', verdicts.filter(v => v.lane === 'oEmbed')],
+  ] as const
+  for (const [what, own] of judged) {
+    const ownDead = own.filter(v => v.verdict === 'dead').length
+    const conclusive = own.filter(v => v.verdict !== 'unknown').length
+    if (conclusive >= RATIO_MIN_SAMPLE && ownDead / conclusive > IMPLAUSIBLE_DEAD_RATIO) {
+      console.warn(
+        `[sweep] ${what}: ${ownDead} of ${conclusive} links reported gone — too many to believe; nothing written`,
+      )
+      return { ...result, aborted: true }
+    }
   }
 
   const stamp = new Date(now).toISOString()
@@ -132,9 +159,12 @@ async function sweep(candidates: Candidate[], now: number): Promise<SweepResult>
       result.cleared++
     }
     // Queued rather than written here: the guard above already refuses to
-    // write anything when the whole run looks wrong, and a disk error partway
-    // through this loop shouldn't leave a half-marked run either — flush()
-    // commits every patch in one transaction, so they all land or none do.
+    // write anything when the run or a lane looks wrong, and a disk error
+    // partway through this loop shouldn't leave a half-marked run either —
+    // flush() commits every patch in one transaction, so on DISK they all
+    // land or none do. Memory is another matter: updateNote has already applied each
+    // patch in memory, so if flush() throws, this process shows the marks
+    // until a restart reloads the store from disk.
     await store.updateNote(note.id, patch, { persist: false })
   }
   await store.flush()
