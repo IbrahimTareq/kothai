@@ -376,7 +376,6 @@ for (const f of checkAgainstHead(rawBaseline, rawHead)) {
 const EXEMPT = new Map([
   // Ladder rungs held open so the scale stays closed and choosing needs no
   // judgement. Each is the step someone would otherwise hand-write.
-  ['--text-lg', 'type ladder: a hole at 18px would be filled by hand'],
   ['--leading-none', 'leading ladder'],
   ['--space-0', 'spacing ladder: the explicit zero'],
   ['--space-44', 'spacing ladder: 4px grid above 24'],

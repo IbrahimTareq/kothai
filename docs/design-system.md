@@ -45,7 +45,7 @@ the right move is to use the nearest step, not to add one.
 
 | Axis | Tokens | Notes |
 |---|---|---|
-| Type size | `--text-3xs` (9px) → `--text-3xl` (28px) | `--text-display-fluid` for hero headings |
+| Type size | `--text-2xs` 11 · `--text-xs` 12 · `--text-sm` 14 · `--text-md` 16 · `--text-xl` 20 · `--text-3xl` 28 | one role per step: counts · labels · UI body · reading text · titles · article headline (roles in `tokens.css`); `--text-display-fluid` for the Ask hero |
 | Weight | `--fw-normal` `--fw-medium` `--fw-heading` `--fw-bold` | headings use `--fw-heading` |
 | Tracking | `--tracking-normal` `--tracking-heading` `--tracking-tight` `--tracking-tighter` `--tracking-mono` `--tracking-label` | tightens as size grows |
 | Leading | `--leading-none` → `--leading-normal`, plus `--leading-chat` | |
@@ -196,10 +196,12 @@ precedent.)
 
 Three things sit outside the system on purpose. Don't "fix" them.
 
-- **The Ask surface.** `.core` uses chat-specific tokens (`--text-chat`,
-  `--leading-chat`, `--chat-*`, `--shadow-*`) ported from the ai-sdk chatbot
-  reference — 13px at 1.65 with soft shadows instead of hairlines. Its *type*
-  treatment was promoted to the app-wide default; its *surfaces* remain local.
+- **The Ask surface.** `.core` uses chat-specific tokens (`--leading-chat`,
+  `--chat-*`, `--shadow-*`) ported from the ai-sdk chatbot reference — a 1.65
+  leading with soft shadows instead of hairlines. Its *type* treatment was
+  promoted to the app-wide default; its *surfaces* remain local. Its 13px size
+  (`--text-chat`) did not survive the ladder cut: it was a third body size
+  between 12 and 14, and Ask now reads at `--text-sm`.
 - **Content overlays.** Controls, badges and labels that float over user
   imagery or video sit on `--scrim` (`--scrim-hover` when pressed) with a
   `--color-white` glyph — tokens that are the same in both themes, because

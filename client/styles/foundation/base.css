@@ -23,7 +23,7 @@ body{
   color:var(--ink);
   font-family:var(--font-sans);
   font-weight:var(--fw-normal);
-  font-size:var(--text-base);
+  font-size:var(--text-sm);
   letter-spacing:var(--tracking-normal);  /* body sits neutral; only headings track tight */
   line-height:var(--leading-normal);
   -webkit-font-smoothing:antialiased;

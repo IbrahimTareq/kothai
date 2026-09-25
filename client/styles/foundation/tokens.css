@@ -43,17 +43,30 @@
      The ladder now ends at 28px + the fluid hero. A --text-display:36px and
      --text-display-lg:40px sat above that with --tracking-tightest to match,
      an entire display tier for typography this app does not set. Cutting the
-     top of a ladder leaves no gap, so they went; --text-lg is likewise unused
-     but sits mid-ladder, and a hole at 18px would just get filled by hand. */
-  --text-3xs:9px;
-  --text-2xs:10px;
+     top of a ladder leaves no gap, so they went.
+
+     Then the middle. Twelve steps, seven of them between 9px and 16px, meant
+     Ask read at 13px, the page default sat at 15px and Settings at 12 and 14:
+     three neighbouring body sizes on one screen, none of which looked chosen.
+     Seven steps now, one role each —
+
+       2xs 11  counts, badges, timestamps, tile meta
+       xs  12  labels, descriptions, small controls
+       sm  14  UI body: rows, buttons, the Ask thread, the page default
+       md  16  reading text: a tile's headline, an article's standfirst
+       xl  20  titles: every page, the item panel, onboarding
+       3xl 28  an article's headline
+       display-fluid  the Ask hero
+
+     The cut names (3xs, base, lg, 2xl, chat) are left as holes rather than
+     the survivors renamed to close them: a view still writing --text-xl then
+     gets the 20px it meant, not a silent 28px, and a cut name fails lint as
+     undefined. */
+  --text-2xs:11px;
   --text-xs:12px;
   --text-sm:14px;
-  --text-base:15px;
   --text-md:16px;
-  --text-lg:18px;
   --text-xl:20px;
-  --text-2xl:22px;
   --text-3xl:28px;
   /* Fluid hero size — the Ask landing headline */
   --text-display-fluid:clamp(24px,3vw,30px);
@@ -175,10 +188,11 @@
 
   /* ── Ask surface ──
      Typography and surface values ported from the ai-sdk chatbot reference
-     (chatbot.ai-sdk.dev): 13px body at 1.65 with neutral tracking, a 16px
+     (chatbot.ai-sdk.dev): a 1.65 body leading with neutral tracking, a 16px
      composer/bubble radius, and soft one-pixel shadows in place of the hard
-     hairlines used elsewhere. Dark values here, light ones in the theme block. */
-  --text-chat:13px;
+     hairlines used elsewhere. Dark values here, light ones in the theme block.
+     Its 13px body size came too, as --text-chat; it sat between Settings' 12
+     and 14 as a third body size, and Ask now reads at --text-sm. */
   --leading-chat:1.65;
   --chat-surface:rgba(28,28,28,.70);
   --chat-bubble-from:#242424;

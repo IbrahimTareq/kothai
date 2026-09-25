@@ -16,6 +16,7 @@
 // the answer is identical on a laptop and in CI.
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { loadThemes, resolve, pairContrast, contrast } from '../../scripts/token-colors.ts'
 
@@ -101,4 +102,25 @@ test('every colour token resolves in both themes', () => {
     if (!resolve(name, dark)) continue // not a colour token
     assert.ok(resolve(name, light), `${name} is a colour in :root but does not resolve under [data-theme="light"]`)
   }
+})
+
+// The type ladder had grown to twelve steps, seven of them between 9px and
+// 16px: Ask read at 13px, the page default was 15px and Settings used 12 and
+// 14, so three neighbouring body sizes sat on one screen and none of them
+// looked chosen. Seven steps now, each a role (docs/design-system.md). A new
+// size is a design decision; make it here, on purpose, not in a view.
+test('the type ladder is the seven documented steps', () => {
+  const src = readFileSync(TOKENS, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+  const ladder = Object.fromEntries(
+    [...src.matchAll(/(--text-[a-z0-9-]+)\s*:\s*([^;]+);/g)].map(m => [m[1], m[2].trim()]),
+  )
+  assert.deepEqual(ladder, {
+    '--text-2xs': '11px',
+    '--text-xs': '12px',
+    '--text-sm': '14px',
+    '--text-md': '16px',
+    '--text-xl': '20px',
+    '--text-3xl': '28px',
+    '--text-display-fluid': 'clamp(24px,3vw,30px)',
+  })
 })

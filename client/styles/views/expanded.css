@@ -39,11 +39,11 @@
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);padding:var(--space-36) var(--space-36)}
 .exp-card-logo{display:flex;justify-content:center;color:var(--ink)}
 .exp-card-logo.lg{width:56px;height:56px;margin:0 auto;align-items:center;border-radius:var(--radius);
-  background:var(--panel-2);font-size:var(--text-2xl);font-weight:var(--fw-medium)}
+  background:var(--panel-2);font-size:var(--text-xl);font-weight:var(--fw-medium)}
 .exp-field{display:flex;flex-direction:column;gap:var(--space-6)}
 .exp-field-label{display:block}
 .exp-field-val{font-size:var(--text-sm);line-height:var(--leading-normal);color:var(--ink-dim)}
-.exp-field-val.big{font-size:var(--text-2xl);color:var(--ink);letter-spacing:var(--tracking-tight)}
+.exp-field-val.big{font-size:var(--text-xl);color:var(--ink);letter-spacing:var(--tracking-tight)}
 .exp-card-cta{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-8);margin-top:var(--space-4);padding:var(--space-14) 0 var(--space-2);
   border-top:1px solid var(--line);color:var(--ink);font-size:var(--text-sm);font-weight:var(--fw-medium);
   text-decoration:none;transition:var(--dur-fast)}
@@ -54,7 +54,7 @@
 .exp-reddit-head{display:flex;justify-content:center;padding:var(--space-36);background:#ff4500;color:#fff}  /* token-lint-ignore: Reddit brand orange — a third-party brand colour, not ours */
 .exp-reddit-body{display:flex;flex-direction:column;gap:var(--space-18);padding:var(--space-28) var(--space-36) var(--space-32)}
 .exp-reddit-tag{color:#ff4500;font-weight:var(--fw-bold);font-size:var(--text-md)}  /* token-lint-ignore: Reddit brand orange — a third-party brand colour, not ours */
-.exp-reddit-text{font-size:var(--text-2xl);line-height:var(--leading-snug);color:var(--ink);letter-spacing:var(--tracking-tight)}
+.exp-reddit-text{font-size:var(--text-xl);line-height:var(--leading-snug);color:var(--ink);letter-spacing:var(--tracking-tight)}
 
 /* vertical media / reel */
 .exp-media{display:flex;align-items:center;justify-content:center;height:100%;cursor:pointer}
@@ -99,7 +99,7 @@
   font-size:var(--text-xs)}
 .exp-article-title{margin:0;font-size:var(--text-3xl);font-weight:var(--fw-heading);
   line-height:var(--leading-tight);letter-spacing:var(--tracking-tighter);color:var(--ink)}
-.exp-article-lede{margin:0;max-width:52ch;font-size:var(--text-base);line-height:var(--leading-normal);
+.exp-article-lede{margin:0;max-width:52ch;font-size:var(--text-md);line-height:var(--leading-normal);
   letter-spacing:var(--tracking-tight);color:var(--ink-dim)}
 .exp-article-cta{display:inline-flex;align-items:center;gap:var(--space-10);margin-top:var(--space-4);
   padding:var(--space-12) var(--space-24);border-radius:var(--radius-full);background:var(--accent);color:var(--on-accent);

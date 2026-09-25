@@ -159,7 +159,6 @@ test('flags a rule that sets small text in caps', () => {
     findEyebrowChrome(css).map(h => h.selector),
     ['.sec-h'],
   )
-  assert.equal(findEyebrowChrome(`.x{text-transform:uppercase;font-size:var(--text-3xs)}`).length, 1)
 })
 
 test('leaves caps at control size alone, and small text that is not in caps', () => {

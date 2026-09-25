@@ -206,7 +206,7 @@
 .core .input-shell.focus{background:var(--chat-surface);border-color:var(--line);
   box-shadow:var(--shadow-composer-focus)}
 .core .input-shell textarea{flex:1 0 100%;width:100%;
-  font-size:var(--text-chat);letter-spacing:normal;line-height:var(--leading-chat);
+  font-size:var(--text-sm);letter-spacing:normal;line-height:var(--leading-chat);
   min-height:96px;max-height:192px;padding:var(--space-14) var(--space-8) var(--space-6)}
 .core .input-shell .attach-preview{margin:var(--space-12) var(--space-8) 0}
 .core .attach-btn,.core .send-btn{width:28px;height:28px;flex-shrink:0;
@@ -223,10 +223,10 @@
   border:1px solid var(--line-2);color:var(--ink);padding:var(--space-8) var(--space-14);
   border-radius:var(--radius-2xl) var(--radius-2xl) var(--radius-lg) var(--radius-2xl);
   box-shadow:var(--shadow-card);
-  font-size:var(--text-chat);letter-spacing:normal;line-height:var(--leading-chat)}
+  font-size:var(--text-sm);letter-spacing:normal;line-height:var(--leading-chat)}
 
 /* assistant turn: same measure, no bubble */
-.core .ai-lead{font-size:var(--text-chat);letter-spacing:normal;
+.core .ai-lead{font-size:var(--text-sm);letter-spacing:normal;
   line-height:var(--leading-chat)}
 
 /* rows pick up the reference's card shadow instead of a hairline */
@@ -234,14 +234,14 @@
   box-shadow:var(--shadow-card)}
 .core .chat-row:hover{border-color:var(--line);
   background:var(--panel-2);box-shadow:var(--shadow-float)}
-.core .chat-title{font-size:var(--text-chat);letter-spacing:normal}
+.core .chat-title{font-size:var(--text-sm);letter-spacing:normal}
 /* Evidence under an answer stays flat — the shadowed, floating treatment reads
    as another composer or bubble, and there are up to a dozen of these in a row. */
 .core .cited{border-color:var(--line-2);border-radius:var(--radius-md);box-shadow:none}
 .core .cited:hover{border-color:var(--line);background:var(--panel-2);box-shadow:none}
 .core .cited-summary{font-size:var(--text-xs);letter-spacing:var(--tracking-tight)}
 .core .ask-off{border-color:var(--line-2);border-radius:var(--radius-xl);
-  box-shadow:var(--shadow-card);font-size:var(--text-chat);letter-spacing:normal}
+  box-shadow:var(--shadow-card);font-size:var(--text-sm);letter-spacing:normal}
 
 /* ── thread furniture: clock stamps, copy, stop, jump-to-latest ───────────── */
 /* The thread needs a positioning context for the floating pill, and the pill

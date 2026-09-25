@@ -100,14 +100,14 @@ export function checkRaw(counts: Record<string, number>, baseline: Record<string
   return failures
 }
 
-/** Rules that rebuild .eyebrow: eyebrow-sized text (--text-2xs/3xs) set in
+/** Rules that rebuild .eyebrow: eyebrow-sized text (--text-2xs) set in
  *  caps. Control text in caps is --text-xs and up, so it passes. */
 export function findEyebrowChrome(css: string) {
   const found: { selector: string; line: number }[] = []
   for (const m of css.matchAll(/([^{}]*)\{([^{}]*)\}/g)) {
     const body = m[2].replace(COMMENT, '')
     if (!/text-transform\s*:\s*uppercase/.test(body)) continue
-    if (!/font-size\s*:\s*var\(--text-(?:2xs|3xs)\)/.test(body)) continue
+    if (!/font-size\s*:\s*var\(--text-2xs\)/.test(body)) continue
     const selector = m[1].replace(COMMENT, '').trim().replace(/\s+/g, ' ')
     if (!selector || selector.startsWith('@')) continue
     found.push({ selector, line: css.slice(0, m.index + m[1].length - m[1].trimStart().length).split('\n').length })
