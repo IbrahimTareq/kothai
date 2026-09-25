@@ -152,11 +152,17 @@ export function _reset({ loaded: isLoaded = true, keepDb = false }: { loaded?: b
 // Erase the learned tag registry — see notes.clearAll(). Nothing is lost
 // permanently: the registry is derived from note tags, so it re-seeds from
 // whatever notes exist on the next boot (and after a wipe, that's none).
-export async function clearAll() {
-  const removed = registry.size
-  registry = new Map()
-  ;(await getDb()).prepare('DELETE FROM tag_vocab').run()
-  return removed
+//
+// `keep` spares the tags named in it. The demo's reset (routes/demo.ts) passes
+// the tags its remaining notes carry: a visitor's link registered its tags
+// here, and left alone they stayed snap targets for every later visitor.
+export async function clearAll(keep = new Set<string>()) {
+  const before = registry.size
+  registry = new Map([...registry].filter(([tag]) => keep.has(tag)))
+  ;(await getDb())
+    .prepare('DELETE FROM tag_vocab WHERE tag NOT IN (SELECT value FROM json_each(?))')
+    .run(JSON.stringify([...keep]))
+  return before - registry.size
 }
 
 export function size() {

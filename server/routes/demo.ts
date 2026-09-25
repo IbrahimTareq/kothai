@@ -132,8 +132,12 @@ export const demoLimits = {
 // ---- nightly reset ----------------------------------------------------------
 // Everything a visitor added goes; the shared library, which carries no
 // visitor, stays. Run at boot and then daily (server/index.ts).
+//
+// The tag registry included: every tag in it came from a note's enrichment
+// (tagvocab.ts), so the library's notes carry all of its own.
 export async function resetDemo(): Promise<void> {
   for (const n of store.allNotes()) if (n.visitor) await removeNote(n.id)
+  await tagvocab.clearAll(new Set(store.allNotes().flatMap(n => n.tags ?? [])))
   for (const c of chats.all()) if (c.visitor) await chats.remove(c.id)
   for (const c of collections.all()) if (c.visitor) await collections.remove(c.id)
   demoLimits.save.reset()

@@ -13,6 +13,7 @@ const { UPLOAD_DIR } = await import('../../../server/config.ts')
 const store = await import('../../../server/data/notes.ts')
 const chats = await import('../../../server/data/chats.ts')
 const collections = await import('../../../server/data/collections.ts')
+const tagvocab = await import('../../../server/data/tagvocab.ts')
 const { demoLimits, resetDemo } = await import('../../../server/routes/demo.ts')
 
 import test from 'node:test'
@@ -55,6 +56,25 @@ test('the reset removes every visitor’s links, files, chats and spaces, and ke
     chats.all().map(c => c.messages[0].text),
     ['shared'],
   )
+})
+
+test('the reset forgets the tags only a visitor’s links brought, so later saves cannot snap to them', async () => {
+  store._reset()
+  tagvocab._reset()
+  const vecs: Record<string, number[]> = { kyoto: [1, 0], slur: [0, 1], 'slur-ish': [0.05, 1] }
+  const embed = async (t: string) => vecs[t]
+  const seedTags = await tagvocab.canonicalize(['kyoto'], { embed })
+  await store.addNote({ type: 'link', content: 'seed', tags: seedTags })
+  const theirs = await tagvocab.canonicalize(['slur'], { embed })
+  await store.addNote({ type: 'link', content: 'x', tags: theirs, visitor: 'a' })
+
+  await resetDemo()
+
+  // Reloaded from the table, as the next boot would.
+  tagvocab._reset({ loaded: false, keepDb: true })
+  await tagvocab.load()
+  assert.equal(tagvocab.size(), 1, 'only the library’s own tag is left')
+  assert.deepEqual(await tagvocab.canonicalize(['slur-ish'], { embed }), ['slur-ish'])
 })
 
 test('the reset gives every visitor their allowance back', async () => {
