@@ -55,8 +55,10 @@ export const name = 'instagram'
 export const label = 'Instagram'
 export const expects = 'saved_posts.json, saved_collections.json, or the whole export ZIP'
 
-const SAVED_POSTS_FILE = /(^|\/)saved_posts\.json$/
-const COLLECTIONS_FILE = /(^|\/)saved_collections\.json$/
+// The optional " (N)" is the suffix a browser adds when the export was
+// downloaded twice — "saved_posts (1).json" was rejected as not Instagram data.
+const SAVED_POSTS_FILE = /(^|\/)saved_posts( \(\d+\))?\.json$/
+const COLLECTIONS_FILE = /(^|\/)saved_collections( \(\d+\))?\.json$/
 
 // Prefer a value shaped like the real permalink over "first href found" in a
 // string_map_data bag — exports can list a Profile URL (or other href-bearing

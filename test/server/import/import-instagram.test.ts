@@ -50,6 +50,15 @@ test('sniff: recognizes an export containing saved_posts.json', () => {
   assert.equal(sniff(files({ 'random.json': '{"a":1}' })), false)
 })
 
+test('sniff/parse: accept the " (1)" suffix a browser adds to a re-downloaded export', () => {
+  const upload = files({ '0/saved_posts (1).json': SAVED, '1/saved_collections (2).json': COLLECTIONS })
+  assert.equal(sniff(upload), true)
+  const result = parse(upload)
+  assert.equal(result.items.length, 2)
+  assert.deepEqual(collectionsOf(result, 'https://www.instagram.com/reel/DEF456/'), ['Recipes'])
+  assert.equal(sniff(files({ '0/saved_posts (copy).json': SAVED })), false)
+})
+
 test('parseSavedPosts: extracts url/poster/savedAt, skips entries without href', () => {
   const items = parseSavedPosts(JSON.parse(SAVED))
   assert.equal(items.length, 2)
