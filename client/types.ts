@@ -38,6 +38,7 @@ export interface ServerNote {
   // that turned out to be a single image.
   slides?: string[]
   score?: number
+  visitor?: string // on the demo, the visitor who saved it; only ever the viewer's own
 }
 
 // The flattened shape the UI renders (produced by mapNote).
@@ -68,6 +69,7 @@ export interface UIItem {
   siteName?: string | null
   seed?: number
   score?: number
+  visitor?: string // see ServerNote.visitor
 }
 
 export interface Category {

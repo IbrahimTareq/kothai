@@ -219,7 +219,11 @@ export function ExpandedView({
   const [tags, setTags] = useState<string[]>(item.tags || [])
   const [note, setNote] = useState<string>(item.mindNote || '')
   const [adding, setAdding] = useState(false)
+  // On the demo a visitor may change only a link they saved, and put links
+  // only in spaces they made (server/routes/demo.ts). Anything else carries no
+  // visitor, since the server sends a visitor's things to them alone.
   const demo = !!useDemo()
+  const locked = demo && !item.visitor
   const [draft, setDraft] = useState('')
   const brand = sourceGlyph(item)
 
@@ -250,7 +254,8 @@ export function ExpandedView({
   const { ref: mainRef, className: mainFade } = useScrollEdges('y', [item.id], { resetScroll: true })
 
   const inSpaces = collections.filter(c => c.itemIds.includes(item.id))
-  const openSpaces = collections.filter(c => !c.itemIds.includes(item.id))
+  const writable = (c: Collection) => !demo || !!c.visitor
+  const openSpaces = collections.filter(c => writable(c) && !c.itemIds.includes(item.id))
 
   // reset local editing state when a different item is opened
   useEffect(() => {
@@ -401,7 +406,7 @@ export function ExpandedView({
             )}
           </div>
 
-          <fieldset className="demo-lock" disabled={demo}>
+          <fieldset className="demo-lock" disabled={locked}>
             <section className="exp-sec">
               <div className="exp-sec-h eyebrow">
                 Tags <span className="exp-sec-n">{tags.length}</span>
@@ -439,22 +444,24 @@ export function ExpandedView({
               <div className="exp-sec-h eyebrow">Notes</div>
               <Textarea
                 className="exp-note"
-                placeholder={demo ? 'Notes are off in the demo' : 'Type here to add a note…'}
+                placeholder={locked ? 'Notes are for links you saved' : 'Type here to add a note…'}
                 value={note}
                 onChange={e => setNote(e.target.value)}
                 onBlur={commitNote}
               />
             </section>
+          </fieldset>
 
-            <section className="exp-sec">
-              <div className="exp-sec-h eyebrow">
-                Spaces <span className="exp-sec-n">{inSpaces.length}</span>
-              </div>
-              <div className="exp-colls">
-                {inSpaces.map(c => (
-                  <div key={c.id} className="exp-coll">
-                    {c.tags.length > 0 && <Icon name="spark" size={11} />}
-                    <span className="exp-coll-name">{c.name}</span>
+          <section className="exp-sec">
+            <div className="exp-sec-h eyebrow">
+              Spaces <span className="exp-sec-n">{inSpaces.length}</span>
+            </div>
+            <div className="exp-colls">
+              {inSpaces.map(c => (
+                <div key={c.id} className="exp-coll">
+                  {c.tags.length > 0 && <Icon name="spark" size={11} />}
+                  <span className="exp-coll-name">{c.name}</span>
+                  {writable(c) && (
                     <button
                       className="exp-coll-x"
                       aria-label={`Remove from ${c.name}`}
@@ -462,29 +469,29 @@ export function ExpandedView({
                     >
                       <Icon name="close" size={11} />
                     </button>
-                  </div>
-                ))}
-                <Menu
-                  empty={collections.length === 0 ? 'No spaces yet' : 'In every space'}
-                  trigger={
-                    <button className="exp-coll-plus">
-                      <Icon name="plus" size={12} /> Add to space
-                    </button>
-                  }
-                  items={openSpaces.map(c => ({
-                    key: c.id,
-                    label: c.name,
-                    trailing: c.tags.length > 0 && (
-                      <span title="Smart space">
-                        <Icon name="spark" size={11} />
-                      </span>
-                    ),
-                    onSelect: () => onAddTo(c.id, item.id),
-                  }))}
-                />
-              </div>
-            </section>
-          </fieldset>
+                  )}
+                </div>
+              ))}
+              <Menu
+                empty={collections.some(writable) ? 'In every space' : 'No spaces yet'}
+                trigger={
+                  <button className="exp-coll-plus">
+                    <Icon name="plus" size={12} /> Add to space
+                  </button>
+                }
+                items={openSpaces.map(c => ({
+                  key: c.id,
+                  label: c.name,
+                  trailing: c.tags.length > 0 && (
+                    <span title="Smart space">
+                      <Icon name="spark" size={11} />
+                    </span>
+                  ),
+                  onSelect: () => onAddTo(c.id, item.id),
+                }))}
+              />
+            </div>
+          </section>
         </div>
 
         <div className="exp-side-actions">
@@ -494,16 +501,16 @@ export function ExpandedView({
             { label: 'Copy link', icon: 'copy', onClick: () => item.url && navigator.clipboard?.writeText(item.url) },
             { label: 'Open original', icon: 'external', onClick: () => openUrl(item.url) },
             {
-              label: demo ? 'Re-tag is off in the demo' : item.pending ? 'Retagging…' : 'Re-tag',
+              label: locked ? 'Re-tag works on links you saved' : item.pending ? 'Retagging…' : 'Re-tag',
               icon: 'retag',
-              disabled: item.pending || demo,
+              disabled: item.pending || locked,
               onClick: () => onRetag(item.id),
             },
             {
-              label: demo ? 'Delete is off in the demo' : 'Delete',
+              label: locked ? 'Delete works on links you saved' : 'Delete',
               icon: 'trash',
               className: 'del',
-              disabled: demo,
+              disabled: locked,
               onClick: () => {
                 onDelete(item.id)
                 onClose()

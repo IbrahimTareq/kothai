@@ -44,6 +44,7 @@ export function mapNote(n: ServerNote): UIItem {
     thumbRatio: n.thumbRatio || null,
     slides: n.slides,
     siteName: n.siteName || null,
+    visitor: n.visitor,
   }
 }
 

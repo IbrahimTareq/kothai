@@ -79,7 +79,7 @@ export function DemoSettings() {
         <div className="settings-rows">
           <SettingsRow
             title="Settings are off in the demo"
-            desc="The library here is shared by every visitor, so the demo lets you save a few links, ask a few questions and make a few spaces a day, and change nothing else."
+            desc="The library here is shared by every visitor, so the demo lets you save a few links, ask a few questions and make a few spaces a day, and change only what you added."
             action={
               <Button asChild tone="solid">
                 <a href={GET_YOUR_OWN} target="_blank" rel="noreferrer">

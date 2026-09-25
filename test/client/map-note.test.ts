@@ -25,3 +25,10 @@ test('mapNote: a thumbnail’s stored shape reaches the card', () => {
   assert.equal(mapNote({ ...base, thumb: '/uploads/meta-a.jpg', thumbRatio: 1.912 }).thumbRatio, 1.912)
   assert.equal(mapNote({ ...base, thumb: '/uploads/meta-a.jpg' }).thumbRatio, null, 'saved before shapes were')
 })
+
+// On the demo, a card and the item view unlock a link's delete, re-tag, tags
+// and note only for the visitor who saved it, and they know it by this field.
+test('mapNote: the demo visitor who saved a link reaches the card', () => {
+  assert.equal(mapNote({ ...base, visitor: 'v1' }).visitor, 'v1')
+  assert.equal(mapNote(base).visitor, undefined, 'the shared library, and every note of an ordinary install')
+})

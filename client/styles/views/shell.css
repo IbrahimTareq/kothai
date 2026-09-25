@@ -20,26 +20,24 @@
    refuses (server/routes/demo.ts) and that a visitor would meet only to be told
    no. display:none rather than pointer-events, so they leave the tab order too.
    On :root because the item view and capture render in portals outside .app.
-   A space the visitor made ([data-mine]) keeps its delete, which the server
-   allows them; rename it still refuses. */
-:root[data-demo] :is(.card-actions, .chat-row .card-del, .attach-btn, .exp-tags .chip--add, .chip-x, .exp-coll-x,
-  .exp-coll-plus, .collection-view:not([data-mine]) .page-actions, .coll-rename){display:none}
-/* A space's rule tags go too, being nothing but removable chips and their add
-   (the spark still marks a smart space), and so does the canvas: every drag
-   and every first open of it autosaves. The view-mode switch is the page's
-   one Segmented without .view-toggle. */
-:root[data-demo] .collection-view :is(.coll-rule, .page-display .seg:not(.view-toggle)){display:none}
-:root[data-demo] .coll-name{pointer-events:none}
-/* An empty space's way to Everything goes as well: Everything has no "Add to
-   space" on the demo, so it would send a visitor to a control they lack. */
-:root[data-demo] .coll-browse{display:none}
-/* What it locks instead, where the value itself is worth seeing: an item's
-   tags, note and spaces. A disabled fieldset takes every
+   What a visitor made is theirs to change, so their own space ([data-mine])
+   keeps every control; Cards.tsx and Expanded.tsx decide the same per item. */
+:root[data-demo] .attach-btn{display:none}
+/* A shared space loses whatever edits it: rename and delete, its rule tags
+   (the spark still marks a smart space), and the canvas, since every drag and
+   every first open of it autosaves. The view-mode switch is the page's one
+   Segmented without .view-toggle. Its way to Everything goes as well: nothing
+   there can put a link in a space that is not the visitor's. */
+:root[data-demo] .collection-view:not([data-mine]) :is(.page-actions, .coll-rule, .page-display .seg:not(.view-toggle), .coll-browse){display:none}
+:root[data-demo] .collection-view:not([data-mine]) .coll-name{pointer-events:none}
+/* What it locks instead, where the value itself is worth seeing: the tags and
+   note of a link the visitor did not save. A disabled fieldset takes every
    control inside out of reach, keyboard included; display:contents keeps it
    from adding a box, so the layout is the one it wraps. It does not stop a
-   Radix menu, which opens on pointerdown and reads only its own disabled prop:
-   "Add to space" opened through it, so that one is in the list above. */
+   Radix menu, which opens on pointerdown and reads only its own disabled prop,
+   so "Add to space" sits outside it and offers only the visitor's own spaces. */
 .demo-lock{display:contents}
+.demo-lock:disabled :is(.chip--add, .chip-x){display:none}
 .demo-lock :disabled{cursor:default}
 .demo-lock .chip:disabled{pointer-events:none}
 .body{display:grid;grid-template-columns:var(--rail) 1fr;height:100%;min-height:0}

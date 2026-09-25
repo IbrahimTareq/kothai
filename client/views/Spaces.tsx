@@ -128,9 +128,10 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
                     }}
                     onBlur={e => !name.trim() && !e.currentTarget.parentElement?.contains(e.relatedTarget) && cancel()}
                   />
-                  {/* The demo hides the rule picker inside a space (shell.css), and
-                      "Add to space" with it, so a visitor's space was left with no
-                      way to fill it. Here, its rules can still be set once. */}
+                  {/* Demo only. It first stood in for the rule picker inside a
+                      space, which the demo hid; that picker is back for a
+                      visitor's own space, but this still fills a new space at
+                      once from a library whose tags the visitor never chose. */}
                   {demo && (
                     <Input
                       compact

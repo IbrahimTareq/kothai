@@ -7,6 +7,7 @@ import { relTime, imgGradient } from '../util/format'
 import { isMediaFirst, isAwaitingContent, sourceGlyph, sourceLabel } from '../domain/source'
 import type { Collection, UIItem } from '../types'
 import { Menu } from '../ui/Menu'
+import { useDemo } from './Demo'
 
 // Deterministic placeholder height so gradient tiles stagger like real media.
 function phHeight(seed: number) {
@@ -189,7 +190,11 @@ export function ItemCard({
   // The headline tile draws its own source mark inline, so the floating corner
   // badge would be a second copy of the same glyph.
   const headline = item.type === 'link' && !isMediaFirst(item)
-  const canCollect = !!(collections && onAddTo && onRemoveFrom)
+  // On the demo a visitor may delete only a link they saved, and put links only
+  // in spaces they made (server/routes/demo.ts); see Expanded.tsx.
+  const demo = !!useDemo()
+  const spaces = demo ? collections?.filter(c => c.visitor) : collections
+  const canCollect = !!(spaces && onAddTo && onRemoveFrom)
   const overlay = (
     <Fragment>
       {brand && !headline && (
@@ -215,7 +220,7 @@ export function ItemCard({
                 <Icon name="plus" size={14} />
               </button>
             }
-            items={collections!.map(c => {
+            items={spaces!.map(c => {
               const on = c.itemIds.includes(item.id)
               return {
                 key: c.id,
@@ -231,16 +236,18 @@ export function ItemCard({
             })}
           />
         )}
-        <button
-          className="card-act del"
-          title="Release"
-          onClick={e => {
-            e.stopPropagation()
-            onDelete(item.id)
-          }}
-        >
-          <Icon name="trash" size={13} />
-        </button>
+        {(!demo || item.visitor) && (
+          <button
+            className="card-act del"
+            title="Release"
+            onClick={e => {
+              e.stopPropagation()
+              onDelete(item.id)
+            }}
+          >
+            <Icon name="trash" size={13} />
+          </button>
+        )}
       </div>
     </Fragment>
   )
