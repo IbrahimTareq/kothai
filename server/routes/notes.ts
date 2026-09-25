@@ -53,16 +53,6 @@ export async function handleSave(req: IncomingMessage, res: ServerResponse, view
 
 // One note by id. The client's deep-linked expanded view (/item/<id>) opens
 // before any page of the board has loaded, so it asks for just that item.
-// Every tag a new space's rule could be built on, with its reach, most used
-// first. An unavailable note would join the space but its board hides it, so
-// it is left out of the count, which would otherwise promise more than it shows.
-export function handleTags(res: ServerResponse, viewer: string | null) {
-  const counts = new Map<string, number>()
-  for (const n of store.allNotes().filter(visibleTo(viewer)))
-    if (!n.unavailable) for (const t of n.tags || []) counts.set(t, (counts.get(t) || 0) + 1)
-  const tags = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-  json(res, 200, { tags: tags.map(([tag, count]) => ({ tag, count })) })
-}
 
 export function handleGetNote(res: ServerResponse, id: string, viewer: string | null) {
   const note = store.getNote(id)

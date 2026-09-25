@@ -8,7 +8,7 @@ import assert from 'node:assert/strict'
 import * as store from '../../../server/data/notes.ts'
 import * as collections from '../../../server/data/collections.ts'
 import * as chats from '../../../server/data/chats.ts'
-import { handleNotes, handleNotesDelta, handleGetNote, handleTags } from '../../../server/routes/notes.ts'
+import { handleNotes, handleNotesDelta, handleGetNote } from '../../../server/routes/notes.ts'
 import { handleChats, handleChat } from '../../../server/routes/chats.ts'
 import {
   handleCollections,
@@ -101,15 +101,6 @@ test('a space a visitor makes is theirs alone, and its rule fills only from what
   const other = mockRes()
   handleCollections(other.res, 'b')
   assert.deepEqual(ids(other.sent.json().collections), [])
-})
-
-test('the tags a visitor is offered come only from what they can see', async () => {
-  store._reset()
-  await store.addNote({ type: 'link', content: 'seed', tags: ['bread'] })
-  await store.addNote({ type: 'link', content: 'theirs', tags: ['bread', 'private-thing'], visitor: 'b' })
-  const { res, sent } = mockRes()
-  handleTags(res, 'a')
-  assert.deepEqual(sent.json().tags, [{ tag: 'bread', count: 1 }])
 })
 
 test('a visitor can delete their own space and no one else’s', async () => {

@@ -374,10 +374,6 @@ export const API = {
   async status(): Promise<ModelStatus> {
     return apiGet<ModelStatus>('/api/status')
   },
-  // every tag the viewer's library carries, most used first (handleTags)
-  async tags(): Promise<{ tag: string; count: number }[]> {
-    return (await apiGet<{ tags: { tag: string; count: number }[] }>('/api/tags')).tags
-  },
   // enrichment backlog: how many notes the current residency could enrich
   async backlog(): Promise<{ count: number }> {
     return apiGet('/api/enrich/backlog')

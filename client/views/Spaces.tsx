@@ -1,13 +1,11 @@
 // Spaces.tsx — the Spaces landing: a card for every space, and the draft card
 // that makes a new one. One space's own view is Space.tsx.
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Icon } from '../components/icons'
 import type { Collection, UIItem } from '../types'
 import { Button } from '../ui/Button'
 import { PageHeader } from '../ui/PageHeader'
 import { Input } from '../ui/Input'
-import { Chip } from '../ui/Chip'
-import { API } from '../data/api'
 import { useDemo } from '../components/Demo'
 
 interface SpacesViewProps {
@@ -45,35 +43,16 @@ function SpaceCover({ covers = [] }: { covers?: UIItem[] }) {
 export function SpacesView({ collections, createCollection, navigate }: SpacesViewProps) {
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
-  const [tags, setTags] = useState('')
-  const demo = useDemo()
-  const spent = demo?.spacesLeft === 0 // the demo's daily few (server/routes/demo.ts)
-  // The library's tags, so smart tags are picked rather than typed blind: one
-  // that matches nothing made a space as empty as having none.
-  const [pool, setPool] = useState<{ tag: string; count: number }[]>([])
-  useEffect(() => {
-    if (creating && demo) API.tags().then(setPool)
-  }, [creating, !!demo])
-  const entered = tags.split(',').map(t => t.trim().toLowerCase())
-  const partial = entered.pop() ?? '' // the entry still being typed
-  const offered = pool.filter(t => !entered.includes(t.tag) && t.tag.includes(partial)).slice(0, 4)
-  const pick = (tag: string) => setTags([...entered.filter(Boolean), tag, ''].join(', '))
+  const spent = useDemo()?.spacesLeft === 0 // the demo's daily few (server/routes/demo.ts)
 
   const cancel = () => {
     setName('')
-    setTags('')
     setCreating(false)
   }
   const submit = async () => {
     const nm = name.trim()
     if (!nm) return
-    const c = await createCollection(
-      nm,
-      tags
-        .split(',')
-        .map(t => t.trim())
-        .filter(Boolean),
-    )
+    const c = await createCollection(nm, [])
     cancel()
     navigate(`space:${c.id}`)
   }
@@ -126,38 +105,8 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
                       if (e.key === 'Enter') submit()
                       if (e.key === 'Escape') cancel()
                     }}
-                    onBlur={e => !name.trim() && !e.currentTarget.parentElement?.contains(e.relatedTarget) && cancel()}
+                    onBlur={() => !name.trim() && cancel()}
                   />
-                  {/* Demo only. It first stood in for the rule picker inside a
-                      space, which the demo hid; that picker is back for a
-                      visitor's own space, but this still fills a new space at
-                      once from a library whose tags the visitor never chose. */}
-                  {demo && (
-                    <Input
-                      compact
-                      className="mono"
-                      aria-label="Smart tags"
-                      placeholder="Smart tags, comma-separated"
-                      enterKeyHint="done"
-                      value={tags}
-                      onChange={e => setTags(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') submit()
-                        if (e.key === 'Escape') cancel()
-                      }}
-                    />
-                  )}
-                  {demo && offered.length > 0 && (
-                    <div className="space-draft-tags">
-                      {offered.map(t => (
-                        // mousedown is held back so the field being typed in keeps focus
-                        <Chip key={t.tag} compact add onMouseDown={e => e.preventDefault()} onClick={() => pick(t.tag)}>
-                          {t.tag}
-                          <span className="fc-count">{t.count}</span>
-                        </Chip>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
             )}

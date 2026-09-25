@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import * as store from '../../../server/data/notes.ts'
 import * as collections from '../../../server/data/collections.ts'
-import { handleNotes, handleDeleteNote, handleTags } from '../../../server/routes/notes.ts'
+import { handleNotes, handleDeleteNote } from '../../../server/routes/notes.ts'
 import { mockRes, record, records } from '../../helpers/http.ts'
 
 const urlOf = (qs: string) => new URL(`http://x/api/notes${qs}`)
@@ -22,23 +22,6 @@ test('paged /api/notes returns page, total, facets, pendingTotal', async () => {
   assert.equal(record(record(body.facets).types).video, 1)
   assert.equal(notes[0].type, 'video', 'newest first — canonical order')
   assert.ok(!('embedding' in notes[0]))
-})
-
-// A tag's count is the reach a smart rule on it would have, so it counts what
-// a space's board would show: an unavailable note joins the space but is hidden.
-test('/api/tags counts every tag a space could be built on, most used first', async () => {
-  store._reset()
-  await store.addNote({ type: 'link', content: 'a', tags: ['coffee', 'brewing'] })
-  await store.addNote({ type: 'link', content: 'b', tags: ['coffee'] })
-  await store.addNote({ type: 'link', content: 'c', tags: ['art'] })
-  await store.addNote({ type: 'link', content: 'gone', tags: ['art'], unavailable: true })
-  const { res, sent } = mockRes()
-  handleTags(res, null)
-  assert.deepEqual(sent.json().tags, [
-    { tag: 'coffee', count: 2 },
-    { tag: 'art', count: 1 },
-    { tag: 'brewing', count: 1 },
-  ])
 })
 
 test('filters compose and facets ignore type/source narrowing', async () => {

@@ -27,7 +27,6 @@
 .space-draft, .space-draft:hover { cursor: default; border-style: dashed; border-color: var(--line); background: transparent; }
 .space-draft .tile-media { background: transparent; }
 .space-draft .field { width: 100%; }
-.space-draft-tags { display: flex; flex-wrap: wrap; gap: var(--space-4); }
 
 /* ---- Collection detail ---- */
 .collection-view { display: flex; flex-direction: column; height: 100%; padding-top: var(--topbar-h); }
