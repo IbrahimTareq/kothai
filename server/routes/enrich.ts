@@ -5,6 +5,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import * as ai from '../ai/index.ts'
 import * as enrich from '../ai/enrich.ts'
 import { backlogCount } from '../ai/backlog.ts'
+import { queueProgress } from '../ai/queue.ts'
 import * as store from '../data/notes.ts'
 import * as settings from '../data/settings.ts'
 import { isInstagramPost } from '../links/instagram.ts'
@@ -14,8 +15,10 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null
 }
 
+// `count` is what the current AI settings could still fill; `done`/`total` are
+// the queue's current run, 0 of 0 when idle (see ai/queue.ts).
 export function handleBacklog(res: ServerResponse): void {
-  json(res, 200, { count: backlogCount(store.allNotes(), settings.getResidency()) })
+  json(res, 200, { count: backlogCount(store.allNotes(), settings.getResidency()), ...queueProgress() })
 }
 
 // Both bulk-enrichment routes refuse the same way when there is no reachable

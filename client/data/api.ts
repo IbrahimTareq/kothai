@@ -385,8 +385,9 @@ export const API = {
   async status(): Promise<ModelStatus> {
     return apiGet<ModelStatus>('/api/status')
   },
-  // enrichment backlog: how many notes the current residency could enrich
-  async backlog(): Promise<{ count: number }> {
+  // enrichment backlog: how many notes the current residency could enrich,
+  // and how far the queue is through its current run (total 0 = idle)
+  async backlog(): Promise<{ count: number; done: number; total: number }> {
     return apiGet('/api/enrich/backlog')
   },
   async enrichBacklog(): Promise<{ ok: boolean; queued: number }> {

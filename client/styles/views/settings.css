@@ -141,20 +141,6 @@
 .residency { padding: var(--space-10) var(--space-12) var(--space-4); }
 .residency-desc { margin-top: var(--space-8); }
 
-/* Backlog enrich banner */
-.backlog-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-12);
-  padding: var(--space-10) var(--space-14);
-  margin-bottom: var(--space-10);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  font-size:var(--text-sm);
-}
-.backlog-actions { display: flex; gap: var(--space-8); }
-
 /* Settings row list — one bordered card, each row an action: title and
    explanation on the left, its control on the right. Confirmation steps and
    result messages expand full-width beneath the row that owns them, so the

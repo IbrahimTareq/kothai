@@ -20,6 +20,7 @@ import { DuplicatesSection } from '../components/settings/DuplicatesSection'
 import { RestoreRow } from '../components/settings/RestoreRow'
 import { BackupsRow } from '../components/settings/BackupsRow'
 import { DriveRow } from '../components/settings/DriveRow'
+import { EnrichmentRow } from '../components/settings/EnrichmentRow'
 import { ModelFilesRow } from '../components/settings/ModelFilesRow'
 import { API, apiError } from '../data/api'
 import type { Residency, SettingsResponse, ModelLoad } from '../types'
@@ -42,9 +43,9 @@ export function SettingsView({
   const [cfg, setCfg] = useState<SettingsResponse | null>(null)
   const [busyRole, setBusyRole] = useState<Role | null>(null)
   const [pendingRole, setPendingRole] = useState<Role | null>(null) // role currently downloading
-  const [backlog, setBacklog] = useState<number | null>(null)
-  const [enriching, setEnriching] = useState(false)
-  const [enrichError, setEnrichError] = useState(false)
+  // Bumped after anything here queues enrichment, so the Enrichment row
+  // re-reads at once rather than waiting for a poll it isn't running.
+  const [enrichNudge, setEnrichNudge] = useState(0)
   // Note count for the re-tag confirmation. It lives on /api/status rather
   // than on the ModelLoad prop, which is only the model-loading view of it.
   const [noteCount, setNoteCount] = useState<number | null>(null)
@@ -120,28 +121,9 @@ export function SettingsView({
       ...c,
       residency: { ...c.residency, [role]: p },
     }))
-    // Only once the residency actually stuck, and a failure here is just a
-    // missing banner: previously this shared the save's catch, so a backlog
-    // probe that failed on its own re-read the whole settings document.
-    if (!saved || !waking) return
-    const count = await API.backlog()
-      .then(b => b.count)
-      .catch(() => 0)
-    if (count > 0) setBacklog(count)
-  }
-
-  // Enrich-now: only dismiss the banner on confirmed success — a fire-and-forget
-  // dismiss-then-request would silently swallow a failure with no way to retry.
-  const enrichNow = async () => {
-    setEnriching(true)
-    setEnrichError(false)
-    try {
-      await API.enrichBacklog()
-      setBacklog(null)
-    } catch {
-      setEnrichError(true)
-    }
-    setEnriching(false)
+    // Only once the residency actually stuck: a role now on may have notes to
+    // fill, and the Enrichment row should count them straight away.
+    if (saved && waking) setEnrichNudge(n => n + 1)
   }
 
   // Re-tag everything. Deliberately two-step: it re-runs the language model
@@ -158,10 +140,8 @@ export function SettingsView({
       const { queued } = await API.retagAll()
       setRetagQueued(queued)
       setRetagArmed(false)
-      // Everything is pending again, so the backlog banner's count is stale.
-      API.backlog()
-        .then(b => setBacklog(b.count > 0 ? b.count : null))
-        .catch(() => {})
+      // Every note is queued again; the Enrichment row picks up the run.
+      setEnrichNudge(n => n + 1)
     } catch (e) {
       setRetagError(apiError(e, 'Could not start re-tagging.'))
     }
@@ -183,13 +163,10 @@ export function SettingsView({
       const result = await API.wipeAll(WIPE_TOKEN)
       setWipeResult(result)
       setWipeArmed(false)
-      // Everything on screen that came from the store is now gone; re-read
-      // the backlog so the enrich banner doesn't keep offering to enrich
-      // notes that no longer exist.
-      setBacklog(null)
-      API.backlog()
-        .then(b => setBacklog(b.count))
-        .catch(() => {})
+      // Everything on screen that came from the store is now gone; re-read so
+      // the Enrichment row doesn't keep offering to enrich notes that no
+      // longer exist.
+      setEnrichNudge(n => n + 1)
     } catch (e) {
       setWipeError(
         apiError(e, 'Could not erase your data — check the server and try again.', {
@@ -267,27 +244,6 @@ export function SettingsView({
               )
             }
           >
-            {backlog !== null && (
-              <div className="backlog-banner">
-                <span>
-                  {enrichError ? (
-                    "Couldn't start enrichment — check the server and try again."
-                  ) : (
-                    <>
-                      {backlog} saved note{backlog === 1 ? '' : 's'} can now be enriched with your current AI settings.
-                    </>
-                  )}
-                </span>
-                <span className="backlog-actions">
-                  <Button tone="solid" onClick={enrichNow} disabled={enriching}>
-                    {enriching ? 'Starting…' : 'Enrich now'}
-                  </Button>
-                  <Button onClick={() => setBacklog(null)} disabled={enriching}>
-                    Later
-                  </Button>
-                </span>
-              </div>
-            )}
             {roles.map(role =>
               isRemote(role) ? (
                 <div key={role} className="role-acc open">
@@ -385,6 +341,8 @@ export function SettingsView({
               <DriveRow />
 
               <RestoreRow />
+
+              <EnrichmentRow nudge={enrichNudge} />
 
               <SettingsRow
                 title="Re-tag everything"

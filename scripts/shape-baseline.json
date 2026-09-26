@@ -28,12 +28,12 @@
     "exports": 1
   },
   "client/views/Settings.tsx": {
-    "lines": 535,
+    "lines": 492,
     "exports": 1
   },
   "server/ai/enrich.ts": {
-    "lines": 733,
-    "exports": 8
+    "lines": 724,
+    "exports": 7
   },
   "server/ai/index.ts": {
     "lines": 368,
@@ -79,6 +79,6 @@
     "claudeMdLines": 45,
     "cleanCodeRulesLines": 41,
     "baselineEntries": 19,
-    "exportTotal": 553
+    "exportTotal": 555
   }
 }

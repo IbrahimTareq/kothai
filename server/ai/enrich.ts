@@ -34,10 +34,11 @@ import {
   setFetchSettledHandler,
   _igQueueState,
 } from '../links/instagram-queue.ts'
+import { queueJob } from './queue.ts'
 
-// The Instagram lane moved to ../links/instagram-queue.ts. Re-exported here because the
-// routes and its tests address it through this module, and where the queue
-// lives is not their business.
+// The Instagram lane moved to ../links/instagram-queue.ts, and the job chain to
+// ./queue.ts. Re-exported here because the routes and their tests address them
+// through this module, and where a queue lives is not their business.
 export {
   queueIgMeta,
   queueIgSlides,
@@ -46,17 +47,7 @@ export {
   metaRetryEligible,
   isStuckInstagramNote,
   _igQueueState,
-}
-
-let enrichChain: Promise<unknown> = Promise.resolve()
-
-// Enqueue an arbitrary job on the FIFO chain. Also used by the settings
-// re-embed so it can't race in-flight enrichment. Returns the chain promise
-// so callers that care when it lands (tests; queueIgMeta below) can await
-// it — fire-and-forget callers just ignore the return value.
-export function queueJob(fn: () => unknown): Promise<unknown> {
-  enrichChain = enrichChain.then(fn).catch(e => console.error('[enrich] failed:', e instanceof Error ? e.message : e))
-  return enrichChain
+  queueJob,
 }
 
 // `url` is the note's saved content — every note is a link.
@@ -78,8 +69,8 @@ setFetchSettledHandler(noteId => {
 
 // ---- fast metadata lane ---------------------------------------------------
 // Cheap, network-bound work — oEmbed/OpenGraph: a caption, an author, a
-// thumbnail — split OUT of enrichChain, which is strictly serial because the
-// local model can only run one pass at a time.
+// thumbnail — split OUT of the job chain (./queue.ts), which is strictly
+// serial because the local model can only run one pass at a time.
 //
 // Welded together (which is how this worked) a ~300ms metadata fetch waits
 // behind someone else's multi-second vision+classify pass, so a 197-item
