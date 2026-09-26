@@ -457,7 +457,10 @@ export const Collections = {
     const d = await apiPost<{ collection: Collection }>('/api/collections', { name, tags })
     return d.collection
   },
-  async update(id: string, patch: { name?: string; tags?: string[]; canvas?: CanvasDoc | null }): Promise<Collection> {
+  async update(
+    id: string,
+    patch: { name?: string; description?: string; tags?: string[]; canvas?: CanvasDoc | null },
+  ): Promise<Collection> {
     const d = await apiPatch<{ collection: Collection }>(`/api/collections/${id}`, patch)
     return d.collection
   },

@@ -30,6 +30,10 @@ Returns all Spaces.
       description: 'New name',
       type: 'string',
     },
+    description: {
+      description: 'What the Space is for, up to 500 characters. An empty string clears it',
+      type: 'string',
+    },
     tags: {
       description: 'Updated tag filters',
       type: 'string[]',

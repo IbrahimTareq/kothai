@@ -8,6 +8,7 @@ import type { ReactNode } from 'react'
 //
 //   identity  — an optional lead mark, the title, a count beside it,
 //               page actions on the right
+//   summary   — an optional line under the identity: what the page is for
 //   toolbar   — filters on the left (what is shown), display on the right
 //               (how it is shown); omitted when a page has neither
 //
@@ -21,6 +22,7 @@ export function PageHeader({
   title,
   meta,
   actions,
+  summary,
   filters,
   display,
 }: {
@@ -28,6 +30,7 @@ export function PageHeader({
   title: ReactNode
   meta?: ReactNode
   actions?: ReactNode
+  summary?: ReactNode
   filters?: ReactNode
   display?: ReactNode
 }) {
@@ -39,6 +42,7 @@ export function PageHeader({
         {meta != null && <span className="page-meta">{meta}</span>}
         {actions && <div className="page-actions">{actions}</div>}
       </div>
+      {summary}
       {(filters || display) && (
         <div className="page-toolbar">
           <div className="page-filters">{filters}</div>

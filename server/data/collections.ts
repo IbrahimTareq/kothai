@@ -25,6 +25,7 @@ interface Collection extends NewCollection {
   itemIds: string[]
   removedIds: string[]
   canvas?: CanvasDoc
+  description?: string
 }
 
 // All this module ever reads off a note. Spelled out here rather than imported
@@ -34,11 +35,7 @@ interface TaggedNote {
   tags?: string[] | null
 }
 
-export interface CollectionPatch {
-  name?: string
-  tags?: string[]
-  canvas?: CanvasDoc | null
-}
+export type CollectionPatch = Partial<Pick<Collection, 'name' | 'description' | 'tags'>> & { canvas?: CanvasDoc | null }
 
 // Same narrowing as chats.ts's rowData, for the same reason: node:sqlite types
 // every column as SQLOutputValue because the connection knows nothing of the
@@ -177,13 +174,15 @@ export async function create({ name, tags = [], visitor }: NewCollection, notes:
   return withCovers(c)
 }
 
-// Rename, edit the smart rule and/or replace the canvas. Editing tags re-runs
+// Rename, describe, edit the smart rule and/or replace the canvas. Editing tags re-runs
 // backfill (additive — never removes items that no longer match). Returns
 // null if not found.
 export async function update(id: string, patch: CollectionPatch, notes: TaggedNote[] = []) {
   const c = find(id)
   if (!c) return null
   if (typeof patch.name === 'string') c.name = patch.name
+  // '' clears it: undefined is a key JSON.stringify leaves out of the row.
+  if (typeof patch.description === 'string') c.description = patch.description || undefined
   if (Array.isArray(patch.tags)) {
     c.tags = norm(patch.tags)
     if (c.tags.length) backfill(c, notes)

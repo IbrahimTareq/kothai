@@ -56,6 +56,7 @@ export async function handleUpdateCollection(
     if (!name) return json(res, 400, { error: 'name cannot be empty' })
     patch.name = name.slice(0, 120)
   }
+  if (typeof fields.description === 'string') patch.description = fields.description.trim().slice(0, 500)
   if (Array.isArray(fields.tags)) patch.tags = normalizeTags(fields.tags, { max: 40 })
   if (fields.canvas === null) patch.canvas = null
   else if (fields.canvas !== undefined) {

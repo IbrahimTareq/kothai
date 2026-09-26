@@ -1,6 +1,6 @@
-// Space.tsx — one space: its name (rename, delete), the smart rule tags that
-// fill it, and its items as a grid or a canvas. The landing that lists every
-// space is Spaces.tsx.
+// Space.tsx — one space: its name (rename, delete), its description, the smart
+// rule tags that fill it, and its items as a grid or a canvas. The landing that
+// lists every space is Spaces.tsx.
 import { useState, useEffect, useMemo, useRef, type MutableRefObject } from 'react'
 import { Icon } from '../components/icons'
 import { ItemCard } from '../components/Cards'
@@ -21,6 +21,7 @@ import { Input } from '../ui/Input'
 import { useDemo } from '../components/Demo'
 import { Tooltip } from '../ui/Tooltip'
 import { Confirm } from '../ui/Confirm'
+import { SpaceDescription } from '../components/SpaceDescription'
 
 interface CollectionViewProps {
   collection: Collection | null
@@ -32,6 +33,7 @@ interface CollectionViewProps {
   addToCollection: (cid: string, itemId: string) => void
   removeFromCollection: (cid: string, itemId: string) => void
   renameCollection: (id: string, name: string) => void
+  describeCollection: (id: string, description: string) => void
   editCollectionTags: (id: string, tags: string[]) => void
   saveCanvas: (id: string, doc: CanvasDoc) => void
   deleteCollection: (id: string) => void
@@ -54,6 +56,7 @@ export function CollectionView({
   addToCollection,
   removeFromCollection,
   renameCollection,
+  describeCollection,
   editCollectionTags,
   saveCanvas,
   deleteCollection,
@@ -180,6 +183,10 @@ export function CollectionView({
   // Ranking and the "offer to create this one" rule live in domain/tagSuggest.ts,
   // covered by test/client/tag-suggest.test.ts.
   const q = tagDraft.trim().toLowerCase()
+  // Column count and grid-or-canvas are ways of looking at items, so an empty
+  // space shows neither, as Everything does. A canvas can hold text and frames
+  // with no members, though: one that exists, or is open, keeps its switch.
+  const showDisplay = board || collection.count > 0 || !!collection.canvas?.nodes.length
   const { suggestions, canAddNew, poolSize } = suggestTags(collItems, collection.tags, tagDraft)
 
   return (
@@ -250,6 +257,7 @@ export function CollectionView({
             </>
           )
         }
+        summary={<SpaceDescription text={collection.description} onSave={d => describeCollection(collection.id, d)} />}
         filters={
           <div className={`coll-rule${ruleFade}`} ref={ruleRef}>
             {/* Named, because this row sits exactly where Everything's filters
@@ -307,30 +315,32 @@ export function CollectionView({
           </div>
         }
         display={
-          <>
-            {!board && (
+          showDisplay && (
+            <>
+              {!board && (
+                <Segmented
+                  label="Columns"
+                  className="view-toggle"
+                  value={view}
+                  onChange={setView}
+                  options={[
+                    { value: 'grid4', label: <Icon name="grid4" size={16} />, title: '4 columns' },
+                    { value: 'grid6', label: <Icon name="grid6" size={16} />, title: '6 columns' },
+                    { value: 'grid8', label: <Icon name="grid8" size={16} />, title: '8 columns' },
+                  ]}
+                />
+              )}
               <Segmented
-                label="Columns"
-                className="view-toggle"
-                value={view}
-                onChange={setView}
+                label="View mode"
+                value={board ? 'canvas' : 'grid'}
+                onChange={v => setBoard(v === 'canvas')}
                 options={[
-                  { value: 'grid4', label: <Icon name="grid4" size={16} />, title: '4 columns' },
-                  { value: 'grid6', label: <Icon name="grid6" size={16} />, title: '6 columns' },
-                  { value: 'grid8', label: <Icon name="grid8" size={16} />, title: '8 columns' },
+                  { value: 'grid', label: 'Grid' },
+                  { value: 'canvas', label: 'Canvas' },
                 ]}
               />
-            )}
-            <Segmented
-              label="View mode"
-              value={board ? 'canvas' : 'grid'}
-              onChange={v => setBoard(v === 'canvas')}
-              options={[
-                { value: 'grid', label: 'Grid' },
-                { value: 'canvas', label: 'Canvas' },
-              ]}
-            />
-          </>
+            </>
+          )
         }
       />
 

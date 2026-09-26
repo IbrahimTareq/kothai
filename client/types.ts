@@ -294,6 +294,7 @@ export interface Collection {
   id: string
   createdAt: string
   name: string
+  description?: string // what the space is for; absent until written
   tags: string[] // smart rule; [] = pure manual collection
   itemIds: string[] // membership, newest-first
   removedIds: string[]

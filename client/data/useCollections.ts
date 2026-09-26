@@ -6,9 +6,9 @@
 // the whole feature, not a slice of one.
 //
 // Two write postures, deliberately different:
-//   - rename / delete / saveCanvas are optimistic. They are local edits the
-//     server cannot disagree with, so the UI moves first and a failed request
-//     is swallowed.
+//   - rename / describe / delete / saveCanvas are optimistic. They are local
+//     edits the server cannot disagree with, so the UI moves first and a
+//     failed request is swallowed.
 //   - create / tag-edit / add / remove await the server, because its response
 //     reflects work the client cannot predict — smart-rule backfill deciding
 //     which notes a tag change pulls in, and membership after an add.
@@ -23,6 +23,7 @@ export interface CollectionSource {
   collections: Collection[]
   createCollection: (name: string, tags: string[]) => Promise<Collection>
   renameCollection: (id: string, name: string) => void
+  describeCollection: (id: string, description: string) => void
   saveCanvas: (id: string, canvas: CanvasDoc) => void
   editCollectionTags: (id: string, tags: string[]) => Promise<void>
   deleteCollection: (id: string) => void
@@ -60,6 +61,10 @@ export function useCollections(): CollectionSource {
     renameCollection: (id, name) => {
       setCollections(prev => prev.map(c => (c.id === id ? { ...c, name } : c)))
       Collections.update(id, { name }).catch(() => {})
+    },
+    describeCollection: (id, description) => {
+      setCollections(prev => prev.map(c => (c.id === id ? { ...c, description: description || undefined } : c)))
+      Collections.update(id, { description }).catch(() => {})
     },
     // The mounted canvas is the authority for the space it shows; this only
     // keeps the app's copy current so leaving and returning shows the latest
