@@ -4,6 +4,7 @@
 // enrichment, but nothing in the per-note pipeline calls back into it.
 import * as store from '../data/notes.ts'
 import type { NoteRecord } from '../data/notes.ts'
+import * as tagvocab from '../data/tagvocab.ts'
 import * as inference from './index.ts'
 import * as settings from '../data/settings.ts'
 import { EMBED_RECIPE } from './prompts.ts'
@@ -65,6 +66,19 @@ export async function reembedAll(reason = 'settings') {
   }
   await store.flush() // one write for the whole batch, not one per note
   await settings.save({ embedRecipe: EMBED_RECIPE })
+  // Tag snapping compares each new tag's vector against the registry's, so the
+  // registry has to move to the new model too: left on the old one, every
+  // comparison scored 0 (different width) or noise (same width), and new tags
+  // either never snapped or snapped to the wrong one. Reseeded from the notes,
+  // the same way first boot builds it. A failure is logged rather than thrown
+  // so the notes' markers above still stand; the emptied table is what makes
+  // the next boot reseed it (see hadTagRegistry in server/index.ts).
+  try {
+    await tagvocab.clearAll()
+    await tagvocab.rebuildFromNotes(notes)
+  } catch (e) {
+    console.error('[enrich] tag registry re-embed failed -', e instanceof Error ? e.message : e)
+  }
   console.log('[enrich] re-embedding done')
   return notes.length
 }

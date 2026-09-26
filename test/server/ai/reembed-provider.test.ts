@@ -43,8 +43,16 @@ mock.module('../../../server/data/notes.ts', {
   },
 })
 mock.module('../../../server/data/tags.ts', { namedExports: { ...realTags, buildVocabulary: () => [] } })
+// Stubbed for the reason reembed-recipe.test.ts gives: the real registry
+// reseed opens the on-disk database, and the slower sweep let one test's
+// marker write land after the next test had reset it.
 mock.module('../../../server/data/tagvocab.ts', {
-  namedExports: { ...realTagvocab, canonicalize: async (t: string[]) => t },
+  namedExports: {
+    ...realTagvocab,
+    canonicalize: async (t: string[]) => t,
+    clearAll: async () => 0,
+    rebuildFromNotes: async () => {},
+  },
 })
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
@@ -122,6 +130,9 @@ test('with the embed role off, nothing is queued AND no marker is written', asyn
   // Role switched back on: the absent marker means the change is still owed.
   residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
   assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'local', wasRemote: true }), true)
+  // Undrained, this sweep finished inside the next test and wrote its marker
+  // over that test's reset — once the sweep grew a registry reseed step.
+  await drain()
 })
 
 test('unchanged with no stored marker records the inference so a later flip is measurable', async () => {

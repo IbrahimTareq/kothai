@@ -394,13 +394,19 @@ export async function handleSaveSettings(req: IncomingMessage, res: ServerRespon
     Object.keys(models.local).length + Object.keys(models.remote).length + Object.keys(resPatch.patch).length
   if (!changing) return json(res, 400, { error: 'nothing to change' })
 
-  // Endpoint ids are a plain store-and-apply: no weights, no residency, and no
-  // re-index — the endpoint's own catalogue is the only thing that changed.
+  // Endpoint ids are a plain store-and-apply: no weights and no residency —
+  // the endpoint's own catalogue is the only thing that changed. The one
+  // exception is a new embedding model, which needs the same re-embed as a
+  // local swap below: treated like llm and vision, it left the library on the
+  // old model's vectors while queries used the new one, and search degraded
+  // silently. A blank id is the role switched off, with nothing to embed with.
+  const remoteEmbedChanged = Boolean(models.remote.embed) && models.remote.embed !== settings.getRemote().embed
   if (Object.keys(models.remote).length) {
     await settings.save({ remote: models.remote })
     // Role-keyed { llm, embed, vision } — the same shape both providers take.
     await ai.applySettings(settings.getRemote())
   }
+  if (remoteEmbedChanged) enrich.queueJob(() => reembed.reembedAll(`endpoint model → ${models.remote.embed}`))
 
   const prev = settings.get()
   const prevRes = settings.getResidency()

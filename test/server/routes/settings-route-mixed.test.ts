@@ -19,9 +19,14 @@ const caps = (roles: RoleProviders, managesResidency: boolean): RoutedCapabiliti
 // specifier twice, and a mocked module the route has already imported keeps
 // pointing at this namespace anyway. So the provider answer is mutable state
 // each test sets, rather than a fresh mock per test.
-const provider: { caps: RoutedCapabilities; applied: ModelSelection[] } = {
+const provider: {
+  caps: RoutedCapabilities
+  applied: ModelSelection[]
+  embed: (text: string) => Promise<number[]>
+} = {
   caps: caps({ llm: 'local', embed: 'local', vision: 'local' }, true),
   applied: [],
+  embed: async () => [1, 0],
 }
 
 mock.module('../../../server/ai/index.ts', {
@@ -34,6 +39,7 @@ mock.module('../../../server/ai/index.ts', {
     applyResidency: async () => {},
     boot: async () => {},
     warmRole: async () => {},
+    embedText: (text: string) => provider.embed(text),
   },
 })
 
@@ -122,4 +128,56 @@ test('a mixed save survives a restart: endpoint ids land in the remote store, no
   assert.equal(settings.get().llm, DEFAULTS.llm)
   assert.equal(settings.get().vision, DEFAULTS.vision)
   assert.equal(settings.get().embed, DEFAULTS.embed)
+})
+
+// Regression. Changing the endpoint's embedding model was treated as a plain
+// store-and-apply, like llm and vision — so the library kept every vector from
+// the old model while new notes and Ask queries used the new one. Different
+// lengths score 0 in cosine and same-length vectors from another model score
+// noise, so search degraded silently. The tag registry has the same problem:
+// snapping compares a new tag's vector against the stored ones.
+test('changing the endpoint embedding model re-embeds the library and the tag registry', async () => {
+  provider.caps = caps({ llm: 'remote', embed: 'remote', vision: 'remote' }, false)
+
+  const { _resetDb, getDb } = await import('../../../server/data/db.ts')
+  const settings = await import('../../../server/data/settings.ts')
+  const store = await import('../../../server/data/notes.ts')
+  const tagvocab = await import('../../../server/data/tagvocab.ts')
+  const enrich = await import('../../../server/ai/enrich.ts')
+
+  _resetDb()
+  settings._reset()
+  await settings.load()
+  store._reset({ keepDb: true })
+  tagvocab._reset({ keepDb: true })
+
+  // The library as the old model left it: two-dimensional vectors.
+  const oldVec = [1, 0]
+  await settings.save({ remote: { llm: 'gpt-4o-mini', embed: 'old-embed', vision: 'gpt-4o-mini' } })
+  const n = await store.addNote({ title: 'Brown butter pasta', tags: ['pasta'], embedding: oldVec })
+  await tagvocab.rebuildFromNotes(store.allNotes(), { embed: async () => oldVec })
+
+  // The new model answers in three.
+  provider.embed = async () => [0, 0, 1]
+  const save = async (embed: string) => {
+    const { res, sent } = mockRes()
+    await handleSaveSettings(mockReq({ body: JSON.stringify({ remote: { embed } }) }), res)
+    assert.equal(sent.code, 200, JSON.stringify(sent.json()))
+    await enrich.queueJob(() => {}) // drain
+  }
+  await save('new-embed')
+
+  const db = await getDb()
+  const width = (blob: unknown) => store.decodeEmbedding(blob instanceof Uint8Array ? blob : null)?.length
+  assert.equal(width(db.prepare('SELECT embedding FROM notes WHERE id = ?').get(n.id)?.embedding), 3)
+  assert.equal(width(db.prepare("SELECT embedding FROM tag_vocab WHERE tag = 'pasta'").get()?.embedding), 3)
+
+  // Saving the same id again is not a model change and must not re-embed.
+  let calls = 0
+  provider.embed = async () => {
+    calls++
+    return [0, 0, 1]
+  }
+  await save('new-embed')
+  assert.equal(calls, 0)
 })

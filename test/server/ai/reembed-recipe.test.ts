@@ -47,8 +47,16 @@ mock.module('../../../server/data/notes.ts', {
   },
 })
 mock.module('../../../server/data/tags.ts', { namedExports: { ...realTags, buildVocabulary: () => [] } })
+// reembedAll also reseeds the tag registry. The real module is bound to the
+// real AI facade and the on-disk database, so both halves are stubbed here;
+// the registry re-embed is covered end to end in settings-route-mixed.test.ts.
 mock.module('../../../server/data/tagvocab.ts', {
-  namedExports: { ...realTagvocab, canonicalize: async (t: string[]) => t },
+  namedExports: {
+    ...realTagvocab,
+    canonicalize: async (t: string[]) => t,
+    clearAll: async () => 0,
+    rebuildFromNotes: async () => {},
+  },
 })
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
