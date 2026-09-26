@@ -258,6 +258,19 @@ export interface ModelFilesResponse {
   reclaimableBytes: number
 }
 
+// GET /api/duplicates — notes sharing a link, oldest first within each group
+// (server/routes/duplicates.ts).
+export interface DuplicateNote {
+  id: string
+  title: string
+  url: string
+  createdAt: string
+}
+
+export interface DuplicatesResponse {
+  groups: DuplicateNote[][]
+}
+
 // GET/PATCH /api/backups — what server/backups.ts keeps in data/backups.
 export interface BackupsResponse {
   enabled: boolean

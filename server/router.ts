@@ -16,6 +16,7 @@ import {
 } from './routes/notes.ts'
 import { handleImport } from './routes/import.ts'
 import { handleAvailabilityRemove } from './routes/availability.ts'
+import { handleDuplicates } from './routes/duplicates.ts'
 import { handleExport } from './routes/export.ts'
 import { handleBackup, handleRestore, handleDriveRestore } from './routes/backup.ts'
 import { handleGetDrive, handleConnectDrive, handleDisconnectDrive } from './routes/drive.ts'
@@ -129,6 +130,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       return await handleDeleteModelFile(res, decodeURIComponent(p.slice('/api/models/files/'.length)))
     }
     if (req.method === 'POST' && p === '/api/availability/remove') return await handleAvailabilityRemove(req, res)
+    if (req.method === 'GET' && p === '/api/duplicates') return handleDuplicates(res)
     if (req.method === 'GET' && p === '/api/enrich/backlog') return handleBacklog(res)
     if (req.method === 'POST' && p === '/api/enrich/backlog') return handleEnrichBacklog(res)
     if (req.method === 'POST' && p === '/api/enrich/prioritize') return await handlePrioritize(req, res)

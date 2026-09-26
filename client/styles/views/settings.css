@@ -350,8 +350,47 @@
   .model-file { flex-wrap: wrap; }
   .mf-main { flex: 1 1 100%; }
   .mf-delete, .mf-confirm, .mf-badge { margin-left: auto; }
+  .dup-note { flex-wrap: wrap; }
+  .dup-title { flex: 1 1 100%; }
+  .dup-action { margin-left: auto; }
 }
 
+/* Duplicates. One bordered block per link: the link on top, then each copy
+   with when it was saved, so two copies of the same title can be told apart
+   by age. The title is the only elastic part, as in the model list above. */
+.dup-group {
+  margin: var(--space-10) 0 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+.dup-url {
+  padding: var(--space-8) var(--space-14);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-faint);
+  font-size: var(--text-xs);
+}
+.dup-notes { margin: 0; padding: 0; list-style: none; }
+.dup-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  padding: var(--space-10) var(--space-14);
+  border-top: 1px solid var(--line);
+}
+.dup-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+  font-size: var(--text-sm);
+}
+.dup-when { flex: none; color: var(--ink-faint); font-size: var(--text-xs); }
+.dup-action { flex: none; }
 /* ---- first-run wizard ---------------------------------------------------- */
 /* Spacing tokens are literal pixels (--space-12 is 12px), and the house style
    in this file is compact single-line declarations — match both. */
