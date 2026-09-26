@@ -42,11 +42,8 @@ import {
   handleSetupEndpoint,
   handleSaveEndpoint,
   handleClearEndpoint,
-  handleBacklog,
-  handleEnrichBacklog,
-  handlePrioritize,
-  handleRetagAll,
 } from './routes/settings.ts'
+import { handleBacklog, handleEnrichBacklog, handlePrioritize, handleRetagAll } from './routes/enrich.ts'
 import { handleSetupTest } from './routes/setup-test.ts'
 import { handleGetTelegram, handleSaveTelegram, handleClearTelegram } from './routes/telegram.ts'
 

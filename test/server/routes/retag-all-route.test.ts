@@ -21,7 +21,7 @@ mock.module('../../../server/data/settings.ts', {
   namedExports: { ...realSettings, getResidency: () => residencyImpl() },
 })
 
-const { handleRetagAll } = await import('../../../server/routes/settings.ts')
+const { handleRetagAll } = await import('../../../server/routes/enrich.ts')
 
 function ok() {
   availableImpl = () => true

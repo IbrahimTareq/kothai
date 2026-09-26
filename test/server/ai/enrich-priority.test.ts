@@ -76,7 +76,7 @@ mock.module('../../../server/data/notes.ts', {
   },
 })
 
-const { handlePrioritize } = await import('../../../server/routes/settings.ts')
+const { handlePrioritize } = await import('../../../server/routes/enrich.ts')
 
 // POST bodies go in through a real IncomingMessage, which is what readBody
 // reads — see the header of test/helpers/http.ts for why a hand-rolled
