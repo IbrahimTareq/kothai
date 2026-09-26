@@ -124,6 +124,7 @@ async function fakeAddItems(id: string, itemIds: string[]) {
 
 // ---- fake enrich queue ---------------------------------------------------
 let queueEnrichCalls: { id: string; job: unknown }[] = []
+let queueLinkMetaCalls: string[] = []
 
 // ---- fake importer override (for testing route defensiveness against a
 // misbehaving/future importer, without needing a real broken export) -------
@@ -152,6 +153,7 @@ function reset() {
   addItemCalls = []
   rowWrites = 0
   queueEnrichCalls = []
+  queueLinkMetaCalls = []
   importerOverride = null
 }
 reset()
@@ -185,6 +187,12 @@ mock.module('../../../server/ai/enrich.ts', {
     ...realEnrich,
     queueEnrich: (id: string, job: unknown) => {
       queueEnrichCalls.push({ id, job })
+    },
+    // Left real, this lane fetched every imported post from instagram.com on
+    // its throttled queue: minutes of `pnpm test` in a normal terminal, and a
+    // suite that depended on Instagram answering.
+    queueLinkMeta: (id: string) => {
+      queueLinkMetaCalls.push(id)
     },
   },
 })
@@ -348,6 +356,7 @@ test('happy path: imports posts, queues enrich, reports counts', async () => {
   assert.equal(notes.length, 2)
   assert.equal(flushCalls, 1, 'one batched flush, not one persist per note')
   assert.equal(queueEnrichCalls.length, 2, 'each imported note is queued for background enrich')
+  assert.deepEqual(queueLinkMetaCalls, ['note-1', 'note-2'], 'and for its caption and thumbnail')
 })
 
 // MUST FIX F3 (review round): enrich must be queued only AFTER the batch
