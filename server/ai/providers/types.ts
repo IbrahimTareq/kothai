@@ -107,6 +107,10 @@ export interface Provider {
   applyResidency?(residency: Residency): Promise<void>
   configureModels?(selection: ModelSelection): Promise<void>
   weightsInUse?(selection?: ModelSelection): Record<string, Role>
+
+  // Remote only: local inference fails per call, never systemically, so it
+  // has no circuit and nothing to recover from. See circuit.ts.
+  onRecover?(fn: () => void): void
 }
 
 // The assertion form. `export type X = ProviderModule<typeof import('./y.ts')>`

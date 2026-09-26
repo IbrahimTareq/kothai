@@ -78,6 +78,22 @@ test('a successful probe fully closes the circuit', () => {
   assert.equal(c.state, 'closed')
 })
 
+// The endpoint coming back is when the outage's losses get re-run: every note
+// enriched while it was down kept its heuristic title and no embedding, and
+// until this hook only the Settings backlog button would ever retry them.
+test('onRecover fires once when an open circuit closes, never on a success while closed', () => {
+  const k = clock()
+  let recovered = 0
+  const c = new Circuit({ threshold: 1, cooldownMs: 1000, now: k.now, onRecover: () => recovered++ })
+  c.recordSuccess()
+  assert.equal(recovered, 0)
+  c.recordFailure()
+  k.t = 1000
+  c.recordSuccess()
+  c.recordSuccess()
+  assert.equal(recovered, 1)
+})
+
 test('a non-transient failure opens immediately regardless of threshold', () => {
   const c = new Circuit({ threshold: 10, now: clock().now })
   c.recordFailure({ transient: false })

@@ -318,6 +318,35 @@ test('a non-transient failure opens the circuit and later calls fail fast withou
   assert.equal(p.available(), false)
 })
 
+test('the first success after the circuit opened reports the recovery', async t => {
+  // Date only: the 60s cooldown is read off Date.now, and the HTTP round
+  // trips below still need real timers.
+  t.mock.timers.enable({ apis: ['Date'], now: 0 })
+  let up = true
+  routes['/embeddings'] = (_req, res) => {
+    if (up) return okJson(res, { data: [{ embedding: [1] }] })
+    res.writeHead(401, { 'content-type': 'application/json' })
+    res.end('{}')
+  }
+  let recovered = 0
+  const p = createRemoteProvider({
+    baseUrl: base,
+    apiKey: null,
+    models: { llm: 'm', embed: 'e', vision: 'v' },
+    onRecover: () => recovered++,
+  })
+  await p.init()
+  await p.embedText('a')
+  assert.equal(recovered, 0, 'a success on a closed circuit is not a recovery')
+  up = false
+  await p.embedText('a').catch(() => {})
+  assert.equal(p.available(), false)
+  t.mock.timers.tick(60_000)
+  up = true
+  await p.embedText('a')
+  assert.equal(recovered, 1)
+})
+
 test('a model one role cannot use fails that role alone, not the whole endpoint', async () => {
   // Regression, from a Railway install: vision was pointed at llama3.2:3b, a
   // text-only model. Ollama answered every thumbnail with 400 "model does not

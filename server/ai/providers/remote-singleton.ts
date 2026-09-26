@@ -9,6 +9,9 @@ import { createRemoteProvider } from './remote.ts'
 import type { ModelSelection, Provider, ProviderConfig } from './types.ts'
 
 let singleton: Provider | null = null
+// Held here rather than handed to one instance: boot() replaces the instance
+// every time the endpoint is re-pointed, and the handler must survive that.
+let recover = () => {}
 const current = (): Provider => singleton || boot({})
 
 // One object rather than a module of forwarders: what this file announces is a
@@ -27,6 +30,9 @@ export const remoteProvider = {
   embedText: (...a: Parameters<Provider['embedText']>) => current().embedText(...a),
   describeImage: (...a: Parameters<Provider['describeImage']>) => current().describeImage(...a),
   answer: (...a: Parameters<Provider['answer']>) => current().answer(...a),
+  onRecover: (fn: () => void) => {
+    recover = fn
+  },
   shutdown: async () => {
     if (singleton) await singleton.shutdown()
   },
@@ -50,6 +56,7 @@ function boot(models: ModelSelection): Provider {
     // Per-provider quirks live in the catalogue, not in this transport.
     embeddingsPath: findEndpoint(providerId)?.embeddingsPath || '',
     models: { llm: models.llm || '', embed: models.embed || '', vision: models.vision || '' },
+    onRecover: () => recover(),
   })
   return singleton
 }

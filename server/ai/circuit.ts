@@ -12,6 +12,7 @@ export interface CircuitOptions {
   threshold?: number
   cooldownMs?: number
   now?: () => number
+  onRecover?: () => void
 }
 
 export interface CircuitFailure {
@@ -29,11 +30,13 @@ export class Circuit {
   openedAt: number
   cooldownUntil: number
   reason: string
+  onRecover: () => void
 
-  constructor({ threshold = 5, cooldownMs = 60_000, now = Date.now }: CircuitOptions = {}) {
+  constructor({ threshold = 5, cooldownMs = 60_000, now = Date.now, onRecover = () => {} }: CircuitOptions = {}) {
     this.threshold = threshold
     this.cooldownMs = cooldownMs
     this.now = now
+    this.onRecover = onRecover
     this.state = 'closed'
     this.consecutive = 0
     this.openedAt = 0
@@ -50,11 +53,17 @@ export class Circuit {
     return this.now() - this.openedAt >= this.cooldownMs
   }
 
+  // Only a close from open is a recovery. A note enriched while the circuit
+  // was open lost its classify and embed, and before this hook nothing
+  // re-queued it: running out of credits left every such note on its
+  // heuristic title until someone pressed the Settings backlog button.
   recordSuccess(): void {
+    const recovered = this.state === 'open'
     this.state = 'closed'
     this.consecutive = 0
     this.cooldownUntil = 0
     this.reason = ''
+    if (recovered) this.onRecover()
   }
 
   // `retryAfterMs` is the endpoint's own answer to "when should I come back?".

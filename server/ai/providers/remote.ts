@@ -80,21 +80,25 @@ interface RemoteProviderOptions {
   apiKey: string | null
   models: ModelSelection
   embeddingsPath?: string
+  onRecover?: () => void
 }
 
-export function createRemoteProvider({ baseUrl, apiKey, models, embeddingsPath = '' }: RemoteProviderOptions) {
-  const circuit = new Circuit({ threshold: 5, cooldownMs: 60_000 })
+export function createRemoteProvider({
+  baseUrl,
+  apiKey,
+  models,
+  embeddingsPath = '',
+  onRecover,
+}: RemoteProviderOptions) {
+  const breaker = () => new Circuit({ threshold: 5, cooldownMs: 60_000, onRecover })
+  const circuit = breaker()
   // A second breaker per role, for failures that belong to ONE role's model
   // rather than to the endpoint. With only the shared breaker, a Railway
   // install whose vision role named a text-only model got a 400 on every
   // thumbnail, and that 400 opened the circuit for classify and embed too — so
   // nothing was ever tagged or embedded. Outages, bad keys and rate limits are
   // still the endpoint's, and still stop every role.
-  const roleCircuits: Record<Role, Circuit> = {
-    llm: new Circuit({ threshold: 5, cooldownMs: 60_000 }),
-    embed: new Circuit({ threshold: 5, cooldownMs: 60_000 }),
-    vision: new Circuit({ threshold: 5, cooldownMs: 60_000 }),
-  }
+  const roleCircuits: Record<Role, Circuit> = { llm: breaker(), embed: breaker(), vision: breaker() }
   let catalogue: string[] = []
   // Some providers keep their embedding models out of /models entirely —
   // OpenRouter lists hundreds of chat models there and not one embedding, and

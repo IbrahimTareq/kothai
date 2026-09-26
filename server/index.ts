@@ -15,6 +15,8 @@ const chats = await import('./data/chats.ts')
 const settings = await import('./data/settings.ts')
 const enrich = await import('./ai/enrich.ts')
 const reembed = await import('./ai/reembed.ts')
+// For its side effect: re-queues what an endpoint outage cost once it is back.
+await import('./ai/recovery.ts')
 const collections = await import('./data/collections.ts')
 const tagvocab = await import('./data/tagvocab.ts')
 const telegram = await import('./telegram/index.ts')
