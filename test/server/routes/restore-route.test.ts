@@ -40,13 +40,16 @@ mock.module('../../../server/data/import-lock.ts', {
 let reembedRequests = 0
 const realEnrich = await import('../../../server/ai/enrich.ts')
 mock.module('../../../server/ai/enrich.ts', {
+  namedExports: { ...realEnrich, queueJob: async () => {} },
+})
+const realReembed = await import('../../../server/ai/reembed.ts')
+mock.module('../../../server/ai/reembed.ts', {
   namedExports: {
-    ...realEnrich,
+    ...realReembed,
     queueRecipeReembed: () => {
       reembedRequests++
       return true
     },
-    queueJob: async () => {},
   },
 })
 

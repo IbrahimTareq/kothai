@@ -142,7 +142,7 @@ export function isPromptedEmbedModel(model: string | null | undefined): boolean 
 // Bump when anything about how a note becomes a vector changes — the prefix
 // scheme here, or which fields enrich.ts feeds in. Notes record the recipe
 // they were embedded under, and a mismatch triggers the same full re-embed a
-// model swap does (see enrich.reembedAll). Without it, a library ends up
+// model swap does (see reembed.reembedAll). Without it, a library ends up
 // holding two incompatible sets of vectors and retrieval silently degrades
 // for whichever half is older.
 export const EMBED_RECIPE = 'v2-gemma-task-prefix'

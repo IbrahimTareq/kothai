@@ -74,6 +74,7 @@ mock.module('../../../server/data/settings.ts', {
 })
 
 const enrich = await import('../../../server/ai/enrich.ts')
+const reembed = await import('../../../server/ai/reembed.ts')
 
 const NOTE: NoteRecord = note({
   id: 'n1',
@@ -94,25 +95,25 @@ function reset(list: NoteRecord[] = [], marker: string | null = null) {
 const drain = () => enrich.queueJob(() => {})
 
 test('no stored value on a remote install means it was embedding remotely', () => {
-  assert.equal(enrich.embedProviderChanged({ stored: null, resolved: 'local', wasRemote: true }), true)
-  assert.equal(enrich.embedProviderChanged({ stored: null, resolved: 'remote', wasRemote: true }), false)
+  assert.equal(reembed.embedProviderChanged({ stored: null, resolved: 'local', wasRemote: true }), true)
+  assert.equal(reembed.embedProviderChanged({ stored: null, resolved: 'remote', wasRemote: true }), false)
 })
 
 test('no stored value on a local install means it was embedding locally', () => {
-  assert.equal(enrich.embedProviderChanged({ stored: null, resolved: 'local', wasRemote: false }), false)
-  assert.equal(enrich.embedProviderChanged({ stored: null, resolved: 'remote', wasRemote: false }), true)
+  assert.equal(reembed.embedProviderChanged({ stored: null, resolved: 'local', wasRemote: false }), false)
+  assert.equal(reembed.embedProviderChanged({ stored: null, resolved: 'remote', wasRemote: false }), true)
 })
 
 test('a stored value is believed over any inference', () => {
-  assert.equal(enrich.embedProviderChanged({ stored: 'local', resolved: 'local', wasRemote: true }), false)
-  assert.equal(enrich.embedProviderChanged({ stored: 'remote', resolved: 'local', wasRemote: false }), true)
+  assert.equal(reembed.embedProviderChanged({ stored: 'local', resolved: 'local', wasRemote: true }), false)
+  assert.equal(reembed.embedProviderChanged({ stored: 'remote', resolved: 'local', wasRemote: false }), true)
 })
 
 test('with the embed role off, nothing is queued AND no marker is written', async () => {
   reset([NOTE], null)
   residencyImpl = () => ({ llm: 'off', embed: 'off', vision: 'off' })
 
-  assert.equal(enrich.queueEmbedProviderReembed({ resolved: 'local', wasRemote: true }), false)
+  assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'local', wasRemote: true }), false)
   await drain()
   assert.equal(embedCalls.length, 0)
   assert.equal(storedProvider, null, 'recording a provider the role never embedded with would strand the library')
@@ -120,13 +121,13 @@ test('with the embed role off, nothing is queued AND no marker is written', asyn
 
   // Role switched back on: the absent marker means the change is still owed.
   residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
-  assert.equal(enrich.queueEmbedProviderReembed({ resolved: 'local', wasRemote: true }), true)
+  assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'local', wasRemote: true }), true)
 })
 
 test('unchanged with no stored marker records the inference so a later flip is measurable', async () => {
   reset([NOTE], null)
 
-  assert.equal(enrich.queueEmbedProviderReembed({ resolved: 'remote', wasRemote: true }), false)
+  assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'remote', wasRemote: true }), false)
   await drain()
   assert.equal(embedCalls.length, 0, 'nothing changed, so nothing to re-embed')
   assert.equal(storedProvider, 'remote', 'the inference must be written down the first time it is made')
@@ -135,7 +136,7 @@ test('unchanged with no stored marker records the inference so a later flip is m
 test('unchanged with a stored marker queues nothing and leaves the marker alone', async () => {
   reset([NOTE], 'local')
 
-  assert.equal(enrich.queueEmbedProviderReembed({ resolved: 'local', wasRemote: true }), false)
+  assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'local', wasRemote: true }), false)
   await drain()
   assert.equal(embedCalls.length, 0)
   assert.equal(storedProvider, 'local')
@@ -145,7 +146,7 @@ test('unchanged with a stored marker queues nothing and leaves the marker alone'
 test('a changed provider with an empty library records the new value without sweeping', async () => {
   reset([], 'remote')
 
-  assert.equal(enrich.queueEmbedProviderReembed({ resolved: 'local', wasRemote: true }), false)
+  assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'local', wasRemote: true }), false)
   await drain()
   assert.equal(embedCalls.length, 0)
   assert.equal(storedProvider, 'local', 'a fresh install must not be told it owes a re-embed on every boot')
@@ -154,7 +155,7 @@ test('a changed provider with an empty library records the new value without swe
 test('a changed provider with notes sweeps the library and records the marker only afterwards', async () => {
   reset([NOTE, { ...NOTE, id: 'n2' }], 'remote')
 
-  assert.equal(enrich.queueEmbedProviderReembed({ resolved: 'local', wasRemote: true }), true)
+  assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'local', wasRemote: true }), true)
   assert.equal(storedProvider, 'remote', 'the marker must not move before the job has even run')
   await drain()
 
@@ -170,14 +171,14 @@ test('an install that was embedding remotely still notices a later wholesale fli
   reset([NOTE], null)
 
   // Boot one: nothing changed, but the inference gets written down.
-  assert.equal(enrich.queueEmbedProviderReembed({ resolved: 'remote', wasRemote: true }), false)
+  assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'remote', wasRemote: true }), false)
   await drain()
   assert.equal(embedCalls.length, 0)
   assert.equal(storedProvider, 'remote')
 
   // Boot two, after KOTHAI_AI_PROVIDER was flipped wholesale. Inferring from
   // the environment again would compare 'local' against 'local' and miss it.
-  assert.equal(enrich.queueEmbedProviderReembed({ resolved: 'local', wasRemote: false }), true)
+  assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'local', wasRemote: false }), true)
   await drain()
   assert.equal(embedCalls.length, 1, 'the library was still holding vectors from the endpoint')
   assert.equal(storedProvider, 'local')

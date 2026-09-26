@@ -146,7 +146,7 @@ export function getEmbedRecipe(): string | null {
 }
 
 // Which provider produced the stored vectors ('local' | 'remote'). null on an
-// install that predates the marker — see enrich.embedProviderChanged, which
+// install that predates the marker — see reembed.embedProviderChanged, which
 // infers the answer from how that install was configured.
 export function getEmbedProvider(): string | null {
   return embedProvider

@@ -75,6 +75,7 @@ mock.module('../../../server/data/settings.ts', {
 })
 
 const enrich = await import('../../../server/ai/enrich.ts')
+const reembed = await import('../../../server/ai/reembed.ts')
 const { EMBED_RECIPE } = await import('../../../server/ai/prompts.ts')
 
 function reset(list: NoteRecord[] = []) {
@@ -105,7 +106,7 @@ const REEL: NoteRecord = {
 }
 
 test('embedBodyFor reads every field enrichment embeds, not the short legacy list', () => {
-  const body = enrich.embedBodyFor(REEL)
+  const body = reembed.embedBodyFor(REEL)
   for (const field of [
     'Brown butter pasta',
     'ten minute recipe',
@@ -124,7 +125,7 @@ test('embedBodyFor reads every field enrichment embeds, not the short legacy lis
 
 test('reembedAll embeds every note once, writes once, and records the new recipe', async () => {
   reset([REEL, { ...REEL, id: 'r2' }, { ...REEL, id: 'r3' }])
-  const n = await enrich.reembedAll('test')
+  const n = await reembed.reembedAll('test')
 
   assert.equal(n, 3)
   assert.equal(embedCalls.length, 3)
@@ -141,7 +142,7 @@ test('reembedAll survives one unembeddable note rather than abandoning the rest 
     return [text.length]
   }
 
-  await enrich.reembedAll('test')
+  await reembed.reembedAll('test')
   assert.equal(embedCalls.length, 3, 'the sweep kept going')
   assert.equal(notes.filter(x => Array.isArray(x.embedding)).length, 2)
   assert.equal(storedRecipe, EMBED_RECIPE)
@@ -149,7 +150,7 @@ test('reembedAll survives one unembeddable note rather than abandoning the rest 
 
 test('reembedAll skips a note with no embeddable text at all', async () => {
   reset([note({ id: 'empty' })])
-  await enrich.reembedAll('test')
+  await reembed.reembedAll('test')
   assert.equal(embedCalls.length, 0)
 })
 
@@ -157,13 +158,13 @@ test('queueRecipeReembed fires exactly once when the stored recipe is stale, the
   reset([REEL, { ...REEL, id: 'r2' }])
   storedRecipe = 'v1-something-older'
 
-  assert.equal(enrich.queueRecipeReembed(), true)
+  assert.equal(reembed.queueRecipeReembed(), true)
   await enrich.queueJob(() => {}) // drain
   assert.equal(embedCalls.length, 2)
   assert.equal(storedRecipe, EMBED_RECIPE)
 
   // Next boot: the marker now matches, so nothing is queued.
-  assert.equal(enrich.queueRecipeReembed(), false)
+  assert.equal(reembed.queueRecipeReembed(), false)
   await enrich.queueJob(() => {})
   assert.equal(embedCalls.length, 2)
 })
@@ -171,7 +172,7 @@ test('queueRecipeReembed fires exactly once when the stored recipe is stale, the
 test('a library that predates the marker entirely (null) is treated as stale and re-embedded', async () => {
   reset([REEL])
   storedRecipe = null
-  assert.equal(enrich.queueRecipeReembed(), true)
+  assert.equal(reembed.queueRecipeReembed(), true)
   await enrich.queueJob(() => {})
   assert.equal(embedCalls.length, 1)
 })
@@ -181,20 +182,20 @@ test('with the embed role off, nothing is queued AND the marker is left stale so
   storedRecipe = 'v1-older'
   residencyImpl = () => ({ llm: 'off', embed: 'off', vision: 'off' })
 
-  assert.equal(enrich.queueRecipeReembed(), false)
+  assert.equal(reembed.queueRecipeReembed(), false)
   await enrich.queueJob(() => {})
   assert.equal(embedCalls.length, 0)
   assert.equal(storedRecipe, 'v1-older', 'recording the new recipe here would strand the library forever')
 
   // Role switched back on: the stale marker means the sweep is still owed.
   residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
-  assert.equal(enrich.queueRecipeReembed(), true)
+  assert.equal(reembed.queueRecipeReembed(), true)
 })
 
 test('an empty library records the recipe without queueing a sweep over nothing', async () => {
   reset([])
   storedRecipe = 'v1-older'
-  assert.equal(enrich.queueRecipeReembed(), false)
+  assert.equal(reembed.queueRecipeReembed(), false)
   await enrich.queueJob(() => {})
   assert.equal(embedCalls.length, 0)
   assert.equal(storedRecipe, EMBED_RECIPE, 'a fresh install must not be told it owes a re-embed on every boot')

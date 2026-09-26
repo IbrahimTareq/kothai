@@ -3,6 +3,7 @@ import * as store from '../data/notes.ts'
 import * as settings from '../data/settings.ts'
 import * as tagvocab from '../data/tagvocab.ts'
 import * as enrich from '../ai/enrich.ts'
+import * as reembed from '../ai/reembed.ts'
 import { ROLES, POLICIES, OFF_RESIDENCY } from '../ai/roles.ts'
 import { json, readBody } from '../lib/http.ts'
 import { demoLimits, visibleTo } from './demo.ts'
@@ -439,9 +440,9 @@ export async function handleSaveSettings(req: IncomingMessage, res: ServerRespon
       // A new embedding model speaks a different vector space, so every note is
       // re-embedded in the background (search degrades gracefully meanwhile).
       // The sweep itself lives in enrich.ts so the boot-time recipe check runs
-      // the identical code — see enrich.reembedAll.
+      // the identical code — see reembed.reembedAll.
       if (embedChanged && residency.embed !== 'off') {
-        await enrich.reembedAll(`model → ${models.local.embed}`)
+        await reembed.reembedAll(`model → ${models.local.embed}`)
       }
     })
   }

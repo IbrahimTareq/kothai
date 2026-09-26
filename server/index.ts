@@ -14,6 +14,7 @@ const store = await import('./data/notes.ts')
 const chats = await import('./data/chats.ts')
 const settings = await import('./data/settings.ts')
 const enrich = await import('./ai/enrich.ts')
+const reembed = await import('./ai/reembed.ts')
 const collections = await import('./data/collections.ts')
 const tagvocab = await import('./data/tagvocab.ts')
 const telegram = await import('./telegram/index.ts')
@@ -48,11 +49,11 @@ enrich.queueMetaBackfill()
 // a different set of note fields) are not comparable with new ones, so a
 // changed recipe re-embeds the library once, in the background, on the same
 // job queue as everything else.
-const reembedding = enrich.queueRecipeReembed()
+const reembedding = reembed.queueRecipeReembed()
 // Vectors from an on-device model and vectors from an endpoint's model live
 // in different spaces too, so the embed role changing provider invalidates
 // the library just as thoroughly as a recipe change does.
-const providerReembedding = enrich.queueEmbedProviderReembed({
+const providerReembedding = reembed.queueEmbedProviderReembed({
   resolved: ai.capabilities().roles.embed,
   wasRemote: getAiConfig().provider === 'remote',
 })

@@ -181,7 +181,7 @@ async function open(): Promise<DatabaseSync> {
   // the mismatch that triggers the one-time re-embed.
   ensureColumns(db, 'settings', { embed_recipe: 'TEXT' })
   // Which provider produced the stored vectors. NULL on an install that
-  // predates the marker — enrich.embedProviderChanged infers the answer from
+  // predates the marker — reembed.embedProviderChanged infers the answer from
   // how that install was configured rather than re-embedding on a guess.
   ensureColumns(db, 'settings', { embed_provider: 'TEXT' })
   // Daily backups, on unless switched off — including on every existing install.

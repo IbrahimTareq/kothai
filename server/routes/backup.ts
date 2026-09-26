@@ -18,6 +18,7 @@ import * as chats from '../data/chats.ts'
 import * as tagvocab from '../data/tagvocab.ts'
 import * as settings from '../data/settings.ts'
 import * as enrich from '../ai/enrich.ts'
+import * as reembed from '../ai/reembed.ts'
 import { isImportInProgress, IMPORT_BUSY, runExclusiveImport } from '../data/import-lock.ts'
 import { saveBackup, writeBackup } from '../backups.ts'
 import { openDriveBackup } from '../drive.ts'
@@ -233,7 +234,7 @@ async function swapIn(stagedDb: string, stagedUploads: string | null) {
     // knows whether that can run now (not with the embed role off) and, if not,
     // leaves the marker for a later boot to act on.
     await settings.save({ embedRecipe: null })
-    enrich.queueRecipeReembed()
+    reembed.queueRecipeReembed()
   }
   if (settings.getResidency().embed !== 'off') {
     enrich.queueJob(() => tagvocab.rebuildFromNotes(store.allNotes()))
@@ -270,7 +271,7 @@ function copyLibrary(db: DatabaseSync, file: string): boolean {
 
 // Whether the backup's vectors were built the way this install builds them.
 // Any difference counts: vectors from two models sit in different spaces, and
-// a library holding both answers every query badly (see enrich.ts). A backup
+// a library holding both answers every query badly (see reembed.ts). A backup
 // from an install never configured has no row, and counts as different.
 function sameVectors(row: Record<string, SQLOutputValue> | undefined): boolean {
   return (
