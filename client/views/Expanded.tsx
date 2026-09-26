@@ -410,6 +410,7 @@ export function ExpandedView({
             <section className="exp-sec">
               <div className="exp-sec-h eyebrow">
                 Tags <span className="exp-sec-n">{tags.length}</span>
+                {item.pending && <span>Tagging…</span>}
               </div>
               <div className="exp-tags">
                 <Chip compact add onClick={() => setAdding(true)}>

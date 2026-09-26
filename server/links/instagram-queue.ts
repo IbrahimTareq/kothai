@@ -11,7 +11,7 @@
 // are easier to keep right when they are not interleaved with classify/embed.
 //
 // The queue does not know what enrichment is. Its one tie back to the pipeline
-// is announcing that a caption landed, which arrives here as an injected
+// is announcing that a fetch settled, which arrives here as an injected
 // handler rather than an import — so this module has no edge back to enrich.ts
 // and the two cannot form a cycle.
 import * as store from '../data/notes.ts'
@@ -31,12 +31,15 @@ interface IgJob {
   embed?: { resolve: (html: string) => void; reject: (e: unknown) => void }
 }
 
-// Called with a noteId once a fetch has produced a caption worth
-// re-classifying on. enrich.ts registers the real handler at import; the
-// default no-op keeps this module usable (and testable) on its own.
-let onCaptionLanded: (noteId: string) => void = () => {}
-export function setCaptionHandler(fn: (noteId: string) => void) {
-  onCaptionLanded = fn
+// Called with a noteId once a meta fetch has settled: caption, thumbnail
+// only, nothing, or a failure. enrich.ts registers the real handler at
+// import and decides what the note is owed; the default no-op keeps this
+// module usable (and testable) on its own. Every settle, not only a caption:
+// a pending import waits on its fetch before any model work, so a fetch that
+// lands nothing must still hand the note back or it stays pending for good.
+let onFetchSettled: (noteId: string) => void = () => {}
+export function setFetchSettledHandler(fn: (noteId: string) => void) {
+  onFetchSettled = fn
 }
 
 // Instagram embed fetches get their OWN queue, separate from enrichChain
@@ -94,7 +97,7 @@ async function runIgJob({ noteId, url }: IgJob) {
     patch.metaNextTry = Date.now() + metaRetryDelay(tries - 1)
   }
   await store.updateNote(noteId, patch)
-  if (patch.siteTitle || patch.siteDesc) onCaptionLanded(noteId)
+  onFetchSettled(noteId)
 }
 
 async function pumpIg() {

@@ -25,6 +25,11 @@ Create, list, update, and delete notes.
 
 Returns immediately. Enrichment runs in the background.
 
+`pending` stays `true` until the note's labelling pass has run. For an
+Instagram post that pass waits for its caption fetch, which runs on a
+throttled lane, so a large import's posts stay pending until that lane
+reaches them.
+
 ## GET /api/notes
 
 <TypeTable

@@ -4,7 +4,8 @@
 // new code from the Instagram-import review round — two real bugs
 // (metaFetched write-order clobber, caption never reaching classify/embed)
 // were found here — so these tests reproduce the exact scenarios that
-// exposed them, plus the failure-isolation and no-loop guarantees.
+// exposed them, plus the failure-isolation and no-loop guarantees. It now
+// also covers a pending import's single pass, deferred until its fetch settles.
 //
 // Every module enrich.ts touches is mocked via node:test's mock.module
 // (requires --experimental-test-module-mocks, wired into `pnpm test`) so
@@ -172,16 +173,17 @@ test("metaFetched write-order: a slow main-chain classify pass must not clobber 
   reset()
   seedNotes([{ ...note({ id: 'n1', content: IG_URL, url: IG_URL, type: 'link' }), ai: {} }])
   // Reproduces the reviewer's measured ordering: IG fetch resolves fast,
-  // classify is slow — so the IG job's store.updateNote lands first.
-  classifyImpl = async () => {
+  // the model pass is slow — so the IG job's store.updateNote lands first.
+  // Embed, not classify: a URL-only pass no longer classifies.
+  embedTextImpl = async () => {
     await new Promise(r => setTimeout(r, 15))
-    return { type: 'link', category: 'General', title: 'T', summary: 'S', tags: [] }
+    return [0, 0, 0]
   }
   await enrich.queueEnrich('n1', IG_URL)
   assert.equal(seeded('n1').metaFetched, true, "the main pass's patch must never clobber metaFetched back to false")
 })
 
-test('a landed caption triggers exactly one re-classify/re-embed, built from stored fields — not a re-fetch', async () => {
+test('a landed caption triggers exactly one classify, built from stored fields — the URL-only pass no longer classifies', async () => {
   reset()
   const id = 'n2'
   seedNotes([{ ...note({ id, content: IG_URL, url: IG_URL, type: 'link' }), ai: {} }])
@@ -200,21 +202,12 @@ test('a landed caption triggers exactly one re-classify/re-embed, built from sto
     1,
     'fetchLinkMeta must be called exactly once — reclassify must not re-fetch',
   )
-  assert.equal(
-    classifyCalls.length,
-    2,
-    'classify runs once in enrichNote (text-only) and once more in reclassifyWithCaption (with caption)',
-  )
-  assert.equal(classifyCalls[0], IG_URL, 'the first pass has no caption yet')
+  assert.equal(classifyCalls.length, 1, 'the URL-only pass skips classify; only the caption pass runs it')
+  assert.match(classifyCalls[0], /the full caption text/, "built from the note's own stored siteDesc")
   assert.match(
-    classifyCalls[1],
-    /the full caption text/,
-    "the second pass is built from the note's own stored siteDesc",
-  )
-  assert.match(
-    classifyCalls[1],
+    classifyCalls[0],
     new RegExp(IG_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
-    "the second pass still includes the note's own content",
+    "the pass still includes the note's own content",
   )
 
   const saved = seeded(id)
@@ -223,11 +216,11 @@ test('a landed caption triggers exactly one re-classify/re-embed, built from sto
   assert.equal(saved.ai.classify, true)
   assert.equal(saved.ai.embed, true)
 
-  // The seeded fetch also returned a thumb — the reclassify pass must
-  // describe it and fold that into the same classify text as the caption.
+  // The seeded fetch also returned a thumb — the caption pass must describe
+  // it and fold that into the same classify text as the caption.
   assert.equal(describeImageCalls.length, 1)
   assert.match(describeImageCalls[0].absPath, /x\.jpg$/)
-  assert.match(classifyCalls[1], /default thumbnail description/)
+  assert.match(classifyCalls[0], /default thumbnail description/)
   assert.equal(saved.ai.thumbVision, true)
   // Persisted, not just folded into richText: Ask's answer prompt and
   // textSearch both read this field off the note.
@@ -236,7 +229,7 @@ test('a landed caption triggers exactly one re-classify/re-embed, built from sto
   // No loop: further chain activity must not grow the call counts.
   await enrich.queueJob(() => {})
   await enrich.queueJob(() => {})
-  assert.equal(classifyCalls.length, 2, 'nothing re-queues itself — the counts stay put')
+  assert.equal(classifyCalls.length, 1, 'nothing re-queues itself — the counts stay put')
 })
 
 test('thumbnail vision respects the vision residency — off means no describeImage call, caption still reclassifies', async () => {
@@ -439,11 +432,8 @@ test('a reclassify failure leaves the note recoverable — igReclassified is NOT
     siteName: 'Instagram',
     thumb: null,
   })
-  let classifyCallCount = 0
   classifyImpl = async () => {
-    classifyCallCount++
-    if (classifyCallCount >= 2) throw new Error('transient model failure') // fails on the RECLASSIFY call, not the first pass
-    return { type: 'link', category: 'General', title: 'T', summary: 'S', tags: [] }
+    throw new Error('transient model failure') // the first pass skips classify, so this is the reclassify
   }
 
   await enrich.queueEnrich(id, IG_URL) // first pass succeeds → ai.classify: true
@@ -455,7 +445,7 @@ test('a reclassify failure leaves the note recoverable — igReclassified is NOT
   assert.equal(
     saved.ai.classify,
     true,
-    'the first, URL-only classify pass had already succeeded and must not be undone',
+    'the URL-only pass recorded "nothing to classify from", and that must not be undone',
   )
   assert.equal(
     saved.ai.igReclassified,
@@ -847,4 +837,264 @@ test('a reclassify with tagsEdited embeds the kept (existing) tags, not the disc
   assert.equal(embedCalls.length, 1)
   assert.match(embedCalls[0], /kept-tag/, "the embedding must reflect the user's surviving tag")
   assert.doesNotMatch(embedCalls[0], /discarded-ai-tag/, 'the embedding must not encode a tag the note no longer has')
+})
+
+// ---- pending imports: one labelling pass, started by the fetch ----
+// An import used to classify each post from its bare URL first (tags like
+// `platform, view, web`), clear `pending`, and queue the caption pass behind
+// the whole import. These pin the replacement: no model work until the
+// fetch has been attempted, then exactly one pass.
+
+test('a pending Instagram note that was never fetched gets no model work until its fetch settles', async () => {
+  reset()
+  const id = 'p1'
+  seedNotes([{ ...note({ id, content: IG_URL, url: IG_URL, pending: true }), ai: {} }])
+  enrich._igQueueState.pause()
+  try {
+    await enrich.queueEnrich(id, IG_URL)
+
+    assert.deepEqual(enrich._igQueueState.ids(), [id], 'the fetch is queued')
+    assert.equal(classifyCalls.length, 0)
+    assert.equal(embedCalls.length, 0)
+    assert.equal(describeImageCalls.length, 0)
+    assert.equal(seeded(id).pending, true, 'nothing has labelled it yet, so it still says so')
+  } finally {
+    enrich._igQueueState.clear()
+  }
+})
+
+test('a pending note whose fetch lands a caption is labelled once, from the caption and its hashtags', async () => {
+  reset()
+  const id = 'p2'
+  seedNotes([{ ...note({ id, content: IG_URL, url: IG_URL, pending: true }), ai: {} }])
+  fetchLinkMetaImpl = async () => ({
+    siteTitle: null,
+    siteDesc: 'a calm scene #makkah',
+    siteName: 'Instagram',
+    thumb: null,
+  })
+  await enrich.queueEnrich(id, IG_URL) // defers, queues the fetch
+  await drainIgQueue() // the fetch settles and hands the note back
+  await enrich.queueJob(() => {}) // the one labelling pass
+
+  assert.equal(classifyCalls.length, 1)
+  assert.match(classifyCalls[0], /a calm scene/)
+  assert.deepEqual(classifyArgs[0].candidateTags, ['makkah'])
+  const saved = seeded(id)
+  assert.equal(saved.pending, false)
+  assert.equal(saved.ai?.igReclassified, true)
+
+  // A restart must not label every imported post a second time.
+  enrich.queueMetaBackfill()
+  await enrich.queueJob(() => {})
+  assert.equal(classifyCalls.length, 1)
+})
+
+test('a pending note whose fetch finds only a thumbnail is labelled from the thumbnail description', async () => {
+  reset()
+  const id = 'p4'
+  seedNotes([{ ...note({ id, content: IG_URL, url: IG_URL, pending: true }), ai: {} }])
+  fetchLinkMetaImpl = async () => ({ siteTitle: null, siteDesc: null, siteName: 'Instagram', thumb: '/uploads/t.jpg' })
+  await enrich.queueEnrich(id, IG_URL)
+  await drainIgQueue()
+  await enrich.queueJob(() => {})
+
+  assert.equal(describeImageCalls.length, 1)
+  assert.equal(classifyCalls.length, 1)
+  assert.match(classifyCalls[0], /default thumbnail description/)
+  assert.equal(seeded(id).pending, false)
+})
+
+test('a caption-less post whose thumbnail describe failed keeps classify open for the backlog to finish', async () => {
+  reset()
+  const id = 'p11'
+  seedNotes([{ ...note({ id, content: IG_URL, url: IG_URL, pending: true }), ai: {} }])
+  fetchLinkMetaImpl = async () => ({ siteTitle: null, siteDesc: null, siteName: 'Instagram', thumb: '/uploads/q.jpg' })
+  describeImageImpl = async () => {
+    throw new Error('vision down')
+  }
+  await enrich.queueEnrich(id, IG_URL)
+  await drainIgQueue()
+  await enrich.queueJob(() => {})
+
+  assert.equal(classifyCalls.length, 0, 'never classify a bare URL')
+  assert.notEqual(seeded(id).ai?.classify, true, 'the thumbnail is still to be read, so classify stays owed')
+  assert.equal(seeded(id).pending, false)
+
+  // The Settings backlog's resweep describes the thumbnail and classifies from it.
+  describeImageImpl = async () => 'default thumbnail description'
+  await enrich.queueEnrich(id, IG_URL)
+  await drainIgQueue()
+
+  assert.equal(classifyCalls.length, 1)
+  assert.match(classifyCalls[0], /default thumbnail description/)
+})
+
+// Regression guard for "every route clears pending" on defer -> settle -> enrichNote; it passed before this route existed too.
+test('with every role off, a settled fetch still clears pending', async () => {
+  reset()
+  const id = 'p5'
+  residencyImpl = () => ({ llm: 'off', embed: 'off', vision: 'off' })
+  seedNotes([{ ...note({ id, content: IG_URL, url: IG_URL, pending: true }), ai: {} }])
+  fetchLinkMetaImpl = async () => ({ siteTitle: null, siteDesc: 'caption', siteName: 'Instagram', thumb: null })
+  await enrich.queueEnrich(id, IG_URL)
+  await drainIgQueue()
+  await enrich.queueJob(() => {})
+
+  assert.equal(classifyCalls.length, 0)
+  assert.equal(seeded(id).pending, false)
+})
+
+test('boot: a pending note that was never fetched is queued for its fetch, not labelled', async () => {
+  reset()
+  const id = 'p6'
+  seedNotes([{ ...note({ id, content: IG_URL, url: IG_URL, pending: true }), ai: {} }])
+  enrich._igQueueState.pause()
+  try {
+    enrich.queueMetaBackfill()
+    await enrich.queueJob(() => {})
+
+    assert.deepEqual(enrich._igQueueState.ids(), [id])
+    assert.equal(classifyCalls.length, 0)
+    assert.equal(seeded(id).pending, true)
+  } finally {
+    enrich._igQueueState.clear()
+  }
+})
+
+test("a fetch that settles while the chain is busy doesn't cost a second pass or a second fetch", async () => {
+  reset()
+  const id = 'p9'
+  seedNotes([{ ...note({ id, content: IG_URL, url: IG_URL, pending: true }), ai: {} }])
+  // Something slow holds the chain, the import's own pass queues behind it,
+  // and the fetch settles meanwhile, so the handler's pass queues last.
+  let release!: () => void
+  const held = new Promise<void>(r => {
+    release = r
+  })
+  void enrich.queueJob(() => held)
+  void enrich.queueEnrich(id, IG_URL)
+  enrich.queueIgMeta(id, IG_URL)
+  await drainIgQueue()
+  release()
+  await enrich.queueJob(() => {})
+  await drainIgQueue()
+
+  assert.equal(fetchLinkMetaCalls.length, 1, 'the handler found the note already labelled and left it alone')
+  assert.equal(seeded(id).pending, false)
+})
+
+test('boot: a pending note whose caption already landed gets one full pass, with its thumbnail', async () => {
+  reset()
+  const id = 'p8'
+  seedNotes([
+    {
+      ...note({
+        id,
+        content: IG_URL,
+        url: IG_URL,
+        pending: true,
+        metaFetched: true,
+        siteDesc: 'the caption',
+        thumb: '/uploads/p8.jpg',
+      }),
+      ai: {},
+    },
+  ])
+  enrich.queueMetaBackfill()
+  await enrich.queueJob(() => {})
+
+  assert.equal(classifyCalls.length, 1)
+  assert.match(classifyCalls[0], /default thumbnail description/, 'the one pass read the thumbnail')
+  assert.equal(embedCalls.length, 1)
+  assert.equal(seeded(id).pending, false)
+})
+
+test('a pending note whose fetch fails is settled without classify: import title kept, account tag added', async () => {
+  reset()
+  const id = 'p3'
+  seedNotes([
+    {
+      ...note({
+        id,
+        content: IG_URL,
+        url: IG_URL,
+        pending: true,
+        title: '@someone · Post',
+        tags: ['instagram'],
+        account: 'someone',
+      }),
+      ai: {},
+    },
+  ])
+  fetchLinkMetaImpl = async () => {
+    throw new Error('429')
+  }
+  await enrich.queueEnrich(id, IG_URL)
+  await drainIgQueue()
+  await enrich.queueJob(() => {})
+  await drainIgQueue()
+
+  assert.equal(classifyCalls.length, 0, 'never classify a bare URL')
+  assert.equal(fetchLinkMetaCalls.length, 1, 'the backoff owns retries — no immediate re-fetch')
+  const saved = seeded(id)
+  assert.equal(saved.pending, false)
+  assert.equal(saved.title, '@someone · Post')
+  assert.deepEqual(saved.tags, ['@someone', 'instagram'])
+  assert.equal(saved.ai?.classify, true, 'nothing to classify from, so the backlog stops counting it')
+  assert.equal(embedCalls.length, 1, 'embed still runs')
+})
+
+test('boot: a pending note whose fetch already failed is settled, not left pending', async () => {
+  reset()
+  const id = 'p6b'
+  seedNotes([
+    {
+      ...note({ id, content: IG_URL, url: IG_URL, pending: true }),
+      metaTries: 1,
+      metaNextTry: Date.now() + 600_000,
+      ai: {},
+    },
+  ])
+  enrich.queueMetaBackfill()
+  await enrich.queueJob(() => {})
+
+  assert.equal(fetchLinkMetaCalls.length, 0, 'still backing off')
+  assert.equal(classifyCalls.length, 0)
+  assert.equal(seeded(id).pending, false)
+  assert.equal(seeded(id).ai?.classify, true)
+})
+
+test('queueLinkMeta hands an Instagram link to the Instagram lane instead of dropping it', () => {
+  reset()
+  enrich._igQueueState.pause()
+  try {
+    enrich.queueLinkMeta('p7', IG_URL)
+    assert.deepEqual(enrich._igQueueState.ids(), ['p7'])
+  } finally {
+    enrich._igQueueState.clear()
+  }
+})
+
+test('a caption-less post with a stored thumbnail description is classified from it, not marked bare', async () => {
+  reset()
+  seedNotes([
+    {
+      ...note({
+        id: 'p10',
+        content: IG_URL,
+        url: IG_URL,
+        metaFetched: true,
+        thumb: '/uploads/p10.jpg',
+        tags: ['platform', 'view'],
+      }),
+      thumbDescription: 'a stored description of the reel',
+      ai: { thumbVision: true },
+    },
+  ])
+  await enrich.queueEnrich('p10', IG_URL)
+
+  assert.equal(classifyCalls.length, 1)
+  assert.match(classifyCalls[0], /a stored description of the reel/)
+  assert.equal(describeImageCalls.length, 0, 'no repeat vision')
 })

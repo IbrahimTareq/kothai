@@ -461,6 +461,8 @@ export default function App() {
                 slots: notes.slots,
                 total: notes.total,
                 ready: notes.ready,
+                pendingTotal: notes.pendingTotal,
+                pendingEta: notes.pendingEta,
                 onWindow: notes.ensure,
                 galFilter,
                 setGalFilter,

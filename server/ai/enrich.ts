@@ -31,7 +31,7 @@ import {
   metaRetryDelay,
   metaRetryEligible,
   isStuckInstagramNote,
-  setCaptionHandler,
+  setFetchSettledHandler,
   _igQueueState,
 } from '../links/instagram-queue.ts'
 
@@ -64,9 +64,17 @@ export function queueEnrich(noteId: string, url: string) {
   return queueJob(() => enrichNote(noteId, url))
 }
 
-// A caption that has just landed is worth re-classifying on, but the queue
-// that fetched it has no reason to know that — it announces, this decides.
-setCaptionHandler(noteId => queueJob(() => reclassifyWithCaption(noteId)))
+// The queue announces a settled fetch; this decides what the note is owed. A
+// pending note has been waiting on it for its one labelling pass (see
+// enrichNote); a labelled one gets the caption reclassify if a caption has
+// landed since. Pending is re-read when the job runs: if the chain was busy
+// while the fetch landed, the note's own pass may have labelled it first,
+// and a second pass on a caption-less post would re-queue the same fetch.
+setFetchSettledHandler(noteId => {
+  const n = store.getNote(noteId)
+  if (n?.pending) queueJob(() => (store.getNote(noteId)?.pending ? enrichNote(noteId, n.content) : undefined))
+  else if (n && (n.siteTitle || n.siteDesc) && !n.ai?.igReclassified) queueJob(() => reclassifyWithCaption(noteId))
+})
 
 // ---- fast metadata lane ---------------------------------------------------
 // Cheap, network-bound work — oEmbed/OpenGraph: a caption, an author, a
@@ -83,8 +91,8 @@ setCaptionHandler(noteId => queueJob(() => reclassifyWithCaption(noteId)))
 //
 // Bounded concurrency rather than firing all of them at once: these are
 // outbound requests to a handful of hosts, and 197 simultaneous fetches is how
-// you earn a rate-limit. Deliberately NOT used for Instagram, which has its
-// own queue on a >=2.5s throttle for exactly that reason (see queueIgMeta).
+// you earn a rate-limit. Instagram is handed to its own queue instead, on a
+// >=2.5s throttle for exactly that reason (see queueIgMeta).
 interface MetaJob {
   noteId: string
   url: string
@@ -95,7 +103,14 @@ let metaActive = 0
 const metaQueue: MetaJob[] = []
 
 export function queueLinkMeta(noteId: string, url: string) {
-  if (!noteId || !url || isInstagramPost(url)) return
+  if (!noteId || !url) return
+  // Instagram has its own throttled lane. Left to enrichNote, each post's
+  // fetch waited for the serial model chain to reach it (~15s a post), so an
+  // import's off-screen captions arrived at model speed.
+  if (isInstagramPost(url)) {
+    queueIgMeta(noteId, url)
+    return
+  }
   metaQueue.push({ noteId, url })
   pumpMeta()
 }
@@ -188,24 +203,24 @@ async function describeThumb(
   }
 }
 
-// Re-runs classify + embed for a note once its Instagram caption has landed
-// (see queueIgMeta below), using the note's OWN stored fields — never
-// re-fetching link metadata. This is deliberately NOT a re-queued enrichNote
-// pass: enrichNote recomputes `url` from the note's content, would see the
-// Instagram URL again, and call queueIgMeta again — an endless fetch/patch
-// cycle. reclassifyWithCaption never calls fetchLinkMeta or queueIgMeta, so
-// that cycle can't happen here by construction. The `ai.igReclassified`
-// marker makes a run idempotent per note, which matters if queueIgMeta ever
-// fires twice for the same id (e.g. a boot-time backfill racing an
-// in-flight import): that can add at most ONE extra reclassify, never an
-// unbounded chain of them, and the marker turns that extra one into a no-op.
+// Re-runs classify + embed for a labelled note once its Instagram caption has
+// landed (see queueIgMeta below), from the note's OWN stored fields: it never
+// fetches, so it cannot re-trigger itself. Not a re-queued enrichNote pass:
+// stepsFor would skip classify (the URL-only pass marked it done), and for a
+// post still caption-less enrichNote re-queues queueIgMeta — a fetch/settle
+// cycle. Only a pending note goes back through enrichNote, and its pass can't
+// cycle: it re-fetches only when metaRetryEligible allows, and clears `pending`.
+// The `ai.igReclassified` marker makes a run idempotent per note, which matters
+// if queueIgMeta fires twice for one id (a boot-time backfill racing an
+// in-flight import): that adds at most ONE extra reclassify, and the marker
+// turns it into a no-op.
 //
 // igReclassified is only set when classify or embed actually SUCCEEDED this
-// run — never unconditionally. A transient model failure here still leaves
-// `ai.classify: true` from enrichNote's earlier URL-only pass, so if the
-// marker were set regardless, stepsFor would never re-offer classify AND
-// this marker would block every future reclassify attempt too — stranding
-// the note on URL-only metadata forever. Leaving the marker unset just costs
+// run — never unconditionally. A transient model failure here can leave
+// `ai.classify: true` from enrichNote's URL-only pass ("nothing to classify
+// from"), so if the marker were set regardless, stepsFor would never re-offer
+// classify AND this marker would block every future reclassify attempt too —
+// stranding the note on its import title and tags forever. Leaving it unset costs
 // a redundant (self-healing) reclassify next time something re-triggers it
 // (the boot sweep in queueMetaBackfill below, or another queueIgMeta call) —
 // this codebase already prefers that tradeoff (see backlog.ts's
@@ -222,10 +237,10 @@ async function reclassifyWithCaption(id: string, { vision = true } = {}) {
   if (!existing || existing.ai?.igReclassified) return // deleted, or already re-run once
 
   const ai: AiMarkers = { ...existing.ai }
-  // The thumbnail queueIgMeta just fetched is guaranteed to be on disk by the
-  // time this runs, so this is where an Instagram note's frame gets described.
-  // enrichNote runs the same step for every other kind of note; whichever
-  // reaches a given note first wins, and the marker makes the other a no-op.
+  // A labelled note whose caption came on a later retry gets its frame
+  // described here (the thumbnail queueIgMeta fetched is on disk by now); an
+  // import's single enrichNote pass describes its own. Whichever reaches a
+  // note first wins, and the marker makes the other a no-op.
   const thumbDescription = vision ? await describeThumb(existing, residency, ai) : ''
 
   // Built from stored fields (content + the siteTitle/siteDesc queueIgMeta
@@ -361,18 +376,16 @@ export function queueMetaBackfill() {
     // thumb-retry's own timers rather than fetched here: at boot, every such
     // note at once is the burst that got it rate-limited in the first place.
     if (n.thumbSrc && !n.thumb) queueThumbRetry(n.id)
-    // Separate sweep, not an `else if`: a note can have its caption (from a
-    // completed IG fetch) while still lacking a reclassify — e.g. the
-    // process restarted between queueIgMeta's store.updateNote and its
-    // queueJob(reclassifyWithCaption) call, or the reclassify itself failed
-    // (see reclassifyWithCaption's comment on why it doesn't set the marker
-    // on failure). The block above never queues a fetch for such a note
-    // (metaFetched is already true and a caption landed, so it is neither
-    // stuck nor retry-eligible), and stepsFor's classify gate skips it too
-    // (ai.classify is already true from the original URL-only pass) — so
-    // without this, it would stay on URL-only metadata forever. On a large
-    // import a restart inside the ~2.5s/post throttle window is routine, not
-    // an edge case.
+    // Separate sweep, not an `else if`: a labelled note can hold a caption (a
+    // later retry's) yet lack its reclassify — the process restarted between
+    // that fetch's store.updateNote and the reclassify the settle handler
+    // queued, or the reclassify failed (see reclassifyWithCaption on why that
+    // leaves the marker unset). The block above never queues a fetch for such
+    // a note (metaFetched is true and a caption landed, so it is neither stuck
+    // nor retry-eligible), and stepsFor's classify gate skips it too (the
+    // URL-only pass set ai.classify: "nothing to classify from") — so without
+    // this it would never be labelled from its caption. Before imports went
+    // pending, a restart inside the ~2.5s/post import throttle made this routine.
     //
     // Without vision: a real install had 191 of these waiting when the fix
     // above landed, every one with a thumbnail and no description. A vision pass
@@ -380,7 +393,11 @@ export function queueMetaBackfill() {
     // hour ahead of anything the user saves, which is the boot-time stall
     // stepsFor's comment in backlog.ts refuses. The missing description
     // stays counted in the Settings backlog, whose pass re-embeds with it.
-    if (n.url && isInstagramPost(n.url) && (n.siteTitle || n.siteDesc) && !n.ai?.igReclassified) {
+    //
+    // A pending note is skipped: the pending loop below gives it its one full
+    // pass, with vision. Without that, a restart mid-import labelled such
+    // posts twice, first without their thumbnail.
+    if (n.url && !n.pending && isInstagramPost(n.url) && (n.siteTitle || n.siteDesc) && !n.ai?.igReclassified) {
       queueJob(() => reclassifyWithCaption(n.id, { vision: false }))
     }
     // Captions arrived after these notes were saved, so they carry no
@@ -443,10 +460,9 @@ async function enrichNote(id: string, url: string) {
   // the caption is already sitting in siteTitle/siteDesc on disk: reuse it
   // here rather than leaving richText caption-less (which would silently
   // regress classify/embed back to URL-only quality on every resweep) or
-  // re-queuing another throttled fetch for data that's already there. On a
-  // genuinely first pass `existing` has no siteTitle yet, so this is null —
-  // first-pass behavior (richText excludes the caption; queueIgMeta fires)
-  // is unchanged.
+  // re-queuing another throttled fetch for data that's already there. A
+  // genuinely first pass (the note still `pending`, never fetched) queues the
+  // fetch and returns; the settle handler brings it back (see the branch below).
   //
   // metaFetched alone isn't enough to skip the re-fetch, though: a FAILED
   // fetch now leaves metaFetched falsy (tracked instead via metaTries/
@@ -462,7 +478,16 @@ async function enrichNote(id: string, url: string) {
   let linkMeta: Partial<LinkMeta> | null = isIgUrl
     ? { siteTitle: existing?.siteTitle ?? null, siteDesc: existing?.siteDesc ?? null }
     : null
-  if (isIgUrl) {
+  if (isIgUrl && existing?.pending) {
+    // Not yet labelled: its caption and thumbnail are the only evidence it
+    // has, so model work waits for the fetch, and the settle handler brings
+    // the note back. Labelling first from the bare URL gave a 1,683-post
+    // import junk tags, cleared `pending` so posts looked done, and queued
+    // the real pass behind the whole import. Retries follow the backoff:
+    // re-queuing right after a failure doubled requests mid-throttle.
+    if (metaRetryEligible(existing)) queueIgMeta(id, url)
+    if (!existing.metaFetched && !existing.metaTries) return
+  } else if (isIgUrl) {
     if (!existing?.metaFetched || !(existing?.siteTitle || existing?.siteDesc)) queueIgMeta(id, url)
   } else if (existing?.metaFetched && (existing.siteTitle || existing.siteDesc || existing.thumb)) {
     // The fast lane above already fetched this note's metadata. Reuse it
@@ -509,7 +534,8 @@ async function enrichNote(id: string, url: string) {
     if (result.text) captions = result.text
   }
 
-  const richText = [url, linkMeta?.siteTitle, linkMeta?.siteDesc, linkMeta?.article, captions, thumbDescription]
+  const thumbText = thumbDescription || existing?.thumbDescription
+  const richText = [url, linkMeta?.siteTitle, linkMeta?.siteDesc, linkMeta?.article, captions, thumbText]
     .filter(Boolean)
     .join('\n\n')
 
@@ -555,13 +581,25 @@ async function enrichNote(id: string, url: string) {
     if (linkMeta.author && !existing?.account) patch.account = linkMeta.author
   }
 
-  if (richText && steps.includes('classify')) {
+  // An Instagram post with only its URL to go on is not classified: given
+  // `instagram.com/reel/…` alone the model invented `platform, view, web` (80
+  // posts of a real import) and "Instagram Reel Link", and those tags then fed
+  // every later classify's vocabulary. It keeps its current title and tags plus
+  // its account tag, and is marked classified the way `ai.captions` marks "no
+  // captions": nothing to classify from. A thumbnail still to be described (a
+  // failed vision call) keeps classify open for the backlog's pass to read it.
+  // A later caption still reclassifies it.
+  if (isIgUrl && richText === url && steps.includes('classify')) {
+    if (!existing?.ai?.tagsEdited) patch.tags = tags.withAccountTag(existing?.tags ?? [], existing?.account)
+    if (!(thumb && residency.vision !== 'off')) ai.classify = true
+  } else if (richText && steps.includes('classify')) {
     try {
       const knownTags = tags.buildVocabulary(store.allNotes())
       const meta = await inference.classify({
         text: richText,
         now: new Date().toISOString(),
         knownTags,
+        candidateTags: isIgUrl ? tags.extractHashtags(linkMeta?.siteDesc) : [],
       })
       // Snap LLM-generated tags to existing semantic equivalents (forward-only).
       meta.tags = await tagvocab.canonicalize(meta.tags)
@@ -582,6 +620,9 @@ async function enrichNote(id: string, url: string) {
       // re-classification (title, summary, category, embedding) still lands.
       if (existing?.ai?.tagsEdited) delete patch.tags
       ai.classify = true
+      // Classified from its caption, so the caption reclassify is done too;
+      // without this the boot sweep re-labelled every imported post.
+      if (isIgUrl && (linkMeta?.siteTitle || linkMeta?.siteDesc)) ai.igReclassified = true
     } catch (e) {
       console.error('[enrich] AI classify failed, keeping heuristics:', e instanceof Error ? e.message : e)
     }

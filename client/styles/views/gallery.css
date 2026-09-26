@@ -50,6 +50,7 @@
   margin:var(--space-14) var(--space-28) 0}
 .unavail-bar-text{color:var(--ink-dim)}
 .unavail-bar-error{flex-basis:100%;color:var(--danger)}
+.tagging-bar{flex:none;margin:var(--space-14) var(--space-28) 0;color:var(--ink-dim)}
 /* board (windowed masonry) — every cell is absolutely positioned from
    coordinates computed in lib/masonry.ts, which also owns the column count and
    its breakpoints. There is deliberately NO CSS grid here: the old version was

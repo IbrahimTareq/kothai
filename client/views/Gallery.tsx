@@ -13,6 +13,36 @@ import { Chip } from '../ui/Chip'
 import { Segmented } from '../ui/Segmented'
 import { UnavailableBar } from '../components/UnavailableBar'
 
+// Rounded to what the estimate can honestly claim: a rate over the last few
+// minutes, not a schedule.
+function left(ms: number): string {
+  const mins = ms / 60_000
+  if (mins < 1) return 'under a minute left'
+  const five = Math.max(5, Math.round(mins / 5) * 5)
+  if (five < 60) return `about ${five} min left`
+  return `about ${Math.round(mins / 30) / 2} h left`
+}
+
+// The line above the board while notes still wait for their labelling pass.
+// An import's captions and thumbnails arrive in minutes and its tags over
+// hours (one local model pass per post, 5-25s each). Without this, a post
+// with its caption and no tags looked finished and wrong. Not exported:
+// GalleryView is its only caller.
+//
+// No role="status": that makes the div a polite live region, so a screen
+// reader would re-announce "Tagging N saved links…" on every poll (every
+// 15s) for the hours a backlog can take. The repo's one other status role
+// (RowStatus in client/components/settings/SettingsRow.tsx) is for a
+// one-off outcome, not a number that keeps ticking.
+function TaggingBar({ count, eta }: { count: number; eta: number | null }) {
+  return (
+    <div className="tagging-bar">
+      Tagging <b>{count}</b> saved link{count === 1 ? '' : 's'}
+      {eta !== null && ` · ${left(eta)}`}
+    </div>
+  )
+}
+
 interface GalleryViewProps {
   nav: string
   view: ViewMode
@@ -25,6 +55,10 @@ interface GalleryViewProps {
   slots: Slot[]
   total: number
   ready: boolean
+  /** Notes still waiting for their labelling pass, and how long the rate so
+   *  far says that will take (null until there is a rate). */
+  pendingTotal: number
+  pendingEta: number | null
   onWindow: (first: number, last: number) => void
   /** Selected chip keys — types, sources and 'unavailable' mixed together.
    *  Empty means "All". */
@@ -60,6 +94,8 @@ export function GalleryView({
   slots,
   total,
   ready,
+  pendingTotal,
+  pendingEta,
   onWindow,
   galFilter,
   setGalFilter,
@@ -239,6 +275,8 @@ export function GalleryView({
           onStale={refreshFacets}
         />
       )}
+
+      {pendingTotal > 0 && <TaggingBar count={pendingTotal} eta={pendingEta} />}
 
       <div className="gal-scroll" ref={scrollRef}>
         {total === 0 && ready ? (

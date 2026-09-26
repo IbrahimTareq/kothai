@@ -76,6 +76,10 @@ export class NotePager {
   total = 0
   facets: Facets = { types: {}, sources: {} }
   pendingTotal = 0
+  // The current drain, for pendingEta: start time, notes to get through (a
+  // mid-run rise joins it rather than restarting the clock), and last count
+  // seen. Survives reset() — the count is library-wide, a filter click isn't.
+  private drain: { t: number; n: number; last: number } | null = null
   // Starting point for the next delta poll — set from whichever page
   // response landed most recently, then advanced by applyDelta's caller.
   rev = 0
@@ -168,7 +172,7 @@ export class NotePager {
 
   // False when the page was dropped, so the caller does not mark a query
   // ready on the strength of another query's results.
-  applyPage(p: NotesPage, gen = this.gen, req = this.requestFacets()): boolean {
+  applyPage(p: NotesPage, gen = this.gen, req = this.requestFacets(), now = Date.now()): boolean {
     // Two quick chip clicks can land the first query's page after the second
     // has begun; applying it would show the wrong filter's results.
     if (gen !== this.gen) return false
@@ -178,7 +182,7 @@ export class NotePager {
     }
     this.total = p.total
     this.applyFacets(p.facets, req)
-    this.pendingTotal = p.pendingTotal
+    this.setPending(p.pendingTotal, now)
     // Unconditional overwrite, no max-taking against a concurrent delta
     // poll's rev: worst case a stale rev here just makes the next delta
     // poll re-request a bit of already-applied data — applyDelta is
@@ -259,8 +263,8 @@ export class NotePager {
     this.slotCache = null
   }
 
-  applyDelta(d: NotesDelta, query: PagerQuery): void {
-    this.pendingTotal = d.pendingTotal
+  applyDelta(d: NotesDelta, query: PagerQuery, now = Date.now()): void {
+    this.setPending(d.pendingTotal, now)
     for (const id of d.deleted) this.removeLocal(id)
     // Capture the "newest loaded" ts once, before the loop, instead of
     // re-reading arr[0] on each iteration. changedSince() returns newly-added
@@ -290,6 +294,27 @@ export class NotePager {
     // one losing to a strict > comparison.
     fresh.sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0))
     for (const item of fresh) this.insertLocal(item)
+  }
+
+  private setPending(n: number, now: number): void {
+    const d = this.drain
+    if (!d || d.last === 0) this.drain = { t: now, n, last: n }
+    else {
+      if (n > d.last) d.n += n - d.last
+      d.last = n
+    }
+    this.pendingTotal = n
+  }
+
+  // Ms until nothing is pending at the rate the count has fallen since the
+  // drain started, or null while there's too little to go on (one pass takes 5-25s).
+  pendingEta(now: number): number | null {
+    const d = this.drain
+    if (!d || !this.pendingTotal) return null
+    const done = d.n - this.pendingTotal
+    const spent = now - d.t
+    if (spent < 120_000 || done < 5) return null
+    return (this.pendingTotal * spent) / done
   }
 
   // Loaded slots in [first,last] that are Instagram posts still missing a

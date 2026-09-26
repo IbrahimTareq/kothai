@@ -448,3 +448,58 @@ test('matchesLocal: an empty selection filters nothing', () => {
   assert.equal(matchesLocal(vid, {}), true)
   assert.equal(matchesLocal(vid, { type: '' }), true)
 })
+
+const pendingDelta = (pendingTotal: number) => ({ notes: [], deleted: [], pendingTotal })
+
+test('pendingEta: nothing until two minutes and five notes have gone by', () => {
+  const p = new NotePager()
+  p.applyDelta(pendingDelta(100), {}, 0)
+  p.applyDelta(pendingDelta(80), {}, 60_000)
+  assert.equal(p.pendingEta(60_000), null, 'one minute is not a rate')
+
+  const q = new NotePager()
+  q.applyDelta(pendingDelta(100), {}, 0)
+  q.applyDelta(pendingDelta(97), {}, 600_000)
+  assert.equal(q.pendingEta(600_000), null, 'three notes is not a rate')
+})
+
+test('pendingEta: the count left at the rate it has fallen', () => {
+  const p = new NotePager()
+  p.applyDelta(pendingDelta(100), {}, 0)
+  p.applyDelta(pendingDelta(80), {}, 120_000)
+  assert.equal(p.pendingEta(120_000), 480_000, '20 done in 2 min, 80 left → 8 min')
+  p.applyDelta(pendingDelta(80), {}, 180_000) // a stall — no further progress
+  assert.equal(p.pendingEta(180_000), 720_000, 'a stall stays in the rate: 80 left at 20/2min over 3min')
+})
+
+test('pendingEta: notes added mid-run join the drain rather than restart it', () => {
+  const p = new NotePager()
+  p.applyDelta(pendingDelta(100), {}, 0)
+  p.applyDelta(pendingDelta(80), {}, 120_000)
+  p.applyDelta(pendingDelta(130), {}, 120_000) // a save or second import adds 50
+  assert.equal(p.pendingEta(120_000), 780_000, '20 done in 2 min, 130 left → 13 min')
+})
+
+test('pendingEta: a count that drained to zero starts a new window when it rises', () => {
+  const p = new NotePager()
+  p.applyDelta(pendingDelta(10), {}, 0)
+  p.applyDelta(pendingDelta(0), {}, 600_000)
+  p.applyDelta(pendingDelta(50), {}, 700_000)
+  p.applyDelta(pendingDelta(40), {}, 820_000)
+  assert.equal(p.pendingEta(820_000), 480_000, '10 done in 2 min, 40 left → 8 min')
+})
+
+test('pendingEta: a query switch does not restart the estimate', () => {
+  const p = new NotePager()
+  p.applyDelta(pendingDelta(100), {}, 0)
+  p.reset()
+  p.applyDelta(pendingDelta(80), {}, 120_000)
+  assert.equal(p.pendingEta(120_000), 480_000)
+})
+
+test('pendingEta: nothing pending, nothing to estimate', () => {
+  const p = new NotePager()
+  p.applyDelta(pendingDelta(10), {}, 0)
+  p.applyDelta(pendingDelta(0), {}, 600_000)
+  assert.equal(p.pendingEta(600_000), null)
+})

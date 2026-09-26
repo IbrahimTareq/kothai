@@ -14,6 +14,10 @@ export interface NoteSource {
   total: number
   facets: { types: Record<string, number>; sources: Record<string, number>; unavailable?: number }
   ready: boolean
+  /** Notes still waiting for their labelling pass, and how long the rate so
+   *  far says that will take (null until there is a rate). */
+  pendingTotal: number
+  pendingEta: number | null
   ensure: (firstIndex: number, lastIndex: number) => void
   insertLocal: (item: UIItem) => void
   removeLocal: (id: string) => void
@@ -165,6 +169,8 @@ export function useNotes(query: PagerQuery, enabled = true, members?: number): N
       total: pager.current.total,
       facets: pager.current.facets,
       ready,
+      pendingTotal: pager.current.pendingTotal,
+      pendingEta: pager.current.pendingEta(Date.now()),
       ensure: (first: number, last: number) => {
         // One page of lookahead beyond the visible window.
         for (const off of pager.current.neededPages(Math.max(0, first - PAGE / 2), last + PAGE)) fetchPage(off)
@@ -206,7 +212,10 @@ export function useNotes(query: PagerQuery, enabled = true, members?: number): N
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }),
     // facets too: a refreshFacets answer changes the counts and no slot, and
-    // without it the chips kept the counts from before.
-    [pager.current.slots(), pager.current.facets, ready, key],
+    // without it the chips kept the counts from before. pendingTotal too: a
+    // poll can change the count and no slot, and the bar would keep the old
+    // one. tickCount too: during a stall no count moves, so the ETA froze
+    // instead of stretching with each poll.
+    [pager.current.slots(), pager.current.facets, pager.current.pendingTotal, ready, key, tickCount],
   )
 }

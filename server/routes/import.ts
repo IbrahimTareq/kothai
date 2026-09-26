@@ -325,11 +325,12 @@ async function runImport(req: IncomingMessage, res: ServerResponse): Promise<voi
   try {
     for (const { id, url } of imported) {
       // Two lanes, deliberately. queueLinkMeta fetches the caption and
-      // thumbnail a few at a time, so an imported grid stops being a wall of
-      // identical placeholder tiles within a minute or two; queueEnrich does
-      // the model work on its own serial chain behind that. Ordered this way
-      // so the cheap lane is already running before the first classify pass
-      // takes the model.
+      // thumbnail on a cheap lane — a few at a time for most links, Instagram
+      // one at a time on its throttled lane with on-screen posts promoted
+      // first — so an imported grid stops being a wall of identical
+      // placeholder tiles within minutes; queueEnrich does the model work on
+      // its own serial chain behind that. Ordered this way so the cheap lane
+      // is already running before the first classify pass takes the model.
       enrich.queueLinkMeta(id, url)
       enrich.queueEnrich(id, url)
     }
