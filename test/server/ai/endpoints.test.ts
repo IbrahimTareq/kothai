@@ -62,6 +62,13 @@ test('every provider that needs a key links to where one is made', () => {
   }
 })
 
+// gpt-4o-mini bills an image at 2,833 tokens plus 5,667 per 512px tile, so a
+// 540×960 reel cover cost ~25.5k tokens: a 1,800-post Instagram import spent
+// ~$4 of a $5 cap on cover frames alone and stopped part-way.
+test('no preset describes images with gpt-4o-mini', () => {
+  for (const e of ENDPOINTS) assert.doesNotMatch(e.defaults.vision, /gpt-4o-mini/, e.id)
+})
+
 test('findEndpoint returns null for an unknown id rather than throwing', () => {
   assert.equal(findEndpoint('not-a-provider'), null)
   assert.equal(findEndpoint(undefined), null)

@@ -71,7 +71,11 @@ export const ENDPOINTS: Endpoint[] = [
     servesEmbeddings: true,
     note: 'Needs API credit — a ChatGPT subscription is a different thing.',
     keyUrl: 'https://platform.openai.com/api-keys',
-    defaults: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small', vision: 'gpt-4o-mini' },
+    // Vision is gpt-4.1-mini, not the llm's gpt-4o-mini: 4o-mini bills an
+    // image at 2,833 tokens plus 5,667 per 512px tile, ~25.5k for a 540×960
+    // reel cover, and a 1,800-post Instagram import spent ~$4 of a $5 cap on
+    // cover frames alone. 4.1-mini bills 32px patches ×1.62: ~830 tokens.
+    defaults: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small', vision: 'gpt-4.1-mini' },
   },
   {
     id: 'openrouter',
@@ -90,7 +94,8 @@ export const ENDPOINTS: Endpoint[] = [
     // /models answers a made-up key with 200; /key answers it with 401.
     //   curl -s -o /dev/null -w '%{http_code}' -H 'Authorization: Bearer x' https://openrouter.ai/api/v1/key
     keyCheckPath: '/key',
-    defaults: { llm: 'openai/gpt-4o-mini', embed: 'openai/text-embedding-3-small', vision: 'openai/gpt-4o-mini' },
+    // Vision for the same reason as OpenAI's entry above.
+    defaults: { llm: 'openai/gpt-4o-mini', embed: 'openai/text-embedding-3-small', vision: 'openai/gpt-4.1-mini' },
   },
   {
     id: 'ollama-local',

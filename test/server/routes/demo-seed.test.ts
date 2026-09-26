@@ -112,7 +112,7 @@ test('a demo on a known endpoint takes that endpoint’s preset models', async (
   assert.deepEqual(settings.getRemote(), {
     llm: 'openai/gpt-4o-mini',
     embed: 'openai/text-embedding-3-small',
-    vision: 'openai/gpt-4o-mini',
+    vision: 'openai/gpt-4.1-mini',
   })
 })
 

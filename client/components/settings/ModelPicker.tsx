@@ -28,7 +28,7 @@ export const ROLE_META: Record<Role, { title: string; sub: string }> = {
 const ROLE_PLACEHOLDER: Record<Role, string> = {
   llm: 'e.g. gpt-4o-mini',
   embed: 'e.g. text-embedding-3-small',
-  vision: 'e.g. gpt-4o-mini',
+  vision: 'e.g. gpt-4.1-mini',
 }
 
 // Human copy for the three residency policies, in display order.

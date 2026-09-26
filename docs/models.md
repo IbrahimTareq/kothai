@@ -51,10 +51,10 @@ When you pick a provider during setup, Kothai pre-fills models known to work on 
 
 | Provider | Language | Embedding | Vision |
 |---|---|---|---|
-| **OpenAI** | gpt-4o-mini | text-embedding-3-small | gpt-4o-mini |
-| **OpenRouter** | openai/gpt-4o-mini | openai/text-embedding-3-small | openai/gpt-4o-mini |
+| **OpenAI** | gpt-4o-mini | text-embedding-3-small | gpt-4.1-mini |
+| **OpenRouter** | openai/gpt-4o-mini | openai/text-embedding-3-small | openai/gpt-4.1-mini |
 | **Ollama (local)** | llama3.2:3b | nomic-embed-text | llama3.2-vision |
 
-These defaults favour the cheapest models that cover the roles the endpoint can fill. Any model it serves can be used instead.
+These defaults favour the cheapest models that cover the roles the endpoint can fill. Cheapest means per job, not per token: gpt-4o-mini costs less per word but bills a reel cover at roughly 25,000 tokens, so vision uses gpt-4.1-mini, which reads the same cover for about 830. Any model it serves can be used instead.
 
 On Railway, use a hosted endpoint. Railway has no GPUs, and a model on its shared CPU takes close to a minute to tag a single note, and captioning images there is impractical. If you want nothing to leave your own machines, self-host Kothai and run Ollama on your own hardware instead.
