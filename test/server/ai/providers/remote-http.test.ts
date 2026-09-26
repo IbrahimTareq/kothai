@@ -107,6 +107,16 @@ test('429 maps to a transient rate_limited error carrying Retry-After', async ()
   assert.equal(e.retryAfterMs, 7000)
 })
 
+// OpenAI answers 429 both for a per-minute limit that clears on its own and
+// for an account with no credit left, which never does. Only the body says
+// which, and the message used to drop it.
+test('a 429 keeps the endpoint’s explanation in its message', async () => {
+  reply(429, { error: { code: 'insufficient_quota', message: 'You exceeded your current quota.' } })
+  const e = await post('/x', {}).catch(x => x)
+  assert.ok(e instanceof RemoteError)
+  assert.match(e.message, /insufficient_quota/)
+})
+
 test('500 maps to a transient endpoint_error', async () => {
   reply(500, {})
   const e = await post('/x', {}).catch(x => x)

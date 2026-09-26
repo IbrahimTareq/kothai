@@ -55,7 +55,10 @@ function classify(status: number, body: unknown): RemoteError {
     })
   }
   if (status === 429) {
-    return new RemoteError('rate_limited', 'Endpoint rate-limited the request.', { transient: true, status })
+    // The detail is kept: OpenAI sends 429 for a per-minute limit and for an
+    // account out of credit alike, and without its body a library whose
+    // backlog had drained the account read as a passing rate limit.
+    return new RemoteError('rate_limited', `Endpoint rate-limited the request. ${detail}`, { transient: true, status })
   }
   return new RemoteError('endpoint_error', `Endpoint returned ${status}. ${detail}`, { transient: true, status })
 }
