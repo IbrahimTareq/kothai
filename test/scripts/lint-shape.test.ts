@@ -258,16 +258,27 @@ test('checkAgainstHead fails a widened _governance field the same as a widened f
   assert.match(r[0], /_governance/)
 })
 
+// Git's per-repository variables, the set `git rev-parse --local-env-vars`
+// prints. Inherited, they override cwd — see the GIT_DIR test at the end.
+const LOCAL_VARS = execFileSync('git', ['rev-parse', '--local-env-vars'], { encoding: 'utf8' }).split('\n')
+const ownEnv = () => Object.fromEntries(Object.entries(process.env).filter(([k]) => !LOCAL_VARS.includes(k)))
+
+// A throwaway repository with an empty server/, and a git bound to it.
+function scratchRepo() {
+  const root = mkdtempSync(join(tmpdir(), 'shape-'))
+  const git = (...args: string[]) => execFileSync('git', args, { cwd: root, stdio: 'pipe', env: ownEnv() })
+  git('init', '-q')
+  mkdirSync(join(root, 'server'))
+  return { root, git }
+}
+
 // A split creates new files, and --update ran before they were committed. The
 // measured set came from plain `git ls-files`, so the new modules' exports
 // were invisible and --update "tightened" the export total from 506 to 500
 // while the real count was 511 (5d38056, 9d2f987). Untracked files count;
 // ignored ones still don't.
 test('sourceFiles measures new, uncommitted files but not ignored ones', () => {
-  const root = mkdtempSync(join(tmpdir(), 'shape-'))
-  const git = (...args: string[]) => execFileSync('git', args, { cwd: root, stdio: 'pipe' })
-  git('init', '-q')
-  mkdirSync(join(root, 'server'))
+  const { root, git } = scratchRepo()
   writeFileSync(join(root, '.gitignore'), 'server/ignored.ts\n')
   writeFileSync(join(root, 'server', 'tracked.ts'), 'export const a = 1\n')
   git('add', '.')
@@ -281,13 +292,39 @@ test('sourceFiles measures new, uncommitted files but not ignored ones', () => {
 // taking `pnpm test` and the Stop hook down with it in every session sharing
 // the checkout, where another session's unstaged deletion is routine.
 test('sourceFiles skips a tracked file deleted from disk but not yet staged', () => {
-  const root = mkdtempSync(join(tmpdir(), 'shape-'))
-  const git = (...args: string[]) => execFileSync('git', args, { cwd: root, stdio: 'pipe' })
-  git('init', '-q')
-  mkdirSync(join(root, 'server'))
+  const { root, git } = scratchRepo()
   writeFileSync(join(root, 'server', 'kept.ts'), 'export const a = 1\n')
   writeFileSync(join(root, 'server', 'gone.ts'), 'export const b = 1\n')
   git('add', '.')
   rmSync(join(root, 'server', 'gone.ts'))
   assert.deepEqual(sourceFiles(root), ['server/kept.ts'])
+})
+
+// `git rebase --exec` and git hooks export GIT_DIR pointing at the calling
+// repository, and it overrides cwd. The scratch repos above inherited it: their
+// `git init` re-initialised the real repository with core.bare = true, the
+// `git add` after it failed, and the main checkout and every worktree stopped
+// working until the flag was set back by hand (2026-09-27).
+test('an inherited GIT_DIR never reaches the repository it names', () => {
+  // What --exec exports from a worktree: that worktree's own gitdir. From there
+  // `git init` writes core.bare into the shared config; a plain .git does not.
+  const decoy = mkdtempSync(join(tmpdir(), 'shape-decoy-'))
+  const inDecoy = (...args: string[]) => execFileSync('git', args, { cwd: decoy, stdio: 'pipe', env: ownEnv() })
+  inDecoy('init', '-q')
+  inDecoy('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '--allow-empty', '-m', 'root')
+  inDecoy('worktree', 'add', '-q', join(decoy, 'wt'))
+  process.env.GIT_DIR = join(decoy, '.git', 'worktrees', 'wt')
+  try {
+    const { root, git } = scratchRepo()
+    writeFileSync(join(root, 'server', 'a.ts'), 'export const a = 1\n')
+    git('add', '.')
+    assert.deepEqual(sourceFiles(root), ['server/a.ts'])
+  } finally {
+    delete process.env.GIT_DIR
+  }
+  assert.equal(
+    inDecoy('config', '--get', 'core.bare').toString().trim(),
+    'false',
+    'GIT_DIR’s repository was re-initialised',
+  )
 })
