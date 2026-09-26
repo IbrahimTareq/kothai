@@ -115,11 +115,11 @@ test('500 maps to a transient endpoint_error', async () => {
   assert.equal(e.transient, true)
 })
 
-test('a timeout maps to a transient endpoint_unreachable error', async () => {
+test('a timeout maps to a transient timeout error', async () => {
   handler = () => {} // never responds
   const e = await post('/x', {}, { timeoutMs: 50 }).catch(x => x)
   assert.ok(e instanceof RemoteError)
-  assert.equal(e.code, 'endpoint_unreachable')
+  assert.equal(e.code, 'timeout')
   assert.equal(e.transient, true)
 })
 

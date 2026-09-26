@@ -135,3 +135,20 @@ test('the final error still carries retryAfterMs for the circuit breaker', async
     e => e instanceof RemoteError && e.retryAfterMs === 12_000,
   )
 })
+
+// A timeout is ours, not the endpoint's: the request was delivered and the
+// provider keeps generating after we hang up, and bills for it. Retrying one
+// sent the same vision or classify call up to four times, each paid for.
+test('a timed-out request is not sent again', async () => {
+  let hits = 0
+  handler = () => {
+    hits++ // never responds
+  }
+  const { sleep, waits } = spy()
+  await assert.rejects(
+    () => postJson(base, '/x', {}, { sleep, timeoutMs: 50 }),
+    e => e instanceof RemoteError && e.code === 'timeout' && e.transient,
+  )
+  assert.equal(hits, 1)
+  assert.equal(waits.length, 0)
+})

@@ -92,8 +92,11 @@ function waitFor(err: RemoteError, attempt: number): number {
 
 // A predicate, not a boolean: withRetry's `err` arrives as unknown from the
 // catch, and this is what narrows it to a RemoteError for waitFor().
+// A timeout is transient for the circuit but never retried: the endpoint got
+// the request and bills for it even after we hang up, so a retry paid for the
+// same vision or classify call up to four times.
 const retryable = (err: unknown): err is RemoteError =>
-  err instanceof RemoteError && err.transient && err.code !== 'bad_response'
+  err instanceof RemoteError && err.transient && err.code !== 'bad_response' && err.code !== 'timeout'
 
 export interface RequestOptions {
   apiKey?: string | null
@@ -162,8 +165,10 @@ async function request(baseUrl: string, path: string, { method, body, apiKey, ti
       signal: ac.signal,
     })
   } catch (e: unknown) {
-    // AbortError and every DNS/connect failure land here identically — from
-    // the caller's point of view "the endpoint did not answer" is one state.
+    // Our own timeout is told apart from a DNS/connect failure because only
+    // the timeout may have been billed — see retryable() on why that matters.
+    if (ac.signal.aborted)
+      throw new RemoteError('timeout', `${baseUrl} did not answer within ${timeoutMs / 1000}s`, { transient: true })
     const why = e instanceof Error ? e.message : String(e)
     throw new RemoteError('endpoint_unreachable', `Could not reach ${baseUrl}: ${why}`, { transient: true })
   } finally {
