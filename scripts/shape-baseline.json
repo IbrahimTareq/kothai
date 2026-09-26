@@ -1,30 +1,26 @@
 {
   "client/app/App.tsx": {
-    "lines": 529,
+    "lines": 523,
     "exports": 1
   },
   "client/components/Canvas.tsx": {
-    "lines": 520,
+    "lines": 481,
     "exports": 1
   },
-  "client/components/Cards.tsx": {
-    "lines": 444,
-    "exports": 4
-  },
   "client/data/api.ts": {
-    "lines": 486,
+    "lines": 479,
     "exports": 4
   },
   "client/layout/canvas.ts": {
     "lines": 250,
-    "exports": 18
+    "exports": 17
   },
   "client/views/Core.tsx": {
-    "lines": 573,
+    "lines": 571,
     "exports": 1
   },
   "client/views/Expanded.tsx": {
-    "lines": 567,
+    "lines": 541,
     "exports": 1
   },
   "client/views/Settings.tsx": {
@@ -40,11 +36,11 @@
     "exports": 29
   },
   "server/ai/prompts.ts": {
-    "lines": 363,
+    "lines": 349,
     "exports": 16
   },
   "server/ai/providers/local.ts": {
-    "lines": 545,
+    "lines": 544,
     "exports": 25
   },
   "server/ai/providers/remote.ts": {
@@ -68,7 +64,7 @@
     "exports": 8
   },
   "server/routes/import.ts": {
-    "lines": 481,
+    "lines": 410,
     "exports": 1
   },
   "server/routes/settings.ts": {
@@ -77,8 +73,8 @@
   },
   "_governance": {
     "claudeMdLines": 45,
-    "cleanCodeRulesLines": 41,
-    "baselineEntries": 19,
+    "cleanCodeRulesLines": 40,
+    "baselineEntries": 18,
     "exportTotal": 556
   }
 }
