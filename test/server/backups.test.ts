@@ -112,12 +112,12 @@ test('once the newest daily backup is a day old, another is written', async () =
   assert.equal(daily().length, 2)
 })
 
-test('the newest seven daily backups are kept, and older ones deleted', async () => {
-  for (let i = 1; i <= 7; i++) oldBackup(`kothai-backup-2026-09-0${i}T03-00-00-000Z.tar.gz`, (10 - i) * DAY)
+test('the newest five daily backups are kept, and older ones deleted', async () => {
+  for (let i = 1; i <= 5; i++) oldBackup(`kothai-backup-2026-09-0${i}T03-00-00-000Z.tar.gz`, (10 - i) * DAY)
   await backups.backupIfDue()
 
   const kept = daily()
-  assert.equal(kept.length, 7)
+  assert.equal(kept.length, 5)
   assert.equal(kept.includes('kothai-backup-2026-09-01T03-00-00-000Z.tar.gz'), false, 'the oldest went')
 })
 

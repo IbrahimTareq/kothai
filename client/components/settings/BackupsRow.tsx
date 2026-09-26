@@ -52,7 +52,7 @@ export function BackupsRow() {
       title="Automatic backups"
       desc={
         <>
-          Once a day, a backup like the one above is saved to <code>data/backups</code> on this machine. The newest 7
+          Once a day, a backup like the one above is saved to <code>data/backups</code> on this machine. The newest 5
           are kept, each about the size of your library. A copy on this disk is lost with it, so download one now and
           then.
         </>

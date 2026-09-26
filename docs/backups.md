@@ -45,7 +45,7 @@ It briefly needs free disk space equal to the database's size, and refuses while
 
 ### Automatic backups
 
-Kothai also backs itself up, once a day, to `data/backups/`. Each one is the same file *Download backup* gives you. The newest 7 are kept, so budget about seven times your library's size for them.
+Kothai also backs itself up, once a day, to `data/backups/`. Each one is the same file *Download backup* gives you. The newest 5 are kept, so budget about five times your library's size for them.
 
 Settings → **YOUR DATA** → *Automatic backups* shows when the last one ran, lists every kept file with a *Download* link, and turns them off. Turn them off if something else already backs up `data/` (restic, a NAS snapshot), or disk space is tight.
 

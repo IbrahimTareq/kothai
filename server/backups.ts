@@ -146,10 +146,10 @@ type Kind = 'daily' | 'before-restore'
 // A daily backup is named like a download, so a file copied off the volume is
 // recognisably the same thing.
 const PREFIX: Record<Kind, string> = { daily: 'kothai-backup', 'before-restore': 'before-restore' }
-// Each copy is the whole library, so every one kept costs its full size. Seven
+// Each copy is the whole library, so every one kept costs its full size. Five
 // days is time to notice a problem before the last good copy rotates out; a
 // restore's copy only has to outlast finding out the restore was a mistake.
-const KEEP: Record<Kind, number> = { daily: 7, 'before-restore': 3 }
+const KEEP: Record<Kind, number> = { daily: 5, 'before-restore': 3 }
 const DAY = 24 * 60 * 60 * 1000
 // What a backup must leave free. SQLite fails a write it has no room for, and
 // the live database shares this disk.
