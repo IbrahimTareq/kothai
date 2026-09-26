@@ -52,6 +52,15 @@ test('isJunkTag: frame-description words and echoed prompt labels are junk', () 
   }
 })
 
+test('isJunkTag: filler a model invents from a bare URL is junk', () => {
+  // Real library: Instagram and TikTok saves classified before their caption
+  // arrived carried "platform" (50 notes), "user" (14), "unknown" and
+  // "comments" — the model describing a link, not what the save is about.
+  for (const t of ['platform', 'user', 'unknown', 'comments']) {
+    assert.equal(isJunkTag(t), true, t)
+  }
+})
+
 test('isJunkTag: topic words that sit next to the frame words are kept', () => {
   for (const t of ['home', 'interior', 'woodworking', 'calligraphy', 'mens-health']) {
     assert.equal(isJunkTag(t), false, t)

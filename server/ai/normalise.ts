@@ -86,6 +86,14 @@ const JUNK_TAGS = new Set([
   'white',
   'black',
   'wooden',
+  // Filler for a link with nothing behind it yet: Instagram and TikTok saves
+  // classified from the bare URL, before any caption, got "platform" (50
+  // notes), "user" (14), "unknown" and "comments" — describing the link, not
+  // the save.
+  'platform',
+  'user',
+  'unknown',
+  'comments',
 ])
 
 // normalizeTag always hyphenates whitespace ("social media" -> "social-media"),
