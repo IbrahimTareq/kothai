@@ -1,12 +1,12 @@
 // Backend bridge — maps a server note (QVAC) into the UI item shape and exposes
 // the real /api endpoints.
 import type {
-  CanvasDoc,
   Chat,
   ChatMessage,
   ChatSummary,
   CaptureTokenState,
   Collection,
+  CollectionPatch,
   ModelFilesResponse,
   DuplicatesResponse,
   ModelStatus,
@@ -457,14 +457,11 @@ export const Collections = {
     const d = await apiGet<{ collections?: (Collection & { covers?: ServerNote[] })[] }>('/api/collections')
     return (d.collections || []).map(c => ({ ...c, covers: (c.covers || []).map(mapNote) }))
   },
-  async create(name: string, tags: string[] = []): Promise<Collection> {
-    const d = await apiPost<{ collection: Collection }>('/api/collections', { name, tags })
+  async create(name: string, tags: string[] = [], parentId?: string): Promise<Collection> {
+    const d = await apiPost<{ collection: Collection }>('/api/collections', { name, tags, parentId })
     return d.collection
   },
-  async update(
-    id: string,
-    patch: { name?: string; description?: string; tags?: string[]; canvas?: CanvasDoc | null },
-  ): Promise<Collection> {
+  async update(id: string, patch: CollectionPatch): Promise<Collection> {
     const d = await apiPatch<{ collection: Collection }>(`/api/collections/${id}`, patch)
     return d.collection
   },

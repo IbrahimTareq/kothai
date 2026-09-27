@@ -305,6 +305,16 @@ export interface Collection {
   visitor?: string // on the demo, the visitor who made it; only ever the viewer's own
 }
 
+// PATCH /api/collections/:id — every field optional. parentId null moves the
+// space to the top level; canvas null clears its board.
+export type CollectionPatch = {
+  name?: string
+  description?: string
+  tags?: string[]
+  canvas?: CanvasDoc | null
+  parentId?: string | null
+}
+
 // ── Space canvas ────────────────────────────────────────────────────────────
 // JSON Canvas (jsoncanvas.org) shape with one extension: an `item` node is a
 // member card. Coordinates are absolute canvas pixels; a node sits inside a
