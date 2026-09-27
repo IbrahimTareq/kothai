@@ -10,23 +10,8 @@ import type { DatabaseSync, SQLOutputValue } from 'node:sqlite'
 import { getDb, _resetDb } from './db.ts'
 import type { CollectionRow } from './db.ts'
 import { normalizeTag } from './tags.ts'
-import type { CanvasDoc } from '../lib/canvas.ts'
 import * as notesStore from './notes.ts'
-
-type NewCollection = { name: string; tags?: string[]; visitor?: string } // visitor: see ServerNote.visitor
-
-// The stored document. `canvas` is optional rather than nullable because
-// update() below DELETES the key to clear a board — the route sends null, and
-// the absence is what a reader tests for.
-interface Collection extends NewCollection {
-  id: string
-  createdAt: string
-  tags: string[]
-  itemIds: string[]
-  removedIds: string[]
-  canvas?: CanvasDoc
-  description?: string
-}
+import type { Collection, CollectionPatch, NewCollection } from '../types.ts'
 
 // All this module ever reads off a note. Spelled out here rather than imported
 // from the note store because the independence is the point — see the header.
@@ -34,8 +19,6 @@ interface TaggedNote {
   id: string
   tags?: string[] | null
 }
-
-export type CollectionPatch = Partial<Pick<Collection, 'name' | 'description' | 'tags'>> & { canvas?: CanvasDoc | null }
 
 // Same narrowing as chats.ts's rowData, for the same reason: node:sqlite types
 // every column as SQLOutputValue because the connection knows nothing of the
@@ -158,7 +141,7 @@ export function backfill(c: Collection, notes: TaggedNote[]) {
 }
 
 // Create a collection. `notes` (optional) backfills a smart rule at creation.
-export async function create({ name, tags = [], visitor }: NewCollection, notes: TaggedNote[] = []) {
+export async function create({ name, tags = [], visitor, parentId }: NewCollection, notes: TaggedNote[] = []) {
   const c: Collection = {
     id: randomUUID(),
     createdAt: new Date().toISOString(),
@@ -167,6 +150,7 @@ export async function create({ name, tags = [], visitor }: NewCollection, notes:
     itemIds: [],
     removedIds: [],
     visitor,
+    parentId,
   }
   collections.unshift(c)
   if (c.tags.length) backfill(c, notes)
@@ -174,7 +158,7 @@ export async function create({ name, tags = [], visitor }: NewCollection, notes:
   return withCovers(c)
 }
 
-// Rename, describe, edit the smart rule and/or replace the canvas. Editing tags re-runs
+// Rename, describe, move, edit the smart rule and/or replace the canvas. Editing tags re-runs
 // backfill (additive — never removes items that no longer match). Returns
 // null if not found.
 export async function update(id: string, patch: CollectionPatch, notes: TaggedNote[] = []) {
@@ -183,6 +167,11 @@ export async function update(id: string, patch: CollectionPatch, notes: TaggedNo
   if (typeof patch.name === 'string') c.name = patch.name
   // '' clears it: undefined is a key JSON.stringify leaves out of the row.
   if (typeof patch.description === 'string') c.description = patch.description || undefined
+  // The route has already refused a parent that is missing or would loop
+  // (routes/collections.ts). null lifts the space to the top level, stored as
+  // an absent key, like description above.
+  if (patch.parentId === null) delete c.parentId
+  else if (typeof patch.parentId === 'string') c.parentId = patch.parentId
   if (Array.isArray(patch.tags)) {
     c.tags = norm(patch.tags)
     if (c.tags.length) backfill(c, notes)
@@ -196,12 +185,21 @@ export async function update(id: string, patch: CollectionPatch, notes: TaggedNo
   return withCovers(c)
 }
 
+// Its sub-spaces move up to its own parent rather than going with it:
+// deleting a space never deletes what was filed in it, other spaces included.
 export async function remove(id: string) {
-  const before = collections.length
-  collections = collections.filter(c => c.id !== id)
-  const changed = collections.length !== before
-  if (changed) await deleteRow(id)
-  return changed
+  const gone = find(id)
+  if (!gone) return false
+  const db = await getDb()
+  for (const c of collections) {
+    if (c.parentId !== id) continue
+    if (gone.parentId) c.parentId = gone.parentId
+    else delete c.parentId
+    updateRow(db, c)
+  }
+  collections = collections.filter(c => c !== gone)
+  await deleteRow(id)
+  return true
 }
 
 // Manual add.

@@ -267,3 +267,39 @@ test('deleteItemEverywhere prunes canvases in every collection that drew the ite
   assert.equal(canvas1.nodes.length, 1)
   assert.equal(canvas2.nodes.length, 1)
 })
+
+test('a space made under another keeps its parent; null lifts it to the top level', async () => {
+  collections._reset()
+  const travel = await collections.create({ name: 'Travel' })
+  const japan = await collections.create({ name: 'Japan', parentId: travel.id })
+  assert.equal(space(japan.id).parentId, travel.id)
+  await collections.update(japan.id, { parentId: null })
+  assert.equal(space(japan.id).parentId, undefined)
+  await collections.update(japan.id, { parentId: travel.id })
+  assert.equal(space(japan.id).parentId, travel.id)
+})
+
+test('removing a space lifts its sub-spaces to its own parent; grandchildren stay put', async () => {
+  collections._reset()
+  const travel = await collections.create({ name: 'Travel' })
+  const asia = await collections.create({ name: 'Asia', parentId: travel.id })
+  const japan = await collections.create({ name: 'Japan', parentId: asia.id })
+  const tokyo = await collections.create({ name: 'Tokyo', parentId: japan.id })
+  assert.equal(await collections.remove(asia.id), true)
+  assert.equal(space(japan.id).parentId, travel.id)
+  assert.equal(space(tokyo.id).parentId, japan.id)
+  await collections.remove(travel.id)
+  assert.equal(space(japan.id).parentId, undefined, 'a top-level parent leaves its children at the top level')
+})
+
+// Lifted to a grandparent rather than to the top level: an absent parentId
+// would pass this test both before parentId existed and with the row unwritten.
+test('the lift on remove is written to the database, not only held in memory', async () => {
+  collections._reset()
+  const travel = await collections.create({ name: 'Travel' })
+  const asia = await collections.create({ name: 'Asia', parentId: travel.id })
+  const japan = await collections.create({ name: 'Japan', parentId: asia.id })
+  await collections.remove(asia.id)
+  await collections.load({ reload: true })
+  assert.equal(space(japan.id).parentId, travel.id)
+})

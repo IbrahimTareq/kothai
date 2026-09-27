@@ -8,6 +8,7 @@
 // boundary. A shared module would couple their release cadence to buy
 // nothing. If you change a field here, change its counterpart there in the
 // same commit.
+import type { CanvasDoc } from './lib/canvas.ts'
 
 export type NoteType = 'link' | 'video'
 
@@ -57,4 +58,26 @@ export interface ServerNote {
   // a plain number[] fresh from a provider (an OpenAI-compatible /embeddings
   // response is JSON), and null on a note created before anything embedded it.
   embedding?: Float32Array | number[] | null
+}
+
+// A Space (data/collections.ts). Mirrors Collection in client/types.ts, minus
+// what the server adds on the way out (count, covers).
+export type NewCollection = { name: string; tags?: string[]; visitor?: string; parentId?: string } // visitor: see ServerNote.visitor
+
+// The stored document. `canvas` is optional rather than nullable because
+// update() in data/collections.ts DELETES the key to clear a board — the
+// route sends null, and the absence is what a reader tests for.
+export interface Collection extends NewCollection {
+  id: string
+  createdAt: string
+  tags: string[]
+  itemIds: string[]
+  removedIds: string[]
+  canvas?: CanvasDoc
+  description?: string
+}
+
+export type CollectionPatch = Partial<Pick<Collection, 'name' | 'description' | 'tags'>> & {
+  canvas?: CanvasDoc | null
+  parentId?: string | null
 }

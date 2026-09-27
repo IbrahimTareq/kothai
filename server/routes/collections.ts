@@ -4,7 +4,7 @@ import * as collections from '../data/collections.ts'
 import { json, readBody } from '../lib/http.ts'
 import { sanitizeCanvas } from '../lib/canvas.ts'
 import { demoLimits, visibleTo } from './demo.ts'
-import type { CollectionPatch } from '../data/collections.ts'
+import type { CollectionPatch } from '../types.ts'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
 // readBody hands back `unknown` — these bodies are whatever the client posted.
