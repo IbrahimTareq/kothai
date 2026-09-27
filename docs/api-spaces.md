@@ -19,6 +19,10 @@ Returns all Spaces.
       description: 'Optional tags to filter by',
       type: 'string[]',
     },
+    parentId: {
+      description: 'Id of the Space to create this one inside. Omit for a top-level Space',
+      type: 'string',
+    },
   }}
 />
 
@@ -42,12 +46,18 @@ Returns all Spaces.
       description: 'Canvas layout data',
       type: 'object',
     },
+    parentId: {
+      description: 'Move the Space inside another. null moves it to the top level',
+      type: 'string | null',
+    },
   }}
 />
 
+A `parentId` that does not exist, or is the Space itself or one inside it, answers 400.
+
 ## DELETE /api/collections/:id
 
-Deletes the Space. Notes in it are not deleted.
+Deletes the Space. Notes in it are not deleted, and Spaces inside it move up to its parent (or to the top level).
 
 ## POST /api/collections/:id/items
 

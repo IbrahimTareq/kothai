@@ -168,8 +168,8 @@ export async function update(id: string, patch: CollectionPatch, notes: TaggedNo
   // '' clears it: undefined is a key JSON.stringify leaves out of the row.
   if (typeof patch.description === 'string') c.description = patch.description || undefined
   // The route has already refused a parent that is missing or would loop
-  // (routes/collections.ts). null lifts the space to the top level, stored as
-  // an absent key, like description above.
+  // (parentError in routes/collections.ts). null lifts the space to the top
+  // level, stored as an absent key, like description above.
   if (patch.parentId === null) delete c.parentId
   else if (typeof patch.parentId === 'string') c.parentId = patch.parentId
   if (Array.isArray(patch.tags)) {

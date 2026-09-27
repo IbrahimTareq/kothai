@@ -14,6 +14,7 @@ import {
   handleCollections,
   handleCreateCollection,
   handleDeleteCollection,
+  handleUpdateCollection,
 } from '../../../server/routes/collections.ts'
 import { demoLimits, visibleTo, visitorOf } from '../../../server/routes/demo.ts'
 import { mockReq, mockRes, records } from '../../helpers/http.ts'
@@ -123,6 +124,33 @@ test('a visitor can delete their own space and no one else’s', async () => {
   const plain = mockRes()
   await handleDeleteCollection(plain.res, shared.id, null)
   assert.equal(plain.sent.code, 200, 'an ordinary install deletes any space')
+})
+
+test('a visitor nests spaces only inside their own', async () => {
+  collections._reset()
+  demoLimits.space.reset()
+  const shared = await collections.create({ name: 'Shared' })
+  const theirs = await collections.create({ name: 'Theirs', visitor: 'b' })
+  const mine = await collections.create({ name: 'Mine', visitor: 'a' })
+  const other = await collections.create({ name: 'Other', visitor: 'a' })
+  for (const parent of [shared, theirs]) {
+    const made = mockRes()
+    const body = JSON.stringify({ name: 'Sub', parentId: parent.id })
+    await handleCreateCollection(mockReq({ method: 'POST', body }), made.res, 'a')
+    assert.equal(made.sent.code, 404, `${parent.name} must answer like a missing space`)
+    const moved = mockRes()
+    await handleUpdateCollection(
+      mockReq({ method: 'PATCH', body: JSON.stringify({ parentId: parent.id }) }),
+      moved.res,
+      other.id,
+      'a',
+    )
+    assert.equal(moved.sent.code, 404, `moving into ${parent.name} must answer like a missing space`)
+  }
+  const inside = mockRes()
+  const body = JSON.stringify({ name: 'Sub', parentId: mine.id })
+  await handleCreateCollection(mockReq({ method: 'POST', body }), inside.res, 'a')
+  assert.equal(inside.sent.code, 200)
 })
 
 test('a visitor’s chats are theirs alone', async () => {

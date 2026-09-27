@@ -295,6 +295,7 @@ export interface Collection {
   createdAt: string
   name: string
   description?: string // what the space is for; absent until written
+  parentId?: string // the space this one sits in; absent at the top level
   tags: string[] // smart rule; [] = pure manual collection
   itemIds: string[] // membership, newest-first
   removedIds: string[]

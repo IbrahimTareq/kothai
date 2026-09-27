@@ -19,27 +19,53 @@ export function handleCollections(res: ServerResponse, viewer: string | null) {
   json(res, 200, { collections: collections.all(visibleTo(viewer)) })
 }
 
+// On the demo, a visitor may change only a space they made. A shared one, or
+// another visitor's, answers exactly like a missing one.
+const notMine = (viewer: string | null, id: string) => !!viewer && collections.get(id)?.visitor !== viewer
+
+// Whether `parentId` may hold space `id` (null: a space not made yet). Answers
+// the error to send, or null when it may. On the demo a parent the visitor did
+// not make answers like a missing space, as notMine does, so a visitor's tree
+// only ever holds their own spaces. The walk up always ends at the top level:
+// every stored parentId passed through here.
+function parentError(viewer: string | null, id: string | null, parentId: unknown) {
+  const bad = { code: 400, error: 'invalid parent' }
+  if (typeof parentId !== 'string' || !parentId) return bad
+  if (notMine(viewer, parentId)) return { code: 404, error: 'collection not found' }
+  if (!collections.get(parentId)) return bad
+  for (let at: string | undefined = parentId; at; at = collections.get(at)?.parentId) {
+    if (at === id) return bad
+  }
+  return null
+}
+
 // `viewer` is the demo visitor (routes/demo.ts), null on an ordinary install.
 export async function handleCreateCollection(req: IncomingMessage, res: ServerResponse, viewer: string | null) {
   const body = await readBody(req)
   const fields = isRecord(body) ? body : {}
   const name = String(fields.name || '').trim()
   if (!name) return json(res, 400, { error: 'name required' })
+  const { parentId } = fields
+  if (parentId !== undefined) {
+    const bad = parentError(viewer, null, parentId)
+    if (bad) return json(res, bad.code, { error: bad.error })
+  }
   if (viewer && !demoLimits.space.take(viewer)) {
     return json(res, 429, { error: 'That’s all the demo spaces in a day. Try again tomorrow.', code: 'demo_limit' })
   }
   // A smart rule fills only from what the maker can see: the reads would hide
   // another visitor's links anyway, but they would still be stored in the space.
   const c = await collections.create(
-    { name: name.slice(0, 120), tags: normalizeTags(fields.tags, { max: 40 }), visitor: viewer ?? undefined },
+    {
+      name: name.slice(0, 120),
+      tags: normalizeTags(fields.tags, { max: 40 }),
+      visitor: viewer ?? undefined,
+      parentId: typeof parentId === 'string' ? parentId : undefined,
+    },
     store.allNotes().filter(visibleTo(viewer)),
   )
   json(res, 200, { collection: c })
 }
-
-// On the demo, a visitor may change only a space they made. A shared one, or
-// another visitor's, answers exactly like a missing one.
-const notMine = (viewer: string | null, id: string) => !!viewer && collections.get(id)?.visitor !== viewer
 
 export async function handleUpdateCollection(
   req: IncomingMessage,
@@ -58,6 +84,12 @@ export async function handleUpdateCollection(
   }
   if (typeof fields.description === 'string') patch.description = fields.description.trim().slice(0, 500)
   if (Array.isArray(fields.tags)) patch.tags = normalizeTags(fields.tags, { max: 40 })
+  if (fields.parentId === null) patch.parentId = null
+  else if (fields.parentId !== undefined) {
+    const bad = parentError(viewer, id, fields.parentId)
+    if (bad) return json(res, bad.code, { error: bad.error })
+    patch.parentId = String(fields.parentId)
+  }
   if (fields.canvas === null) patch.canvas = null
   else if (fields.canvas !== undefined) {
     const doc = sanitizeCanvas(fields.canvas)
