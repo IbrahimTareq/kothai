@@ -1,7 +1,7 @@
 // Space.tsx — one space: its name (rename, delete), its description, the smart
 // rule tags that fill it, and its items as a grid or a canvas. The landing that
 // lists every space is Spaces.tsx.
-import { useState, useEffect, useRef, type MutableRefObject } from 'react'
+import { useState, useRef, type MutableRefObject } from 'react'
 import { Icon } from '../components/icons'
 import { ItemCard } from '../components/Cards'
 import { WindowedBoard } from '../components/Board'
@@ -19,8 +19,8 @@ import { Popover } from '../ui/Popover'
 import { Input } from '../ui/Input'
 import { useDemo } from '../components/Demo'
 import { Tooltip } from '../ui/Tooltip'
-import { Confirm } from '../ui/Confirm'
 import { SpaceDescription } from '../components/SpaceDescription'
+import { SpaceActions } from '../components/SpaceActions'
 
 interface CollectionViewProps {
   collection: Collection | null
@@ -67,15 +67,9 @@ export function CollectionView({
   const [tagDraft, setTagDraft] = useState('')
   const [addingTag, setAddingTag] = useState(false)
   const [board, setBoard] = useState(false) // false = grid, true = canvas
-  const [armed, setArmed] = useState(false)
-  const arm = () => setArmed(true)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const { notes, collItems, membersReady } = useSpaceMembers(collection, board, notesRef)
-
-  useEffect(() => {
-    setArmed(false)
-  }, [collection?.id])
 
   // The rule strip scrolls sideways on phones, so it carries the same fade
   // hints the Everything filter bar does — one module, one behaviour.
@@ -191,29 +185,7 @@ export function CollectionView({
           )
         }
         meta={renaming ? null : `${collItems.length} item${collItems.length === 1 ? '' : 's'}`}
-        actions={
-          renaming ? null : armed ? (
-            // Alone while it asks: beside rename, it squeezed a phone's title to 0px.
-            <Confirm inline danger confirmLabel="Delete space" onConfirm={del} onCancel={() => setArmed(false)} />
-          ) : (
-            <>
-              <Button
-                className="coll-rename"
-                size="icon"
-                tone="ghost"
-                title="Rename space"
-                aria-label="Rename space"
-                onClick={startRename}
-              >
-                <Icon name="edit" size={14} />
-              </Button>
-              {/* Arms before it fires: one click on a bare icon should not lose a space. */}
-              <Button size="icon" tone="ghost" title="Delete space" aria-label="Delete space" onClick={arm}>
-                <Icon name="trash" size={16} />
-              </Button>
-            </>
-          )
-        }
+        actions={renaming ? null : <SpaceActions onRename={startRename} onDelete={del} />}
         summary={<SpaceDescription text={collection.description} onSave={d => describeCollection(collection.id, d)} />}
         filters={
           <div className={`coll-rule${ruleFade}`} ref={ruleRef}>
