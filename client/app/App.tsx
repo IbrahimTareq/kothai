@@ -39,6 +39,7 @@ export default function App() {
     saveCanvas,
     editCollectionTags,
     deleteCollection,
+    moveCollection,
     addToCollection,
     removeFromCollection,
   } = useCollections()
@@ -439,6 +440,8 @@ export default function App() {
                 editCollectionTags,
                 saveCanvas,
                 deleteCollection,
+                createCollection,
+                moveCollection,
                 navigate,
                 notesRef: spaceNotesRef,
               }}

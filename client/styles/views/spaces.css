@@ -30,10 +30,12 @@
 
 /* ---- Collection detail ---- */
 .collection-view { display: flex; flex-direction: column; height: 100%; padding-top: var(--topbar-h); }
+/* A space's own sub-spaces sit above its items, in the same scroller. */
+.collection-view .spaces-grid { margin-bottom: var(--space-22); }
 /* The header is <PageHeader>: a smart space's spark, the name (click it to
-   rename), its count, then rename and delete; under them the rules that
-   fill the space and the controls that view it. The rail is the way back
-   to Spaces. */
+   rename), its count, then rename, new sub-space, move and delete; under
+   them the rules that fill the space and the controls that view it. The
+   trail above the name, like the rail, is the way back up. */
 .coll-name { cursor: pointer; }
 /* renaming swaps the name for a field that takes the rest of the row. It
    inherits the title's size, weight and tracking, which a field never takes

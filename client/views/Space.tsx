@@ -1,6 +1,6 @@
-// Space.tsx — one space: its name (rename, delete), its description, the smart
-// rule tags that fill it, and its items as a grid or a canvas. The landing that
-// lists every space is Spaces.tsx.
+// Space.tsx — one space: its name (rename, nest, move, delete), its
+// description, the smart rule tags that fill it, its sub-spaces, and its items
+// as a grid or a canvas. The landing that lists every space is Spaces.tsx.
 import { useState, useRef, type MutableRefObject } from 'react'
 import { Icon } from '../components/icons'
 import { ItemCard } from '../components/Cards'
@@ -21,6 +21,8 @@ import { useDemo } from '../components/Demo'
 import { Tooltip } from '../ui/Tooltip'
 import { SpaceDescription } from '../components/SpaceDescription'
 import { SpaceActions } from '../components/SpaceActions'
+import { SpaceGrid } from './Spaces'
+import { spacePath } from '../domain/spaceTree'
 
 interface CollectionViewProps {
   collection: Collection | null
@@ -36,6 +38,8 @@ interface CollectionViewProps {
   editCollectionTags: (id: string, tags: string[]) => void
   saveCanvas: (id: string, doc: CanvasDoc) => void
   deleteCollection: (id: string) => void
+  createCollection: (name: string, tags: string[], parentId?: string) => Promise<Collection>
+  moveCollection: (id: string, parentId: string | null) => void
   navigate: (next: string) => void
   // App's delete/update handlers also drive the ExpandedView modal, which is
   // mounted at the App level (outside this component) — so a tag edit or
@@ -59,6 +63,8 @@ export function CollectionView({
   editCollectionTags,
   saveCanvas,
   deleteCollection,
+  createCollection,
+  moveCollection,
   navigate,
   notesRef,
 }: CollectionViewProps) {
@@ -67,6 +73,7 @@ export function CollectionView({
   const [tagDraft, setTagDraft] = useState('')
   const [addingTag, setAddingTag] = useState(false)
   const [board, setBoard] = useState(false) // false = grid, true = canvas
+  const [creating, setCreating] = useState(false) // a sub-space's draft card is showing
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const { notes, collItems, membersReady } = useSpaceMembers(collection, board, notesRef)
@@ -116,6 +123,19 @@ export function CollectionView({
     deleteCollection(collection.id)
     navigate('spaces')
   }
+  const children = collections.filter(c => c.parentId === collection.id)
+  // Into the new space, as from the landing: it is empty, and filling it is next.
+  const createSub = async (name: string) => {
+    const c = await createCollection(name, [], collection.id)
+    setCreating(false)
+    navigate(`space:${c.id}`)
+  }
+  // Sub-spaces show in grid mode only (the canvas has no card for one), so
+  // starting one leaves the canvas.
+  const newSub = () => {
+    setBoard(false)
+    setCreating(true)
+  }
 
   // ---- rule-tag builder ---------------------------------------------------
   // A smart space auto-includes any vault item carrying one of its rule tags,
@@ -142,15 +162,23 @@ export function CollectionView({
 
   return (
     <div className="collection-view" data-mine={collection.visitor ? '' : undefined}>
-      {/* The count belongs to the name, so it sits against it. Rename and
-          delete are what you do to the SPACE, so they sit on its identity row
-          — delete used to be on the view toolbar with only a hairline between
-          it and "Canvas", which gave an irreversible action the same weight as
-          a view switch. The toolbar is what fills the space on the left and
-          how you look at it on the right; density sits at the left of the
-          display group so dropping it in canvas mode never moves the view
-          switch. */}
+      {/* The count belongs to the name, so it sits against it. Rename, nest,
+          move and delete are what you do to the SPACE, so they sit on its
+          identity row — delete used to be on the view toolbar with only a
+          hairline between it and "Canvas", which gave an irreversible action
+          the same weight as a view switch. The toolbar is what fills the space
+          on the left and how you look at it on the right; density sits at the
+          left of the display group so dropping it in canvas mode never moves
+          the view switch. */}
       <PageHeader
+        // Drawn on every space, top level included, so the title sits at one
+        // height whichever space is open.
+        trail={[
+          { key: 'spaces', label: 'Spaces', onClick: () => navigate('spaces') },
+          ...spacePath(collections, collection.id)
+            .slice(0, -1)
+            .map(s => ({ key: s.id, label: s.name, onClick: () => navigate(`space:${s.id}`) })),
+        ]}
         lead={
           !renaming &&
           collection.tags.length > 0 && (
@@ -185,7 +213,18 @@ export function CollectionView({
           )
         }
         meta={renaming ? null : `${collItems.length} item${collItems.length === 1 ? '' : 's'}`}
-        actions={renaming ? null : <SpaceActions onRename={startRename} onDelete={del} />}
+        actions={
+          renaming ? null : (
+            <SpaceActions
+              collection={collection}
+              collections={collections}
+              onRename={startRename}
+              onNewSub={newSub}
+              onMove={parentId => moveCollection(collection.id, parentId)}
+              onDelete={del}
+            />
+          )
+        }
         summary={<SpaceDescription text={collection.description} onSave={d => describeCollection(collection.id, d)} />}
         filters={
           <div className={`coll-rule${ruleFade}`} ref={ruleRef}>
@@ -291,17 +330,19 @@ export function CollectionView({
         )
       ) : (
         <div className="gal-scroll" ref={scrollRef}>
-          {collItems.length === 0 ? (
-            // Not the spark: that marks a smart space, and this may not be one.
-            // The button is the way to fill it, which the message only named.
-            <div className="empty">
-              <Icon name="spaces" size={40} />
-              <p>{collection.tags.length > 0 ? 'NO ITEMS MATCH YET' : 'NO ITEMS YET'}</p>
-              <Button className="coll-browse" onClick={() => navigate('all')}>
-                Browse Everything
-              </Button>
-            </div>
-          ) : (
+          {/* Sub-spaces first, like folders above files. The board under them
+              windows from where it starts (components/Board.tsx). */}
+          {(children.length > 0 || creating) && (
+            <SpaceGrid
+              spaces={children}
+              all={collections}
+              creating={creating}
+              onCreate={createSub}
+              onCancel={() => setCreating(false)}
+              navigate={navigate}
+            />
+          )}
+          {collItems.length > 0 ? (
             <WindowedBoard
               items={collItems}
               view={view}
@@ -318,6 +359,21 @@ export function CollectionView({
                 />
               )}
             />
+          ) : (
+            // A space holding only sub-spaces is not empty, so it shows them
+            // without the prompt to fill it.
+            children.length === 0 &&
+            !creating && (
+              // Not the spark: that marks a smart space, and this may not be one.
+              // The button is the way to fill it, which the message only named.
+              <div className="empty">
+                <Icon name="spaces" size={40} />
+                <p>{collection.tags.length > 0 ? 'NO ITEMS MATCH YET' : 'NO ITEMS YET'}</p>
+                <Button className="coll-browse" onClick={() => navigate('all')}>
+                  Browse Everything
+                </Button>
+              </div>
+            )
           )}
         </div>
       )}
