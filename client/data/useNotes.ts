@@ -116,23 +116,17 @@ export function useNotes(query: PagerQuery, enabled = true, members?: number): N
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [members])
 
-  // Poll "what changed since rev X" while enrichment is landing
-  // server-side, instead of refetching whole loaded pages on a timer.
+  // Poll "what changed since rev X" instead of refetching whole loaded pages
+  // on a timer. See pollDelay for why it never stops and how fast it runs.
   const [tickCount, setTickCount] = useState(0)
-  const loadedPending = pager.current.slots().reduce((n, s) => n + (!isPlaceholder(s) && s.pending ? 1 : 0), 0)
-  const pendingTotal = pager.current.pendingTotal
-  // Notes the user just captured and is watching enrich on screen. They get a
-  // much tighter cadence than the background-backfill rate below: the server
-  // finishes a fresh save in a second or two, so waiting out a 15s tick to
-  // show its real title/thumbnail reads as "nothing happened, reload the page".
+  // Notes the user just captured and is watching enrich on screen. A dep so a
+  // fresh capture re-arms the timer at the fast rate: the server finishes a
+  // fresh save in a second or two, so waiting out a slow tick to show its real
+  // title/thumbnail reads as "nothing happened, reload the page".
   const hot = pager.current.watchingCount(Date.now()) > 0
-  const anyPending = pendingTotal > 0 || loadedPending > 0 || hot || pager.current.awaitingThumbCount(Date.now()) > 0
   useEffect(() => {
-    if (!enabled || !anyPending) return
-    // The >50 branch is for a library-wide backlog (a bulk re-tag, a fresh
-    // import) that nobody is watching tick by tick — it must not slow down
-    // the one note the user is actually looking at, hence `hot` first.
-    const delay = hot ? 1200 : pager.current.pendingTotal > 50 ? 15000 : 4000
+    if (!enabled) return
+    const delay = pager.current.pollDelay(Date.now())
     const id = window.setTimeout(async () => {
       try {
         const d = await API.delta(pager.current.rev, pager.current.bootId)
@@ -157,13 +151,12 @@ export function useNotes(query: PagerQuery, enabled = true, members?: number): N
       // Bump a plain counter so the dependency array's value changes every
       // tick, forcing the effect to re-arm — a boolean (or a rev number that
       // could plateau) that stays constant across renders would never
-      // retrigger it. Same reasoning as the pendingTotal/loadedPending
-      // dependency this loop replaced.
+      // retrigger it.
       setTickCount(v => v + 1)
     }, delay)
     return () => clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, anyPending, hot, key, ready, tickCount])
+  }, [enabled, hot, key, ready, tickCount])
 
   return useMemo(
     () => ({
@@ -187,8 +180,6 @@ export function useNotes(query: PagerQuery, enabled = true, members?: number): N
           ids.forEach(id => {
             sentPriority.current.add(id)
           })
-          pager.current.markAwaitingThumb(ids, Date.now(), 20_000)
-          rerender()
           API.prioritize(ids)
         }, 500)
       },

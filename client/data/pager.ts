@@ -53,20 +53,13 @@ export class NotePager {
   private inflight = new Set<number>()
   private phCache: Placeholder[] = []
   private slotCache: Slot[] | null = null
-  // ids the client asked the server to prioritize (client/data/useNotes.ts's
-  // ensure()), each mapped to how long the delta-poll loop should keep
-  // checking for their thumbnail before giving up. Bounded rather than
-  // indefinite: a note stuck in a multi-hour retry backoff (server/ai/
-  // enrich.ts's metaRetryDelay) shouldn't keep the client polling forever —
-  // it'll be picked up whenever the user next revisits or reloads.
-  private awaitingThumb = new Map<string, number>() // id -> expiry (epoch ms)
   // Notes the user is actively waiting on — right now, whatever they just
   // captured. Enrichment lands server-side within a second or two, but the
   // delta poll's normal cadence is tuned for background backfill (15s once
   // the library has a real pending backlog), so without this the card the
   // user is staring at keeps its heuristic title until the next slow tick.
-  // Same shape as awaitingThumb: id -> expiry, bounded so a note stuck
-  // behind a long queue can't pin the fast cadence on forever.
+  // id -> expiry, bounded so a note stuck behind a long queue can't pin the
+  // fast cadence on forever.
   private watching = new Map<string, number>() // id -> expiry (epoch ms)
   // Ids removed locally. A delete waits out App's undo window before it
   // reaches the server, so a delta in that window still carries the note —
@@ -122,7 +115,6 @@ export class NotePager {
     // Counts are left to applyFacets: a refresh sent after the query switch
     // can land before its first page, and its counts are the newer ones.
     this.pendingTotal = 0
-    this.awaitingThumb.clear()
     this.watching.clear()
     // Zeroing bootId (not just rev) matters: it forces a stale delta-poll
     // timeout from a superseded query — scheduled before reset() ran, still
@@ -167,7 +159,7 @@ export class NotePager {
       if (idx >= this.total) return
       // A note already held at another index means the server's offsets have
       // moved since that page came back: a save from Telegram or another
-      // device while no delta poll ran, or an import landing mid-list with its
+      // device before the next delta poll, or an import landing mid-list with its
       // original date. Written by offset alone, the note sat on both sides of
       // the page boundary. The stale copy goes back to a placeholder, and the
       // board's next window report refetches its page from the current order.
@@ -327,30 +319,16 @@ export class NotePager {
     return out
   }
 
-  markAwaitingThumb(ids: string[], now: number, ttlMs: number): void {
-    const until = now + ttlMs
-    for (const id of ids) this.awaitingThumb.set(id, until)
-  }
-
-  // How many still-awaited ids are worth polling for right now: not yet
-  // expired, and not already resolved (a loaded slot may already show the
-  // thumbnail by the time this is checked, e.g. right after applyDelta).
-  awaitingThumbCount(now: number): number {
-    let count = 0
-    for (const [id, until] of this.awaitingThumb) {
-      if (now > until) {
-        this.awaitingThumb.delete(id)
-        continue
-      }
-      const idx = this.idToIndex.get(id)
-      const it = idx !== undefined ? this.arr[idx] : undefined
-      if (it?.thumb) {
-        this.awaitingThumb.delete(id)
-        continue
-      }
-      count++
-    }
-    return count
+  // Ms until the next delta poll. It never stops: it used to run only while
+  // something was pending, so a note saved from Telegram onto a quiet library
+  // never reached an open board — nothing was pending when it was saved, and
+  // it was enriched before anything asked again. The 15s rate is for a
+  // library-wide backlog (a bulk re-tag, a fresh import) nobody watches tick
+  // by tick; it must not slow down a note the user just captured, hence the
+  // watched check first.
+  pollDelay(now: number): number {
+    if (this.watchingCount(now) > 0) return 1200
+    return this.pendingTotal > 50 ? 15000 : 4000
   }
 
   // Mark ids worth polling fast for until they finish enriching.

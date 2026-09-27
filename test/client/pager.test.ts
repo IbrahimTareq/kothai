@@ -303,39 +303,6 @@ test('thumbless reports loaded instagram slots without thumbs in range', () => {
   assert.deepEqual(p.thumbless(0, 3), ['a'], 'no thumb + instagram only; placeholder at 3 skipped')
 })
 
-test('markAwaitingThumb keeps a note counted until it resolves or expires', () => {
-  const p = new NotePager()
-  p.applyPage(page(0, 1, 1)) // creates note 'n0' with no thumb
-  p.markAwaitingThumb(['n0'], 1000, 20000)
-  assert.equal(p.awaitingThumbCount(1000), 1)
-  assert.equal(p.awaitingThumbCount(19000), 1, 'still within ttl')
-  assert.equal(p.awaitingThumbCount(21001), 0, 'expired')
-})
-
-test('awaitingThumbCount resolves early once the note actually gets a thumb', () => {
-  const p = new NotePager()
-  p.applyPage(page(0, 1, 1))
-  p.markAwaitingThumb(['n0'], 1000, 20000)
-  p.applyPage({
-    offset: 0,
-    total: 1,
-    facets: { types: {}, sources: {} },
-    pendingTotal: 0,
-    notes: [item('n0', { thumb: '/uploads/x.jpg' })],
-  })
-  assert.equal(p.awaitingThumbCount(2000), 0)
-})
-
-test('reset() clears any pending thumbnail waits from the previous query', () => {
-  const p = new NotePager()
-  p.applyPage(page(0, 1, 1))
-  p.markAwaitingThumb(['n0'], 1000, 20000)
-  p.reset()
-  assert.equal(p.awaitingThumbCount(1000), 0)
-})
-
-// The delta poll's normal cadence is tuned for background backfill; a note the
-// user just captured needs a faster one until it finishes enriching.
 test('watch keeps a freshly captured note counted while it is still pending', () => {
   const p = new NotePager()
   p.insertLocal(item('fresh', { pending: true }))
@@ -511,4 +478,19 @@ test('pages refetched while a delete waits out its Undo show neither a duplicate
   assert.equal(new Set(ids).size, ids.length)
   assert.equal(ids.includes('n5'), false)
   assert.equal(ids.length, PAGE * 2)
+})
+
+test('an idle board still polls, so a note saved from Telegram reaches it', () => {
+  const p = new NotePager()
+  p.applyPage(serverPage(serverList(3), 0))
+  assert.equal(p.pollDelay(0), 4000)
+})
+
+test('the poll runs hot for a note just captured, and slows for a big backlog', () => {
+  const p = new NotePager()
+  p.applyPage({ ...serverPage(serverList(3), 0), pendingTotal: 80 })
+  assert.equal(p.pollDelay(0), 15000)
+  p.insertLocal(item('fresh', { pending: true }))
+  p.watch(['fresh'], 0, 90_000)
+  assert.equal(p.pollDelay(0), 1200)
 })
