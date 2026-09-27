@@ -147,6 +147,7 @@ test('a visitor nests spaces only inside their own', async () => {
     )
     assert.equal(moved.sent.code, 404, `moving into ${parent.name} must answer like a missing space`)
   }
+  assert.equal(demoLimits.space.left('a'), 3, 'a refused parent spends none of the day’s spaces')
   const inside = mockRes()
   const body = JSON.stringify({ name: 'Sub', parentId: mine.id })
   await handleCreateCollection(mockReq({ method: 'POST', body }), inside.res, 'a')

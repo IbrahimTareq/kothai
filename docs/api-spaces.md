@@ -53,7 +53,7 @@ Returns all Spaces.
   }}
 />
 
-A `parentId` that does not exist, or is the Space itself or one inside it, answers 400.
+On create or update, a `parentId` that is not a Space id, is the Space itself, or is a Space inside it answers 400.
 
 ## DELETE /api/collections/:id
 

@@ -67,6 +67,7 @@ test('a parent that is missing, not an id, or inside the space is refused', asyn
     ['its grandchild', japan.id],
     ['a missing space', 'nope'],
     ['not an id', 42],
+    ['empty', ''],
   ]
   for (const [label, parentId] of bad) {
     assert.equal((await patch(travel.id, { name: 'Renamed', parentId })).code, 400, label)
