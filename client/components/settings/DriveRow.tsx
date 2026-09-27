@@ -83,7 +83,7 @@ export function DriveRow() {
         data.connected ? (
           <>
             Each daily backup is also copied to <b>Kothai Backups</b> in the Google Drive of{' '}
-            <b>{data.email ?? 'your account'}</b>, off this machine. The newest 7 are kept there. Kothai sees only the
+            <b>{data.email ?? 'your account'}</b>, off this machine. The newest 5 are kept there. Kothai sees only the
             files it put there, nothing else in your Drive.
           </>
         ) : (

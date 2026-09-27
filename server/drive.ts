@@ -37,7 +37,7 @@ const FOLDER = 'Kothai Backups'
 const FOLDER_TYPE = 'application/vnd.google-apps.folder'
 // Mirrors data/backups. Each copy is the whole library, and a free Google
 // account's 15 GB is shared with Gmail and Photos.
-const KEEP = 7
+const KEEP = 5
 const DAILY = /^kothai-backup-[0-9T-]+Z\.tar\.gz$/
 
 // ---- the connection ---------------------------------------------------------

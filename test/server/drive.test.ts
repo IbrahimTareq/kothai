@@ -141,16 +141,16 @@ test('a backup already on Drive is not uploaded again on the next hourly check',
   assert.equal(google.uploads, 1)
 })
 
-test('the newest seven are kept on Drive, and older ones deleted there', async () => {
+test('the newest five are kept on Drive, and older ones deleted there', async () => {
   await connected()
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 6; i++) {
     await newDailyBackup()
     await drive.syncToDrive()
-    // Local retention is seven too; names differ by the millisecond only.
+    // Local retention is five too; names differ by the millisecond only.
     await new Promise(r => setTimeout(r, 2))
   }
-  assert.equal(google.uploads, 8)
-  assert.equal(onDrive().length, 7)
+  assert.equal(google.uploads, 6)
+  assert.equal(onDrive().length, 5)
 })
 
 test('a failed upload is reported once, and cleared by the next success', async () => {

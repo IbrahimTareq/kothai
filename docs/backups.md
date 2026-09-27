@@ -59,7 +59,7 @@ A restore also saves the library it replaces here (`before-restore-….tar.gz`, 
 
 Settings → **YOUR DATA** → *Google Drive* → *Connect Google Drive*. Kothai shows a code; enter it at [google.com/device](https://www.google.com/device) on any device and approve. No redirect back to Kothai is involved, so this works the same on localhost, a tailnet or a PaaS.
 
-After that, each daily backup is also copied to a **Kothai Backups** folder in your Drive, and the newest 7 are kept there.
+After that, each daily backup is also copied to a **Kothai Backups** folder in your Drive, and the newest 5 are kept there.
 
 - **Kothai sees only its own files.** It asks for Google's `drive.file` permission: the files it created, nothing else in your Drive.
 - **The files are ordinary backups**, not encrypted: the same `.tar.gz` as *Download backup*. Anyone who can open your Drive can open them.
