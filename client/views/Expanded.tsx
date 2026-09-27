@@ -8,6 +8,7 @@ import { Icon } from '../components/icons'
 import { Carousel } from '../components/Carousel'
 import { relTime, imgGradient } from '../util/format'
 import { isMediaFirst, sourceGlyph, sourceLabel, githubParts } from '../domain/source'
+import { spaceLabel } from '../domain/spaceTree'
 import { lockAxis, shouldDismiss, navDirection, type Axis } from '../layout/swipe'
 import { useScrollEdges } from '../layout/useScrollEdges'
 import type { Collection, UIItem } from '../types'
@@ -461,7 +462,7 @@ export function ExpandedView({
               {inSpaces.map(c => (
                 <div key={c.id} className="exp-coll">
                   {c.tags.length > 0 && <Icon name="spark" size={11} />}
-                  <span className="exp-coll-name">{c.name}</span>
+                  <span className="exp-coll-name">{spaceLabel(collections, c.id)}</span>
                   {writable(c) && (
                     <button
                       className="exp-coll-x"
@@ -482,7 +483,7 @@ export function ExpandedView({
                 }
                 items={openSpaces.map(c => ({
                   key: c.id,
-                  label: c.name,
+                  label: spaceLabel(collections, c.id),
                   trailing: c.tags.length > 0 && (
                     <span title="Smart space">
                       <Icon name="spark" size={11} />
