@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { NotePager, PAGE, isPlaceholder, matchesLocal } from '../../client/data/pager.ts'
+import { NotePager, PAGE, isPlaceholder } from '../../client/data/pager.ts'
 import type { UIItem } from '../../client/types.ts'
 
 const item = (id: string, o: Partial<UIItem> = {}): UIItem => ({
@@ -367,86 +367,6 @@ test('reset() clears watched captures from the previous query', () => {
   p.watch(['fresh'], 1000, 90000)
   p.reset()
   assert.equal(p.watchingCount(1000), 0)
-})
-
-test('matchesLocal mirrors the server filter for optimistic inserts', () => {
-  const reel = item('r', { type: 'video', url: 'https://www.instagram.com/reel/A/', host: 'instagram.com' })
-  assert.ok(matchesLocal(reel, {}))
-  assert.ok(matchesLocal(reel, { type: 'video' }))
-  assert.ok(!matchesLocal(reel, { type: 'link' }))
-  assert.ok(matchesLocal(reel, { source: 'reels' }))
-  assert.ok(!matchesLocal(item('t', { title: 'hello' }), { q: 'xyz' }))
-  assert.ok(matchesLocal(item('t', { title: 'hello world' }), { q: 'world' }))
-})
-
-// A collection-scoped query can't be mirrored client-side: an item carries no
-// record of which collections it belongs to (unlike type/source/q, which are
-// derivable from the item itself). Without this, applyDelta would treat any
-// vault-wide change as belonging to whatever Space is currently open.
-test('matchesLocal never optimistically matches a collection-scoped query', () => {
-  const it = item('x', { type: 'video', tags: ['whatever'] })
-  assert.ok(!matchesLocal(it, { collection: 'c1' }))
-  assert.ok(!matchesLocal(it, { collection: 'c1', type: 'video' })) // even if every other clause matches
-})
-
-// --- multi-select filters ----------------------------------------------------
-// matchesLocal mirrors the server's applyFilters so an optimistically saved note
-// lands in (or stays out of) the current view without a round trip. When the
-// filters became multi-select, a mirror still comparing one value would have
-// silently dropped every optimistic note from any multi-chip view.
-
-test('matchesLocal: a note matches if it is ANY of the selected types', () => {
-  const vid = { id: 'a', type: 'video', pending: false, ts: 0, tags: [] } as UIItem
-  const link = { id: 'b', type: 'link', pending: false, ts: 0, tags: [] } as UIItem
-  assert.equal(matchesLocal(vid, { type: 'video,link' }), true)
-  assert.equal(matchesLocal(link, { type: 'video,link' }), true)
-  assert.equal(matchesLocal(vid, { type: 'link' }), false)
-})
-
-test('matchesLocal: a note matches if it is from ANY of the selected sources', () => {
-  const tt = {
-    id: 'a',
-    type: 'video',
-    host: 'www.tiktok.com',
-    url: 'https://www.tiktok.com/video/1',
-    pending: false,
-    ts: 0,
-    tags: [],
-  } as UIItem
-  assert.equal(matchesLocal(tt, { source: 'tiktok' }), true)
-  assert.equal(matchesLocal(tt, { source: 'reels,tiktok' }), true)
-  assert.equal(matchesLocal(tt, { source: 'reels' }), false)
-})
-
-test('matchesLocal: facets AND together', () => {
-  const tt = {
-    id: 'a',
-    type: 'video',
-    host: 'www.tiktok.com',
-    url: 'https://www.tiktok.com/video/1',
-    pending: false,
-    ts: 0,
-    tags: [],
-  } as UIItem
-  assert.equal(matchesLocal(tt, { source: 'tiktok', type: 'video' }), true)
-  assert.equal(matchesLocal(tt, { source: 'tiktok', type: 'link' }), false)
-})
-
-test('matchesLocal: unavailable combines with the rest, and is hidden by default', () => {
-  const dead = { id: 'a', type: 'video', unavailable: true, pending: false, ts: 0, tags: [] } as UIItem
-  const live = { id: 'b', type: 'video', pending: false, ts: 0, tags: [] } as UIItem
-  assert.equal(matchesLocal(dead, { unavailable: true, type: 'video' }), true)
-  assert.equal(matchesLocal(live, { unavailable: true, type: 'video' }), false)
-  // The default direction: a dead note stays out of an ordinary view.
-  assert.equal(matchesLocal(dead, { type: 'video' }), false)
-  assert.equal(matchesLocal(dead, {}), false)
-  assert.equal(matchesLocal(live, {}), true)
-})
-
-test('matchesLocal: an empty selection filters nothing', () => {
-  const vid = { id: 'a', type: 'video', pending: false, ts: 0, tags: [] } as UIItem
-  assert.equal(matchesLocal(vid, {}), true)
-  assert.equal(matchesLocal(vid, { type: '' }), true)
 })
 
 const pendingDelta = (pendingTotal: number) => ({ notes: [], deleted: [], pendingTotal })

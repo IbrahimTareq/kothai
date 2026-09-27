@@ -3,8 +3,9 @@
 // prioritization. All list state for note-grid views flows through here.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { API, mapNote } from './api'
-import { NotePager, PAGE, isPlaceholder, matchesLocal } from './pager'
-import type { PagerQuery, Slot } from './pager'
+import { NotePager, PAGE, isPlaceholder } from './pager'
+import type { Slot } from './pager'
+import { matchesLocal, type PagerQuery } from '../domain/boardQuery'
 import type { UIItem } from '../types'
 
 const SEARCH_DEBOUNCE_MS = 150

@@ -4,6 +4,7 @@
 // skeleton card. Pure module: fetching/polling live in useNotes.ts.
 import type { UIItem } from '../types'
 import { SOURCE_BY_KEY } from '../domain/source.ts'
+import { matchesLocal, type PagerQuery } from '../domain/boardQuery.ts'
 
 export const PAGE = 120
 
@@ -35,43 +36,6 @@ export interface NotesDelta {
   deleted: string[]
   pendingTotal: number
 }
-export interface PagerQuery {
-  type?: string
-  source?: string
-  q?: string
-  collection?: string
-  unavailable?: boolean
-  sort?: string
-}
-
-// Client mirror of the server-side filter, for deciding whether an
-// optimistically saved note belongs in the current view.
-export function matchesLocal(item: UIItem, query: PagerQuery): boolean {
-  // Collection membership can't be mirrored client-side — an item alone
-  // doesn't say which collections it belongs to, unlike type/source/q which
-  // are derivable from the item itself. Without this guard, applyDelta's
-  // "is this unknown note newer than what's loaded" check would treat any
-  // vault-wide change as belonging to the open collection and leak unrelated
-  // items into its board. Members added while a Space is open show up next
-  // full fetch instead (Space.tsx's CollectionView already handles removal
-  // locally via removeLocal, so this only affects the addition path).
-  if (query.collection) return false
-  // Mirrors applyFilters' OR-within-a-facet: a note matches if it is ANY of the
-  // selected types, and from ANY of the selected sources.
-  const types = (query.type || '').split(',').filter(Boolean)
-  if (types.length && !types.includes(item.type)) return false
-  // Mirrors applyFilters' default: a dead link stays out of an ordinary view
-  // and only appears when explicitly asked for.
-  if (query.unavailable ? !item.unavailable : item.unavailable) return false
-  const sources = (query.source || '').split(',').filter(Boolean)
-  if (sources.length && !sources.some(k => SOURCE_BY_KEY[k]?.test(item))) return false
-  if (query.q?.trim()) {
-    const hay = [item.title, item.note, item.host, (item.tags || []).join(' ')].filter(Boolean).join(' ').toLowerCase()
-    if (!hay.includes(query.q.trim().toLowerCase())) return false
-  }
-  return true
-}
-
 export class NotePager {
   total = 0
   facets: Facets = { types: {}, sources: {} }
