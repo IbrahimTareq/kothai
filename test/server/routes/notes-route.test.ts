@@ -123,3 +123,17 @@ test('/api/notes sends what a card shows, not the fields only the server reads',
   assert.equal(card.siteDesc, 'What it is about')
   assert.equal(card.thumb, '/uploads/meta-a.jpg')
 })
+
+test('exclude leaves out notes deleted on the board but still held for Undo', async () => {
+  store._reset()
+  const ids = []
+  for (let i = 0; i < 4; i++) ids.push((await store.addNote({ type: 'link', content: `n${i}` })).id)
+  const { res, sent } = mockRes()
+  handleNotes(res, urlOf(`?offset=0&limit=10&exclude=${ids[1]},${ids[2]}`), null)
+  const body = sent.json()
+  assert.equal(body.total, 2, 'offsets must count what the board shows')
+  assert.deepEqual(
+    records(body.notes).map(n => n.id),
+    [ids[3], ids[0]],
+  )
+})

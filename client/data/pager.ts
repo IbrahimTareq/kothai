@@ -156,7 +156,8 @@ export class NotePager {
     // poll's rev: worst case a stale rev here just makes the next delta
     // poll re-request a bit of already-applied data — applyDelta is
     // idempotent for known ids and gated by matchesLocal + the newest-ts
-    // check for unknown ones, so this can never drop or duplicate a note.
+    // check for unknown ones. A newer rev does skip a note saved elsewhere
+    // since the last poll; it shows up as offset drift, handled below.
     if (p.rev !== undefined) this.rev = p.rev
     if (p.bootId !== undefined) this.bootId = p.bootId
     this.inflight.delete(p.offset)
@@ -164,6 +165,14 @@ export class NotePager {
     p.notes.forEach((incoming, i) => {
       const idx = p.offset + i
       if (idx >= this.total) return
+      // A note already held at another index means the server's offsets have
+      // moved since that page came back: a save from Telegram or another
+      // device while no delta poll ran, or an import landing mid-list with its
+      // original date. Written by offset alone, the note sat on both sides of
+      // the page boundary. The stale copy goes back to a placeholder, and the
+      // board's next window report refetches its page from the current order.
+      const was = this.idToIndex.get(incoming.id)
+      if (was !== undefined && was !== idx && this.arr[was]?.id === incoming.id) this.arr[was] = undefined
       const existing = this.arr[idx]
       // Reuse the held object for JSON-equal notes so unchanged cards keep
       // their identity and never re-render (mergeItems' old job).
@@ -224,6 +233,12 @@ export class NotePager {
     this.arr.splice(idx, 1)
     this.total--
     this.reindex()
+  }
+
+  // For page requests: the server still has a note deleted here until its
+  // Undo lapses, and its offsets must count what the board shows.
+  excluded(): string[] {
+    return [...this.gone]
   }
 
   restoreLocal(item: UIItem, at: number): void {

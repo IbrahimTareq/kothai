@@ -81,7 +81,15 @@ export function handleGetNote(res: ServerResponse, id: string, viewer: string | 
 
 export function handleNotes(res: ServerResponse, url: URL, viewer: string | null): void {
   const p = url.searchParams
-  const all = store.allNotes().filter(visibleTo(viewer))
+  // Notes deleted on the board but held for Undo (client/app/useHeldDelete.tsx)
+  // are still here until the window closes. Counted, they put every offset
+  // after them one ahead of the board's, and the page fetched by scrolling
+  // showed its first note twice — or brought the deleted one back.
+  const exclude = new Set((p.get('exclude') || '').split(','))
+  const all = store
+    .allNotes()
+    .filter(visibleTo(viewer))
+    .filter(n => !exclude.has(n.id))
   const collectionId = p.get('collection')
   const collection = collectionId ? new Set(collections.get(collectionId)?.itemIds || []) : undefined
   // Facets ignore type/source: chips only render on the Everything nav and

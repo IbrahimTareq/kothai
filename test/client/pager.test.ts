@@ -454,3 +454,61 @@ test('pendingEta: nothing pending, nothing to estimate', () => {
   p.applyDelta(pendingDelta(0), {}, 600_000)
   assert.equal(p.pendingEta(600_000), null)
 })
+
+// Server order, n0 newest, with `extra` spliced in at `at`.
+const serverList = (n: number, extra: string[] = [], at = 0) => {
+  const ids = Array.from({ length: n }, (_, i) => `n${i}`)
+  ids.splice(at, 0, ...extra)
+  return ids
+}
+const serverPage = (ids: string[], offset: number) => ({
+  offset,
+  total: ids.length,
+  facets: { types: {}, sources: {} },
+  pendingTotal: 0,
+  notes: ids.slice(offset, offset + PAGE).map(id => item(id)),
+})
+const loadedIds = (p: NotePager) => p.slots().flatMap(s => (isPlaceholder(s) ? [] : [s.id]))
+
+test('a note saved elsewhere between two pages does not show the page boundary note twice', () => {
+  const p = new NotePager()
+  p.applyPage(serverPage(serverList(PAGE * 2), 0))
+  // Saved from Telegram while no delta poll was running: every note on the
+  // server moves one place down before the second page is asked for.
+  const now = serverList(PAGE * 2, ['tg'])
+  p.applyPage(serverPage(now, PAGE))
+  const ids = loadedIds(p)
+  assert.equal(new Set(ids).size, ids.length)
+  // The stale copy's page is fetched again, which brings the new note in.
+  for (const off of p.neededPages(0, PAGE * 2)) p.applyPage(serverPage(now, off))
+  assert.deepEqual(loadedIds(p), now)
+})
+
+test('an import landing mid-list does not show a loaded note twice', () => {
+  const p = new NotePager()
+  p.applyPage(serverPage(serverList(PAGE * 3), 0))
+  p.applyPage(serverPage(serverList(PAGE * 3), PAGE))
+  // Imported notes carry their original dates, so they land in the middle.
+  p.applyPage(serverPage(serverList(PAGE * 3, ['old1', 'old2'], 50), PAGE * 2))
+  const ids = loadedIds(p)
+  assert.equal(new Set(ids).size, ids.length)
+})
+
+test('pages refetched while a delete waits out its Undo show neither a duplicate nor the deleted note', () => {
+  const p = new NotePager()
+  const server = serverList(PAGE * 3)
+  p.applyPage(serverPage(server, 0))
+  p.applyPage(serverPage(server, PAGE))
+  p.removeLocal('n5') // the server keeps n5 until the Undo lapses
+  // Every note after n5 moved up one, leaving the last loaded slot empty, so
+  // scrolling there refetches its page — asking the server to leave out what
+  // was deleted here.
+  for (let pass = 0; pass < 5; pass++) {
+    const shown = server.filter(id => !p.excluded().includes(id))
+    for (const off of p.neededPages(0, PAGE * 2 - 1)) p.applyPage(serverPage(shown, off))
+  }
+  const ids = loadedIds(p)
+  assert.equal(new Set(ids).size, ids.length)
+  assert.equal(ids.includes('n5'), false)
+  assert.equal(ids.length, PAGE * 2)
+})

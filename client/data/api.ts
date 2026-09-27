@@ -150,6 +150,7 @@ export const API = {
     collection?: string
     unavailable?: boolean
     sort?: string
+    exclude?: string[]
   }): Promise<{
     notes: UIItem[]
     total: number
@@ -168,6 +169,7 @@ export const API = {
     if (params.collection) qs.set('collection', params.collection)
     if (params.unavailable) qs.set('unavailable', '1')
     if (params.sort) qs.set('sort', params.sort)
+    if (params.exclude?.length) qs.set('exclude', params.exclude.join(','))
     const d = await apiGet<{
       notes: ServerNote[]
       total: number
