@@ -121,7 +121,8 @@ export function CollectionView({
     )
   const del = () => {
     deleteCollection(collection.id)
-    navigate('spaces')
+    // Its sub-spaces were just moved up into its parent, so that is where you were in the tree.
+    navigate(collection.parentId ? `space:${collection.parentId}` : 'spaces')
   }
   const children = collections.filter(c => c.parentId === collection.id)
   // Into the new space, as from the landing: it is empty, and filling it is next.

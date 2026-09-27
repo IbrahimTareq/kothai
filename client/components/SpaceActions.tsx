@@ -21,9 +21,10 @@ interface SpaceActionsProps {
 
 export function SpaceActions({ collection, collections, onRename, onNewSub, onMove, onDelete }: SpaceActionsProps) {
   const [armed, setArmed] = useState(false)
-  // On the demo a visitor nests only inside spaces they made
-  // (routes/collections.ts), so only those are offered.
-  const demo = !!useDemo()
+  // On the demo a visitor nests only inside spaces they made (routes/collections.ts),
+  // so only those are offered, and a sub-space spends the daily quota as any space does.
+  const demoState = useDemo()
+  const demo = !!demoState
   if (armed) {
     // Alone while it asks: beside rename, it squeezed a phone's title to 0px.
     return <Confirm inline danger confirmLabel="Delete space" onConfirm={onDelete} onCancel={() => setArmed(false)} />
@@ -46,7 +47,14 @@ export function SpaceActions({ collection, collections, onRename, onNewSub, onMo
       >
         <Icon name="edit" size={14} />
       </Button>
-      <Button size="icon" tone="ghost" title="New space inside this one" aria-label="New sub-space" onClick={onNewSub}>
+      <Button
+        size="icon"
+        tone="ghost"
+        title={demoState?.spacesLeft === 0 ? 'No more spaces today' : 'New space inside this one'}
+        aria-label="New sub-space"
+        disabled={demoState?.spacesLeft === 0}
+        onClick={onNewSub}
+      >
         <Icon name="plus" size={14} />
       </Button>
       <Menu
