@@ -167,6 +167,9 @@ Before, Everything had no title, Settings set its own at `--text-2xl` in an
 icon tile, and a space drew a hairline no other page had. The Ask landing is
 the exception — its headline is the prompt, not a page title.
 
+A page inside another (a space in a space) adds a `trail` above the identity
+row: the pages above it, each a way back up.
+
 **Pick-one-of-a-few is `<Segmented>`** (`client/ui/`), on Radix's toggle
 group: a `label`, a `value`, an `onChange` and `options` of `{ value, label,
 title? }`, where `title` is also the accessible name of an icon-only option.

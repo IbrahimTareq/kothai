@@ -255,6 +255,12 @@
 .page-toolbar{display:flex;align-items:center;gap:var(--space-16);min-height:var(--control-md)}
 .page-filters{flex:1;min-width:0;display:flex;align-items:center}
 .page-display{flex:none;display:flex;align-items:center;gap:var(--space-8)}
+/* The trail above a nested page's title: small print that reads as where you
+   are, not as more actions, so its crumbs are text and take no box. */
+.page-trail{display:flex;align-items:center;gap:var(--space-6);min-width:0;overflow:hidden;
+  font-size:var(--text-xs);color:var(--ink-faint);white-space:nowrap}
+.page-trail button{all:unset;cursor:pointer;overflow:hidden;text-overflow:ellipsis}
+.page-trail button:hover,.page-trail button:focus-visible{color:var(--ink)}
 /* The header's bottom edge, drawn by the scroller under it. With no rule and
    no padding of its own, the header had no edge once the page moved: cards
    scrolled straight up to the chips and were sliced off flush with their
