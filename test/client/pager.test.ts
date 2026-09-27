@@ -353,6 +353,37 @@ test('watchingCount drops a note as soon as enrichment clears its pending flag',
   assert.equal(p.watchingCount(2000), 0)
 })
 
+test('restoreLocal puts an undone delete back in its slot', () => {
+  const p = new NotePager()
+  p.applyPage(page(0, 3, 3))
+  const n1 = p.slots()[1] as UIItem
+  p.removeLocal('n1')
+  p.restoreLocal(n1, 1)
+  assert.equal(p.total, 3)
+  assert.deepEqual(
+    p.slots().map(s => (s as UIItem).id),
+    ['n0', 'n1', 'n2'],
+  )
+})
+
+// Deleting a link straight after capturing it is the common "wrong link"
+// case, and its enrichment lands inside the undo window: the delta brought
+// the deleted card back on screen, and an Undo after that showed it twice.
+test('a delta does not bring back a note deleted locally', () => {
+  const p = new NotePager()
+  const fresh = item('fresh', { ts: 100, pending: true })
+  p.insertLocal(fresh)
+  p.removeLocal('fresh')
+  p.applyDelta({ notes: [item('fresh', { ts: 100, title: 'enriched' })], deleted: [], pendingTotal: 0 }, {})
+  assert.equal(p.total, 0)
+  p.restoreLocal(fresh, 0)
+  p.applyDelta({ notes: [item('fresh', { ts: 100, title: 'enriched' })], deleted: [], pendingTotal: 0 }, {})
+  assert.deepEqual(
+    p.slots().map(s => (s as UIItem).title),
+    ['enriched'],
+  )
+})
+
 test('watchingCount drops a note that left the view', () => {
   const p = new NotePager()
   p.insertLocal(item('fresh', { pending: true }))

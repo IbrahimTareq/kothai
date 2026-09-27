@@ -68,6 +68,11 @@ export class NotePager {
   // Same shape as awaitingThumb: id -> expiry, bounded so a note stuck
   // behind a long queue can't pin the fast cadence on forever.
   private watching = new Map<string, number>() // id -> expiry (epoch ms)
+  // Ids removed locally. A delete waits out App's undo window before it
+  // reaches the server, so a delta in that window still carries the note —
+  // and a fresh capture's enrichment lands in exactly that window, which put
+  // the card straight back. Only restoreLocal (the Undo) brings one back.
+  private gone = new Set<string>()
   // Which query's pages are current. A query switch used to reset() on the
   // spot, which emptied facets as well as slots: Everything's chip strip is
   // built from facets, so it unmounted along with every card until the new
@@ -213,10 +218,18 @@ export class NotePager {
   }
 
   removeLocal(id: string): void {
+    this.gone.add(id)
     const idx = this.idToIndex.get(id)
     if (idx === undefined) return
     this.arr.splice(idx, 1)
     this.total--
+    this.reindex()
+  }
+
+  restoreLocal(item: UIItem, at: number): void {
+    this.gone.delete(item.id)
+    this.arr.splice(at, 0, item)
+    this.total++
     this.reindex()
   }
 
@@ -251,6 +264,7 @@ export class NotePager {
       // Unknown id: only a note newer than everything loaded before this
       // delta can be safely placed. Anything older lives in unloaded
       // territory and will arrive when its page is fetched.
+      if (this.gone.has(incoming.id)) continue
       if ((incoming.ts ?? 0) > baseline && matchesLocal(incoming, query)) fresh.push(incoming)
     }
     // Insert ascending so each insertLocal correctly becomes the new front;

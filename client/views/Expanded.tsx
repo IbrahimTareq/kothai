@@ -187,7 +187,7 @@ function MainPanel({ item, slidesLoading }: { item: UIItem; slidesLoading?: bool
 interface ExpandedProps {
   item: UIItem
   onClose: () => void
-  onDelete: (id: string) => void
+  onDelete: (item: UIItem) => void
   onUpdate: (id: string, patch: { tags?: string[]; mindNote?: string }) => void
   onRetag: (id: string) => void
   collections: Collection[]
@@ -513,7 +513,7 @@ export function ExpandedView({
               className: 'del',
               disabled: locked,
               onClick: () => {
-                onDelete(item.id)
+                onDelete(item)
                 onClose()
               },
             },

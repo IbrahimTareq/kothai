@@ -27,7 +27,7 @@ interface CollectionViewProps {
   collection: Collection | null
   view: ViewMode
   setView: (v: ViewMode) => void
-  deleteItem: (id: string) => void
+  deleteItem: (item: UIItem) => void
   onExpand: (item: UIItem) => void
   collections: Collection[]
   addToCollection: (cid: string, itemId: string) => void
@@ -136,12 +136,10 @@ export function CollectionView({
     )
   }
 
-  // Board-originated delete/remove: also drop the item from this collection's
-  // own pager immediately, rather than waiting on the next fetch.
-  const handleDelete = (id: string) => {
-    notes.removeLocal(id)
-    deleteItem(id)
-  }
+  // Board-originated remove: also drop the item from this collection's own
+  // pager immediately, rather than waiting on the next fetch. A delete needs
+  // no such step — App's deleteItem reaches this pager through notesRef, and
+  // has to find the card still in it to put it back on Undo.
   const handleRemoveFrom = (cid: string, itemId: string) => {
     if (cid === collection.id) notes.removeLocal(itemId)
     removeFromCollection(cid, itemId)
@@ -381,7 +379,7 @@ export function CollectionView({
               renderItem={it => (
                 <ItemCard
                   item={it}
-                  onDelete={handleDelete}
+                  onDelete={deleteItem}
                   onExpand={onExpand}
                   collections={collections}
                   onAddTo={addToCollection}

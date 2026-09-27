@@ -6,6 +6,7 @@ import { useNotes, type NoteSource } from '../data/useNotes'
 import { boardQuery } from '../domain/boardQuery'
 import { useCollections } from '../data/useCollections'
 import { useStatusPoll } from '../data/useStatusPoll'
+import { useHeldDelete } from './useHeldDelete'
 import { useChat } from '../data/useChat'
 import { isPlaceholder } from '../data/pager'
 import { ExpandedView } from '../views/Expanded'
@@ -95,6 +96,7 @@ export default function App() {
     Boolean(SOURCE_BY_KEY[k]),
   )
   const notes = useNotes(boardQ, galleryActive)
+  const held = useHeldDelete(notes, spaceNotesRef, nav + JSON.stringify(boardQ))
   // Keep the open detail modal in sync with background completions (e.g.
   // Re-tag) that land via the pager's delta poll: ExpandedView reads from
   // this standalone `expanded` snapshot, not live pager data, so without
@@ -173,15 +175,7 @@ export default function App() {
     }
   }
 
-  const deleteItem = (id: string) => {
-    notes.removeLocal(id)
-    spaceNotesRef.current?.removeLocal(id)
-    // After the delete lands, not alongside it: asked any sooner, the server
-    // still counts the note.
-    API.del(id)
-      .then(notes.refreshFacets)
-      .catch(() => {})
-  }
+  const deleteItem = held.remove
   // optimistic tag / mind-note edits from the expanded view; server reconciles
   const updateItem = (id: string, patch: { tags?: string[]; mindNote?: string }) => {
     notes.patchLocal(id, patch)
@@ -500,6 +494,8 @@ export default function App() {
           <span>Added</span>
         </span>
       </button>
+
+      {held.bar}
 
       {expanded && (
         <ExpandedView

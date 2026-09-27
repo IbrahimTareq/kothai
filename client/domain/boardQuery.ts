@@ -21,7 +21,7 @@ import { SOURCE_BY_KEY } from './source.ts'
 // Navs that are their own screen rather than a filtered board.
 const NON_BOARD_NAVS = new Set(['core', 'settings', 'spaces'])
 
-export function isBoardNav(nav: string): boolean {
+function isBoardNav(nav: string): boolean {
   return !NON_BOARD_NAVS.has(nav) && !nav.startsWith('space:')
 }
 

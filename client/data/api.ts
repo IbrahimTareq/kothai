@@ -68,9 +68,9 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' }
 // parameters of those names further down the file.
 function request<T = unknown>(
   path: string,
-  init: { method?: string; body?: unknown; signal?: AbortSignal } = {},
+  init: { method?: string; body?: unknown; signal?: AbortSignal; keepalive?: boolean } = {},
 ): Promise<T> {
-  const { method, body, signal } = init
+  const { method, body, signal, keepalive } = init
   return fetch(path, {
     ...(method ? { method } : {}),
     // A GET carries no body and needs no content type; everything that changes
@@ -78,6 +78,7 @@ function request<T = unknown>(
     ...(method && method !== 'GET' ? { headers: JSON_HEADERS } : {}),
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     ...(signal ? { signal } : {}),
+    ...(keepalive ? { keepalive } : {}),
   }).then(r => _json<T>(r))
 }
 
@@ -278,7 +279,8 @@ export const API = {
     return mapNote(d.note)
   },
   async del(id: string): Promise<void> {
-    await apiDel(`/api/notes/${id}`)
+    // keepalive: a delete held for undo is sent as the page closes (useHeldDelete).
+    await request(`/api/notes/${id}`, { method: 'DELETE', keepalive: true })
   },
   // patch user-editable fields (tags + free-form mind note) of a saved item
   async update(id: string, patch: { tags?: string[]; mindNote?: string }): Promise<UIItem> {

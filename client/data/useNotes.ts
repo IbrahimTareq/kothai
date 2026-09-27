@@ -22,6 +22,7 @@ export interface NoteSource {
   ensure: (firstIndex: number, lastIndex: number) => void
   insertLocal: (item: UIItem) => void
   removeLocal: (id: string) => void
+  restoreLocal: (item: UIItem, at: number) => void
   patchLocal: (id: string, patch: Partial<UIItem>) => void
   refreshFacets: () => void
 }
@@ -203,6 +204,10 @@ export function useNotes(query: PagerQuery, enabled = true, members?: number): N
       },
       removeLocal: (id: string) => {
         pager.current.removeLocal(id)
+        rerender()
+      },
+      restoreLocal: (item: UIItem, at: number) => {
+        pager.current.restoreLocal(item, at)
         rerender()
       },
       patchLocal: (id: string, patch: Partial<UIItem>) => {

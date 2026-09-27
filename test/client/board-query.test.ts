@@ -6,7 +6,7 @@
 // below, and it is the reason this module exists separately at all.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { boardQuery, isBoardNav, matchesLocal } from '../../client/domain/boardQuery.ts'
+import { boardQuery, matchesLocal } from '../../client/domain/boardQuery.ts'
 import type { UIItem } from '../../client/types.ts'
 
 const TYPES = new Set(['link', 'video'])
@@ -58,12 +58,14 @@ test('empty selections come through as undefined, not empty strings', () => {
   assert.equal(out.unavailable, undefined)
 })
 
-test('isBoardNav excludes the screens that are not a filtered board', () => {
+const active = (nav: string) => boardQuery(nav, [], '', 'newest', TYPES, isSource).active
+
+test('the board query is inactive on the screens that are not a filtered board', () => {
   for (const nav of ['core', 'settings', 'spaces', 'space:abc']) {
-    assert.equal(isBoardNav(nav), false, nav)
+    assert.equal(active(nav), false, nav)
   }
   for (const nav of ['all', 'link', 'video']) {
-    assert.equal(isBoardNav(nav), true, nav)
+    assert.equal(active(nav), true, nav)
   }
 })
 

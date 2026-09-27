@@ -177,7 +177,7 @@ export function ItemCard({
   onRemoveFrom,
 }: {
   item: UIItem
-  onDelete: (id: string) => void
+  onDelete: (item: UIItem) => void
   onExpand?: (item: UIItem) => void
   collections?: Collection[]
   onAddTo?: (cid: string, itemId: string) => void
@@ -242,7 +242,7 @@ export function ItemCard({
             title="Release"
             onClick={e => {
               e.stopPropagation()
-              onDelete(item.id)
+              onDelete(item)
             }}
           >
             <Icon name="trash" size={13} />

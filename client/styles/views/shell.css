@@ -4,6 +4,19 @@
 #root{position:relative;z-index:var(--z-raised);height:100%}
 .app{position:relative;height:100%}
 
+/* The Undo after a delete (app/useHeldDelete.tsx): bottom centre, level with
+   the capture button; over the tab bar on phones (responsive.css). */
+.undo-bar{position:absolute;left:50%;bottom:var(--space-28);transform:translateX(-50%);z-index:var(--z-float);
+  display:flex;align-items:center;gap:var(--space-12);max-width:min(48ch,calc(100% - var(--space-32)));
+  padding:var(--space-6) var(--space-6) var(--space-6) var(--space-16);
+  background:var(--surface-popover);border:1px solid var(--line);border-radius:var(--radius-full);
+  box-shadow:var(--shadow-popover);font-size:var(--text-sm);color:var(--ink-dim);
+  animation:undo-in var(--dur-mid) var(--ease-entrance)}
+.undo-bar:empty{display:none}
+.undo-bar-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.undo-bar-text b{color:var(--ink)}
+@keyframes undo-in{from{opacity:0}}
+
 /* header overlays the content so it scrolls beneath the frosted glass */
 .topbar{position:absolute;top:0;left:0;right:0;z-index:var(--z-topbar);
   display:flex;align-items:center;justify-content:flex-end;

@@ -51,7 +51,7 @@ interface GalleryViewProps {
   setSearch: (s: string) => void
   searchFocus: boolean
   setSearchFocus: (b: boolean) => void
-  deleteItem: (id: string) => void
+  deleteItem: (item: UIItem) => void
   slots: Slot[]
   total: number
   ready: boolean
