@@ -80,10 +80,21 @@ export function WindowedBoard({
   // suspended entirely in background/hidden contexts, and a scroll handler
   // that only commits its update inside a rAF callback stops updating the
   // window at all there.
+  //
+  // The window is taken from where the board begins, not from the top of the
+  // scroller: a space draws its sub-spaces above its items (views/Space.tsx),
+  // and reading raw scrollTop left the cards at the bottom of the screen
+  // unmounted by the grid's height. Measured on every scroll rather than once,
+  // because the rows above change height (a draft card) without the board or
+  // the scroller resizing.
   useEffect(() => {
     const sc = scroller.current
-    if (!sc) return
-    const onScroll = () => setScrollTop(sc.scrollTop)
+    const board = boardRef.current
+    if (!sc || !board) return
+    const onScroll = () => {
+      const offset = board.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop
+      setScrollTop(sc.scrollTop - offset)
+    }
     sc.addEventListener('scroll', onScroll, { passive: true })
     onScroll()
     return () => sc.removeEventListener('scroll', onScroll)
