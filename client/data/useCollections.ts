@@ -1,14 +1,16 @@
 // The Spaces (collections) list and every mutation the app makes to it.
 //
-// Lifted out of App.tsx, where these eight handlers sat among ~30 other pieces
+// Lifted out of App.tsx, where its first eight handlers sat among ~30 other pieces
 // of unrelated state. They form a closed set: nothing here reads or writes any
 // other App state, and the only dependency is the Collections API — so this is
 // the whole feature, not a slice of one.
 //
 // Two write postures, deliberately different:
-//   - rename / describe / delete / saveCanvas are optimistic. They are local
-//     edits the server cannot disagree with, so the UI moves first and a
-//     failed request is swallowed.
+//   - rename / describe / saveCanvas are optimistic. They are local edits the
+//     server cannot disagree with, so the UI moves first and a failed request
+//     is swallowed. delete moves first too, then refetches either way: the
+//     server lifts the space's sub-spaces up a level, which the client cannot
+//     see coming.
 //   - create / tag-edit / move / add / remove await the server, because its
 //     response reflects work the client cannot predict, or refuses it —
 //     smart-rule backfill deciding which notes a tag change pulls in,

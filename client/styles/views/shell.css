@@ -36,9 +36,9 @@
    What a visitor made is theirs to change, so their own space ([data-mine])
    keeps every control; Cards.tsx and Expanded.tsx decide the same per item. */
 :root[data-demo] .attach-btn{display:none}
-/* A shared space loses whatever edits it: rename, describe and delete, and its rule tags
-   (the spark still marks a smart space). Its canvas stays, arranged but never
-   saved (views/Space.tsx). Its way to Everything goes as well: nothing there
+/* A shared space loses whatever edits it: rename, describe, new sub-space, move
+   and delete, and its rule tags (the spark still marks a smart space). Its
+   canvas stays, arranged but never saved (views/Space.tsx). Its way to Everything goes as well: nothing there
    can put a link in a space that is not the visitor's. */
 :root[data-demo] .collection-view:not([data-mine]) :is(.page-actions, .coll-rule, .coll-browse, .coll-desc-add){display:none}
 :root[data-demo] .collection-view:not([data-mine]) :is(.coll-name, .coll-desc){pointer-events:none}
