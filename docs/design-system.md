@@ -181,8 +181,10 @@ is gone, so Settings no longer shows two kinds of segment on one page.
 **Menus and popovers are `<Menu>` and `<Popover>`** (`client/ui/`), on Radix,
 which owns focus, arrow keys, Escape and outside clicks. `<Menu>` is a list of
 actions and takes its items as data (`label`, `trailing`, `checked`,
-`onSelect`), so every row is drawn the same way; a checkable item keeps the
-menu open to toggle several in a row. `<Popover>` is for anything else: a
+`onSelect`, `keepOpen`), so every row is drawn the same way; a checkable item
+keeps the menu open to toggle several in a row, and a `keepOpen` item is a
+step inside the menu (a space's "Move to…" swaps in its targets) rather than
+an action. `<Popover>` is for anything else: a
 field, a hint, a list you filter. Given a `trigger` it is modal; given an
 `anchor` instead it is a combobox's list, which leaves focus in the field —
 the endpoint model field's list was an absolute `ul` its accordion clipped to

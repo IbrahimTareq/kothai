@@ -8,12 +8,16 @@ import type { ReactElement, ReactNode, SyntheticEvent } from 'react'
 // which each picker also re-implemented, one with a backdrop div.
 //
 // A checkable item stays open when picked, so several can be toggled in a row;
-// a plain item closes the menu, since its job is done.
+// a plain item closes the menu, since its job is done. A `keepOpen` item is a
+// step inside the menu rather than an action — "Move to…" swaps the list for
+// the places a space can go, in place, because a submenu beside it has no room
+// to open at phone width, which is where a space's header needed the menu.
 type Item = {
   key: string
   label: string
   trailing?: ReactNode
   checked?: boolean
+  keepOpen?: boolean
   onSelect: () => void
 }
 
@@ -27,14 +31,16 @@ export function Menu({
   title,
   items,
   empty,
+  onOpenChange,
 }: {
   trigger: ReactElement
   title?: string
   items: Item[]
   empty: string
+  onOpenChange?: (open: boolean) => void // to reset a keepOpen step when the menu closes
 }) {
   return (
-    <DropdownMenu.Root>
+    <DropdownMenu.Root onOpenChange={onOpenChange}>
       <DropdownMenu.Trigger asChild>{trigger}</DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
@@ -55,7 +61,14 @@ export function Menu({
               </>
             )
             return it.checked === undefined ? (
-              <DropdownMenu.Item key={it.key} className="menu-item" onSelect={it.onSelect}>
+              <DropdownMenu.Item
+                key={it.key}
+                className="menu-item"
+                onSelect={e => {
+                  if (it.keepOpen) e.preventDefault()
+                  it.onSelect()
+                }}
+              >
                 {body}
               </DropdownMenu.Item>
             ) : (
