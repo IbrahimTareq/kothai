@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import { Icon } from './icons'
 import { useDemo } from './Demo'
-import { moveTargets, spaceLabel } from '../domain/spaceTree'
+import { byPath, moveTargets, spaceLabel } from '../domain/spaceTree'
 import type { Collection } from '../types'
 import { Button } from '../ui/Button'
 import { Confirm } from '../ui/Confirm'
@@ -32,9 +32,10 @@ export function SpaceActions({ collection, collections, onRename, onNewSub, onMo
   }
   const moves = [
     ...(collection.parentId ? [{ key: 'top', label: 'Top level', onSelect: () => onMove(null) }] : []),
-    ...moveTargets(collections, collection.id)
-      .filter(c => !demo || !!c.visitor)
-      .map(c => ({ key: c.id, label: spaceLabel(collections, c.id), onSelect: () => onMove(c.id) })),
+    ...byPath(
+      moveTargets(collections, collection.id).filter(c => !demo || !!c.visitor),
+      collections,
+    ).map(c => ({ key: c.id, label: spaceLabel(collections, c.id), onSelect: () => onMove(c.id) })),
   ]
   const actions = [
     { key: 'rename', label: 'Rename', onSelect: onRename },

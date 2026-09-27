@@ -5,7 +5,7 @@ import type { ReactElement } from 'react'
 import { Icon, CAT } from './icons'
 import { relTime, imgGradient } from '../util/format'
 import { isMediaFirst, isAwaitingContent, sourceGlyph, sourceLabel } from '../domain/source'
-import { spaceLabel } from '../domain/spaceTree'
+import { byPath, spaceLabel } from '../domain/spaceTree'
 import type { Collection, UIItem } from '../types'
 import { Menu } from '../ui/Menu'
 import { useDemo } from './Demo'
@@ -221,7 +221,7 @@ export function ItemCard({
                 <Icon name="plus" size={14} />
               </button>
             }
-            items={spaces!.map(c => {
+            items={byPath(spaces!, spaces!).map(c => {
               const on = c.itemIds.includes(item.id)
               return {
                 key: c.id,

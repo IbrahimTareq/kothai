@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { moveTargets, spaceLabel, spacePath } from '../../client/domain/spaceTree.ts'
+import { byPath, moveTargets, spaceLabel, spacePath } from '../../client/domain/spaceTree.ts'
 
 // Travel > Asia > Japan, Travel > Portugal, and Reading on its own.
 const spaces = [
@@ -37,4 +37,23 @@ test('a space is named by its path', () => {
 test('a space moves anywhere but itself, the spaces inside it, and where it already is', () => {
   assert.deepEqual(ids(moveTargets(spaces, 't')), ['r'])
   assert.deepEqual(ids(moveTargets(spaces, 'a')), ['p', 'r'])
+})
+
+// "Travel (old)" sorts between "Travel" and "Travel / Asia" as label text,
+// which split Travel's family in the menus.
+test('spaces sort under their parents, compared name by name down the path', () => {
+  const mixed = [...spaces, { id: 'o', name: 'Travel (old)' }]
+  assert.deepEqual(ids(byPath(mixed, mixed)), ['r', 't', 'a', 'j', 'p', 'o'])
+})
+
+test('two sub-spaces with one name keep their own sub-spaces beneath them', () => {
+  const twins = [
+    { id: 'i1', name: 'Ideas' },
+    { id: 'i2', name: 'Ideas' },
+    { id: 'z', name: 'Zines', parentId: 'i1' },
+    { id: 'b', name: 'Books', parentId: 'i2' },
+  ]
+  const order = ids(byPath(twins, twins))
+  assert.equal(order.indexOf('z'), order.indexOf('i1') + 1)
+  assert.equal(order.indexOf('b'), order.indexOf('i2') + 1)
 })

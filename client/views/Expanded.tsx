@@ -8,7 +8,7 @@ import { Icon } from '../components/icons'
 import { Carousel } from '../components/Carousel'
 import { relTime, imgGradient } from '../util/format'
 import { isMediaFirst, sourceGlyph, sourceLabel, githubParts } from '../domain/source'
-import { spaceLabel } from '../domain/spaceTree'
+import { byPath, spaceLabel } from '../domain/spaceTree'
 import { lockAxis, shouldDismiss, navDirection, type Axis } from '../layout/swipe'
 import { useScrollEdges } from '../layout/useScrollEdges'
 import type { Collection, UIItem } from '../types'
@@ -481,7 +481,7 @@ export function ExpandedView({
                     <Icon name="plus" size={12} /> Add to space
                   </button>
                 }
-                items={openSpaces.map(c => ({
+                items={byPath(openSpaces, collections).map(c => ({
                   key: c.id,
                   label: spaceLabel(collections, c.id),
                   trailing: c.tags.length > 0 && (
