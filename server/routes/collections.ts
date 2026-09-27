@@ -27,7 +27,8 @@ const notMine = (viewer: string | null, id: string) => !!viewer && collections.g
 // the error to send, or null when it may. On the demo a parent the visitor did
 // not make answers like a missing space, as notMine does, so a visitor's tree
 // only ever holds their own spaces. The walk up always ends at the top level:
-// every stored parentId passed through here.
+// every stored parentId passed through here, or through a restore, which
+// refuses a backup whose spaces loop (spacesNest in routes/backup.ts).
 function parentError(viewer: string | null, id: string | null, parentId: unknown) {
   const bad = { code: 400, error: 'invalid parent' }
   if (typeof parentId !== 'string' || !parentId) return bad

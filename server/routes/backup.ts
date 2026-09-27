@@ -182,6 +182,7 @@ async function stage(source: AsyncIterable<Buffer>, staging: string): Promise<st
 // library is still whole, not halfway through the swap.
 function checkDatabase(file: string): void {
   let db: DatabaseSync | undefined
+  let nests = true
   try {
     db = new DatabaseSync(file, { readOnly: true })
     const intact = db.prepare('PRAGMA integrity_check').get()?.integrity_check === 'ok'
@@ -191,13 +192,47 @@ function checkDatabase(file: string): void {
         .all()
         .map(r => r.name),
     )
-    if (intact && ['notes', 'collections', 'chats', 'settings'].every(t => tables.has(t))) return
+    if (intact && ['notes', 'collections', 'chats', 'settings'].every(t => tables.has(t))) {
+      nests = spacesNest(db)
+      if (nests) return
+    }
   } catch {
     // not a database at all — answered below, the same as a damaged one
   } finally {
     db?.close()
   }
-  throw new Error("The backup's database is damaged, or is not a Kothai library.")
+  throw new Error(
+    nests
+      ? "The backup's database is damaged, or is not a Kothai library."
+      : "The backup's spaces are nested in a loop, or inside a space it does not hold.",
+  )
+}
+
+// Whether every space's parent is a space in the same backup, and no chain of
+// parents loops. A library made here holds neither (parentError in
+// routes/collections.ts refuses them), but a backup is only a file: restored
+// with two spaces each other's parent, that walk and the client's spacePath
+// (client/domain/spaceTree.ts) would go round forever, the server's event loop
+// with it. Refused like any other damage rather than repaired by lifting
+// spaces to the top level: that would restore a library nobody backed up.
+function spacesNest(db: DatabaseSync): boolean {
+  const parents = new Map(
+    db
+      .prepare('SELECT data FROM collections')
+      .all()
+      .map(r => {
+        const c = JSON.parse(String(r.data))
+        return [c.id, c.parentId]
+      }),
+  )
+  for (const id of parents.keys()) {
+    const seen = new Set()
+    for (let at = parents.get(id); at; at = parents.get(at)) {
+      if (!parents.has(at) || seen.has(at)) return false
+      seen.add(at)
+    }
+  }
+  return true
 }
 
 async function swapIn(stagedDb: string, stagedUploads: string | null) {

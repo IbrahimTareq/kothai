@@ -214,6 +214,55 @@ test('an archive whose database is damaged is refused before anything is replace
   assert.deepEqual(leftovers(), [])
 })
 
+// A backup's database with its spaces' parents rewritten, as a hand edit
+// would leave it; sent bare, the older .db form, so no archive is rebuilt.
+async function backupWithParents(parentOf: (ids: string[]) => Record<string, string>): Promise<Buffer> {
+  await emptyLibrary()
+  await collections.create({ name: 'A' })
+  await collections.create({ name: 'B' })
+  const file = path.join(unpack(await takeBackup()), 'kothai.db')
+  const db = new DatabaseSync(file)
+  const rows = db.prepare('SELECT id, data FROM collections').all()
+  const parents = parentOf(rows.map(r => String(r.id)))
+  for (const r of rows) {
+    const data = { ...JSON.parse(String(r.data)), parentId: parents[String(r.id)] }
+    db.prepare('UPDATE collections SET data = ? WHERE id = ?').run(JSON.stringify(data), r.id)
+  }
+  db.close()
+  return readFileSync(file)
+}
+
+test('a backup whose spaces are each other’s parent is refused before anything is replaced', async () => {
+  // Restored, walking up from either space would never reach the top level.
+  const backup = await backupWithParents(([a, b]) => ({ [a]: b, [b]: a }))
+  await emptyLibrary()
+  await collections.create({ name: 'Still here' })
+
+  const res = await restore(backup)
+  assert.equal(res.status, 400)
+  assert.match(text((await jsonBody(res)).error), /nested in a loop/)
+  assert.deepEqual(
+    collections.all().map(c => c.name),
+    ['Still here'],
+  )
+  assert.deepEqual(leftovers(), [])
+})
+
+test('a backup with a space inside one it does not hold is refused', async () => {
+  const backup = await backupWithParents(([a]) => ({ [a]: 'not-in-this-backup' }))
+  await emptyLibrary()
+
+  assert.equal((await restore(backup)).status, 400)
+})
+
+test('a backup with one space inside another restores, nested as it was', async () => {
+  const backup = await backupWithParents(([a, b]) => ({ [a]: b }))
+  await emptyLibrary()
+
+  assert.equal((await restore(backup)).status, 200)
+  assert.equal(collections.all().filter(c => c.parentId).length, 1)
+})
+
 test('a cross-site form cannot restore: the body must be sent as application/octet-stream', async () => {
   // Checked by the route itself, not only the password gate: without a
   // password nothing else stands between another site and this endpoint, and
