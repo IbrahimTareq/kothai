@@ -20,7 +20,7 @@ import { queueThumbRetry } from '../links/thumb-retry.ts'
 import * as collections from '../data/collections.ts'
 import * as settings from '../data/settings.ts'
 import { stepsFor } from './backlog.ts'
-import type { AiMarkers } from './backlog.ts'
+import type { AiMarkers, BacklogNote } from './backlog.ts'
 import type { Residency } from './roles.ts'
 import { DESCRIBE_THUMB_PROMPT, EMBED_RECIPE } from './prompts.ts'
 import { UPLOAD_DIR } from '../config.ts'
@@ -158,12 +158,14 @@ async function runMetaJob({ noteId, url }: MetaJob) {
 
 // Describes a note's downloaded thumbnail with the vision model, so
 // classify/embed get a second, independent signal beyond whatever the creator
-// chose to caption — often just hashtags. Runs for ANY note carrying a thumb,
+// chose to caption — often just hashtags. Runs for any note carrying a thumb,
 // not only Instagram ones: the cover frame of a TikTok, a YouTube video or an
 // og:image is the same kind of evidence, and short-form covers in particular
 // carry burned-in hook text that the prompt (see DESCRIBE_THUMB_PROMPT)
 // explicitly asks to be transcribed — usually the single best retrieval key
-// the video has. Idempotent via ai.thumbVision so a note only pays for this
+// the video has. Only when the caption is too thin to say what the post is
+// about, though (see stepsFor), judged on the note as passed in — so a caller
+// hands over the caption it has just fetched. Idempotent via ai.thumbVision so a note only pays for this
 // once, even across multiple enrich/reclassify attempts (a transient failure
 // just leaves it unset, same tradeoff as every other AI marker in this file —
 // see igReclassified's comment below). Mutates `ai` in place on success,
@@ -177,12 +179,8 @@ async function runMetaJob({ noteId, url }: MetaJob) {
 // anywhere. For those the marker is simply wrong, and only the artifact tells
 // the truth. The marker is still written, because it is what the enrichment
 // backlog and deriveAiMarkers read elsewhere. See stepsFor's matching note.
-async function describeThumb(
-  note: { thumb?: string | null; thumbDescription?: string | null },
-  residency: Residency,
-  ai: AiMarkers,
-): Promise<string> {
-  if (residency.vision === 'off' || !note.thumb || note.thumbDescription) return ''
+async function describeThumb(note: BacklogNote, residency: Residency, ai: AiMarkers): Promise<string> {
+  if (!note.thumb || !stepsFor(note, residency).includes('thumbVision')) return ''
   try {
     const absPath = path.join(UPLOAD_DIR, path.basename(note.thumb))
     const description = await inference.describeImage({ absPath, prompt: DESCRIBE_THUMB_PROMPT })
@@ -505,9 +503,12 @@ async function enrichNote(id: string, url: string) {
 
   // Thumbnail vision, for any note that has a cover frame — the link meta
   // fetched just above downloads one for most links, and a resweep sees the
-  // one already on disk from an earlier pass.
+  // one already on disk from an earlier pass. Whether it is worth describing
+  // turns on the caption, which on a first save this pass has only just fetched.
   const thumb = linkMeta?.thumb || existing?.thumb
-  const thumbDescription = thumb ? await describeThumb({ ...existing, thumb }, residency, ai) : ''
+  const captioned: BacklogNote = { ...existing, thumb }
+  for (const k of ['siteTitle', 'siteDesc', 'article'] as const) captioned[k] = linkMeta?.[k] || captioned[k]
+  const thumbDescription = thumb ? await describeThumb(captioned, residency, ai) : ''
 
   // YouTube captions — the actual content of a saved video, and the one
   // platform that publishes a transcript for the asking (no download, no

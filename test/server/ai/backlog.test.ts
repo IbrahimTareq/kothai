@@ -31,6 +31,26 @@ test('backlogCount: counts notes with at least one needed step', () => {
   assert.equal(backlogCount(notes, ALL_OFF), 0)
 })
 
+// Seventeen words of prose: enough for classify to know what the post is
+// about, so describing its cover frame is not worth a vision pass.
+const CAPTIONED =
+  'Recreating Anthony Bourdain’s Les Halles fries at home with beef fat, a double fry and plenty of salt'
+
+test('stepsFor: a thumbnail on a well-captioned note is not owed a vision pass', () => {
+  const n = { thumb: '/u/a.png', siteDesc: CAPTIONED, ai: { classify: true, embed: true } }
+  assert.deepEqual(stepsFor(n, ALL_ON), [])
+})
+
+test('stepsFor: hashtags, mentions and links are not caption — a note carrying only those still gets its frame described', () => {
+  const n = {
+    thumb: '/u/a.png',
+    siteDesc:
+      'chef_ali\n\nlink in bio https://example.com/x @friend #food #fries #recipe #bourdain #lesHalles #paris #cooking #easy #dinner #viral #fyp #reels #foodie #yum',
+    ai: { classify: true, embed: true },
+  }
+  assert.deepEqual(stepsFor(n, ALL_ON), ['thumbVision'])
+})
+
 test('deriveAiMarkers: legacy enriched note infers embed, never classify', () => {
   const legacy = { category: 'Recipes', tags: ['x'], summary: 's', embedding: [0.1] }
   assert.deepEqual(deriveAiMarkers(legacy), { embed: true })

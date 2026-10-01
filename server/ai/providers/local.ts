@@ -153,8 +153,12 @@ const managers = {
   vision: new RoleManager('vision', { loader: makeLoader('llm'), idleMs: IDLE_MS.vision }),
 }
 
+// Reasoning off: describeImage keeps only the answer (stripThinking), and on
+// six real cover frames Qwen3.5-VL generated 1,000-4,700 characters to keep
+// 145-530 of them — 9.6s a frame against 1.85s with reasoning disabled, and
+// the transcriptions were no worse.
 function visionConfig(key?: string) {
-  return { ctx_size: 4096, projectionModelSrc: registryModel(presetFor('vision', key)?.proj) }
+  return { ctx_size: 4096, reasoning_budget: 0, projectionModelSrc: registryModel(presetFor('vision', key)?.proj) }
 }
 
 // Apply a saved model selection to the managers (no loading happens here).

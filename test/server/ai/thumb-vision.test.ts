@@ -155,6 +155,31 @@ test('a note with no thumbnail never reaches the vision model', async () => {
   assert.equal(describeCalls.length, 0)
 })
 
+test('a well-captioned note skips the vision pass — judged on the caption THIS pass fetched, not yet on the note', async () => {
+  seed()
+  linkMetaImpl = async () => ({
+    siteTitle: 'Les Halles fries',
+    siteDesc:
+      'Recreating Anthony Bourdain’s Les Halles fries at home with beef fat, a double fry and plenty of salt #fries',
+    siteName: 'TikTok',
+    thumb: '/uploads/meta-t1.jpg',
+    article: null,
+  })
+  await run()
+  linkMetaImpl = async () => ({
+    siteTitle: 'a caption',
+    siteDesc: null,
+    siteName: 'TikTok',
+    thumb: '/uploads/meta-t1.jpg',
+    article: null,
+  })
+
+  assert.equal(describeCalls.length, 0)
+  assert.equal(notes[0].thumbDescription, undefined)
+  assert.equal(classifyCalls.length, 1, 'classify runs off the caption instead')
+  assert.match(classifyCalls[0], /Bourdain/)
+})
+
 test('the ai.thumbVision marker makes the pass idempotent across repeat enrichments', async () => {
   seed()
   await run()

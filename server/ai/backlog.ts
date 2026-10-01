@@ -29,15 +29,40 @@ export interface BacklogNote {
   thumb?: string | null
   thumbDescription?: string | null
   embedding?: Float32Array | number[] | null
+  siteTitle?: string | null
+  siteDesc?: string | null
+  article?: string | null
 }
 
 export type Step = 'thumbVision' | 'classify' | 'embed'
+
+// Below this many words of caption prose, the cover frame is described. A
+// vision pass was the bulk of the model time per note (9.6s a frame, against
+// 2.2s for classify), and it ran on every thumbnail, including posts whose
+// caption already says what they are about. Half the library's captions run to
+// 27 words or more; under ~15 they are mostly calls to action ("Follow for
+// more…", "Comment GAME to get the PDF") that name no topic, and that is where
+// a frame's burned-in hook text earns its keep. Hashtags, mentions and links
+// are not counted: a caption of nothing but those still gets its frame read.
+const CAPTION_WORDS = 15
+
+function needsThumbVision(note: BacklogNote): boolean {
+  if (!note.thumb || note.thumbDescription) return false
+  const words = [note.siteTitle, note.siteDesc, note.article]
+    .filter(Boolean)
+    .join(' ')
+    .replace(/https?:\/\/\S+|[#@][\p{L}\p{N}_.]+/gu, ' ')
+    .split(/\s+/)
+    .filter(w => /[\p{L}\p{N}]{2}/u.test(w))
+  return words.length < CAPTION_WORDS
+}
 
 // Steps a note needs: the role must be enabled (not off) and the note must not
 // already carry that step's marker.
 //
 // `thumbVision` is the odd one out: it is keyed on the ARTIFACT (a thumbnail
-// with no description) rather than on a marker. It has to be, because the
+// with no description, on a note too thinly captioned to classify without it —
+// see needsThumbVision) rather than on a marker. It has to be, because the
 // population that needs it most is precisely the one whose marker lies — notes
 // described back when the description was thrown away instead of stored. Those
 // carry ai.thumbVision: true with nothing to show for it, and no
@@ -52,7 +77,7 @@ export type Step = 'thumbVision' | 'classify' | 'embed'
 export function stepsFor(note: BacklogNote, residency: Residency): Step[] {
   const done = note.ai || {}
   const steps: Step[] = []
-  if (residency.vision !== 'off' && note.thumb && !note.thumbDescription) steps.push('thumbVision')
+  if (residency.vision !== 'off' && needsThumbVision(note)) steps.push('thumbVision')
   if (residency.llm !== 'off' && !done.classify) steps.push('classify')
   if (residency.embed !== 'off' && !done.embed) steps.push('embed')
   return steps
