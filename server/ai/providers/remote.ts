@@ -316,7 +316,8 @@ export function createRemoteProvider({
         { role: 'system', content: classifySystemPrompt({ now, knownTags, candidateTags }) },
         { role: 'user', content: classifyUserPrompt({ text }) },
       ]
-      const model = modelFor('llm')
+      // As little reasoning as the model allows — see remote-http.ts's withLeastReasoning.
+      const req = { model: modelFor('llm'), messages, reasoning_effort: 'none' }
       let raw = ''
       try {
         // Probe json_schema outside call() so a 400 "unsupported" response
@@ -324,8 +325,7 @@ export function createRemoteProvider({
         raw = textOf(
           await chat(
             {
-              model,
-              messages,
+              ...req,
               response_format: {
                 type: 'json_schema',
                 json_schema: { name: 'classification', schema: CLASSIFY_SCHEMA },
@@ -348,7 +348,7 @@ export function createRemoteProvider({
           if (e instanceof RemoteError) recordFailure('llm', e)
           throw e
         }
-        raw = textOf(await call('llm', () => chat({ model, messages }, TIMEOUTS.classify)))
+        raw = textOf(await call('llm', () => chat(req, TIMEOUTS.classify)))
       }
       // Annotated, not narrowed: normaliseClassification's own parameter type
       // is all-optional and all-unknown precisely because this is the model's
@@ -370,6 +370,7 @@ export function createRemoteProvider({
         chat(
           {
             model: modelFor('vision'),
+            reasoning_effort: 'none',
             messages: [
               {
                 role: 'user',

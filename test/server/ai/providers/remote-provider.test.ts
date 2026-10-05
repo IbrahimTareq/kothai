@@ -224,6 +224,86 @@ test('classify falls back to heuristics when output is unparseable after the ret
   assert.equal(out.category, 'General')
 })
 
+// ---- reasoning off ---------------------------------------------------------
+// A reasoning model bills its hidden reasoning as output tokens, and classify
+// and vision keep only the answer. No one value is safe everywhere: gpt-4o-mini
+// and gpt-4.1-mini reject the field outright, the gpt-5 originals want
+// 'minimal', most others take 'none'. Each test names its own model because
+// what a model accepts is remembered for the life of the process.
+const reject = (res: ServerResponse, effort: unknown) => {
+  res.writeHead(400, { 'content-type': 'application/json' })
+  res.end(
+    JSON.stringify({
+      error: {
+        message: `Unsupported value: 'reasoning_effort' does not support '${effort}' with this model.`,
+        type: 'invalid_request_error',
+      },
+    }),
+  )
+}
+const classified = chatReply(JSON.stringify({ type: 'link', category: 'C', title: 'T', summary: 'S', tags: [] }))
+
+test('classify and describeImage ask for no reasoning', async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'kothai-img-'))
+  const file = path.join(dir, 'a.png')
+  writeFileSync(file, Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+  const bodies: Record<string, unknown>[] = []
+  routes['/chat/completions'] = (_req, res, body) => {
+    bodies.push(record(body))
+    okJson(res, classified)
+  }
+  const p = make({ llm: 'thinks-a', embed: 'e', vision: 'sees-a' })
+  await p.init()
+  await p.classify({ text: 'hi', now: 'now' })
+  await p.describeImage({ absPath: file })
+  assert.deepEqual(
+    bodies.map(b => b.reasoning_effort),
+    ['none', 'none'],
+  )
+})
+
+test('a model that rejects the field outright is asked without it, keeps json_schema, and is not probed again', async () => {
+  const bodies: Record<string, unknown>[] = []
+  routes['/chat/completions'] = (_req, res, body) => {
+    const b = record(body)
+    bodies.push(b)
+    if ('reasoning_effort' in b) return reject(res, b.reasoning_effort)
+    okJson(res, classified)
+  }
+  const p = make({ llm: 'never-reasons', embed: 'e', vision: 'v' })
+  await p.init()
+  const out = await p.classify({ text: 'hi', now: 'now' })
+  assert.equal(out.title, 'T')
+  assert.deepEqual(
+    bodies.map(b => b.reasoning_effort),
+    ['none', 'minimal', 'low', undefined],
+  )
+  assert.equal(record(bodies[3].response_format).type, 'json_schema', 'the reasoning 400 is not a json_schema 400')
+  assert.equal(p.available(), true, 'stepping down must not open the circuit')
+
+  await p.classify({ text: 'again', now: 'now' })
+  assert.equal(bodies.length, 5, 'the second call goes straight to what worked')
+  assert.equal(bodies[4].reasoning_effort, undefined)
+})
+
+test("a model whose lowest setting is 'minimal' gets 'minimal' from then on", async () => {
+  const bodies: Record<string, unknown>[] = []
+  routes['/chat/completions'] = (_req, res, body) => {
+    const b = record(body)
+    bodies.push(b)
+    if (b.reasoning_effort === 'none') return reject(res, 'none')
+    okJson(res, classified)
+  }
+  const p = make({ llm: 'gpt-5-ish', embed: 'e', vision: 'v' })
+  await p.init()
+  await p.classify({ text: 'hi', now: 'now' })
+  await p.classify({ text: 'again', now: 'now' })
+  assert.deepEqual(
+    bodies.map(b => b.reasoning_effort),
+    ['none', 'minimal', 'minimal'],
+  )
+})
+
 test('describeImage inlines the file as a base64 data URL content part', async () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'kothai-img-'))
   const file = path.join(dir, 'a.png')

@@ -114,11 +114,48 @@ export async function postJson(
   body: unknown,
   { apiKey = null, timeoutMs = 60_000, retries = RETRIES, sleep = realSleep }: RequestOptions = {},
 ): Promise<unknown> {
-  return withRetry(
-    () => request(baseUrl, path, { method: 'POST', body: JSON.stringify(body), apiKey, timeoutMs }),
-    retries,
-    sleep,
-  )
+  const send = (b: unknown) =>
+    withRetry(
+      () => request(baseUrl, path, { method: 'POST', body: JSON.stringify(b), apiKey, timeoutMs }),
+      retries,
+      sleep,
+    )
+  return typeof body === 'object' && body !== null && 'reasoning_effort' in body
+    ? withLeastReasoning(baseUrl, body, send)
+    : send(body)
+}
+
+// A body asking for `reasoning_effort` is asking for as little reasoning as
+// the model allows. A reasoning model bills its hidden reasoning as output
+// tokens, and classify and vision keep only the answer — locally, Qwen3.5-VL
+// generated 1,000-4,700 characters to keep 145-530 of them. No one value is
+// safe on every endpoint (checked against each provider's docs, 2026-10-01):
+// 'none' turns it off on OpenAI's gpt-5.1-and-later, OpenRouter, Ollama,
+// Gemini 2.5 Flash, llama.cpp and vLLM; the gpt-5 originals reject it and
+// want 'minimal'; Gemini 3 bottoms out at 'low'; and gpt-4o-mini and
+// gpt-4.1-mini — the OpenAI defaults — reject the field with any value. So
+// each 400 that names reasoning steps down a rung, ending with the field
+// gone, and the rung that worked is remembered per model: an install on the
+// defaults pays three unbilled 400s per model per boot, then nothing. Any
+// other failure is not this one's to handle and is thrown as it was.
+const EFFORTS = ['none', 'minimal', 'low', null]
+const effortRung = new Map<string, number>()
+
+async function withLeastReasoning(baseUrl: string, body: object, send: (b: unknown) => Promise<unknown>) {
+  const fields = Object.entries(body).filter(([k]) => k !== 'reasoning_effort')
+  const key = `${baseUrl} ${String(Object.fromEntries(fields).model)}`
+  for (let rung = effortRung.get(key) ?? 0; ; rung++) {
+    const effort = EFFORTS[rung]
+    try {
+      const res = await send(Object.fromEntries(effort ? [...fields, ['reasoning_effort', effort]] : fields))
+      effortRung.set(key, rung)
+      return res
+    } catch (e) {
+      const aboutReasoning =
+        e instanceof RemoteError && e.code === 'bad_request' && /reasoning|thinking/i.test(e.message)
+      if (!effort || !aboutReasoning) throw e
+    }
+  }
 }
 
 export async function getJson(
