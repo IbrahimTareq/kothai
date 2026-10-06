@@ -5,6 +5,7 @@
 import * as store from './data/notes.ts'
 import * as ai from './ai/index.ts'
 import * as enrich from './ai/enrich.ts'
+import { withTrigger } from './ai/usage.ts'
 import type { PublicNote } from './data/notes.ts'
 
 // `url` has already passed ai.isLikelyUrl: each caller refuses anything else
@@ -29,7 +30,11 @@ export async function saveCapture({
   // and embed calls: a fresh demo seeding its library took over a minute to
   // show any images. The fast lane goes first so it is fetching before the
   // chain takes the model.
-  enrich.queueLinkMeta(note.id, url)
-  enrich.queueEnrich(note.id, url)
+  // Labelled here rather than at /api/save, so a Telegram save counts as a
+  // save too: both arrive through this function.
+  withTrigger('save', () => {
+    enrich.queueLinkMeta(note.id, url)
+    enrich.queueEnrich(note.id, url)
+  })
   return note
 }

@@ -16,6 +16,8 @@ let notes: NoteRecord[] = []
 let classifyCalls = 0
 let describeCalls = 0
 let writes: string[] = []
+// Stands in for the usage row a real classify writes on the wire.
+let onClassify = async () => {}
 
 const realStore = await import('../../../server/data/notes.ts')
 const realTags = await import('../../../server/data/tags.ts')
@@ -47,6 +49,7 @@ mock.module('../../../server/ai/index.ts', {
     ...realNormalise,
     classify: async () => {
       classifyCalls++
+      await onClassify()
       return { type: 'video', category: 'Real', title: 'A Real Title', summary: 'A summary.', tags: ['fresh'] }
     },
     embedText: async () => [1, 2, 3],
@@ -150,4 +153,30 @@ test('a note the re-run failed again is queued by the next recovery', async () =
   recover()
   await enrich.queueJob(() => {})
   assert.deepEqual(writes, ['missed', 'missed'])
+})
+
+test('the re-run is recorded as recovery, not as whatever queued the note first', async () => {
+  const { _resetDb, getDb } = await import('../../../server/data/db.ts')
+  const { startUsageLog, recordUsage } = await import('../../../server/ai/usage.ts')
+  _resetDb()
+  await startUsageLog()
+  await reset([MISSED])
+  onClassify = () =>
+    recordUsage({
+      provider: 'remote',
+      model: 'm',
+      ok: true,
+      status: 200,
+      inputTokens: null,
+      outputTokens: null,
+      cachedTokens: null,
+      reasoningTokens: null,
+      costUsd: null,
+      ms: 1,
+    })
+  recover()
+  await enrich.queueJob(() => {})
+  onClassify = async () => {}
+  const db = await getDb()
+  assert.equal(db.prepare('SELECT triggered_by FROM ai_usage').get()?.triggered_by, 'recovery')
 })

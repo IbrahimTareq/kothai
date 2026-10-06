@@ -17,6 +17,7 @@ import {
 import { handleImport } from './routes/import.ts'
 import { handleAvailabilityRemove } from './routes/availability.ts'
 import { handleDuplicates } from './routes/duplicates.ts'
+import { handleUsage } from './routes/usage.ts'
 import { handleExport } from './routes/export.ts'
 import { handleBackup, handleRestore, handleDriveRestore } from './routes/backup.ts'
 import { handleGetDrive, handleConnectDrive, handleDisconnectDrive } from './routes/drive.ts'
@@ -25,6 +26,7 @@ import { handleCheckpoint } from './routes/checkpoint.ts'
 import { handleWipe } from './routes/wipe.ts'
 import { handleModelFiles, handleDeleteModelFile } from './routes/models.ts'
 import { handleAsk } from './routes/ask.ts'
+import { withTrigger } from './ai/usage.ts'
 import { handleGetCaptureToken, handleCreateCaptureToken, handleClearCaptureToken } from './routes/capture-token.ts'
 import { handleChats, handleChat, handleRenameChat, handleDeleteChat } from './routes/chats.ts'
 import {
@@ -71,7 +73,11 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     const viewer = DEMO ? visitorOf(req, res) : null
 
     if (req.method === 'POST' && p === '/api/save') return await handleSave(req, res, viewer)
-    if (req.method === 'POST' && p === '/api/ask') return await handleAsk(req, res, viewer)
+    // Work these routes set off is labelled with what triggered it, for the
+    // Settings usage panel (ai/usage.ts). The label rides into every job they
+    // queue, so a re-tag's model calls are counted as a re-tag even when the
+    // queue runs them minutes later.
+    if (req.method === 'POST' && p === '/api/ask') return await withTrigger('ask', () => handleAsk(req, res, viewer))
     if (req.method === 'GET' && p === '/api/notes/delta') return handleNotesDelta(res, url, viewer)
     if (req.method === 'GET' && p === '/api/notes') return handleNotes(res, url, viewer)
     if (req.method === 'GET' && /^\/api\/notes\/[^/]+$/.test(p))
@@ -100,7 +106,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       if (req.method === 'POST') return handleCreateCaptureToken(res)
       if (req.method === 'DELETE') return handleClearCaptureToken(res)
     }
-    if (req.method === 'POST' && p === '/api/import') return await handleImport(req, res)
+    if (req.method === 'POST' && p === '/api/import') return await withTrigger('import', () => handleImport(req, res))
     if (req.method === 'GET' && p === '/api/export') return handleExport(res)
     if (req.method === 'GET' && p === '/api/backup') return await handleBackup(req, res)
     if (req.method === 'POST' && p === '/api/restore') return await handleRestore(req, res)
@@ -131,8 +137,10 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     }
     if (req.method === 'POST' && p === '/api/availability/remove') return await handleAvailabilityRemove(req, res)
     if (req.method === 'GET' && p === '/api/duplicates') return handleDuplicates(res)
+    if (req.method === 'GET' && p === '/api/usage') return await handleUsage(res, url)
     if (req.method === 'GET' && p === '/api/enrich/backlog') return handleBacklog(res)
-    if (req.method === 'POST' && p === '/api/enrich/backlog') return handleEnrichBacklog(res)
+    if (req.method === 'POST' && p === '/api/enrich/backlog')
+      return withTrigger('backlog', () => handleEnrichBacklog(res))
     if (req.method === 'POST' && p === '/api/enrich/prioritize') return await handlePrioritize(req, res)
     if (p === '/api/collections') {
       if (req.method === 'GET') return handleCollections(res, viewer)
@@ -149,15 +157,16 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
         if (req.method === 'DELETE') return await handleDeleteCollection(res, id, viewer)
       }
     }
-    if (req.method === 'POST' && p === '/api/enrich/retag-all') return await handleRetagAll(res)
+    if (req.method === 'POST' && p === '/api/enrich/retag-all')
+      return await withTrigger('retag-all', () => handleRetagAll(res))
     if (req.method === 'POST' && /^\/api\/notes\/[^/]+\/retag$/.test(p)) {
-      return await handleRetagNote(res, p.split('/')[3], viewer)
+      return await withTrigger('retag', () => handleRetagNote(res, p.split('/')[3], viewer))
     }
     if (req.method === 'POST' && /^\/api\/notes\/[^/]+\/slides$/.test(p)) {
       return await handleNoteSlides(res, decodeURIComponent(p.split('/')[3]), viewer)
     }
     if (req.method === 'PATCH' && p.startsWith('/api/notes/'))
-      return await handleUpdateNote(req, res, p.split('/').pop() ?? '', viewer)
+      return await withTrigger('tag-edit', () => handleUpdateNote(req, res, p.split('/').pop() ?? '', viewer))
     if (req.method === 'DELETE' && p.startsWith('/api/notes/'))
       return await handleDeleteNote(res, p.split('/').pop() ?? '', viewer)
     if (req.method === 'GET') return await serveStatic(req, res, p)

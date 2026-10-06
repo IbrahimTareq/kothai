@@ -19,6 +19,7 @@ import * as tagvocab from '../data/tagvocab.ts'
 import * as settings from '../data/settings.ts'
 import * as enrich from '../ai/enrich.ts'
 import * as reembed from '../ai/reembed.ts'
+import { withTrigger } from '../ai/usage.ts'
 import { isImportInProgress, IMPORT_BUSY, runExclusiveImport } from '../data/import-lock.ts'
 import { saveBackup, writeBackup } from '../backups.ts'
 import { openDriveBackup } from '../drive.ts'
@@ -272,7 +273,7 @@ async function swapIn(stagedDb: string, stagedUploads: string | null) {
     reembed.queueRecipeReembed()
   }
   if (settings.getResidency().embed !== 'off') {
-    enrich.queueJob(() => tagvocab.rebuildFromNotes(store.allNotes()))
+    withTrigger('reembed', () => enrich.queueJob(() => tagvocab.rebuildFromNotes(store.allNotes())))
   }
   return { notes: store.count(), collections: collections.all().length, chats: chats.all().length }
 }

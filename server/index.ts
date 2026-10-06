@@ -21,6 +21,7 @@ const collections = await import('./data/collections.ts')
 const tagvocab = await import('./data/tagvocab.ts')
 const telegram = await import('./telegram/index.ts')
 const demo = await import('./routes/demo.ts')
+const { startUsageLog, withTrigger } = await import('./ai/usage.ts')
 
 const server = createServer()
 
@@ -46,7 +47,10 @@ if (demo.DEMO) await demo.configureDemo()
 // Both selections are passed; each provider reads only its own half.
 await ai.initProvider(undefined, { local: settings.get(), remote: settings.getRemote() })
 if (ai.capabilities().managesResidency) await ai.applyResidency(settings.getResidency())
-enrich.queueMetaBackfill()
+// Before the first model call: the boot sweeps below are the first thing to
+// make one. Off until here, so tests and scripts never write usage rows.
+await startUsageLog()
+withTrigger('boot', () => enrich.queueMetaBackfill())
 // Vectors built under an older embedding recipe (different task prefixes, or
 // a different set of note fields) are not comparable with new ones, so a
 // changed recipe re-embeds the library once, in the background, on the same
@@ -65,9 +69,11 @@ const providerReembedding = reembed.queueEmbedProviderReembed({
 // load lazily on first use.
 if (settings.isConfigured()) {
   if (!hadTagRegistry && settings.getResidency().embed !== 'off') {
-    enrich.queueJob(async () => {
-      await tagvocab.rebuildFromNotes(store.allNotes())
-    })
+    withTrigger('boot', () =>
+      enrich.queueJob(async () => {
+        await tagvocab.rebuildFromNotes(store.allNotes())
+      }),
+    )
   }
 }
 // Last, after the re-embed checks above: they only mark an EMPTY library as

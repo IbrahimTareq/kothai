@@ -9,6 +9,7 @@ import type {
   CollectionPatch,
   ModelFilesResponse,
   DuplicatesResponse,
+  UsageResponse,
   ModelStatus,
   Residency,
   ServerNote,
@@ -425,6 +426,7 @@ export const API = {
     return apiPost('/api/import', payload)
   },
   duplicates: (): Promise<DuplicatesResponse> => apiGet<DuplicatesResponse>('/api/duplicates'),
+  usage: (): Promise<UsageResponse> => apiGet<UsageResponse>('/api/usage'),
   // Delete the notes the daily sweep marked. `expected` is the count the user
   // was shown: the server refuses if it moved between seeing and confirming.
   async removeUnavailable(expected: number): Promise<{ removed: number; unavailable: number }> {

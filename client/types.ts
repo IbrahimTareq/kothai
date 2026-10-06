@@ -271,6 +271,28 @@ export interface DuplicatesResponse {
   groups: DuplicateNote[][]
 }
 
+// GET /api/usage — server/data/usage.ts's UsageGroup, duplicated
+// deliberately: client/ and server/ never import from each other. A null
+// count means the endpoint did not report it, which is not the same as zero.
+export interface UsageGroup {
+  key: string
+  calls: number
+  failed: number
+  inputTokens: number | null
+  outputTokens: number | null
+  cachedTokens: number | null
+  reasoningTokens: number | null
+  costUsd: number | null
+  costUnknownCalls: number
+  ms: number
+}
+export interface UsageResponse {
+  days: number
+  totals: UsageGroup
+  byStep: UsageGroup[]
+  byTrigger: UsageGroup[]
+}
+
 // GET/PATCH /api/backups — what server/backups.ts keeps in data/backups.
 export interface BackupsResponse {
   enabled: boolean

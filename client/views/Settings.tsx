@@ -17,6 +17,7 @@ import { ImportSection } from '../components/settings/ImportSection'
 import { TelegramSection } from '../components/settings/TelegramSection'
 import { CaptureTokenSection } from '../components/settings/CaptureTokenSection'
 import { DuplicatesSection } from '../components/settings/DuplicatesSection'
+import { UsageSection } from '../components/settings/UsageSection'
 import { RestoreRow } from '../components/settings/RestoreRow'
 import { BackupsRow } from '../components/settings/BackupsRow'
 import { DriveRow } from '../components/settings/DriveRow'
@@ -299,6 +300,8 @@ export function SettingsView({
           <CaptureTokenSection />
 
           <DuplicatesSection />
+
+          <UsageSection />
 
           <SettingsGroup label="Your data">
             <div className="settings-rows">

@@ -218,3 +218,29 @@ test('notes enriched normally record the recipe they were embedded under', async
   assert.equal(notes[0].ai.embed, true)
   assert.equal(notes[0].ai.embedRecipe, EMBED_RECIPE)
 })
+
+test('a re-embed is recorded as reembed whichever caller started it', async () => {
+  const { _resetDb, getDb } = await import('../../../server/data/db.ts')
+  const { startUsageLog, recordUsage } = await import('../../../server/ai/usage.ts')
+  _resetDb()
+  await startUsageLog()
+  reset([REEL])
+  embedImpl = async (text: string) => {
+    await recordUsage({
+      provider: 'remote',
+      model: 'm',
+      ok: true,
+      status: 200,
+      inputTokens: null,
+      outputTokens: null,
+      cachedTokens: null,
+      reasoningTokens: null,
+      costUsd: null,
+      ms: 1,
+    })
+    return [text.length]
+  }
+  await reembed.reembedAll('test')
+  const db = await getDb()
+  assert.equal(db.prepare('SELECT triggered_by FROM ai_usage').get()?.triggered_by, 'reembed')
+})

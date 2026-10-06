@@ -19,6 +19,7 @@ import * as store from '../data/notes.ts'
 import * as settings from '../data/settings.ts'
 import { stepsFor } from './backlog.ts'
 import { queueEnrich } from './enrich.ts'
+import { withTrigger } from './usage.ts'
 import { remoteProvider } from './providers/remote-singleton.ts'
 
 // Ids queued here whose job has not finished. A circuit that flaps recovers
@@ -33,7 +34,7 @@ remoteProvider.onRecover(() => {
     .filter(n => !n.pending && !queued.has(n.id) && stepsFor(n, residency).some(s => s !== 'thumbVision'))
   for (const n of todo) {
     queued.add(n.id)
-    queueEnrich(n.id, n.content).finally(() => queued.delete(n.id))
+    withTrigger('recovery', () => queueEnrich(n.id, n.content)).finally(() => queued.delete(n.id))
   }
   if (todo.length) console.log(`[enrich] inference endpoint recovered — re-queued ${todo.length} notes`)
 })

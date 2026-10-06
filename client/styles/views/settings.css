@@ -377,6 +377,30 @@
 }
 .dup-when { flex: none; color: var(--ink-faint); font-size: var(--text-xs); }
 .dup-action { flex: none; }
+
+/* AI usage. A plain table: client/ui has no table component, and the panel
+   is a report the eye scans down a column, which is what a table is for.
+   Numbers are right-aligned so their magnitudes line up. The wrapper scrolls
+   sideways when a phone is too narrow for five columns, so the page never
+   does. */
+.usage-scroll { margin: var(--space-10) 0 0; overflow-x: auto; }
+.usage-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+}
+.usage-table th,
+.usage-table td {
+  padding: var(--space-8) var(--space-10);
+  border-top: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+.usage-table th:first-child { text-align: left; }
+.usage-table thead th { border-top: 0; color: var(--ink-faint); font-weight: var(--fw-medium); }
+.usage-table tbody th { color: var(--ink); font-weight: var(--fw-normal); }
+.usage-failed { color: var(--ink-faint); }
+.usage-empty { margin: var(--space-10) 0 0; color: var(--ink-faint); font-size: var(--text-xs); }
 /* ---- first-run wizard ---------------------------------------------------- */
 /* Spacing tokens are literal pixels (--space-12 is 12px), and the house style
    in this file is compact single-line declarations — match both. */

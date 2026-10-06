@@ -14,6 +14,7 @@
 // is announcing that a fetch settled, which arrives here as an injected
 // handler rather than an import — so this module has no edge back to enrich.ts
 // and the two cannot form a cycle.
+import { AsyncLocalStorage } from 'node:async_hooks'
 import * as store from '../data/notes.ts'
 import type { NoteRecord } from '../data/notes.ts'
 import { fetchLinkMeta } from './meta.ts'
@@ -29,6 +30,12 @@ interface IgJob {
   slides?: boolean
   resolve?: (value?: unknown) => void
   embed?: { resolve: (html: string) => void; reject: (e: unknown) => void }
+  // The async context the job was queued in. The pump is one long-lived loop
+  // that runs in its first caller's context, and a settled fetch queues the
+  // note's model work from inside it: without this, every Instagram post of an
+  // import queued while one Telegram save drained the lane was recorded as
+  // that save in the usage panel (ai/usage.ts).
+  queuedIn?: ReturnType<typeof AsyncLocalStorage.snapshot>
 }
 
 // Called with a noteId once a meta fetch has settled: caption, thumbnail
@@ -128,7 +135,8 @@ async function pumpIg() {
     // relevant throttle slot for nothing. See queueIgMeta below.
     igInFlight.add(job.noteId)
     try {
-      await (job.slides ? runSlidesJob(job) : runIgJob(job))
+      const run = () => (job.slides ? runSlidesJob(job) : runIgJob(job))
+      await (job.queuedIn ? job.queuedIn(run) : run())
     } catch (e) {
       console.error('[enrich] instagram meta job failed:', e instanceof Error ? e.message : e)
     } finally {
@@ -145,7 +153,11 @@ export function queueIgMeta(noteId: string, url: string) {
   // Ahead of any availability checks: a sweep queues hundreds, and a new
   // save's caption and thumbnail must not wait out the whole run.
   const firstCheck = igQueue.findIndex(j => j.embed)
-  igQueue.splice(firstCheck < 0 ? igQueue.length : firstCheck, 0, { noteId, url })
+  igQueue.splice(firstCheck < 0 ? igQueue.length : firstCheck, 0, {
+    noteId,
+    url,
+    queuedIn: AsyncLocalStorage.snapshot(),
+  })
   pumpIg()
 }
 

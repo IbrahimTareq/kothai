@@ -9,6 +9,7 @@ import * as inference from './index.ts'
 import * as settings from '../data/settings.ts'
 import { EMBED_RECIPE } from './prompts.ts'
 import { queueJob } from './enrich.ts'
+import { withTrigger } from './usage.ts'
 
 // Re-embed every note in the library, in one batched write.
 //
@@ -51,7 +52,14 @@ export function embedBodyFor(
     .join('\n')
 }
 
-export async function reembedAll(reason = 'settings') {
+// Labelled here, not at its callers: a settings change, an endpoint swap, a
+// recipe bump and a restore all re-embed through this, and all of it is
+// re-embedding as far as the usage panel is concerned.
+export function reembedAll(reason = 'settings') {
+  return withTrigger('reembed', () => reembedEach(reason))
+}
+
+async function reembedEach(reason: string) {
   const notes = store.allNotes()
   console.log(`[enrich] re-embedding ${notes.length} notes (${reason})…`)
   for (const n of notes) {

@@ -13,6 +13,7 @@ import type { TagVocabRow } from './db.ts'
 import { encodeEmbedding, decodeEmbedding, cosine } from './embedding.ts'
 import { normalizeTags } from './tags.ts'
 import * as ai from '../ai/index.ts'
+import { withStep } from '../ai/usage.ts'
 import type { ServerNote } from '../types.ts'
 
 // The same two shapes a note's embedding has — a Float32Array off the BLOB
@@ -21,8 +22,11 @@ import type { ServerNote } from '../types.ts'
 type Vector = NonNullable<ServerNote['embedding']>
 
 // Injectable so the snap logic is unit-testable without a model; production
-// callers get ai.embedText.
+// callers get tagEmbed, which is ai.embedText labelled tag-embed.
 type Embedder = (text: string) => Promise<number[]>
+// Tag matching's own label, so the Settings usage panel can show what
+// snapping new tags to old ones costs apart from embedding notes.
+const tagEmbed: Embedder = text => withStep('tag-embed', () => ai.embedText(text))
 
 // node:sqlite types every column as SQLOutputValue — the connection carries no
 // knowledge of the CREATE TABLE. These narrow to what db.ts's TagVocabRow says
@@ -174,7 +178,7 @@ export function size() {
 // note data. Throws if an embed fails (e.g. model not ready) — since nothing
 // is written until the loop finishes, that leaves the registry (and disk)
 // untouched, so the caller can retry clean on the next boot.
-export async function rebuildFromNotes(notes: unknown, { embed = ai.embedText }: { embed?: Embedder } = {}) {
+export async function rebuildFromNotes(notes: unknown, { embed = tagEmbed }: { embed?: Embedder } = {}) {
   const seen = new Set<string>()
   const fresh: [string, number[]][] = []
   for (const n of Array.isArray(notes) ? notes : []) {
@@ -202,8 +206,8 @@ export async function rebuildFromNotes(notes: unknown, { embed = ai.embedText }:
 // register it as new. Returns the canonicalized, de-duped list. On any embed
 // failure the original input is returned unchanged (tags are never dropped).
 // `embed` is injectable so the snap logic is unit-testable with a fake embedder;
-// production callers use the default ai.embedText.
-export async function canonicalize(tags: unknown, { embed = ai.embedText }: { embed?: Embedder } = {}) {
+// production callers use the default tagEmbed (ai.embedText labelled tag-embed).
+export async function canonicalize(tags: unknown, { embed = tagEmbed }: { embed?: Embedder } = {}) {
   if (!Array.isArray(tags) || tags.length === 0) return Array.isArray(tags) ? tags : []
   const out: string[] = []
   const seen = new Set<string>()

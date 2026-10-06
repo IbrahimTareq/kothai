@@ -8,6 +8,8 @@
 // are config errors that retrying cannot fix, and each retry against a
 // metered endpoint costs money — so they open the circuit immediately.
 
+import { recordUsage } from '../usage.ts'
+
 export interface RemoteErrorOptions {
   transient?: boolean
   retryAfterMs?: number
@@ -116,7 +118,8 @@ export async function postJson(
 ): Promise<unknown> {
   const send = (b: unknown) =>
     withRetry(
-      () => request(baseUrl, path, { method: 'POST', body: JSON.stringify(b), apiKey, timeoutMs }),
+      () =>
+        metered(path, b, () => request(baseUrl, path, { method: 'POST', body: JSON.stringify(b), apiKey, timeoutMs })),
       retries,
       sleep,
     )
@@ -155,6 +158,48 @@ async function withLeastReasoning(baseUrl: string, body: object, send: (b: unkno
         e instanceof RemoteError && e.code === 'bad_request' && /reasoning|thinking/i.test(e.message)
       if (!effort || !aboutReasoning) throw e
     }
+  }
+}
+
+// One usage row per attempt against a model route (server/ai/usage.ts). Per
+// attempt rather than per call, so the attempts nobody otherwise sees land as
+// failed rows: 429/5xx retries, and the rejected rungs of the reasoning
+// step-down above. /models probes are not model calls and are left out.
+const METERED = new Set(['/chat/completions', '/embeddings'])
+
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null
+// A count the endpoint did not send, or sent as something other than a
+// non-negative number, is unknown (null), never 0 or NaN.
+const count = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : null)
+
+function usageOf(res: unknown) {
+  const u = isRecord(res) && isRecord(res.usage) ? res.usage : {}
+  const prompt = isRecord(u.prompt_tokens_details) ? u.prompt_tokens_details : {}
+  const completion = isRecord(u.completion_tokens_details) ? u.completion_tokens_details : {}
+  return {
+    inputTokens: count(u.prompt_tokens),
+    outputTokens: count(u.completion_tokens),
+    cachedTokens: count(prompt.cached_tokens),
+    reasoningTokens: count(completion.reasoning_tokens),
+    // OpenRouter reports what the call cost; OpenAI and the rest do not.
+    costUsd: count(u.cost),
+  }
+}
+
+const UNREPORTED = { inputTokens: null, outputTokens: null, cachedTokens: null, reasoningTokens: null, costUsd: null }
+
+async function metered(path: string, body: unknown, attempt: () => Promise<unknown>): Promise<unknown> {
+  if (!METERED.has(path)) return attempt()
+  const model = isRecord(body) && typeof body.model === 'string' ? body.model : ''
+  const started = Date.now()
+  try {
+    const res = await attempt()
+    void recordUsage({ provider: 'remote', model, ok: true, status: 200, ...usageOf(res), ms: Date.now() - started })
+    return res
+  } catch (e) {
+    const status = e instanceof RemoteError && e.status ? e.status : null
+    void recordUsage({ provider: 'remote', model, ok: false, status, ...UNREPORTED, ms: Date.now() - started })
+    throw e
   }
 }
 

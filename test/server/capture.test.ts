@@ -10,6 +10,8 @@ import assert from 'node:assert/strict'
 const added: Record<string, unknown>[] = []
 const queued: { id: string; url: string }[] = []
 const metaQueued: { id: string; url: string }[] = []
+// Stands in for the model work a queued enrichment does.
+let queueEnrichImpl = () => {}
 
 mock.module('../../server/data/notes.ts', {
   namedExports: {
@@ -21,7 +23,10 @@ mock.module('../../server/data/notes.ts', {
 })
 mock.module('../../server/ai/enrich.ts', {
   namedExports: {
-    queueEnrich: (id: string, url: string) => queued.push({ id, url }),
+    queueEnrich: (id: string, url: string) => {
+      queueEnrichImpl()
+      queued.push({ id, url })
+    },
     queueLinkMeta: (id: string, url: string) => metaQueued.push({ id, url }),
   },
 })
@@ -59,4 +64,31 @@ test('saveCapture: a link also goes to the fast metadata lane, so its thumbnail 
   metaQueued.length = 0
   const note = await saveCapture({ url: 'https://example.com/d' })
   assert.deepEqual(metaQueued, [{ id: note.id, url: 'https://example.com/d' }])
+})
+
+test('saveCapture: the enrichment it queues is recorded as a save, Telegram included', async () => {
+  const { _resetDb, getDb } = await import('../../server/data/db.ts')
+  const { startUsageLog, recordUsage } = await import('../../server/ai/usage.ts')
+  _resetDb()
+  await startUsageLog()
+  let recorded: Promise<void> = Promise.resolve()
+  queueEnrichImpl = () => {
+    recorded = recordUsage({
+      provider: 'remote',
+      model: 'm',
+      ok: true,
+      status: 200,
+      inputTokens: null,
+      outputTokens: null,
+      cachedTokens: null,
+      reasoningTokens: null,
+      costUsd: null,
+      ms: 1,
+    })
+  }
+  await saveCapture({ url: 'https://example.com/b' })
+  await recorded
+  queueEnrichImpl = () => {}
+  const db = await getDb()
+  assert.equal(db.prepare('SELECT triggered_by FROM ai_usage').get()?.triggered_by, 'save')
 })

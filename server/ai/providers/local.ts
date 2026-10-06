@@ -2,7 +2,7 @@
 // classify / embed / answer helpers used by the notes app.
 //
 // Everything runs locally / on-device via @qvac/sdk — no data leaves the machine.
-import { loadModel, completion, embed, unloadModel, close, cancel } from '@qvac/sdk'
+import { loadModel, completion, embed, unloadModel, close, cancel } from './qvac.ts'
 import * as MODELS from '@qvac/sdk'
 import type { ModelProgressUpdate } from '@qvac/sdk'
 import { RoleManager, ROLES, FeatureDisabledError } from '../roles.ts'

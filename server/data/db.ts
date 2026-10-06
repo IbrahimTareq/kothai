@@ -39,6 +39,10 @@ const DB_FILE = path.join(DATA_DIR, 'kothai.db')
 //   markers, …), and a fixed column set would silently drop anything future
 //   code adds. settings and tag_vocab are the exception — both have a small,
 //   truly fixed shape, so real columns are simpler there.
+// - ai_usage is one row per model call attempt (server/ai/usage.ts writes it,
+//   the Settings usage panel reads it). Its counts are nullable because not
+//   every endpoint reports them, and "not reported" must not sum as zero. The
+//   trigger column is triggered_by because TRIGGER is an SQL keyword.
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS notes (
   seq INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,6 +80,23 @@ CREATE TABLE IF NOT EXISTS tag_vocab (
   tag TEXT PRIMARY KEY,
   embedding BLOB NOT NULL
 );
+CREATE TABLE IF NOT EXISTS ai_usage (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  at INTEGER NOT NULL,
+  step TEXT NOT NULL,
+  triggered_by TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  model TEXT NOT NULL,
+  ok INTEGER NOT NULL,
+  status INTEGER,
+  input_tokens INTEGER,
+  output_tokens INTEGER,
+  cached_tokens INTEGER,
+  reasoning_tokens INTEGER,
+  cost_usd REAL,
+  ms INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ai_usage_at ON ai_usage (at);
 `
 
 // SQLite itself is typed per value, not per column, and node:sqlite hands back

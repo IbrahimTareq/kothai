@@ -14,6 +14,7 @@
 import { getAiConfig, AI_EMBED_PROVIDER } from '../config.ts'
 import { ROLES } from './roles.ts'
 import { resolveRoleProviders, kindsInUse, mergeStatus, mergeListModels, mergeCapabilities } from './routing.ts'
+import { withStep } from './usage.ts'
 // Type-only, so it survives none of the above: `import type` is erased before
 // the module runs and pulls in no provider. providers/types.ts is itself a
 // pure type module, so naming the contract here costs the lite image nothing.
@@ -276,22 +277,24 @@ export function validateModel(role: Role, key: string): ValidationResult {
 }
 
 export const classify = (...a: Parameters<Provider['classify']>): ReturnType<Provider['classify']> =>
-  R('llm').classify(...a)
+  withStep('classify', () => R('llm').classify(...a))
 export const embedText = (...a: Parameters<Provider['embedText']>): ReturnType<Provider['embedText']> =>
-  R('embed').embedText(...a)
+  withStep('embed', () => R('embed').embedText(...a))
 export const describeImage = (...a: Parameters<Provider['describeImage']>): ReturnType<Provider['describeImage']> =>
-  R('vision').describeImage(...a)
-export const answer = (...a: Parameters<Provider['answer']>): ReturnType<Provider['answer']> => R('llm').answer(...a)
+  withStep('vision', () => R('vision').describeImage(...a))
+export const answer = (...a: Parameters<Provider['answer']>): ReturnType<Provider['answer']> =>
+  withStep('answer', () => R('llm').answer(...a))
 // Streaming answers, with a fallback for any provider that doesn't implement
 // them: the whole answer arrives as one delta, so callers never branch on
 // whether the provider can stream.
-export const answerStream = async (args: AnswerStreamArgs): Promise<string> => {
-  const p = R('llm')
-  if (p.answerStream) return p.answerStream(args)
-  const text = await p.answer(args)
-  if (text) args?.onToken?.(text)
-  return text
-}
+export const answerStream = (args: AnswerStreamArgs): Promise<string> =>
+  withStep('answer', async () => {
+    const p = R('llm')
+    if (p.answerStream) return p.answerStream(args)
+    const text = await p.answer(args)
+    if (text) args?.onToken?.(text)
+    return text
+  })
 
 // A model-name patch is role-keyed, so it splits by owner: each provider is
 // handed only the roles it serves, and one with nothing to do is skipped.
