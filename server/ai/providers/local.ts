@@ -324,13 +324,15 @@ export async function describeImage({ absPath, prompt }: DescribeImageArgs): Pro
 // prefix never eats into the text budget and can never itself be truncated.
 export async function embedText(text: string, { mode = 'document' }: EmbedOptions = {}): Promise<number[]> {
   const modelId = await managers.embed.acquire()
-  try {
-    const clean = embedInput(clipToTokens(text), { mode, model: embedModelKey })
-    const { embedding } = await embed({ modelId, text: clean || ' ' })
-    return embedding
-  } finally {
-    managers.embed.release()
-  }
+  return serialise('embed', async () => {
+    try {
+      const clean = embedInput(clipToTokens(text), { mode, model: embedModelKey })
+      const { embedding } = await embed({ modelId, text: clean || ' ' })
+      return embedding
+    } finally {
+      managers.embed.release()
+    }
+  })
 }
 
 // ---- classification ----------------------------------------------------
@@ -396,17 +398,19 @@ export async function answer({ question, contextNotes, history = [] }: AnswerArg
 // give-up path doesn't have to sit through the real grace period.
 const TEARDOWN_GRACE_MS = Number(process.env.KOTHAI_TEARDOWN_GRACE_MS) || 5000
 
-// @qvac/sdk allows one completion per model and rejects the rest outright
+// @qvac/sdk allows one job per model and rejects the rest outright
 // ("rejected by registry concurrency policy"). The refcount in roles.ts does
-// not order callers — it only keeps the weights resident — so completions on a
-// role queue here instead. Without this, a stopped answer whose run is still
-// being torn down poisoned the very next question, and a background classify
-// landing mid-answer failed the same way.
-const completionQueue: Partial<Record<Role, Promise<void>>> = {}
+// not order callers — it only keeps the weights resident — so jobs on a role
+// queue here instead. Without this, a stopped answer whose run is still being
+// torn down poisoned the very next question, and a background classify landing
+// mid-answer failed the same way. Embeds too: saving one link fired seven at
+// once (tagvocab embeds new tags with Promise.all) and six plus the note's own
+// died with "a job is already set or being processed", leaving it unembedded.
+const jobQueue: Partial<Record<Role, Promise<void>>> = {}
 function serialise<T>(role: Role, fn: () => Promise<T>): Promise<T> {
-  const prev = completionQueue[role] || Promise.resolve()
+  const prev = jobQueue[role] || Promise.resolve()
   let done: () => void
-  completionQueue[role] = new Promise(r => {
+  jobQueue[role] = new Promise(r => {
     done = r
   })
   // A failed turn must not break the chain for the ones behind it.
@@ -493,18 +497,8 @@ export async function answerStream({
 }
 
 export async function shutdown() {
-  for (const role of ROLES) {
-    try {
-      await managers[role].unload()
-    } catch {
-      /* ignore */
-    }
-  }
-  try {
-    await close()
-  } catch {
-    /* ignore */
-  }
+  for (const role of ROLES) await managers[role].unload().catch(() => {})
+  await close().catch(() => {})
 }
 
 // ---- provider contract --------------------------------------------------
