@@ -13,6 +13,8 @@
   box-shadow:var(--shadow-popover);font-size:var(--text-sm);color:var(--ink-dim);
   animation:undo-in var(--dur-mid) var(--ease-entrance)}
 .undo-bar:empty{display:none}
+/* A failure notice has no Undo to sit against the right edge. */
+.undo-bar:not(:has(button)){padding-right:var(--space-16)}
 .undo-bar-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .undo-bar-text b{color:var(--ink)}
 @keyframes undo-in{from{opacity:0}}

@@ -64,11 +64,11 @@ export function useCollections(): CollectionSource {
     },
     renameCollection: (id, name) => {
       setCollections(prev => prev.map(c => (c.id === id ? { ...c, name } : c)))
-      Collections.update(id, { name }).catch(() => {})
+      Collections.update(id, { name }).catch(refetch)
     },
     describeCollection: (id, description) => {
       setCollections(prev => prev.map(c => (c.id === id ? { ...c, description: description || undefined } : c)))
-      Collections.update(id, { description }).catch(() => {})
+      Collections.update(id, { description }).catch(refetch)
     },
     // The mounted canvas is the authority for the space it shows; this only
     // keeps the app's copy current so leaving and returning shows the latest

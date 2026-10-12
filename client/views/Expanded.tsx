@@ -19,6 +19,7 @@ import { Menu } from '../ui/Menu'
 import { Textarea } from '../ui/Input'
 import { Tooltip } from '../ui/Tooltip'
 import { useDemo } from '../components/Demo'
+import { writeClipboard } from '../util/clipboard'
 
 function openUrl(url?: string | null) {
   if (url) window.open(url, '_blank')
@@ -220,6 +221,9 @@ export function ExpandedView({
   const [tags, setTags] = useState<string[]>(item.tags || [])
   const [note, setNote] = useState<string>(item.mindNote || '')
   const [adding, setAdding] = useState(false)
+  const [copied, setCopied] = useState<boolean | null>(null) // test/client/clipboard
+  const copyLabel = copied ? 'Copied' : copied === false ? "Couldn't copy" : 'Copy link'
+  const copyLink = async () => item.url && setCopied(await writeClipboard(item.url))
   // On the demo a visitor may change only a link they saved, and put links
   // only in spaces they made (server/routes/demo.ts). Anything else carries no
   // visitor, since the server sends a visitor's things to them alone.
@@ -500,7 +504,7 @@ export function ExpandedView({
           {/* Tips hang on a wrapper: a disabled button fires no pointer events,
                 and while a retag runs "Retagging…" is the only sign it took. */}
           {[
-            { label: 'Copy link', icon: 'copy', onClick: () => item.url && navigator.clipboard?.writeText(item.url) },
+            { label: copyLabel, icon: 'copy', onClick: copyLink },
             { label: 'Open original', icon: 'external', onClick: () => openUrl(item.url) },
             {
               label: locked ? 'Re-tag works on links you saved' : item.pending ? 'Retagging…' : 'Re-tag',

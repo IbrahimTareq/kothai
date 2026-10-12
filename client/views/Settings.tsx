@@ -278,6 +278,7 @@ export function SettingsView({
                   pct={modelLoad.pct || 0}
                   defaultOpen={switching && pendingRole === role}
                   onPick={key => pick(role, key)}
+                  confirm
                 />
               ),
             )}

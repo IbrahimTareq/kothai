@@ -224,7 +224,8 @@ export function useChat(nav: string) {
     setChatList(prev => prev.filter(c => c.id !== id))
     setChatTotal(n => Math.max(0, n - 1))
     if (id === chatId) newChat() // also drops /ask/<id> from the URL
-    API.delChat(id).catch(() => {})
+    // A failed delete brings the row back rather than leaving it gone here only.
+    API.delChat(id).catch(refreshChats)
   }
 
   return {

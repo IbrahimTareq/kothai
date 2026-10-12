@@ -10,6 +10,7 @@ import { Button } from '../../ui/Button'
 import { Segmented } from '../../ui/Segmented'
 import { Input } from '../../ui/Input'
 import { Popover } from '../../ui/Popover'
+import { Confirm } from '../../ui/Confirm'
 
 export type Role = 'llm' | 'embed' | 'vision'
 
@@ -73,12 +74,34 @@ interface ModelRowProps {
   busy: boolean
   switching: boolean
   pct: number
+  tabbable: boolean
   onPick: () => void
 }
 
-function ModelRow({ p, active, busy, switching, pct, onPick }: ModelRowProps) {
+// Arrow keys move between rows the way a radiogroup's do; only the checked row
+// sits in the tab order. Moving focus picks nothing — Enter or a click does.
+function moveFocus(e: React.KeyboardEvent<HTMLButtonElement>) {
+  const step =
+    e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0
+  if (!step) return
+  e.preventDefault()
+  const rows = [
+    ...(e.currentTarget.closest('[role="radiogroup"]')?.querySelectorAll<HTMLElement>('[role="radio"]') ?? []),
+  ]
+  rows[(rows.indexOf(e.currentTarget) + step + rows.length) % rows.length]?.focus()
+}
+
+function ModelRow({ p, active, busy, switching, pct, tabbable, onPick }: ModelRowProps) {
   return (
-    <button className={`model-row${active ? ' active' : ''}`} disabled={busy} onClick={onPick}>
+    <button
+      className={`model-row${active ? ' active' : ''}`}
+      role="radio"
+      aria-checked={active}
+      tabIndex={tabbable ? 0 : -1}
+      disabled={busy}
+      onClick={onPick}
+      onKeyDown={moveFocus}
+    >
       <span className="model-radio">{active && <span className="model-radio-dot"></span>}</span>
       <span className="model-main">
         <span className="model-name">{p.label}</span>
@@ -102,6 +125,9 @@ interface RoleAccordionProps {
   onPick: (key: string) => void
   policy?: Residency
   onPolicy?: (p: Residency) => void
+  /** Ask before a pick commits. Settings switches a running model on the pick;
+      onboarding only selects ahead of its own submit. */
+  confirm?: boolean
 }
 
 // One collapsible model role. Collapsed, the header still communicates state by
@@ -117,10 +143,14 @@ export function RoleAccordion({
   onPick,
   policy,
   onPolicy,
+  confirm,
 }: RoleAccordionProps) {
   const [open, setOpen] = useState(!!defaultOpen)
+  const [armed, setArmed] = useState<ModelPreset | null>(null)
   const current = presets.find(p => p.key === currentKey)
   const meta = ROLE_META[role]
+  // The checked row is the group's one tab stop; with none checked, the first.
+  const tabKey = current?.key ?? presets[0]?.key
   return (
     <div className={`role-acc${open ? ' open' : ''}`}>
       <button className="role-acc-head" onClick={() => setOpen(o => !o)} aria-expanded={open}>
@@ -138,17 +168,35 @@ export function RoleAccordion({
       {open && (
         <div className="model-list">
           {policy && onPolicy && <ResidencyControl value={policy} busy={busy} onPick={onPolicy} />}
-          {presets.map(p => (
-            <ModelRow
-              key={p.key}
-              p={p}
-              active={currentKey === p.key}
-              busy={busy}
-              switching={switching}
-              pct={pct}
-              onPick={() => onPick(p.key)}
+          <div role="radiogroup" aria-label={`${meta.title} model`}>
+            {presets.map(p => (
+              <ModelRow
+                key={p.key}
+                p={p}
+                active={currentKey === p.key}
+                busy={busy}
+                switching={switching}
+                pct={pct}
+                tabbable={p.key === tabKey}
+                onPick={() => (p.key === currentKey ? undefined : confirm ? setArmed(p) : onPick(p.key))}
+              />
+            ))}
+          </div>
+          {armed && confirm && (
+            <Confirm
+              question={[
+                `Switch ${meta.title.toLowerCase()} to ${armed.label}?`,
+                armed.sizeBytes ? `Up to ${fmtGB(armed.sizeBytes)} to download.` : '',
+                role === 'embed' ? 'Every note is re-indexed in the background.' : '',
+              ].join(' ')}
+              confirmLabel="Switch"
+              onConfirm={() => {
+                setArmed(null)
+                onPick(armed.key)
+              }}
+              onCancel={() => setArmed(null)}
             />
-          ))}
+          )}
         </div>
       )}
     </div>

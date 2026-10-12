@@ -120,6 +120,11 @@ export default function App() {
     const id = window.setInterval(sync, 2000)
     return () => clearInterval(id)
   }, [expanded, notes.slots])
+  const patchItem = (id: string, p: Partial<UIItem>) => {
+    notes.patchLocal(id, p)
+    spaceNotesRef.current?.patchLocal(id, p)
+    setExpanded(cur => (cur && cur.id === id ? { ...cur, ...p } : cur))
+  }
   // Carousel slides are fetched the first time an Instagram post is actually
   // opened — never swept in bulk (see queueIgSlides on the server). The single
   // thumbnail keeps showing until they land, so the view never blanks; a post
@@ -138,9 +143,7 @@ export default function App() {
     API.slides(it.id)
       .then(fresh => {
         if (stop || !fresh.slides?.length) return
-        notes.patchLocal(fresh.id, { slides: fresh.slides })
-        spaceNotesRef.current?.patchLocal(fresh.id, { slides: fresh.slides })
-        setExpanded(cur => (cur && cur.id === fresh.id ? { ...cur, slides: fresh.slides } : cur))
+        patchItem(fresh.id, { slides: fresh.slides })
       })
       .catch(() => {
         askedSlides.current.delete(it.id)
@@ -177,24 +180,22 @@ export default function App() {
   }
 
   const deleteItem = held.remove
-  // optimistic tag / mind-note edits from the expanded view; server reconciles
+  // Optimistic tag / note edits; a failed save is put back and said (test/client/silent-writes).
   const updateItem = (id: string, patch: { tags?: string[]; mindNote?: string }) => {
-    notes.patchLocal(id, patch)
-    spaceNotesRef.current?.patchLocal(id, patch)
-    setExpanded(cur => (cur && cur.id === id ? { ...cur, ...patch } : cur))
-    API.update(id, patch).catch(() => {})
+    const before = { tags: expanded?.tags, mindNote: expanded?.mindNote } // only the open item edits
+    patchItem(id, patch)
+    API.update(id, patch).catch(() => {
+      patchItem(id, before)
+      held.fail('Could not save that change')
+    })
   }
   // force a fresh classify/embed pass for one item, discarding its current
   // tags; the server flips `pending` immediately so the existing pending-item
   // UI (already used for fresh saves) shows progress with no new loading state
   const retagItem = (id: string) => {
     API.retag(id)
-      .then(note => {
-        notes.patchLocal(id, note)
-        spaceNotesRef.current?.patchLocal(id, note)
-        setExpanded(cur => (cur && cur.id === id ? note : cur))
-      })
-      .catch(() => {})
+      .then(note => patchItem(id, note))
+      .catch(() => held.fail('Could not start a re-tag'))
   }
 
   // ---- collections (Spaces) ----------------------------------------------

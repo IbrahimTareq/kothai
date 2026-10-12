@@ -11,6 +11,10 @@
 // It hands back its own bar. Unlike capture's, a delete's answer cannot sit on
 // the button that asked: that button went with its card. The bar is always
 // mounted, so the live region exists before it has anything to announce.
+//
+// The same holds for any write whose control is gone by the time it fails —
+// a tag or note saved from a panel since closed — so `fail` says so here too.
+// They had been swallowed, and the screen kept a change the server never took.
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import { API } from '../data/api'
 import type { NoteSource } from '../data/useNotes'
@@ -22,6 +26,13 @@ const UNDO_MS = 6000
 export function useHeldDelete(notes: NoteSource, spaceNotes: MutableRefObject<NoteSource | null>, scope: string) {
   const held = useRef<{ item: UIItem; at: number; spaceAt: number; timer: number } | null>(null)
   const [item, setItem] = useState<UIItem | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const noticeTimer = useRef(0)
+  const fail = (message: string) => {
+    clearTimeout(noticeTimer.current)
+    setNotice(message)
+    noticeTimer.current = window.setTimeout(() => setNotice(null), UNDO_MS)
+  }
 
   const take = () => {
     const h = held.current
@@ -37,7 +48,12 @@ export function useHeldDelete(notes: NoteSource, spaceNotes: MutableRefObject<No
     if (h)
       API.del(h.item.id)
         .then(notes.refreshFacets)
-        .catch(() => {})
+        .catch(() => {
+          // The server still has it, so the board does too.
+          notes.restoreLocal(h.item, h.at)
+          if (h.spaceAt >= 0) spaceNotes.current?.restoreLocal(h.item, h.spaceAt)
+          fail(`Could not delete ${h.item.title || 'that item'}`)
+        })
   }
   useEffect(() => {
     window.addEventListener('pagehide', commit)
@@ -74,15 +90,17 @@ export function useHeldDelete(notes: NoteSource, spaceNotes: MutableRefObject<No
   }
   const bar = (
     <div className="undo-bar" role="status">
-      {item && (
+      {item ? (
         <>
           <span className="undo-bar-text">Deleted {item.title && <b>{item.title}</b>}</span>
           <Button size="xs" onClick={undo}>
             Undo
           </Button>
         </>
+      ) : (
+        notice && <span className="undo-bar-text">{notice}</span>
       )}
     </div>
   )
-  return { remove, bar }
+  return { remove, bar, fail }
 }
