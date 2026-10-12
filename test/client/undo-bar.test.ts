@@ -9,9 +9,13 @@ import { readFileSync } from 'node:fs'
 
 const src = readFileSync(new URL('../../client/app/useItemWrites.tsx', import.meta.url), 'utf8')
 
-test('the Undo button takes focus when the bar appears', () => {
+test('the Undo button takes focus when the bar appears and focus had nowhere to be', () => {
   assert.match(src, /ref=\{undoRef\}/)
   assert.match(src, /undoRef\.current\?\.focus\(\)/)
+  // Only then: on the canvas, Backspace leaves focus where it was, and taking
+  // it to Undo made every next delete start with a click back on the canvas.
+  const effect = src.slice(src.indexOf('useEffect(() => {\n    const lost'), src.indexOf('}, [shown])'))
+  assert.match(effect, /document\.activeElement/)
 })
 
 test('the undo window waits while the bar has the pointer or focus', () => {
@@ -29,6 +33,7 @@ test('removing a tag offers Undo, in the open dialog', () => {
   assert.match(src, /createPortal\(/)
   assert.match(src, /querySelector[^)]*role="dialog"/)
   // Looked for until it is there: one look a frame after opening came too
-  // early, and the bar stayed behind the modal (seen in the browser, 2026-10-12).
-  assert.match(src, /requestAnimationFrame\(look\)/)
+  // early, and the bar stayed behind the modal (seen in the browser, 2026-10-12);
+  // and on a timer, since a hidden tab runs no animation frames.
+  assert.match(src, /setTimeout\(look,/)
 })

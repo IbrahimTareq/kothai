@@ -12,10 +12,10 @@
 //
 // It hands back its own bar. Unlike capture's, a delete's answer cannot sit on
 // the button that asked: that button went with its card. The bar is always
-// mounted, so the live region exists before it has anything to announce. It
-// takes focus when it appears, and its window waits while the pointer or focus
-// is on it: focus had fallen to <body> with the card, and the Undo sat after
-// the whole board in tab order, out of a keyboard's reach in six seconds
+// mounted, so the live region exists before it has anything to announce. When
+// focus fell with the card it takes focus, and its window waits while the
+// pointer or focus is on it: focus had dropped to <body>, and the Undo sat
+// after the whole board in tab order, out of a keyboard's reach in six seconds
 // (test/client/undo-bar). `offer` puts the same Undo on an action already done.
 //
 // The same holds for any write whose control is gone by the time it fails —
@@ -63,25 +63,30 @@ export function useItemWrites(
     timer.current = window.setTimeout(() => expire.current(), UNDO_MS)
   }
   const pause = () => clearTimeout(timer.current)
+  // Only where focus fell to nothing — the card or × that asked is gone. A
+  // canvas keeps its focus through Backspace, and taking it made each next
+  // delete begin with a click back on the canvas.
   useEffect(() => {
-    if (shown) undoRef.current?.focus()
+    const lost = document.activeElement
+    if (shown && (!lost || lost === document.body || lost.getAttribute('role') === 'dialog')) undoRef.current?.focus()
   }, [shown])
-  // Looked for frame by frame: the dialog is portaled in some renders after the
-  // one that opens it, and a single look one frame on found nothing, leaving
-  // the bar behind the modal, hidden and unpressable. Bounded, in case it never comes.
+  // Looked for until it is there: the dialog is portaled in some renders after
+  // the one that opens it, and a single look found nothing, leaving the bar
+  // behind the modal, hidden and unpressable. On a timer, not animation frames,
+  // which a hidden tab never runs. Bounded, in case the dialog never comes.
   const [host, setHost] = useState<Element | null>(null)
   useEffect(() => {
     setHost(null)
     if (!expanded) return
-    let frame = 0
+    let wait = 0
     let tries = 60
     const look = () => {
       const dialog = document.querySelector('[role="dialog"]')
       if (dialog) setHost(dialog)
-      else if (tries--) frame = requestAnimationFrame(look)
+      else if (tries--) wait = window.setTimeout(look, 16)
     }
     look()
-    return () => cancelAnimationFrame(frame)
+    return () => clearTimeout(wait)
   }, [!!expanded])
 
   const [notice, setNotice] = useState<string | null>(null)
