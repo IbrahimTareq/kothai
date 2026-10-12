@@ -163,9 +163,12 @@ export interface CanvasProps {
   onSave: (doc: CanvasDoc) => void
   onExpand: (item: UIItem) => void
   onRemoveItem: (itemId: string) => void
+  onAddItem: (itemId: string) => void
+  /** Puts an Undo for a change already made on the app's undo bar. */
+  onOffer: (text: string, undo: () => void) => void
 }
 
-function CanvasInner({ collectionId, items, doc, onSave, onExpand, onRemoveItem }: CanvasProps) {
+function CanvasInner({ collectionId, items, doc, onSave, onExpand, onRemoveItem, onAddItem, onOffer }: CanvasProps) {
   const [nodes, setNodes] = useState<FlowNode[]>([])
   const [edges, setEdges] = useState<FlowEdge[]>([])
   const { fitView, screenToFlowPosition } = useReactFlow<FlowNode, FlowEdge>()
@@ -308,26 +311,36 @@ function CanvasInner({ collectionId, items, doc, onSave, onExpand, onRemoveItem 
 
   // Backspace/Delete: notes, frames and lines go; a frame's children stay;
   // a selected card is removed from the space (reconcile then drops its node).
+  // It offers Undo: a note exists nowhere but here, and one stray key had
+  // destroyed it for good. Undo puts the cards back in the space, then the
+  // layout, which still has their places in it.
   const onBeforeDelete: OnBeforeDelete<FlowNode, FlowEdge> = useCallback(
     async ({ nodes: del, edges: delEdges }) => {
+      const before = fromFlow(latest.current.nodes, latest.current.edges)
       const groups = new Set(del.filter(n => n.type === 'group').map(n => n.id))
       const explicit = new Set(latest.current.nodes.filter(n => n.selected).map(n => n.id))
       const keep: FlowNode[] = []
+      const cards: string[] = []
       for (const n of del) {
         if (n.type === 'item') {
-          if (explicit.has(n.id)) onRemoveItem(String(n.data.itemId))
+          if (explicit.has(n.id)) cards.push(String(n.data.itemId))
           continue
         }
         if (n.parentId && groups.has(n.parentId) && !explicit.has(n.id)) continue
         keep.push(n)
       }
       const removedIds = new Set(keep.map(n => n.id))
+      for (const id of cards) onRemoveItem(id)
+      onOffer('Deleted from the canvas', () => {
+        for (const id of cards) onAddItem(id)
+        applyDoc(() => before)
+      })
       return {
         nodes: keep,
         edges: delEdges.filter(e => e.selected || removedIds.has(e.source) || removedIds.has(e.target)),
       }
     },
-    [onRemoveItem],
+    [onRemoveItem, onAddItem, onOffer, applyDoc],
   )
 
   // ---- commands ---------------------------------------------------------------
@@ -413,8 +426,11 @@ function CanvasInner({ collectionId, items, doc, onSave, onExpand, onRemoveItem 
           onNote={() => addText(centre())}
           onFrame={addFrame}
           onTidy={() => {
+            // Tidy rewrites every position at once, a whole arrangement one press from gone.
+            const before = fromFlow(latest.current.nodes, latest.current.edges)
             applyDoc(tidy)
             setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 0)
+            onOffer('Tidied the canvas', () => applyDoc(() => before))
           }}
         />
         <div className="cv-canvas" ref={wrapRef} onDoubleClick={onDoubleClick} onKeyDown={onKeyDown}>

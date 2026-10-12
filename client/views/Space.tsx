@@ -32,6 +32,8 @@ interface CollectionViewProps {
   collections: Collection[]
   addToCollection: (cid: string, itemId: string) => void
   removeFromCollection: (cid: string, itemId: string) => void
+  /** The app's undo bar, for a change already made (useItemWrites). */
+  offer: (text: string, undo: () => void) => void
   renameCollection: (id: string, name: string) => void
   describeCollection: (id: string, description: string) => void
   editCollectionTags: (id: string, tags: string[]) => void
@@ -56,6 +58,7 @@ export function CollectionView({
   collections,
   addToCollection,
   removeFromCollection,
+  offer,
   renameCollection,
   describeCollection,
   editCollectionTags,
@@ -320,6 +323,8 @@ export function CollectionView({
             onSave={d => keeps && saveCanvas(collection.id, d)}
             onExpand={onExpand}
             onRemoveItem={id => keeps && handleRemoveFrom(collection.id, id)}
+            onAddItem={id => keeps && addToCollection(collection.id, id)}
+            onOffer={offer}
           />
         ) : (
           // Membership isn't fully loaded yet — mounting Canvas now would have

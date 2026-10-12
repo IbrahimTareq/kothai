@@ -419,6 +419,7 @@ export default function App() {
                 collections,
                 addToCollection,
                 removeFromCollection,
+                offer: writes.offer,
                 renameCollection,
                 describeCollection,
                 editCollectionTags,
