@@ -33,7 +33,7 @@ import { sourceGlyph, isMediaFirst } from '../domain/source'
 import { EMPTY_DOC, TEXT_W, FRAME_W, FRAME_H, reconcile, toFlow, fromFlow, frameAround, tidy } from '../layout/canvas'
 import type { FlowNode, FlowEdge, FlowData } from '../layout/canvas'
 import type { CanvasDoc, UIItem } from '../types'
-import { Button } from '../ui/Button'
+import { CanvasBar } from './CanvasBar'
 
 const SAVE_DELAY = 600
 const uid = () => Math.random().toString(36).slice(2, 10)
@@ -409,28 +409,14 @@ function CanvasInner({ collectionId, items, doc, onSave, onExpand, onRemoveItem 
   return (
     <CanvasCtx.Provider value={ctx}>
       <div className="cv-wrap">
-        <div className="cv-bar">
-          <div className="cv-add">
-            <Button size="xs" tone="ghost" onClick={() => addText(centre())}>
-              + Note
-            </Button>
-            <Button size="xs" tone="ghost" onClick={addFrame}>
-              + Frame
-            </Button>
-          </div>
-          <div className="cv-cmds">
-            <Button
-              size="xs"
-              tone="ghost"
-              onClick={() => {
-                applyDoc(tidy)
-                setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 0)
-              }}
-            >
-              Tidy
-            </Button>
-          </div>
-        </div>
+        <CanvasBar
+          onNote={() => addText(centre())}
+          onFrame={addFrame}
+          onTidy={() => {
+            applyDoc(tidy)
+            setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 0)
+          }}
+        />
         <div className="cv-canvas" ref={wrapRef} onDoubleClick={onDoubleClick} onKeyDown={onKeyDown}>
           <ReactFlow<FlowNode, FlowEdge>
             nodes={nodes}
