@@ -80,6 +80,8 @@
 .chat-row + .chat-row::before{content:"";position:absolute;top:calc(var(--space-2) * -1);
   left:var(--space-12);right:var(--space-12);height:1px;background:var(--line-2)}
 .chat-row:hover{background:var(--panel-2)}
+/* The row's open action (Chats.tsx), over the whole row and under its buttons. */
+.chat-open{position:absolute;inset:0;z-index:var(--z-raised);border-radius:inherit}
 .chat-row>svg{color:var(--ink-dim);flex-shrink:0}
 /* the stacked title + meta column; the actions stay beside it */
 .chat-row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--space-4)}
@@ -293,7 +295,7 @@
 
 /* The delete control is a real button now, so it must shed .card-del's
    absolute placement (card.css pins that to a tile's top-right corner). */
-.core .chat-row .card-del{position:static;width:24px;height:24px;border:0;padding:0;
+.core .chat-row .card-del{position:relative;z-index:var(--z-content);width:24px;height:24px;border:0;padding:0;
   background:none;color:var(--ink-faint);opacity:0;display:grid;place-items:center;
   border-radius:var(--radius);cursor:pointer;transition:var(--dur-fast)}
 .core .chat-row:hover .card-del,.core .chat-row .card-del:focus-visible{opacity:1}

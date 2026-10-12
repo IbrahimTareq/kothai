@@ -187,6 +187,8 @@
 .settings-row[data-drag] .settings-row-head { pointer-events: none; }
 .import-pick { position: relative; }
 .import-pick[aria-disabled="true"] { cursor: wait; opacity: .6; }
+/* The input takes the Tab and is invisible, so its label draws the ring. */
+.import-pick:has(input:focus-visible) { outline: var(--focus-ring); outline-offset: 2px; }
 .import-pick input[type="file"] { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
 /* The theme switch is a phone affordance only — above the tab-bar breakpoint
    the rail carries its own, and two controls for one setting is one too many.

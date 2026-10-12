@@ -15,6 +15,8 @@
 // The same holds for any write whose control is gone by the time it fails —
 // a tag or note saved from a panel since closed — so `fail` says so here too.
 // They had been swallowed, and the screen kept a change the server never took.
+// `say` is the unseen half: capture's "Added" is shown on its own button, but
+// a fade on a button is never announced (test/client/accessible-names).
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import { API } from '../data/api'
 import type { NoteSource } from '../data/useNotes'
@@ -27,6 +29,12 @@ export function useHeldDelete(notes: NoteSource, spaceNotes: MutableRefObject<No
   const held = useRef<{ item: UIItem; at: number; spaceAt: number; timer: number } | null>(null)
   const [item, setItem] = useState<UIItem | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [spoken, setSpoken] = useState('')
+  // Cleared first, so saying the same words twice is still a change to announce.
+  const say = (words: string) => {
+    setSpoken('')
+    requestAnimationFrame(() => setSpoken(words))
+  }
   const noticeTimer = useRef(0)
   const fail = (message: string) => {
     clearTimeout(noticeTimer.current)
@@ -89,18 +97,23 @@ export function useHeldDelete(notes: NoteSource, spaceNotes: MutableRefObject<No
         .catch(() => {})
   }
   const bar = (
-    <div className="undo-bar" role="status">
-      {item ? (
-        <>
-          <span className="undo-bar-text">Deleted {item.title && <b>{item.title}</b>}</span>
-          <Button size="xs" onClick={undo}>
-            Undo
-          </Button>
-        </>
-      ) : (
-        notice && <span className="undo-bar-text">{notice}</span>
-      )}
-    </div>
+    <>
+      <div className="undo-bar" role="status">
+        {item ? (
+          <>
+            <span className="undo-bar-text">Deleted {item.title && <b>{item.title}</b>}</span>
+            <Button size="xs" onClick={undo}>
+              Undo
+            </Button>
+          </>
+        ) : (
+          notice && <span className="undo-bar-text">{notice}</span>
+        )}
+      </div>
+      <span className="sr-only" role="status">
+        {spoken}
+      </span>
+    </>
   )
-  return { remove, bar, fail }
+  return { remove, bar, fail, say }
 }

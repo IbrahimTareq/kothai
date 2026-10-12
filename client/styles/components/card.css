@@ -5,7 +5,11 @@
 /* chromeless by default — media bleeds edge to edge, cards float on the bg */
 .item-card{position:relative;background:transparent;border:0;border-radius:var(--radius-lg);
   padding:0;display:flex;flex-direction:column;gap:var(--space-8);transition:transform var(--dur-fast)}
-.item-card:hover,.item-card:focus-visible{transform:translateY(-3px)}
+.item-card:hover,.item-card:has(> .card-open:focus-visible){transform:translateY(-3px)}
+/* The card's open action (Cards.tsx): a link over the whole card, under the
+   corner actions (--z-content) so they stay pressable. Its focus ring is the
+   card's outline, so it takes the card's corners. */
+.card-open{position:absolute;inset:0;z-index:var(--z-raised);border-radius:inherit}
 .card-cap{display:flex;flex-direction:column;gap:var(--space-4);padding:0 var(--space-2)}
 .card-del{position:absolute;top:8px;right:8px;z-index:var(--z-content);width:26px;height:26px;
   display:grid;place-items:center;border:0;border-radius:var(--radius);
@@ -46,13 +50,13 @@
    the source is named by its mark and its label, not by a colour. */
 .item-card.linktile{background:var(--panel);border:1px solid var(--line);
   padding:var(--space-14);overflow:hidden}
-.item-card.linktile:hover,.item-card.linktile:focus-visible{background:var(--panel-2);
+.item-card.linktile:hover,.item-card.linktile:has(> .card-open:focus-visible){background:var(--panel-2);
   border-color:var(--line-hover)}
 /* light mode: --line is a dark hairline against the pale bg — see the note/code
    rule below, which drops it for the same reason. */
 :root[data-theme="light"] .item-card.linktile{border-color:transparent}
 :root[data-theme="light"] .item-card.linktile:hover,
-:root[data-theme="light"] .item-card.linktile:focus-visible{border-color:rgba(0,0,0,.14)}  /* token-lint-ignore: explicit light-theme focus ring for link tiles */
+:root[data-theme="light"] .item-card.linktile:has(> .card-open:focus-visible){border-color:rgba(0,0,0,.14)}  /* token-lint-ignore: explicit light-theme focus ring for link tiles */
 .lt-body{display:flex;flex-direction:column;gap:var(--space-20);min-height:126px}
 .lt-mark{color:var(--ink-mute);display:block;line-height:0}  /* token-lint-ignore: collapses the line box around an inline glyph — a layout trick, not a type rhythm */
 /* bottom-anchored, so tiles with one-line and four-line titles still line their

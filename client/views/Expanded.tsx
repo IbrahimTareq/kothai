@@ -422,7 +422,7 @@ export function ExpandedView({
                   + Add tag
                 </Chip>
                 {tags.map(t => (
-                  <Chip compact removable key={t} title="Remove tag" onClick={() => removeTag(t)}>
+                  <Chip compact removable key={t} aria-label={`Remove tag ${t}`} onClick={() => removeTag(t)}>
                     {t}
                   </Chip>
                 ))}

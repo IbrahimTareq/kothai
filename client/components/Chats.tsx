@@ -6,6 +6,7 @@ import { Icon } from './icons'
 import { relTime } from '../util/format'
 import type { ChatSummary } from '../types'
 import { Confirm } from '../ui/Confirm'
+import { chatPath } from '../app/router'
 
 interface RowProps {
   chat: ChatSummary
@@ -91,18 +92,21 @@ export function ChatRow({ chat, active, open, rename, remove }: RowProps) {
   }
 
   return (
-    <div
-      className={`chat-row${active ? ' active' : ''}`}
-      role="button"
-      tabIndex={0}
-      onClick={() => open(chat)}
-      onKeyDown={e => {
-        if (e.key === 'Enter' || e.key === ' ') {
+    <div className={`chat-row${active ? ' active' : ''}`}>
+      {/* Opens through a link under Rename and Delete, as a board card does
+          (Cards.tsx): a button role holding buttons nests controls. */}
+      <a
+        className="chat-open"
+        href={chatPath(chat.id)}
+        aria-current={active ? 'page' : undefined}
+        onClick={e => {
+          if (e.metaKey || e.ctrlKey || e.shiftKey) return
           e.preventDefault()
           open(chat)
-        }
-      }}
-    >
+        }}
+      >
+        <span className="sr-only">{chat.title}</span>
+      </a>
       {/* Title over meta rather than beside it. On a phone the single-line
           version gave the title 83px of a 334px row — the rest went to an
           icon, the meta and two buttons — and these titles are model-written,
@@ -121,22 +125,18 @@ export function ChatRow({ chat, active, open, rename, remove }: RowProps) {
         className="card-del"
         aria-label={`Rename chat: ${chat.title}`}
         title="Rename"
-        onClick={e => {
-          e.stopPropagation()
+        onClick={() => {
           setDraft(chat.title)
           setMode('rename')
         }}
       >
-        <Icon name="retag" size={13} />
+        <Icon name="edit" size={13} />
       </button>
       <button
         className="card-del"
         aria-label={`Delete chat: ${chat.title}`}
         title="Delete"
-        onClick={e => {
-          e.stopPropagation()
-          setMode('confirm')
-        }}
+        onClick={() => setMode('confirm')}
       >
         <Icon name="trash" size={13} />
       </button>

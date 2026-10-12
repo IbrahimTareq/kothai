@@ -111,7 +111,10 @@
   /* The search field needs the row more than the total or the title does:
      every chip under it already carries its own count, and the tab bar's
      active pill already says this is Everything. The search takes the row. */
-  .gallery-view .page-title,.gallery-view .page-meta{display:none}
+  .gallery-view .page-meta{display:none}
+  /* Out of sight, not out of the tree: display:none left the page without a
+     single heading for a screen reader to land on. */
+  .gallery-view .page-title{position:absolute;clip-path:inset(50%);white-space:nowrap}
   .gallery-view .page-actions{flex:1;margin-left:0}
   /* clears the tab bar AND the FAB parked above it, so the last row of cards
      can still be read and tapped */

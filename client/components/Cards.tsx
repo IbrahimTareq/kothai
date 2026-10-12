@@ -9,6 +9,7 @@ import type { Collection, UIItem } from '../types'
 import { Menu } from '../ui/Menu'
 import { useDemo } from './Demo'
 import { CardInner } from './CardBody'
+import { routeToPath } from '../app/router'
 
 export function ItemCard({
   item,
@@ -64,15 +65,7 @@ export function ItemCard({
             title="Add to space"
             empty="No spaces yet"
             trigger={
-              // The card's own click and Enter open the expanded view, and
-              // Radix opens this menu on Enter too, so both must stop here or
-              // the keyboard would open the menu and the item at once.
-              <button
-                className="card-act add"
-                title="Add to space"
-                onClick={e => e.stopPropagation()}
-                onKeyDown={e => e.stopPropagation()}
-              >
+              <button className="card-act add" title="Add to space" aria-label="Add to space">
                 <Icon name="plus" size={14} />
               </button>
             }
@@ -93,15 +86,7 @@ export function ItemCard({
           />
         )}
         {corner && (
-          <button
-            className="card-act del"
-            title={corner.label}
-            aria-label={corner.label}
-            onClick={e => {
-              e.stopPropagation()
-              corner.run()
-            }}
-          >
+          <button className="card-act del" title={corner.label} aria-label={corner.label} onClick={corner.run}>
             <Icon name={corner.icon} size={13} />
           </button>
         )}
@@ -109,23 +94,24 @@ export function ItemCard({
     </Fragment>
   )
   return (
-    <article
-      className={`item-card type-${item.type}${headline ? ' linktile' : ''}${openable ? ' openable' : ''}`}
-      tabIndex={0}
-      role={openable ? 'button' : undefined}
-      title={item.url ?? undefined}
-      onClick={openable ? () => onExpand!(item) : undefined}
-      onKeyDown={
-        openable
-          ? e => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                onExpand!(item)
-              }
-            }
-          : undefined
-      }
-    >
+    <article className={`item-card type-${item.type}${headline ? ' linktile' : ''}${openable ? ' openable' : ''}`}>
+      {/* The card opens through a link stretched under its corner actions, not
+          by being a button itself: a button role holding real buttons nests
+          controls, which assistive tech flattens, and the card was named by its
+          raw URL. A link to the item's own address also opens in a new tab. */}
+      {openable && (
+        <a
+          className="card-open"
+          href={routeToPath('all', item.id)}
+          onClick={e => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey) return
+            e.preventDefault()
+            onExpand!(item)
+          }}
+        >
+          <span className="sr-only">{item.title || item.host || 'Open item'}</span>
+        </a>
+      )}
       <div className="card-content">
         <CardInner item={item} overlay={overlay} />
       </div>

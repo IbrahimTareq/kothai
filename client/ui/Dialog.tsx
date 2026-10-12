@@ -54,7 +54,7 @@ export function Dialog({
               opener.current?.focus()
             }}
           >
-            <RadixDialog.Title className="dialog-title">{title}</RadixDialog.Title>
+            <RadixDialog.Title className="sr-only">{title}</RadixDialog.Title>
             {children}
           </RadixDialog.Content>
         </RadixDialog.Overlay>

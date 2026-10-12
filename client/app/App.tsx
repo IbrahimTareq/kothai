@@ -159,6 +159,7 @@ export default function App() {
   const flashCaptured = () => {
     clearTimeout(capturedTimer.current)
     setCaptured(true)
+    held.say('Added')
     capturedTimer.current = window.setTimeout(() => setCaptured(false), 1900)
   }
   useEffect(() => () => clearTimeout(capturedTimer.current), [])
@@ -488,7 +489,7 @@ export default function App() {
           click happened here, so this is where the answer belongs. Both icon
           and label are rendered at once and cross-faded so the pill never
           resizes mid-transition; `saved` drives the whole sequence. */}
-      <button className={`fab${captured ? ' saved' : ''}`} onClick={() => setCaptureOpen(true)}>
+      <button className={`fab${captured ? ' saved' : ''}`} aria-label="Capture" onClick={() => setCaptureOpen(true)}>
         <span className="fab-ico">
           <Icon name="plus" size={20} stroke={2} />
           <Icon name="check" size={20} stroke={2.2} />
