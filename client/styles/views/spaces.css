@@ -45,7 +45,7 @@
 /* The description, under the name: what the space is for. Click it to edit,
    as the name is. Pre-line keeps the line breaks Shift+Enter put in. */
 .coll-desc { margin: 0; max-width: 72ch; font-size: var(--text-sm); line-height: var(--leading-normal); color: var(--ink-dim); white-space: pre-line; cursor: pointer; }
-.coll-desc-add { align-self: flex-start; color: var(--ink-faint); }
+.coll-desc-add { align-self: flex-start; color: var(--ink-mute); }
 .coll-desc-input { width: 100%; max-width: 72ch; }
 .coll-rule { flex: 1; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-6); }
 /* Scrolled rather than wrapped on phones (see foundation/responsive.css); the
@@ -83,7 +83,7 @@
 .exp-colls { display: flex; flex-direction: column; gap: var(--space-6); }
 .exp-coll { display: flex; align-items: center; gap: var(--space-8); background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-dim); border-radius: var(--radius-md); padding: var(--space-8) var(--space-10); font-size:var(--text-sm); text-align: left; }
 .exp-coll-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.exp-coll-x { display: flex; padding: 0; border: 0; background: transparent; color: var(--ink-faint); cursor: pointer; transition: var(--dur-fast); }
+.exp-coll-x { display: flex; padding: 0; border: 0; background: transparent; color: var(--ink-mute); cursor: pointer; transition: var(--dur-fast); }
 .exp-coll-x:hover { color: var(--danger); }
 
 /* add button for the spaces this item is not in yet. Its <Menu> is portaled,

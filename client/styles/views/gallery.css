@@ -28,7 +28,7 @@
 .gal-filters.fade-l.fade-r{
   -webkit-mask-image:linear-gradient(to right,transparent,#000 var(--space-32),#000 calc(100% - var(--space-32)),transparent);  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
   mask-image:linear-gradient(to right,transparent,#000 var(--space-32),#000 calc(100% - var(--space-32)),transparent)}  /* token-lint-ignore: mask stop, an alpha ramp rather than a themed colour */
-.fc-count{font-size:var(--text-2xs);font-variant-numeric:tabular-nums;color:var(--ink-faint)}
+.fc-count{font-size:var(--text-2xs);font-variant-numeric:tabular-nums;color:var(--ink-mute)}
 .chip:hover .fc-count{color:var(--ink-mute)}
 .chip.on .fc-count{color:var(--on-accent);opacity:.55}
 .fc-dot{width:7px;height:7px;border-radius:var(--radius-circle);flex-shrink:0}
@@ -42,7 +42,7 @@
 .search-box.focus{border-bottom-color:var(--line-focus);color:var(--ink)}
 .search-box input{flex:1;width:100%;background:transparent;border:0;outline:none;color:var(--ink);  /* token-lint-ignore: .search-box.focus brightens the underline */
   font-size:var(--text-sm)}
-.search-box input::placeholder{color:var(--ink-faint)}
+.search-box input::placeholder{color:var(--ink-mute)}
 .gal-scroll{flex:1;overflow-y:auto;padding:var(--under-head) var(--space-28) var(--space-40)}
 /* The Unavailable chip's bar: in the column's flow between the header and the
    board, never floating over cards. */

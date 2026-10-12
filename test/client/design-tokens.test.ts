@@ -37,6 +37,13 @@ const BODY_TEXT: [string, string][] = [
   ['--ink', '--panel'],
   ['--ink-dim', '--bg'],
   ['--ink-dim', '--panel'],
+  // Labels, counts, dates and placeholders are --ink-mute, and people read
+  // them. It had a 3:1 floor, as "secondary copy", while carrying all of that
+  // at 3.77:1 dark and 3.16:1 light (technical audit, 2026-10-11). Placeholders
+  // sit in fields, on --panel-3.
+  ['--ink-mute', '--bg'],
+  ['--ink-mute', '--panel'],
+  ['--ink-mute', '--panel-3'],
   ['--danger', '--bg'],
   ['--danger', '--panel'],
   ['--warn', '--bg'],
@@ -53,15 +60,10 @@ for (const [themeName, theme] of THEMES) {
     }
   })
 
-  // --ink-mute is secondary copy, --ink-faint is decorative (micro-labels,
-  // dividers, idle glyphs). Neither is for sentences. These floors stop them
-  // drifting further down rather than claiming they pass AA for body text.
+  // --ink-faint is decorative only: disabled states, borders, and a glyph whose
+  // control is named some other way. No text people need to read. This floor
+  // stops it drifting further down rather than claiming it passes AA.
   test(`${themeName}: de-emphasised ink stays above its floor`, () => {
-    const mute = pairContrast('--ink-mute', '--bg', theme)!
-    assert.ok(
-      mute >= AA_LARGE,
-      `--ink-mute is ${mute.toFixed(2)}:1 in ${themeName}, below ${AA_LARGE}:1 for large text/UI`,
-    )
     const faint = pairContrast('--ink-faint', '--bg', theme)!
     assert.ok(
       faint >= 2.5,

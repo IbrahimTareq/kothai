@@ -180,7 +180,7 @@
 .tile-title{font-size:var(--text-xs);line-height:var(--leading-snug);color:var(--ink);
   letter-spacing:var(--tracking-tight);
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.tile-meta{font-size:var(--text-2xs);color:var(--ink-faint);
+.tile-meta{font-size:var(--text-2xs);color:var(--ink-mute);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ── menu and popover ─────────────────────────────────────────────────────
@@ -250,7 +250,7 @@
   min-height:max(var(--control-lg),var(--control-md))}
 .page-title{min-width:0;margin:0;font-size:var(--text-xl);line-height:var(--leading-tight);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.page-meta{flex:none;font-size:var(--text-xs);color:var(--ink-faint);white-space:nowrap}
+.page-meta{flex:none;font-size:var(--text-xs);color:var(--ink-mute);white-space:nowrap}
 .page-actions{flex:none;margin-left:auto;display:flex;align-items:center;gap:var(--space-8)}
 .page-toolbar{display:flex;align-items:center;gap:var(--space-16);min-height:var(--control-md)}
 .page-filters{flex:1;min-width:0;display:flex;align-items:center}
@@ -258,7 +258,7 @@
 /* The trail above a nested page's title: small print that reads as where you
    are, not as more actions, so its crumbs are text and take no box. */
 .page-trail{display:flex;align-items:center;gap:var(--space-6);min-width:0;overflow:hidden;
-  font-size:var(--text-xs);color:var(--ink-faint);white-space:nowrap}
+  font-size:var(--text-xs);color:var(--ink-mute);white-space:nowrap}
 .page-trail button{all:unset;cursor:pointer;overflow:hidden;text-overflow:ellipsis}
 .page-trail button:hover,.page-trail button:focus-visible{color:var(--ink)}
 /* The header's bottom edge, drawn by the scroller under it. With no rule and
@@ -284,7 +284,7 @@
   border:1px solid var(--line);border-radius:var(--radius-md);
   outline:none;  /* token-lint-ignore: focus is the border brightening to --line-focus below. A field matches :focus-visible on a click too, since it is typed into, so the ring would draw on every click */
   color:var(--ink);font-size:var(--text-sm);transition:border-color var(--dur-fast)}
-.field::placeholder{color:var(--ink-faint)}
+.field::placeholder{color:var(--ink-mute)}
 .field:focus{border-color:var(--line-focus)}
 .field:disabled{opacity:.5}
 .field--compact{min-height:var(--control-sm);padding:var(--space-6) var(--space-10);font-size:var(--text-xs)}

@@ -116,10 +116,14 @@
   --panel-2:rgba(255,255,255,.055);
   --panel-3:rgba(255,255,255,.09);
 
-  /* ink = white, hierarchy via opacity */
+  /* ink = white, hierarchy via opacity. --ink-mute is the quietest ink anyone
+     reads — labels, counts, dates, placeholders — so it clears AA on the page
+     and in a field (test/client/design-tokens). At .40 it was 3.77:1 and carried
+     all of those (technical audit, 2026-10-11). --ink-faint is never text now:
+     disabled states, borders, and glyphs whose control is named another way. */
   --ink:#fff;
   --ink-dim:rgba(255,255,255,.60);
-  --ink-mute:rgba(255,255,255,.40);
+  --ink-mute:rgba(255,255,255,.48);
   --ink-faint:rgba(255,255,255,.32);
 
   /* hairlines. --line-hover/-focus were previously written inline as
@@ -288,8 +292,10 @@
   --panel-3:rgba(0,0,0,.10);
 
   --ink:#0a0a0a;
-  --ink-dim:rgba(10,10,10,.62);
-  --ink-mute:rgba(10,10,10,.45);
+  /* Light needs .58 for --ink-mute to clear AA in a field, which left it a
+     hair under --ink-dim's .62; dim moved up to keep the ladder's step. */
+  --ink-dim:rgba(10,10,10,.70);
+  --ink-mute:rgba(10,10,10,.58);
   --ink-faint:rgba(10,10,10,.38);
 
   --line:rgba(0,0,0,.12);

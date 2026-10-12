@@ -54,6 +54,7 @@
 .exp-reddit-head{display:flex;justify-content:center;padding:var(--space-36);background:#ff4500;color:#fff}  /* token-lint-ignore: Reddit brand orange — a third-party brand colour, not ours */
 .exp-reddit-body{display:flex;flex-direction:column;gap:var(--space-18);padding:var(--space-28) var(--space-36) var(--space-32)}
 .exp-reddit-tag{color:#ff4500;font-weight:var(--fw-bold);font-size:var(--text-md)}  /* token-lint-ignore: Reddit brand orange — a third-party brand colour, not ours */
+:root[data-theme="light"] .exp-reddit-tag{color:var(--ink)}  /* the orange is 3.44:1 on white; the header still carries it */
 .exp-reddit-text{font-size:var(--text-xl);line-height:var(--leading-snug);color:var(--ink);letter-spacing:var(--tracking-tight)}
 
 /* vertical media / reel */
@@ -114,7 +115,7 @@
 .exp-title{margin:0;font-size:var(--text-xl);font-weight:var(--fw-heading);line-height:var(--leading-tight);
   letter-spacing:var(--tracking-tighter);color:var(--ink)}
 .exp-meta{margin-top:var(--space-10);display:flex;align-items:center;gap:var(--space-10);flex-wrap:wrap;
-  font-size:var(--text-xs);color:var(--ink-faint)}
+  font-size:var(--text-xs);color:var(--ink-mute)}
 .exp-src{display:inline-flex;align-items:center;gap:var(--space-6);color:var(--ink-mute)}
 /* the source is the way out to the original — the sidebar has no separate CTA */
 a.exp-src{text-decoration:none;transition:var(--dur-fast)}

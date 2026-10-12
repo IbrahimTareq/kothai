@@ -39,7 +39,7 @@
   color:var(--ink);font-family:var(--font-sans);font-size:var(--text-md);
   letter-spacing:var(--tracking-tight);line-height:var(--leading-normal);
   max-height:200px;padding:var(--space-6) 0}
-.input-shell textarea::placeholder{color:var(--ink-faint)}
+.input-shell textarea::placeholder{color:var(--ink-mute)}
 .detect-chip{display:flex;align-items:center;gap:var(--space-6);
   font-size:var(--text-xs);color:var(--ink);
   background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);
@@ -171,7 +171,7 @@
 .cited-summary{font-size:var(--text-sm);line-height:var(--leading-snug);overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 .cited-meta{font-size:var(--text-2xs);
-  color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  color:var(--ink-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cited-go{color:var(--ink-faint);flex-shrink:0}
 .cited:hover .cited-go{color:var(--ink)}
 
@@ -252,19 +252,19 @@
 .core.has-thread .thread-wrap{position:relative;flex:1;min-height:0;display:flex;width:100%}
 
 .core .msg-user-row{display:flex;flex-direction:column;align-items:flex-end;gap:var(--space-6)}
-.core .msg-time{font-size:var(--text-2xs);font-variant-numeric:tabular-nums;color:var(--ink-faint)}
+.core .msg-time{font-size:var(--text-2xs);font-variant-numeric:tabular-nums;color:var(--ink-mute)}
 
 /* Footer under a settled answer. It keeps its height whether or not the copy
    button is showing, so revealing it on hover never nudges the thread. */
 .core .msg-foot{display:flex;align-items:center;gap:var(--space-12);margin-top:var(--space-12);min-height:20px}
 .core .msg-copy{display:flex;align-items:center;gap:var(--space-6);border:0;background:none;padding:0;
-  cursor:pointer;font-size:var(--text-xs);letter-spacing:var(--tracking-tight);color:var(--ink-faint);
+  cursor:pointer;font-size:var(--text-xs);letter-spacing:var(--tracking-tight);color:var(--ink-mute);
   opacity:0;transition:opacity var(--dur-fast), color var(--dur-fast)}
 .core .msg-ai:hover .msg-copy,.core .msg-copy:focus-visible{opacity:1}
 .core .msg-copy:hover{color:var(--ink)}
 .core .msg-copy.done{opacity:1;color:var(--ok)}
 .core .msg-copy.failed{opacity:1;color:var(--danger)}
-.core .msg-stopped{display:flex;align-items:center;gap:var(--space-12);color:var(--ink-faint);
+.core .msg-stopped{display:flex;align-items:center;gap:var(--space-12);color:var(--ink-mute);
   font-size:var(--text-xs);letter-spacing:var(--tracking-tight)}
 .core .msg-stopped-tag{font-weight:var(--fw-medium);color:var(--ink-mute)}
 
@@ -296,7 +296,7 @@
 /* The delete control is a real button now, so it must shed .card-del's
    absolute placement (card.css pins that to a tile's top-right corner). */
 .core .chat-row .card-del{position:relative;z-index:var(--z-content);width:24px;height:24px;border:0;padding:0;
-  background:none;color:var(--ink-faint);opacity:0;display:grid;place-items:center;
+  background:none;color:var(--ink-mute);opacity:0;display:grid;place-items:center;
   border-radius:var(--radius);cursor:pointer;transition:var(--dur-fast)}
 .core .chat-row:hover .card-del,.core .chat-row .card-del:focus-visible{opacity:1}
 .core .chat-row .card-del:hover{color:var(--danger);background:var(--panel-2)}
