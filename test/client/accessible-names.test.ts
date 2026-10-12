@@ -66,3 +66,14 @@ test('a chat row opens through a link, beside its rename and delete', () => {
   assert.doesNotMatch(chats, /role="button"/)
   assert.match(chats, /<a\s+className="chat-open"[^>]*href=\{chatPath\(/)
 })
+
+// Once a space had a description it could only be edited by a click on the
+// paragraph: nothing a keyboard could reach (WCAG 2.1.1; technical audit,
+// 2026-10-12). It is a tab stop that opens the editor on Enter or Space.
+test("a space's description can be edited from the keyboard", () => {
+  const desc = src('components/SpaceDescription.tsx')
+  const p = desc.match(/<p\s+className="coll-desc"[\s\S]*?<\/p>/)?.[0] ?? ''
+  assert.match(p, /tabIndex=\{0\}/)
+  assert.match(p, /role="button"/)
+  assert.match(p, /onKeyDown=/)
+})

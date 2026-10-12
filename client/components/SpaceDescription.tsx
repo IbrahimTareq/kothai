@@ -1,5 +1,7 @@
 // A space's description, under its name: what the space is for. Click it to
 // edit, as the name is. Its own module because Space.tsx sits at its line budget.
+// The paragraph is a tab stop that opens the editor on Enter or Space: it was
+// click-only, so a keyboard could add a description but never change one.
 import { useState } from 'react'
 import { Button } from '../ui/Button'
 import { Textarea } from '../ui/Input'
@@ -42,7 +44,19 @@ export function SpaceDescription({ text = '', onSave }: { text?: string; onSave:
     )
   }
   return text ? (
-    <p className="coll-desc" onClick={start}>
+    <p
+      className="coll-desc"
+      tabIndex={0}
+      role="button"
+      aria-label={`Edit description: ${text}`}
+      onClick={start}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          start()
+        }
+      }}
+    >
       {text}
     </p>
   ) : (
