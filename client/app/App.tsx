@@ -6,7 +6,7 @@ import { useNotes, type NoteSource } from '../data/useNotes'
 import { boardQuery } from '../domain/boardQuery'
 import { useCollections } from '../data/useCollections'
 import { useStatusPoll } from '../data/useStatusPoll'
-import { useHeldDelete } from './useHeldDelete'
+import { useItemWrites } from './useItemWrites'
 import { useChat } from '../data/useChat'
 import { isPlaceholder } from '../data/pager'
 import { ExpandedView } from '../views/Expanded'
@@ -97,7 +97,8 @@ export default function App() {
     Boolean(SOURCE_BY_KEY[k]),
   )
   const notes = useNotes(boardQ, galleryActive)
-  const held = useHeldDelete(notes, spaceNotesRef, nav + JSON.stringify(boardQ))
+  const writes = useItemWrites(notes, spaceNotesRef, nav + JSON.stringify(boardQ), expanded, setExpanded)
+  const { remove: deleteItem, update: updateItem, retag: retagItem, patch: patchItem } = writes
   // Keep the open detail modal in sync with background completions (e.g.
   // Re-tag) that land via the pager's delta poll: ExpandedView reads from
   // this standalone `expanded` snapshot, not live pager data, so without
@@ -120,11 +121,6 @@ export default function App() {
     const id = window.setInterval(sync, 2000)
     return () => clearInterval(id)
   }, [expanded, notes.slots])
-  const patchItem = (id: string, p: Partial<UIItem>) => {
-    notes.patchLocal(id, p)
-    spaceNotesRef.current?.patchLocal(id, p)
-    setExpanded(cur => (cur && cur.id === id ? { ...cur, ...p } : cur))
-  }
   // Carousel slides are fetched the first time an Instagram post is actually
   // opened — never swept in bulk (see queueIgSlides on the server). The single
   // thumbnail keeps showing until they land, so the view never blanks; a post
@@ -159,7 +155,7 @@ export default function App() {
   const flashCaptured = () => {
     clearTimeout(capturedTimer.current)
     setCaptured(true)
-    held.say('Added')
+    writes.say('Added')
     capturedTimer.current = window.setTimeout(() => setCaptured(false), 1900)
   }
   useEffect(() => () => clearTimeout(capturedTimer.current), [])
@@ -178,25 +174,6 @@ export default function App() {
     } catch (e) {
       return (e as Error).message || 'Could not save that.'
     }
-  }
-
-  const deleteItem = held.remove
-  // Optimistic tag / note edits; a failed save is put back and said (test/client/silent-writes).
-  const updateItem = (id: string, patch: { tags?: string[]; mindNote?: string }) => {
-    const before = { tags: expanded?.tags, mindNote: expanded?.mindNote } // only the open item edits
-    patchItem(id, patch)
-    API.update(id, patch).catch(() => {
-      patchItem(id, before)
-      held.fail('Could not save that change')
-    })
-  }
-  // force a fresh classify/embed pass for one item, discarding its current
-  // tags; the server flips `pending` immediately so the existing pending-item
-  // UI (already used for fresh saves) shows progress with no new loading state
-  const retagItem = (id: string) => {
-    API.retag(id)
-      .then(note => patchItem(id, note))
-      .catch(() => held.fail('Could not start a re-tag'))
   }
 
   // ---- collections (Spaces) ----------------------------------------------
@@ -500,7 +477,7 @@ export default function App() {
         </span>
       </button>
 
-      {held.bar}
+      {writes.bar}
 
       {expanded && (
         <ExpandedView

@@ -1,6 +1,6 @@
 {
   "client/app/App.tsx": {
-    "lines": 519,
+    "lines": 511,
     "exports": 1
   },
   "client/components/Canvas.tsx": {

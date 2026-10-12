@@ -4,7 +4,7 @@
 #root{position:relative;z-index:var(--z-raised);height:100%}
 .app{position:relative;height:100%}
 
-/* The Undo after a delete (app/useHeldDelete.tsx): bottom centre, level with
+/* The Undo after a delete (app/useItemWrites.tsx): bottom centre, level with
    the capture button; over the tab bar on phones (responsive.css). */
 .undo-bar{position:absolute;left:50%;bottom:var(--space-28);transform:translateX(-50%);z-index:var(--z-float);
   display:flex;align-items:center;gap:var(--space-12);max-width:min(48ch,calc(100% - var(--space-32)));

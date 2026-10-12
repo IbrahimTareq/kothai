@@ -15,8 +15,8 @@ const src = (path: string) => readFileSync(new URL(`../../client/${path}`, impor
 test('the capture button has a fixed name, and announces "Added" in a live region', () => {
   const app = src('app/App.tsx')
   assert.match(app, /<button className=\{`fab[^>]*aria-label="Capture"/)
-  assert.match(app, /held\.say\('Added'\)/)
-  assert.match(src('app/useHeldDelete.tsx'), /className="sr-only" role="status">\s*\{spoken\}/)
+  assert.match(app, /writes\.say\('Added'\)/)
+  assert.match(src('app/useItemWrites.tsx'), /className="sr-only" role="status">\s*\{spoken\}/)
 })
 
 test("on a phone Everything's title is hidden from sight, not from the accessibility tree", () => {

@@ -282,7 +282,7 @@ export const API = {
     return mapNote(d.note)
   },
   async del(id: string): Promise<void> {
-    // keepalive: a delete held for undo is sent as the page closes (useHeldDelete).
+    // keepalive: a delete held for undo is sent as the page closes (useItemWrites).
     await request(`/api/notes/${id}`, { method: 'DELETE', keepalive: true })
   },
   // patch user-editable fields (tags + free-form mind note) of a saved item
