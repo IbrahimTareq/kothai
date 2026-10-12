@@ -127,11 +127,13 @@
   --ink-faint:rgba(255,255,255,.32);
 
   /* hairlines. --line-hover/-focus were previously written inline as
-     rgba(255,255,255,.22)/.28 at ten sites, which stayed white in light mode. */
+     rgba(255,255,255,.22)/.28 at ten sites, which stayed white in light mode.
+     --line-focus is a field's whole focus cue, so it clears 3:1 against the
+     page and inside a field; at .28 it was 2.4:1 (test/client/design-tokens). */
   --line:rgba(255,255,255,.10);
   --line-2:rgba(255,255,255,.06);
   --line-hover:rgba(255,255,255,.22);
-  --line-focus:rgba(255,255,255,.28);
+  --line-focus:rgba(255,255,255,.40);
 
   /* Popover surface. Previously three of the four popovers used --panel (~3%
      opacity), so they rendered near-transparent and unreadable over content
@@ -301,7 +303,7 @@
   --line:rgba(0,0,0,.12);
   --line-2:rgba(0,0,0,.07);
   --line-hover:rgba(0,0,0,.20);
-  --line-focus:rgba(0,0,0,.26);
+  --line-focus:rgba(0,0,0,.50);
 
   --surface-modal:#ffffff;
   --surface-modal-focus:#ffffff;

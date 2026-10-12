@@ -7,9 +7,10 @@
   padding:0;display:flex;flex-direction:column;gap:var(--space-8);transition:transform var(--dur-fast)}
 .item-card:hover,.item-card:has(> .card-open:focus-visible){transform:translateY(-3px)}
 /* The card's open action (Cards.tsx): a link over the whole card, under the
-   corner actions (--z-content) so they stay pressable. Its focus ring is the
-   card's outline, so it takes the card's corners. */
+   corner actions (--z-content) so they stay pressable. */
 .card-open{position:absolute;inset:0;z-index:var(--z-raised);border-radius:inherit}
+.item-card:has(> .card-open:focus-visible){outline:var(--focus-ring);outline-offset:2px}
+.card-open:focus-visible{outline:none}  /* token-lint-ignore: the card draws the ring, above; a link tile's overflow:hidden clipped the link's own */
 .card-cap{display:flex;flex-direction:column;gap:var(--space-4);padding:0 var(--space-2)}
 .card-del{position:absolute;top:8px;right:8px;z-index:var(--z-content);width:26px;height:26px;
   display:grid;place-items:center;border:0;border-radius:var(--radius);

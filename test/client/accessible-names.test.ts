@@ -53,6 +53,14 @@ test("a file picker shows its hidden input's keyboard focus", () => {
   )
 })
 
+// The link fills the card, so a ring drawn outside it lands outside the card,
+// where a link tile's overflow:hidden clipped it away: Tab reached the card and
+// showed nothing (seen in the browser, 2026-10-11). The card draws it instead.
+test("a card's keyboard focus ring is drawn by the card, not clipped off its link", () => {
+  const css = readFileSync(new URL('../../client/styles/components/card.css', import.meta.url), 'utf8')
+  assert.match(css, /\.item-card:has\(> \.card-open:focus-visible\)\{outline:var\(--focus-ring\)/)
+})
+
 test('a chat row opens through a link, beside its rename and delete', () => {
   const chats = src('components/Chats.tsx')
   assert.doesNotMatch(chats, /role="button"/)

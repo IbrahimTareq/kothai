@@ -71,6 +71,16 @@ for (const [themeName, theme] of THEMES) {
     )
   })
 
+  // A field's only focus cue is its border turning --line-focus (a click must
+  // not draw the ring), and so is the search underline's. At .28 / .26 it was
+  // ~2.4:1, under the 3:1 a focus indicator needs (technical audit, 2026-10-11).
+  test(`${themeName}: the focus border is visible against the page and inside a field`, () => {
+    for (const bg of ['--bg', '--panel-3']) {
+      const r = pairContrast('--line-focus', bg, theme)!
+      assert.ok(r >= AA_LARGE, `--line-focus on ${bg} is ${r.toFixed(2)}:1 in ${themeName}, below ${AA_LARGE}:1`)
+    }
+  })
+
   test(`${themeName}: popover and modal surfaces are opaque`, () => {
     // Three popovers once used --panel and rendered see-through over content.
     // The capture modal's field floats over the dark backdrop in both themes,
