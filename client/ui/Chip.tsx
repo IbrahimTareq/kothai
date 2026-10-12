@@ -10,28 +10,42 @@ import type { ComponentProps } from 'react'
 //   on         a filter that is applied; sets aria-pressed
 //   compact    in a list rather than on a toolbar (Expanded's tags)
 //   add        the dashed "+ …" that adds one to the set
-//   removable  the click takes it away: an ×, and red on hover
+//   onRemove   its × takes it away, and reddens the pill on hover
+//
+// A removable chip is text with one button, its ×. The whole pill used to be
+// the remove button, and it looks exactly like a filter chip, so a tap meant to
+// pick a tag took it away (design critique, 2026-10-12).
 //
 // A chip that opens a popover gets its open look from Radix's data-state.
-type ChipProps = ComponentProps<'button'> & { on?: boolean; compact?: boolean; add?: boolean; removable?: boolean }
+type ChipProps = ComponentProps<'button'> & {
+  on?: boolean
+  compact?: boolean
+  add?: boolean
+  onRemove?: () => void
+  removeLabel?: string
+}
 
-export function Chip({ on, compact, add, removable, className, children, ...rest }: ChipProps) {
+export function Chip({ on, compact, add, onRemove, removeLabel, className, children, ...rest }: ChipProps) {
   const cls = [
     'chip',
     on && 'on',
     compact && 'chip--compact',
     add && 'chip--add',
-    removable && 'chip--removable',
+    onRemove && 'chip--removable',
     className,
   ]
+  if (onRemove)
+    return (
+      <span className={cls.filter(Boolean).join(' ')}>
+        {children}
+        <button type="button" className="chip-x" aria-label={removeLabel} onClick={onRemove}>
+          ×
+        </button>
+      </span>
+    )
   return (
     <button className={cls.filter(Boolean).join(' ')} aria-pressed={on} {...rest}>
       {children}
-      {removable && (
-        <span className="chip-x" aria-hidden="true">
-          ×
-        </span>
-      )}
     </button>
   )
 }

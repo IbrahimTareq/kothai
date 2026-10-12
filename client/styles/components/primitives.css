@@ -101,10 +101,16 @@
 .chip--compact{height:var(--control-sm);gap:var(--space-6);padding:0 var(--space-12);font-size:var(--text-xs)}
 .chip--add{color:var(--ink-mute);border-style:dashed}
 .chip--add[data-state="open"]{background:var(--panel);color:var(--ink);border-color:var(--line-hover)}
-.chip--removable{gap:var(--space-6)}
-.chip-x{color:var(--ink-faint)}
-.chip--removable:hover{border-color:var(--danger)}
-.chip--removable:hover .chip-x{color:var(--danger)}
+/* A removable chip is text; only its × removes it (ui/Chip.tsx). The × is the
+   control, so it reads at --ink-mute, not the faint a glyph gets, and spans the
+   pill's height to make a target rather than a 7px letter. */
+.chip--removable{gap:var(--space-2);cursor:default}
+.chip--removable:hover{color:var(--ink-dim);border-color:var(--line)}
+.chip-x{display:grid;place-items:center;align-self:stretch;min-width:var(--control-sm);
+  margin-right:calc(var(--space-10) * -1);padding:0;border:0;border-radius:var(--radius-full);
+  background:none;color:var(--ink-mute);font:inherit;cursor:pointer}
+.chip-x:hover{color:var(--danger)}
+.chip--removable:has(.chip-x:hover){border-color:var(--danger)}
 
 /* ── segmented control ────────────────────────────────────────────────────
    What <Segmented> in client/ui/ draws, and the one box for every "pick one of

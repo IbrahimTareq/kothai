@@ -23,6 +23,11 @@
 // They had been swallowed, and the screen kept a change the server never took.
 // `say` is the unseen half: capture's "Added" is shown on its own button, but
 // a fade on a button is never announced (test/client/accessible-names).
+//
+// While the item view is open the bar lives inside it. That view is a modal:
+// everything outside it is hidden from a screen reader, blocked to the pointer
+// and out of focus's reach — so an Undo for a tag removed there, drawn in its
+// usual place, could be neither seen nor pressed (test/client/undo-bar).
 import {
   useEffect,
   useRef,
@@ -32,6 +37,7 @@ import {
   type ReactNode,
   type SetStateAction,
 } from 'react'
+import { createPortal } from 'react-dom'
 import { API } from '../data/api'
 import type { NoteSource } from '../data/useNotes'
 import { Button } from '../ui/Button'
@@ -60,6 +66,23 @@ export function useItemWrites(
   useEffect(() => {
     if (shown) undoRef.current?.focus()
   }, [shown])
+  // Looked for frame by frame: the dialog is portaled in some renders after the
+  // one that opens it, and a single look one frame on found nothing, leaving
+  // the bar behind the modal, hidden and unpressable. Bounded, in case it never comes.
+  const [host, setHost] = useState<Element | null>(null)
+  useEffect(() => {
+    setHost(null)
+    if (!expanded) return
+    let frame = 0
+    let tries = 60
+    const look = () => {
+      const dialog = document.querySelector('[role="dialog"]')
+      if (dialog) setHost(dialog)
+      else if (tries--) frame = requestAnimationFrame(look)
+    }
+    look()
+    return () => cancelAnimationFrame(frame)
+  }, [!!expanded])
 
   const [notice, setNotice] = useState<string | null>(null)
   const [spoken, setSpoken] = useState('')
@@ -165,6 +188,14 @@ export function useItemWrites(
       patch(id, before)
       fail('Could not save that change')
     })
+    const gone = (before.tags ?? []).filter(t => !p.tags?.includes(t))
+    if (p.tags && gone.length === 1)
+      offer(
+        <>
+          Removed tag <b>{gone[0]}</b>
+        </>,
+        () => update(id, { tags: before.tags ?? [] }),
+      )
   }
   // force a fresh classify/embed pass for one item, discarding its current
   // tags; the server flips `pending` immediately so the existing pending-item
@@ -200,5 +231,5 @@ export function useItemWrites(
       </span>
     </>
   )
-  return { remove, update, retag, patch, offer, fail, say, bar }
+  return { remove, update, retag, patch, offer, fail, say, bar: host ? createPortal(bar, host) : bar }
 }

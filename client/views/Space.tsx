@@ -232,7 +232,7 @@ export function CollectionView({
                 filling the space, where a click there only narrows the view. */}
             {collection.tags.length > 0 && <span className="eyebrow coll-rule-label">Auto-adds</span>}
             {collection.tags.map(t => (
-              <Chip removable key={t} title="Stop auto-adding this tag" onClick={() => removeTag(t)}>
+              <Chip key={t} removeLabel={`Stop auto-adding ${t}`} onRemove={() => removeTag(t)}>
                 {t}
               </Chip>
             ))}

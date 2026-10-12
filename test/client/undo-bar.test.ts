@@ -18,3 +18,17 @@ test('the undo window waits while the bar has the pointer or focus', () => {
   const bar = src.slice(src.indexOf('className="undo-bar"'))
   for (const ev of ['onMouseEnter', 'onMouseLeave', 'onFocus', 'onBlur']) assert.match(bar, new RegExp(`${ev}=`))
 })
+
+// Removing a tag took effect at once with no way back, one stray tap from a
+// lost label (design critique, 2026-10-12). It offers Undo — and since tags are
+// edited in the item view, a modal that hides and blocks everything outside
+// it, the bar moves into the open dialog rather than sitting behind it.
+test('removing a tag offers Undo, in the open dialog', () => {
+  const update = src.slice(src.indexOf('const update ='), src.indexOf('\n  }\n', src.indexOf('const update =')))
+  assert.match(update, /offer\(/)
+  assert.match(src, /createPortal\(/)
+  assert.match(src, /querySelector[^)]*role="dialog"/)
+  // Looked for until it is there: one look a frame after opening came too
+  // early, and the bar stayed behind the modal (seen in the browser, 2026-10-12).
+  assert.match(src, /requestAnimationFrame\(look\)/)
+})

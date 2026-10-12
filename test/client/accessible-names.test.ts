@@ -40,7 +40,7 @@ test('an item card opens through a link named by its title, beside its actions',
 // Every tag chip in the item view was named "Remove tag", so a list of eight
 // read as eight identical buttons.
 test("a tag's remove chip names the tag", () => {
-  assert.match(src('views/Expanded.tsx'), /<Chip compact removable[^>]*aria-label=\{`Remove tag \$\{t\}`\}/)
+  assert.match(src('views/Expanded.tsx'), /<Chip compact[^>]*removeLabel=\{`Remove tag \$\{t\}`\}/)
 })
 
 // Import and Restore hide their file input inside a <label class="btn">: Tab
@@ -76,4 +76,17 @@ test("a space's description can be edited from the keyboard", () => {
   assert.match(p, /tabIndex=\{0\}/)
   assert.match(p, /role="button"/)
   assert.match(p, /onKeyDown=/)
+})
+
+// A tag pill looks exactly like a filter chip, and a tap anywhere on it
+// removed the tag: an item's tags in the item view, a space's rule tags in its
+// header (design critique, 2026-10-12). Only the × removes now; the pill is text.
+test('only the × of a removable chip removes it', () => {
+  const chip = src('ui/Chip.tsx')
+  assert.match(chip, /<button[^>]*className="chip-x"[^>]*onClick=\{onRemove\}/)
+  for (const view of ['views/Expanded.tsx', 'views/Space.tsx']) {
+    const s = src(view)
+    assert.doesNotMatch(s, /<Chip[^>]*removable[^>]*onClick=/, `${view} removes on a tap of the whole chip`)
+    assert.match(s, /<Chip[^>]*onRemove=/)
+  }
 })

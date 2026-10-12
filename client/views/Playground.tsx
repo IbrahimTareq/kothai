@@ -72,7 +72,9 @@ export function Playground() {
             <Chip on={filter} onClick={() => setFilter(f => !f)}>
               Filter
             </Chip>
-            <Chip removable>Removable</Chip>
+            <Chip onRemove={() => {}} removeLabel="Remove">
+              Removable
+            </Chip>
             <Chip add>+ Add</Chip>
           </div>
         }
@@ -123,13 +125,15 @@ export function Playground() {
             <Chip on>On</Chip>
             <Chip>Off</Chip>
             <Chip add>+ rule tag</Chip>
-            <Chip removable>madinah</Chip>
+            <Chip onRemove={() => {}} removeLabel="Remove madinah">
+              madinah
+            </Chip>
           </div>
           <div style={row}>
             <Chip compact add>
               + Add tag
             </Chip>
-            <Chip compact removable>
+            <Chip compact onRemove={() => {}} removeLabel="Remove tag">
               travel
             </Chip>
           </div>
