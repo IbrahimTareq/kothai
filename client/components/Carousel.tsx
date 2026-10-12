@@ -66,6 +66,13 @@ export function Carousel({ slides, alt, onOpen, badge }: CarouselProps) {
     e.currentTarget.releasePointerCapture(e.pointerId)
   }
 
+  // A cancel is the browser taking the gesture (a vertical scroll, under
+  // touch-action:pan-y), never a tap: run as onUp, it opened the post.
+  const onCancel = () => {
+    startX.current = null
+    setDrag(0)
+  }
+
   const dragFrac = drag / width()
 
   return (
@@ -77,7 +84,7 @@ export function Carousel({ slides, alt, onOpen, badge }: CarouselProps) {
         onPointerDown={onDown}
         onPointerMove={onMove}
         onPointerUp={onUp}
-        onPointerCancel={onUp}
+        onPointerCancel={onCancel}
       >
         {slides.map((src, idx) => {
           const dist = idx - i - dragFrac

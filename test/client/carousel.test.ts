@@ -50,3 +50,16 @@ test('a drag never runs off either end of the deck', () => {
   assert.equal(nextIndex(0, 100, 3), 0) // already first
   assert.equal(nextIndex(2, -100, 3), 2) // already last
 })
+
+// The stage is touch-action:pan-y, so a vertical scroll that starts on a photo
+// is the browser's, and it ends the gesture with pointercancel. That ran the
+// tap path, and scrolling the item sheet on a phone opened the post on
+// Instagram (technical audit, 2026-10-12). A cancel only puts the deck back.
+test('a cancelled gesture resets the deck and neither opens the post nor turns a slide', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../../client/components/Carousel.tsx', import.meta.url), 'utf8')
+  const handler = src.match(/onPointerCancel=\{(\w+)\}/)?.[1]
+  assert.ok(handler && handler !== 'onUp', 'pointercancel runs the tap/release path')
+  const body = src.slice(src.indexOf(`const ${handler} =`), src.indexOf('\n  }\n', src.indexOf(`const ${handler} =`)))
+  assert.doesNotMatch(body, /onOpen|setI\(/)
+})
