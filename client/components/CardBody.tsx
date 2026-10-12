@@ -66,7 +66,6 @@ function MediaLinkCard({ item, overlay }: { item: UIItem; overlay?: ReactElement
       {item.thumb ? (
         <div className="link-thumb">
           <img src={item.thumb} alt="" loading="lazy" style={shape(item)} />
-          <div className="img-scan"></div>
           {overlay}
         </div>
       ) : (
@@ -150,7 +149,6 @@ export function CardInner({ item, overlay }: { item: UIItem; overlay?: ReactElem
             style={it.thumb ? undefined : { background: imgGradient(tileSeed(it)), height: phHeight(tileSeed(it)) }}
           >
             {it.thumb && <img className="vid-thumb-img" src={it.thumb} alt="" loading="lazy" style={shape(it)} />}
-            <div className="img-scan"></div>
             <div className="play-btn">
               <Icon name="play" size={20} />
             </div>

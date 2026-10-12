@@ -81,8 +81,6 @@
 /* image / video thumb */
 .img-thumb{position:relative;border-radius:var(--radius-lg);overflow:hidden;display:grid;
   place-items:center;color:var(--ink-mute);border:1px solid var(--line-2)}
-.img-scan{position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 1px,transparent 1px 4px);
-  mix-blend-mode:overlay}
 .img-thumb.vid .play-btn{position:absolute;width:46px;height:46px;border-radius:var(--radius-circle);
   background:var(--scrim);border:1px solid rgba(255,255,255,.5);display:grid;place-items:center;
   color:var(--color-white);backdrop-filter:blur(2px)}

@@ -93,7 +93,6 @@ function MediaPanel({ item, slidesLoading }: { item: UIItem; slidesLoading?: boo
         style={media ? undefined : { background: imgGradient((item.title || 'v').length * 7) }}
       >
         {media && <img className={slidesLoading ? 'loading' : ''} src={media} alt={item.title || ''} loading="lazy" />}
-        <div className="exp-media-scan" />
         {item.type === 'video' && (
           <div className="exp-play">
             <Icon name="play" size={30} />
