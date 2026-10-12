@@ -1,0 +1,591 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-11T12:34:08.011321+00:00",
+  "title": "Design System: Kothai",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Inverted Ink",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(70% 0 0)",
+          "oklch(82% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "on-accent": {
+        "role": "primary",
+        "displayName": "Page Ink",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(70% 0 0)",
+          "oklch(82% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "accent-light": {
+        "role": "primary",
+        "displayName": "Inverted Ink (light theme)",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(70% 0 0)",
+          "oklch(82% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "Night Paper",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(70% 0 0)",
+          "oklch(82% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "bg-2": {
+        "role": "neutral",
+        "displayName": "Night Paper, raised row",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(70% 0 0)",
+          "oklch(82% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "bg-raise": {
+        "role": "neutral",
+        "displayName": "Floating Floor",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(70% 0 0)",
+          "oklch(82% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "surface-modal": {
+        "role": "neutral",
+        "displayName": "Modal Surface",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(70% 0 0)",
+          "oklch(82% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "letterbox": {
+        "role": "neutral",
+        "displayName": "Letterbox",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(70% 0 0)",
+          "oklch(82% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "bg-light": {
+        "role": "neutral",
+        "displayName": "Day Paper",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(70% 0 0)",
+          "oklch(82% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "bg-2-light": {
+        "role": "neutral",
+        "displayName": "Day Paper, raised row",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(70% 0 0)",
+          "oklch(82% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "ink-light": {
+        "role": "neutral",
+        "displayName": "Page Ink (light theme)",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(70% 0 0)",
+          "oklch(82% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Breath Panel 1"
+      },
+      "panel-2": {
+        "role": "neutral",
+        "displayName": "Breath Panel 2"
+      },
+      "panel-3": {
+        "role": "neutral",
+        "displayName": "Breath Panel 3"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Full Ink"
+      },
+      "ink-dim": {
+        "role": "neutral",
+        "displayName": "Dim Ink"
+      },
+      "ink-mute": {
+        "role": "neutral",
+        "displayName": "Mute Ink"
+      },
+      "ink-faint": {
+        "role": "neutral",
+        "displayName": "Faint Ink"
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline"
+      },
+      "line-2": {
+        "role": "neutral",
+        "displayName": "Quiet Hairline"
+      },
+      "line-hover": {
+        "role": "neutral",
+        "displayName": "Hairline, touched"
+      },
+      "line-focus": {
+        "role": "neutral",
+        "displayName": "Hairline, focused"
+      },
+      "ink-dim-light": {
+        "role": "neutral",
+        "displayName": "Dim Ink (light theme)"
+      },
+      "ink-mute-light": {
+        "role": "neutral",
+        "displayName": "Mute Ink (light theme)"
+      },
+      "line-light": {
+        "role": "neutral",
+        "displayName": "Hairline (light theme)"
+      },
+      "scrim": {
+        "role": "neutral",
+        "displayName": "Scrim"
+      },
+      "scrim-hover": {
+        "role": "neutral",
+        "displayName": "Scrim, pressed"
+      },
+      "backdrop": {
+        "role": "neutral",
+        "displayName": "Dialog Backdrop"
+      },
+      "danger": {
+        "role": "status",
+        "displayName": "Alarm Coral",
+        "canonical": "oklch(71% 0.18 15)",
+        "tonalRamp": [
+          "oklch(15% 0.18 15)",
+          "oklch(25% 0.18 15)",
+          "oklch(35% 0.18 15)",
+          "oklch(45% 0.18 15)",
+          "oklch(58% 0.18 15)",
+          "oklch(70% 0.18 15)",
+          "oklch(82% 0.18 15)",
+          "oklch(95% 0.18 15)"
+        ]
+      },
+      "warn": {
+        "role": "status",
+        "displayName": "Signal Amber",
+        "canonical": "oklch(87% 0.15 85)",
+        "tonalRamp": [
+          "oklch(15% 0.15 85)",
+          "oklch(25% 0.15 85)",
+          "oklch(35% 0.15 85)",
+          "oklch(45% 0.15 85)",
+          "oklch(58% 0.15 85)",
+          "oklch(70% 0.15 85)",
+          "oklch(82% 0.15 85)",
+          "oklch(95% 0.15 85)"
+        ]
+      },
+      "ok": {
+        "role": "status",
+        "displayName": "Mint Confirm",
+        "canonical": "oklch(85% 0.11 155)",
+        "tonalRamp": [
+          "oklch(15% 0.11 155)",
+          "oklch(25% 0.11 155)",
+          "oklch(35% 0.11 155)",
+          "oklch(45% 0.11 155)",
+          "oklch(58% 0.11 155)",
+          "oklch(70% 0.11 155)",
+          "oklch(82% 0.11 155)",
+          "oklch(95% 0.11 155)"
+        ]
+      },
+      "danger-light": {
+        "role": "status",
+        "displayName": "Alarm Coral (light theme)",
+        "tonalRamp": [
+          "oklch(15% 0.18 25)",
+          "oklch(25% 0.18 25)",
+          "oklch(35% 0.18 25)",
+          "oklch(45% 0.18 25)",
+          "oklch(58% 0.18 25)",
+          "oklch(70% 0.18 25)",
+          "oklch(82% 0.18 25)",
+          "oklch(95% 0.18 25)"
+        ]
+      },
+      "warn-light": {
+        "role": "status",
+        "displayName": "Signal Amber (light theme)",
+        "tonalRamp": [
+          "oklch(15% 0.12 55)",
+          "oklch(25% 0.12 55)",
+          "oklch(35% 0.12 55)",
+          "oklch(45% 0.12 55)",
+          "oklch(58% 0.12 55)",
+          "oklch(70% 0.12 55)",
+          "oklch(82% 0.12 55)",
+          "oklch(95% 0.12 55)"
+        ]
+      },
+      "ok-light": {
+        "role": "status",
+        "displayName": "Mint Confirm (light theme)",
+        "tonalRamp": [
+          "oklch(15% 0.14 150)",
+          "oklch(25% 0.14 150)",
+          "oklch(35% 0.14 150)",
+          "oklch(45% 0.14 150)",
+          "oklch(58% 0.14 150)",
+          "oklch(70% 0.14 150)",
+          "oklch(82% 0.14 150)",
+          "oklch(95% 0.14 150)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The Ask landing headline only; it is the prompt, not a page title."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "An article's headline in the expanded item."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Every page title, the item panel, onboarding."
+      },
+      "body-reading": {
+        "displayName": "Reading",
+        "purpose": "A tile's headline, an article's standfirst."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "The page default: rows, buttons, the Ask thread."
+      },
+      "label": {
+        "displayName": "Eyebrow",
+        "purpose": "The name over a section or beside a field; sentence case in ink-mute."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Counts, badges, timestamps, tile meta."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Only literal text a person might copy or type, via <code> or .mono."
+      }
+    },
+    "shadows": [
+      {
+        "name": "popover",
+        "value": "0 8px 28px rgba(0,0,0,.28)",
+        "purpose": "Menus, popovers and detail tooltips on the opaque bg-raise."
+      },
+      {
+        "name": "card",
+        "value": "inset 0 1px 0 rgba(255,255,255,.04), 0 1px 2px rgba(0,0,0,.20), 0 .5px 1px rgba(0,0,0,.15)",
+        "purpose": "Ask surface only."
+      },
+      {
+        "name": "float",
+        "value": "0 0 0 1px rgba(255,255,255,.06), 0 16px 48px -6px rgba(0,0,0,.35), 0 6px 12px -2px rgba(0,0,0,.20)",
+        "purpose": "Ask surface only."
+      },
+      {
+        "name": "composer",
+        "value": "0 1px 3px rgba(0,0,0,.20), inset 0 1px 0 rgba(255,255,255,.03)",
+        "purpose": "The Ask composer at rest."
+      },
+      {
+        "name": "composer-focus",
+        "value": "0 0 0 1px rgba(255,255,255,.10), 0 4px 16px -4px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.04)",
+        "purpose": "The Ask composer while typing."
+      }
+    ],
+    "motion": [
+      {
+        "name": "dur-fast",
+        "value": ".16s",
+        "purpose": "Hovers, colour and border changes."
+      },
+      {
+        "name": "dur-mid",
+        "value": ".24s",
+        "purpose": "Entrances, small transforms."
+      },
+      {
+        "name": "dur-slow",
+        "value": ".32s",
+        "purpose": "Panel and view transitions."
+      },
+      {
+        "name": "dur-slower",
+        "value": ".44s",
+        "purpose": "The largest committed motion; the theme crossfade."
+      },
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(.2,.9,.3,1)",
+        "purpose": "Default: settle out."
+      },
+      {
+        "name": "ease-entrance",
+        "value": "cubic-bezier(.22,.61,.36,1)",
+        "purpose": "Things arriving on screen."
+      },
+      {
+        "name": "ease-in-out",
+        "value": "cubic-bezier(.65,0,.35,1)",
+        "purpose": "Symmetric, for draw-on paths and the theme switch."
+      },
+      {
+        "name": "delay-sm",
+        "value": ".08s",
+        "purpose": "Stagger; its own axis, never snapped to a duration."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "560px"
+      },
+      {
+        "name": "md",
+        "value": "640px"
+      },
+      {
+        "name": "lg",
+        "value": "720px"
+      },
+      {
+        "name": "xl",
+        "value": "820px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "The default control: a hairline box on a faint fill.",
+      "html": "<button class=\"ds-btn\">Export JSON</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-8);padding:var(--space-8) var(--space-14);border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel-2);color:var(--ink);font:inherit;font-size:var(--text-sm);letter-spacing:var(--tracking-tight);cursor:pointer;transition:var(--dur-fast)}.ds-btn:hover{border-color:var(--line-hover)}.ds-btn:focus-visible{outline:var(--focus-ring);outline-offset:2px;border-color:var(--ink)}"
+    },
+    {
+      "name": "Solid Button",
+      "kind": "button",
+      "refersTo": "button-solid",
+      "description": "The one primary action on a surface; follows the user's accent tint.",
+      "html": "<button class=\"ds-btn-solid\">Save</button>",
+      "css": ".ds-btn-solid{display:inline-flex;align-items:center;justify-content:center;padding:var(--space-8) var(--space-14);border:1px solid transparent;border-radius:var(--radius-md);background:var(--accent);color:var(--on-accent);font:inherit;font-size:var(--text-sm);letter-spacing:var(--tracking-tight);cursor:pointer;transition:var(--dur-fast)}.ds-btn-solid:hover{background:var(--accent-hover)}.ds-btn-solid:focus-visible{outline:var(--focus-ring);outline-offset:2px}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Chrome that recedes until touched.",
+      "html": "<button class=\"ds-btn-ghost\">Cancel</button>",
+      "css": ".ds-btn-ghost{display:inline-flex;align-items:center;justify-content:center;padding:var(--space-8) var(--space-14);border:1px solid transparent;border-radius:var(--radius-md);background:transparent;color:var(--ink-mute);font:inherit;font-size:var(--text-sm);letter-spacing:var(--tracking-tight);cursor:pointer;transition:var(--dur-fast)}.ds-btn-ghost:hover{color:var(--ink);background:var(--panel-2)}.ds-btn-ghost:focus-visible{outline:var(--focus-ring);outline-offset:2px}"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Every boxed text field; focus brightens the border instead of drawing a ring.",
+      "html": "<input class=\"ds-field\" placeholder=\"https://…\">",
+      "css": ".ds-field{box-sizing:border-box;min-height:var(--control-md);padding:var(--space-8) var(--space-12);background:var(--panel-3);border:1px solid var(--line);border-radius:var(--radius-md);outline:none;color:var(--ink);font:inherit;font-size:var(--text-sm);transition:border-color var(--dur-fast)}.ds-field::placeholder{color:var(--ink-faint)}.ds-field:focus{border-color:var(--line-focus)}"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "One of a set you can pick or drop; on inverts to the accent.",
+      "html": "<span style=\"display:flex;gap:8px\"><button class=\"ds-chip\">Videos</button><button class=\"ds-chip on\" aria-pressed=\"true\">Articles</button><button class=\"ds-chip ds-chip--add\">+ Add tag</button></span>",
+      "css": ".ds-chip{display:inline-flex;align-items:center;height:var(--control-md);padding:0 var(--space-14);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-full);color:var(--ink-dim);font:inherit;font-size:var(--text-sm);letter-spacing:var(--tracking-tight);cursor:pointer;transition:var(--dur-fast)}.ds-chip:hover{color:var(--ink);border-color:var(--line-hover)}.ds-chip:focus-visible{outline:var(--focus-ring);outline-offset:2px}.ds-chip.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}.ds-chip--add{color:var(--ink-mute);border-style:dashed}"
+    },
+    {
+      "name": "Segmented",
+      "kind": "custom",
+      "refersTo": "segmented",
+      "description": "The one box for every pick-one-of-a-few.",
+      "html": "<div class=\"ds-seg\" role=\"radiogroup\"><button class=\"ds-seg-btn on\">Grid</button><button class=\"ds-seg-btn\">Canvas</button></div>",
+      "css": ".ds-seg{display:inline-flex;align-items:center;gap:var(--space-2);height:var(--control-md);box-sizing:border-box;padding:var(--space-4);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md)}.ds-seg-btn{height:100%;padding:0 var(--space-10);border:0;background:transparent;color:var(--ink-mute);font:inherit;font-size:var(--text-xs);border-radius:var(--radius);cursor:pointer;transition:var(--dur-fast)}.ds-seg-btn:hover{color:var(--ink)}.ds-seg-btn.on{background:var(--accent);color:var(--on-accent)}.ds-seg-btn:focus-visible{outline:var(--focus-ring);outline-offset:2px}"
+    },
+    {
+      "name": "Menu",
+      "kind": "custom",
+      "refersTo": "menu",
+      "description": "Opaque floating list; the highlight fill is the focus indicator.",
+      "html": "<div class=\"ds-menu\" role=\"menu\"><div class=\"ds-menu-item\" role=\"menuitem\" tabindex=\"0\">Move to…</div><div class=\"ds-menu-item\" role=\"menuitem\" tabindex=\"0\">Rename</div><div class=\"ds-menu-item\" role=\"menuitem\" tabindex=\"0\">Delete</div></div>",
+      "css": ".ds-menu{min-width:190px;padding:var(--space-6);background:var(--surface-popover);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-popover);color:var(--ink)}.ds-menu-item{display:flex;align-items:center;min-height:var(--control-md);padding:var(--space-8) var(--space-6);border-radius:var(--radius-md);font-size:var(--text-sm);cursor:pointer;outline:none}.ds-menu-item:hover,.ds-menu-item:focus-visible{background:color-mix(in srgb,var(--ink) 8%,transparent)}"
+    },
+    {
+      "name": "Tile",
+      "kind": "card",
+      "refersTo": "tile",
+      "description": "Flat cover-and-caption: one hairline, one surface, a fixed 16:10 slot.",
+      "html": "<button class=\"ds-tile\"><span class=\"ds-tile-media\"><span class=\"ds-tile-plate\">1</span></span><span class=\"ds-tile-cap\"><span class=\"ds-tile-title\">How self-hosting changed my notes</span><span class=\"ds-tile-meta\">example.com · 3d</span></span></button>",
+      "css": ".ds-tile{display:flex;flex-direction:column;width:220px;overflow:hidden;padding:0;text-align:left;cursor:pointer;background:var(--panel);border:1px solid var(--line-2);border-radius:var(--radius-md);color:inherit;font:inherit;transition:background var(--dur-fast),border-color var(--dur-fast)}.ds-tile:hover,.ds-tile:focus-visible{background:var(--panel-2);border-color:var(--line)}.ds-tile:focus-visible{outline:var(--focus-ring);outline-offset:2px}.ds-tile-media{position:relative;display:block;aspect-ratio:16/10;background:var(--panel-2)}.ds-tile-plate{position:absolute;top:var(--space-6);left:var(--space-6);min-width:18px;height:18px;padding:0 var(--space-4);display:grid;place-items:center;border-radius:var(--radius-sm);background:var(--scrim);color:var(--color-white);font-size:var(--text-2xs)}.ds-tile-cap{display:flex;flex-direction:column;gap:var(--space-4);padding:var(--space-8) var(--space-10) var(--space-10)}.ds-tile-title{font-size:var(--text-xs);line-height:var(--leading-snug);color:var(--ink)}.ds-tile-meta{font-size:var(--text-2xs);color:var(--ink-faint)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Archive",
+    "overview": "Kothai is a private room for things you kept. The interface uses only black, white and opacity, so the colour on screen comes from what you saved: a video thumbnail, a photo, an article's lead image. Chrome recedes so the archive can be seen. The quiet is structural, not timid: every value on screen comes from a closed scale, so nothing looks improvised.\n\nDensity is that of a working tool. Body text is 14px, controls are 32px tall (44px on touch), and a page opens with one title row and one toolbar row. Hierarchy comes from ink opacity, size and weight, never from a new hue or uppercase labels. Surfaces are white at low opacity over a near-black page, separated by hairlines. Both themes are first-class: every colour is defined twice and tested in both.\n\nTwo looks are ruled out. The first is **terminal costume**: mono type spread across labels, counts and hosts, tracked uppercase micro-labels, scanlines, grids and glow. The codebase spent a whole pass removing these, and the linter now fails `text-transform: uppercase`. The second is **branded SaaS colour**: a signature hue, gradient CTAs, tinted icon tiles. The only hues are the three status colours and whatever accent the user picks in Settings.",
+    "keyCharacteristics": [
+      "Monochrome by doctrine; colour comes from saved media and status alone.",
+      "One sans (Geist) for everything a person reads, one mono (Geist Mono) for text a person might copy or type.",
+      "Hairlines, not shadows, separate surfaces. The Ask surface is the documented exception.",
+      "Closed token scales for every axis, enforced by `lint:tokens`.",
+      "Dark and light themes defined together and tested together.",
+      "One user-tintable accent that every filled control must follow."
+    ],
+    "rules": [
+      {
+        "name": "The No Brand Hue Rule",
+        "body": "Hierarchy comes from the ink ladder, never from a new colour. If you are reaching for a hue to make something stand out, use a step up the ladder or the accent fill instead.",
+        "section": "colors"
+      },
+      {
+        "name": "The Both Themes Rule",
+        "body": "Every colour you use must resolve under `:root` and `:root[data-theme=\"light\"]`. A hard-coded white is a light-theme bug; that is how the send button once vanished.",
+        "section": "colors"
+      },
+      {
+        "name": "The Readable Ink Rule",
+        "body": "Anything a person reads is `ink-mute` or stronger, which clears 4.5:1 on the page and in a field in both themes. `ink-faint` is for what nobody has to read.",
+        "section": "colors"
+      },
+      {
+        "name": "The Follow The Tint Rule",
+        "body": "Anything filled with the accent uses `--accent` / `--accent-hover` / `--on-accent`, or it will ignore the user's chosen colour.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Faces, Two Jobs Rule",
+        "body": "Geist for everything a person reads; Geist Mono only for text they might copy or type. Never hand-write a `font-family`. Never set a label, count or host in mono.",
+        "section": "typography"
+      },
+      {
+        "name": "The Never Bold Rule",
+        "body": "The heaviest reading weight is 600 for headings. `<b>` and `<strong>` are 500. 700 exists for one third-party brand tag and does not spread.",
+        "section": "typography"
+      },
+      {
+        "name": "The Sentence Case Rule",
+        "body": "Labels are sentence case. Hierarchy comes from size, weight and ink, not caps; `lint:tokens` fails `text-transform: uppercase`.",
+        "section": "typography"
+      },
+      {
+        "name": "The Inverse Tracking Rule",
+        "body": "Body tracks neutral. Tracking tightens only as type grows: -.02em for small UI text, -.025em for headings, -.03em at 28px and up. Positive tracking belongs to mono alone.",
+        "section": "typography"
+      },
+      {
+        "name": "The Closed Scale Rule",
+        "body": "If the value you want is not on a scale, use the nearest step. Do not add one.",
+        "section": "layout"
+      },
+      {
+        "name": "The Hairline Not Shadow Rule",
+        "body": "Separate surfaces with `line` or `line-2`. A shadow means \"this floats above the page\". If it doesn't float, it doesn't get one.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Opaque Float Rule",
+        "body": "Anything that floats over content (menus, popovers, tooltips) sits on `bg-raise`, never a translucent panel. Three popovers on `--panel` once rendered unreadable over content.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do take every value from a token in `client/styles/foundation/tokens.css`, and annotate a genuine exception with `token-lint-ignore` and its reason.",
+      "Do step hierarchy through `ink` → `ink-dim` → `ink-mute` → `ink-faint` and `panel` → `panel-2` → `panel-3`.",
+      "Do use `<Button>`, `<Input>`, `<Chip>`, `<Segmented>`, `<Menu>`, `<Popover>`, `<Tooltip>`, `<Dialog>`, `<Confirm>` and `<PageHeader>` from `client/ui/`, rather than drawing a box in a view.",
+      "Do check every change in both themes at `/ui` on the dev server (port 5174), and on mobile if it touches the composer or rail.",
+      "Do keep the state change and drop the movement under `prefers-reduced-motion`: a fade stays; a slide, scale or sweep does not.",
+      "Do put controls that float over media on `scrim` with a white glyph."
+    ],
+    "donts": [
+      "Don't introduce a brand hue, a gradient CTA or a tinted icon tile. Colour is the user's media, the status hues and the user's own accent.",
+      "Don't dress the app as a terminal: no mono labels, counts or hosts, no tracked uppercase, no scanlines, grids or glow.",
+      "Don't set type at 700, or write `<b>` expecting bold.",
+      "Don't separate surfaces with shadows outside the Ask surface and floating layers.",
+      "Don't fill anything with a literal white or black where it should follow `--accent` or the theme.",
+      "Don't hide the focus ring with a bare `outline: none`. Name what shows focus instead.",
+      "Don't add a step to a closed scale. Use the nearest one."
+    ]
+  }
+}
