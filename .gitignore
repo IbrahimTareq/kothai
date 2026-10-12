@@ -8,6 +8,8 @@ qvac.config.json
 .claude/*
 !.claude/settings.json
 !.claude/skills/
+# Impeccable's engine binary: its launcher downloads it to ~/.impeccable/bin when absent.
+.claude/skills/impeccable/scripts/bin/
 !.claude/hooks/
 !.claude/rules/
 .superpowers/
