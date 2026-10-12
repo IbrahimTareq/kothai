@@ -2,7 +2,7 @@
 // and the thumbnail download that writes what it finds into data/uploads.
 // Shared by the generic link path (meta.ts) and the Instagram one, which is
 // why it is not in either.
-import { writeFile } from 'node:fs/promises'
+import { readdir, readFile, rename, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import sharp from 'sharp'
 import { UPLOAD_DIR } from '../config.ts'
@@ -82,21 +82,6 @@ export function decodeEntities(s: string): string {
 // `key` names the file, not just the note: a note's own thumbnail keys off the
 // bare note id, its carousel slides off `<noteId>-<i>`. Every file still starts
 // `meta-` so the uploads wipe and the per-note delete sweep keep matching them.
-// saveThumbSafe wraps saveThumb in the "a missing thumbnail is not a failure"
-// policy — resolve against the page URL, swallow anything that goes wrong,
-// answer null. saveThumb already returns null for a non-image or oversized
-// body, so null was the existing failure value. Two callers stay open-coded
-// because they need to tell failures apart: the carousel loop in
-// fetchInstagramSlides, to keep the rest of the deck past a failed slide, and
-// fetchLinkMeta, to retry an image that was only rate-limited (thumb-retry.ts).
-export async function saveThumbSafe(thumbUrl: string, base: string, key: string): Promise<SavedThumb | null> {
-  try {
-    return await saveThumb(new URL(thumbUrl, base).href, key)
-  } catch {
-    return null
-  }
-}
-
 // Named as the note fields they land in, so a caller can assign them straight
 // on. `thumbRatio` is width over height: with it a card holds its shape before
 // the image arrives, where it used to grow when the image loaded and repack
@@ -116,6 +101,30 @@ export async function saveThumb(url: string, key: string): Promise<SavedThumb | 
   const name = `meta-${key}.${ext}`
   await writeFile(path.join(UPLOAD_DIR, name), data)
   return { thumb: `/uploads/${name}`, thumbRatio: Math.round((width / height) * 1000) / 1000 }
+}
+
+// Thumbnails saved before shrinkThumb existed are still stored as published:
+// the first Everything view of a real install fetched 6.7 MB of them, one a
+// 3024x4032 JPEG drawn at 211px (technical audit, 2026-10-11). Run at boot, it
+// shrinks those in place under the same name, so no note's thumb has to change
+// — which is also why one whose shrink would change its format is left as it
+// is. After the first boot it reads only headers, finds nothing, and is done.
+export async function shrinkStoredThumbs() {
+  for (const name of await readdir(UPLOAD_DIR)) {
+    if (!name.startsWith('meta-')) continue
+    const file = path.join(UPLOAD_DIR, name)
+    try {
+      const { width = 0, height = 0 } = await sharp(file).metadata()
+      if (Math.max(width, height) <= THUMB_EDGE) continue
+      const { data, ext } = await shrinkThumb(await readFile(file))
+      if (path.extname(name).replace('.jpeg', '.jpg') !== `.${ext}`) continue
+      // Through a temporary file: a reader mid-write would get half a picture.
+      await writeFile(`${file}.tmp`, data)
+      await rename(`${file}.tmp`, file)
+    } catch (e) {
+      console.error('[thumb] could not shrink', name, '-', e instanceof Error ? e.message : e)
+    }
+  }
 }
 
 // Stored as published, the demo's twenty-one thumbnails came to 3.7 MB for

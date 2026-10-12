@@ -177,3 +177,24 @@ test('queueThumbRetry: an image that turns out to be gone is let go, and not ask
   assert.equal(imageRequests, 1)
   assert.ok(!notes.get('n3')?.thumb)
 })
+
+// Thumbnails saved before the 960px shrink are still stored as published: the
+// first Everything view of a real install fetched 6.7 MB of them, one a
+// 3024x4032 JPEG drawn at 211px (technical audit, 2026-10-11). A boot sweep
+// shrinks those in place, under the same name, so no note has to change.
+test('stored thumbnails: an oversized one is shrunk in place, a small one is left alone', async () => {
+  const { shrinkStoredThumbs } = await import('../../../server/links/fetch.ts')
+  const big = path.join(UPLOAD_DIR, 'meta-old.jpg')
+  const small = path.join(UPLOAD_DIR, 'meta-small.jpg')
+  await solid(3024, 4032).jpeg().toFile(big)
+  await solid(400, 300).jpeg().toFile(small)
+  const smallBefore = readFileSync(small)
+
+  await shrinkStoredThumbs()
+
+  const shrunk = await sharp(big).metadata()
+  assert.equal(shrunk.format, 'jpeg')
+  assert.equal(Math.max(shrunk.width!, shrunk.height!), 960)
+  assert.equal(shrunk.width! / shrunk.height!, 3024 / 4032)
+  assert.deepEqual(readFileSync(small), smallBefore)
+})

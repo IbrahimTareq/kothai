@@ -1,7 +1,7 @@
 // Instagram posts: metadata from the public embed page, the throttle that
 // keeps a bulk import from getting the IP soft-banned, and carousel slides.
 // fetchLinkMeta in meta.ts hands every Instagram post URL straight here.
-import { MAX_HTML, decodeEntities, get, isSafeFetchUrl, saveThumb, saveThumbSafe } from './fetch.ts'
+import { MAX_HTML, decodeEntities, get, isSafeFetchUrl, saveThumb } from './fetch.ts'
 
 // instagram.com serves a login wall to anonymous og-scrapes, so posts get
 // their metadata from the public /embed/captioned/ page instead (caption +
@@ -237,7 +237,9 @@ export async function fetchInstagramMeta(url: string, noteId: string): Promise<I
     meta.siteDesc = captionToMeta(caption).siteDesc
   }
   meta = withLocation(meta, location)
-  if (thumbUrl) Object.assign(meta, await saveThumbSafe(thumbUrl, url, noteId))
+  // A thumbnail is optional enrichment here: anything that goes wrong is no picture.
+  if (thumbUrl && URL.canParse(thumbUrl, url))
+    Object.assign(meta, await saveThumb(new URL(thumbUrl, url).href, noteId).catch(() => null))
   return meta
 }
 

@@ -22,6 +22,7 @@ const tagvocab = await import('./data/tagvocab.ts')
 const telegram = await import('./telegram/index.ts')
 const demo = await import('./routes/demo.ts')
 const { startUsageLog, withTrigger } = await import('./ai/usage.ts')
+const { shrinkStoredThumbs } = await import('./links/fetch.ts')
 
 const server = createServer()
 
@@ -51,6 +52,8 @@ if (ai.capabilities().managesResidency) await ai.applyResidency(settings.getResi
 // make one. Off until here, so tests and scripts never write usage rows.
 await startUsageLog()
 withTrigger('boot', () => enrich.queueMetaBackfill())
+// In the background, one file at a time: a first run on a big library takes a while.
+shrinkStoredThumbs().catch(e => console.error('[thumb] stored-thumbnail sweep failed:', e))
 // Vectors built under an older embedding recipe (different task prefixes, or
 // a different set of note fields) are not comparable with new ones, so a
 // changed recipe re-embeds the library once, in the background, on the same

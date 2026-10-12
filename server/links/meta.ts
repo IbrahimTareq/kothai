@@ -387,7 +387,7 @@ export async function fetchLinkMeta(rawUrl: string, noteId: string): Promise<Lin
     meta.siteDesc = oembedDesc
   }
 
-  // Not saveThumbSafe: a 429 is not "no thumbnail" (a demo's GitHub card, for good).
+  // Not swallowed, as Instagram's is: a 429 is not "no thumbnail" (a demo's GitHub card, for good).
   const src = thumbUrl && URL.canParse(thumbUrl, url) ? new URL(thumbUrl, url).href : null
   if (src) Object.assign(meta, await saveThumb(src, noteId).catch(e => ({ thumbSrc: isTransient(e) ? src : null })))
   return meta

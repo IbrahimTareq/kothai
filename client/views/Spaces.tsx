@@ -152,7 +152,7 @@ export function SpacesView({ collections, createCollection, navigate }: SpacesVi
       <div className="spaces-scroll">
         {roots.length === 0 && !creating ? (
           <div className="empty">
-            <img src="/empty.svg" alt="" width={60} height={60} />
+            <img src="/empty.png" alt="" width={60} height={60} />
             <p>No spaces yet</p>
             {newSpace}
           </div>

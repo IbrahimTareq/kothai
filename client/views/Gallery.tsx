@@ -286,7 +286,7 @@ export function GalleryView({
         {total === 0 && ready ? (
           <div className="empty">
             {nav === 'all' ? (
-              <img src="/empty-2.svg" alt="" width={80} height={80} />
+              <img src="/empty-2.png" alt="" width={80} height={80} />
             ) : (
               <Icon name={cat.glyph} size={40} />
             )}
