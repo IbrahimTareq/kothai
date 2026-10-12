@@ -302,7 +302,7 @@ export function CoreView({
               value={text}
               disabled={llmOff}
               aria-label="Ask a question about your vault"
-              placeholder={demo?.asksLeft === 0 ? 'That’s all the demo answers today' : 'Ask anything...'}
+              placeholder={demo?.asksLeft === 0 ? 'That’s all the demo answers today' : 'Ask anything…'}
               maxLength={demo ? 500 : undefined}
               onChange={e => setText(e.target.value)}
               onFocus={onFocus}

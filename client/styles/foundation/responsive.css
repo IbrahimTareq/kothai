@@ -180,7 +180,7 @@
   /* The board's per-card cluster was three 26px buttons 6px apart on a 162px
      card: under half the floor, and an unconfirmed delete sitting right
      beside the thing you actually want to tap. On touch the cluster goes
-     entirely — the card body itself opens the expanded view now, and Release
+     entirely — the card body itself opens the expanded view now, and Delete
      and Add to space both live in there, where they are deliberate rather
      than one fat-finger away. */
   .card-actions{display:none}

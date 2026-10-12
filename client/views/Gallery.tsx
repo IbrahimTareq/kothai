@@ -11,6 +11,7 @@ import { useScrollEdges } from '../layout/useScrollEdges'
 import { PageHeader } from '../ui/PageHeader'
 import { Chip } from '../ui/Chip'
 import { Segmented } from '../ui/Segmented'
+import { Button } from '../ui/Button'
 import { UnavailableBar } from '../components/UnavailableBar'
 
 // Rounded to what the estimate can honestly claim: a rate over the last few
@@ -64,6 +65,8 @@ interface GalleryViewProps {
    *  Empty means "All". */
   galFilter: string[]
   setGalFilter: (v: string[]) => void
+  /** Opens quick capture: an empty archive's way to its first item. */
+  onCapture: () => void
   galSort: 'newest' | 'oldest'
   setGalSort: (v: 'newest' | 'oldest') => void
   /** Server counts over the search-filtered set, whatever chips are on. */
@@ -99,6 +102,7 @@ export function GalleryView({
   onWindow,
   galFilter,
   setGalFilter,
+  onCapture,
   galSort,
   setGalSort,
   facets,
@@ -168,7 +172,7 @@ export function GalleryView({
             <Icon name="search" size={16} />
             <input
               value={search}
-              placeholder="search anything…"
+              placeholder="Search anything…"
               onChange={e => setSearch(e.target.value)}
               onFocus={() => setSearchFocus(true)}
               onBlur={() => setSearchFocus(false)}
@@ -286,7 +290,24 @@ export function GalleryView({
             ) : (
               <Icon name={cat.glyph} size={40} />
             )}
-            {search ? <p>{`No ${cat.label.toLowerCase()} match this filter`}</p> : <p>Nothing added yet</p>}
+            {/* Each empty names its cause and its way out. One message covered
+                all three, and on Everything it read "No everything match this
+                filter"; chips with no search said "Nothing added yet". */}
+            {search ? (
+              <p>Nothing matches “{search}”</p>
+            ) : galFilter.length > 0 ? (
+              <>
+                <p>Nothing matches these filters</p>
+                <Button onClick={() => setGalFilter([])}>Show all</Button>
+              </>
+            ) : (
+              <>
+                <p>Nothing added yet</p>
+                <Button tone="solid" onClick={onCapture}>
+                  Capture
+                </Button>
+              </>
+            )}
           </div>
         ) : (
           <WindowedBoard

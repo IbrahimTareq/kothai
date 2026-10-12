@@ -129,7 +129,7 @@ export function RoleAccordion({
           <span className="role-acc-sub">{meta.sub}</span>
         </span>
         <span className="role-acc-current">
-          {switching ? <span className="model-dl">↓ {pct}%</span> : policy === 'off' ? 'OFF' : current?.label || '—'}
+          {switching ? <span className="model-dl">↓ {pct}%</span> : policy === 'off' ? 'Off' : current?.label || '—'}
         </span>
         <span className="role-acc-chev">
           <Icon name="chevron" size={16} />

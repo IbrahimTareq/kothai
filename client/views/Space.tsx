@@ -28,7 +28,6 @@ interface CollectionViewProps {
   collection: Collection | null
   view: ViewMode
   setView: (v: ViewMode) => void
-  deleteItem: (item: UIItem) => void
   onExpand: (item: UIItem) => void
   collections: Collection[]
   addToCollection: (cid: string, itemId: string) => void
@@ -53,7 +52,6 @@ export function CollectionView({
   collection,
   view,
   setView,
-  deleteItem,
   onExpand,
   collections,
   addToCollection,
@@ -352,7 +350,7 @@ export function CollectionView({
               renderItem={it => (
                 <ItemCard
                   item={it}
-                  onDelete={deleteItem}
+                  space={collection.id}
                   onExpand={onExpand}
                   collections={collections}
                   onAddTo={addToCollection}
@@ -369,7 +367,7 @@ export function CollectionView({
               // The button is the way to fill it, which the message only named.
               <div className="empty">
                 <Icon name="spaces" size={40} />
-                <p>{collection.tags.length > 0 ? 'NO ITEMS MATCH YET' : 'NO ITEMS YET'}</p>
+                <p>{collection.tags.length > 0 ? 'Nothing matches its tags yet' : 'Nothing here yet'}</p>
                 <Button className="coll-browse" onClick={() => navigate('all')}>
                   Browse Everything
                 </Button>

@@ -40,7 +40,7 @@
     "exports": 16
   },
   "server/ai/providers/local.ts": {
-    "lines": 544,
+    "lines": 542,
     "exports": 25
   },
   "server/ai/providers/remote.ts": {

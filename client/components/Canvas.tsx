@@ -27,7 +27,7 @@ import {
 } from '@xyflow/react'
 import type { NodeProps, NodeChange, EdgeChange, Connection, OnBeforeDelete } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { CardInner } from './Cards'
+import { CardInner } from './CardBody'
 import { Icon } from './icons'
 import { sourceGlyph, isMediaFirst } from '../domain/source'
 import { EMPTY_DOC, TEXT_W, FRAME_W, FRAME_H, reconcile, toFlow, fromFlow, frameAround, tidy } from '../layout/canvas'
