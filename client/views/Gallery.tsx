@@ -67,6 +67,8 @@ interface GalleryViewProps {
   setGalFilter: (v: string[]) => void
   /** Opens quick capture: an empty archive's way to its first item. */
   onCapture: () => void
+  /** Asks a search that found nothing as a question: text missed, meaning may not. */
+  onAsk: (q: string) => void
   galSort: 'newest' | 'oldest'
   setGalSort: (v: 'newest' | 'oldest') => void
   /** Server counts over the search-filtered set, whatever chips are on. */
@@ -103,6 +105,7 @@ export function GalleryView({
   galFilter,
   setGalFilter,
   onCapture,
+  onAsk,
   galSort,
   setGalSort,
   facets,
@@ -174,6 +177,9 @@ export function GalleryView({
               value={search}
               placeholder="Search anything…"
               onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && search.trim() && total === 0 && ready) onAsk(search)
+              }}
               onFocus={() => setSearchFocus(true)}
               onBlur={() => setSearchFocus(false)}
             />
@@ -294,7 +300,10 @@ export function GalleryView({
                 all three, and on Everything it read "No everything match this
                 filter"; chips with no search said "Nothing added yet". */}
             {search ? (
-              <p>Nothing matches “{search}”</p>
+              <>
+                <p>Nothing matches “{search}”</p>
+                <Button onClick={() => onAsk(search)}>Ask about “{search}”</Button>
+              </>
             ) : galFilter.length > 0 ? (
               <>
                 <p>Nothing matches these filters</p>

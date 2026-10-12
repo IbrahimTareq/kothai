@@ -54,7 +54,8 @@ export default function App() {
   const chat = useChat(nav)
   const [captureOpen, setCaptureOpen] = useState(false)
   const [view, setView] = useState<ViewMode>('grid4')
-  const [search, setSearch] = useState('')
+  // The search query is part of where you are, so it lives in the URL too.
+  const [search, setSearch] = useState(() => new URLSearchParams(location.search).get('q') ?? '')
   const [searchFocus, setSearchFocus] = useState(false)
   // Everything-page filters, multi-select. Chip keys are mixed (types, sources
   // and the 'unavailable' state) and split apart below; an empty set is "All".
@@ -97,6 +98,10 @@ export default function App() {
     Boolean(SOURCE_BY_KEY[k]),
   )
   const notes = useNotes(boardQ, galleryActive)
+  useEffect(() => {
+    const url = location.pathname + (search && galleryActive ? `?q=${encodeURIComponent(search)}` : '')
+    if (url !== location.pathname + location.search) history.replaceState(null, '', url)
+  }, [search, galleryActive, nav])
   const writes = useItemWrites(notes, spaceNotesRef, nav + JSON.stringify(boardQ), expanded, setExpanded)
   const { remove: deleteItem, update: updateItem, retag: retagItem, patch: patchItem } = writes
   // Keep the open detail modal in sync with background completions (e.g.
@@ -259,6 +264,7 @@ export default function App() {
       const r = pathToRoute(location.pathname)
       pushedItem.current = false
       setNav(r.nav)
+      setSearch(new URLSearchParams(location.search).get('q') ?? '')
       if (r.item) showItemById(r.item, r.nav)
       else setExpanded(null)
       // Back and forward move through conversations too: into one loads it,
@@ -444,6 +450,10 @@ export default function App() {
                 galFilter,
                 setGalFilter,
                 onCapture: () => setCaptureOpen(true),
+                onAsk: (q: string) => {
+                  navigate('core')
+                  chat.askFresh(q)
+                },
                 galSort,
                 setGalSort,
                 facets: notes.facets,

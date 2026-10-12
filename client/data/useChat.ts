@@ -92,7 +92,7 @@ export function useChat(nav: string) {
   // Ask: query the vault; used by the Ask (core) view composer.
   // `ask` is a question picked rather than typed (the demo's suggestions in
   // views/Core.tsx); anything else sends what is in the box.
-  const sendQuestion = async (ask = text) => {
+  const sendQuestion = async (ask = text, into = chatId) => {
     const raw = ask.trim()
     const img = pendingImg
     if (asking || (!raw && !img)) return
@@ -128,7 +128,7 @@ export function useChat(nav: string) {
     }
     try {
       const { chatId: cid } = await API.askStream(
-        { question: raw, image: img, chatId },
+        { question: raw, image: img, chatId: into },
         {
           onSources: cited => patch({ cited }),
           onDelta: t => {
@@ -212,6 +212,13 @@ export function useChat(nav: string) {
     if (location.pathname !== '/ask') history.pushState(null, '', '/ask')
     focusComposer()
   }
+  // A search that found nothing, asked instead: a conversation of its own. The
+  // chat id is passed, not read — cleared in this same tick, the state still
+  // holds the old one, and the question would join that conversation.
+  const askFresh = (q: string) => {
+    clearChat()
+    sendQuestion(q, null)
+  }
 
   // The list carries the title, so it updates locally; the server is the
   // authority on the trim/length rules and reconciles on the next fetch.
@@ -229,6 +236,7 @@ export function useChat(nav: string) {
   }
 
   return {
+    askFresh,
     // composer
     text,
     setText,
