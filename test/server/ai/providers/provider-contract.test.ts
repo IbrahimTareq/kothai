@@ -1,18 +1,13 @@
-// The cross-provider contract suite: the SAME assertions run against both
-// providers. Shape drift between local and remote is the primary risk in the
-// provider design — a note classified on-device and one classified against a
-// remote endpoint must be indistinguishable downstream — and this is the only
-// test that catches it.
-//
-// Local is stubbed at the @qvac/sdk boundary (module mocks, already enabled
-// for this suite via the test script's --experimental-test-module-mocks).
-// Remote runs against a throwaway http server. Neither touches the network.
-import { test, mock, before, after } from 'node:test'
+// The provider contract suite. It was written to run the SAME assertions
+// against an on-device provider and the remote one, because shape drift
+// between them was the primary risk; the on-device provider is gone, and the
+// suite still pins the shapes everything downstream reads. The remote provider
+// runs against a throwaway http server and never touches the network.
+import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import type { Server } from 'node:http'
 import { ROLES } from '../../../../server/ai/roles.ts'
-import type { ProviderKind } from '../../../../server/ai/routing.ts'
 import type { Provider } from '../../../../server/ai/providers/types.ts'
 import { listenOnLoopback, record, records } from '../../../helpers/http.ts'
 
@@ -54,52 +49,10 @@ before(async () => {
 })
 
 after(async () => {
-  if (localMod) await localMod.shutdown()
   await new Promise<void>(r => {
     server.close(() => r())
   })
 })
-
-let localMod: Provider | null = null
-
-async function localProvider(): Promise<Provider> {
-  if (localMod) return localMod
-  mock.module('@qvac/sdk', {
-    namedExports: {
-      loadModel: async () => 'model-1',
-      unloadModel: async () => {},
-      close: async () => {},
-      embed: async () => ({ embedding: VECTOR }),
-      cancel: async () => {},
-      completion: ({ history }: { history: { content: string }[] }) => {
-        const text = /return JSON only/.test(history[0].content)
-          ? JSON.stringify(CLASSIFICATION)
-          : 'An answer citing [1].'
-        return {
-          requestId: 'req-1',
-          // Chunked so the streaming path is exercised across a boundary
-          // rather than handed the whole answer in one delta.
-          events: (async function* () {
-            for (const chunk of text.match(/[\s\S]{1,7}/g) || []) yield { type: 'contentDelta', seq: 0, text: chunk }
-            yield { type: 'completionDone', seq: 1, stopReason: 'eos' }
-          })(),
-          final: Promise.resolve({ contentText: text }),
-        }
-      },
-      QWEN3_1_7B_INST_Q4: { name: 'llm', expectedSize: 1 },
-      EMBEDDINGGEMMA_300M_Q8_0: { name: 'embed', expectedSize: 1 },
-      QWEN3_5_2B_MULTIMODAL_Q4_K_M: { name: 'vision', expectedSize: 1 },
-      MMPROJ_QWEN3_5_2B_MULTIMODAL_F16: { name: 'proj', expectedSize: 1 },
-    },
-  })
-  const mod = await import('../../../../server/ai/providers/local.ts')
-  await mod.init({
-    local: { llm: 'QWEN3_1_7B_INST_Q4', embed: 'EMBEDDINGGEMMA_300M_Q8_0', vision: 'QWEN3_5_2B_MULTIMODAL_Q4_K_M' },
-  })
-  await mod.applyResidency({ llm: 'ondemand', embed: 'ondemand', vision: 'ondemand' })
-  localMod = mod
-  return mod
-}
 
 async function remoteProvider(): Promise<Provider> {
   const { createRemoteProvider } = await import('../../../../server/ai/providers/remote.ts')
@@ -115,22 +68,15 @@ async function remoteProvider(): Promise<Provider> {
   return p
 }
 
-// Annotated rather than inferred, and that annotation is now part of what the
-// suite asserts: each builder has to hand back something the checker accepts as
-// a whole Provider, so a member missing from one module is a typecheck error
-// here as well as a failing assertion below.
-const PROVIDERS: [ProviderKind, () => Promise<Provider>][] = [
-  ['local', localProvider],
-  ['remote', remoteProvider],
-]
+// Annotated rather than inferred, and that annotation is part of what the
+// suite asserts: the builder has to hand back something the checker accepts as
+// a whole Provider, so a missing member is a typecheck error here as well as a
+// failing assertion below.
+const PROVIDERS: [string, () => Promise<Provider>][] = [['remote', remoteProvider]]
 
 for (const [name, build] of PROVIDERS) {
-  test(`${name}: capabilities has exactly the three descriptor keys`, async () => {
-    const caps = (await build()).capabilities()
-    assert.deepEqual(Object.keys(caps).sort(), ['downloadsWeights', 'kind', 'managesResidency'])
-    assert.equal(caps.kind, name)
-    assert.equal(typeof caps.managesResidency, 'boolean')
-    assert.equal(typeof caps.downloadsWeights, 'boolean')
+  test(`${name}: capabilities names the kind and nothing else`, async () => {
+    assert.deepEqual((await build()).capabilities(), { kind: name })
   })
 
   test(`${name}: classify returns the full normalised shape with junk filtered`, async () => {
@@ -142,7 +88,7 @@ for (const [name, build] of PROVIDERS) {
     assert.equal(out.type, 'link')
     assert.equal(out.category, 'Tech')
     assert.equal(out.title, 'A Title')
-    assert.deepEqual(out.tags, ['alpha', 'beta'], 'both providers must run the shared junk-tag filter')
+    assert.deepEqual(out.tags, ['alpha', 'beta'], 'the provider must run the shared junk-tag filter')
   })
 
   test(`${name}: embedText returns a plain number array`, async () => {

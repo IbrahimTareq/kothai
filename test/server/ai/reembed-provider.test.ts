@@ -1,13 +1,13 @@
-// The embed role changing provider invalidates every stored vector. This is
-// the guard that rebuilds them, and the guard that stays quiet when nothing
-// changed — a spurious re-embed of a large library is expensive.
+// Vectors from the removed on-device provider sit in another space than an
+// endpoint's. This is the guard that rebuilds them, and the guard that stays
+// quiet when nothing changed — a spurious re-embed of a large library is
+// expensive.
 //
 // The pure predicate is tested on its own; the queueing function gets the
 // same harness reembed-recipe.test.ts uses, because the decisions worth
 // protecting are the ones about the marker, not the return value. Recording
 // the marker too eagerly strands a library that still owes a sweep; recording
-// it too late (or never) means a later provider flip is measured against the
-// wrong baseline and never noticed at all.
+// it too late (or never) re-embeds the library on every boot.
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { note } from '../../helpers/notes.ts'
@@ -102,95 +102,60 @@ function reset(list: NoteRecord[] = [], marker: string | null = null) {
 
 const drain = () => enrich.queueJob(() => {})
 
-test('no stored value on a remote install means it was embedding remotely', () => {
-  assert.equal(reembed.embedProviderChanged({ stored: null, resolved: 'local', wasRemote: true }), true)
-  assert.equal(reembed.embedProviderChanged({ stored: null, resolved: 'remote', wasRemote: true }), false)
-})
-
-test('no stored value on a local install means it was embedding locally', () => {
-  assert.equal(reembed.embedProviderChanged({ stored: null, resolved: 'local', wasRemote: false }), false)
-  assert.equal(reembed.embedProviderChanged({ stored: null, resolved: 'remote', wasRemote: false }), true)
-})
-
-test('a stored value is believed over any inference', () => {
-  assert.equal(reembed.embedProviderChanged({ stored: 'local', resolved: 'local', wasRemote: true }), false)
-  assert.equal(reembed.embedProviderChanged({ stored: 'remote', resolved: 'local', wasRemote: false }), true)
+test('only vectors marked as coming from an endpoint are current', () => {
+  assert.equal(reembed.embedProviderChanged('remote'), false)
+  assert.equal(reembed.embedProviderChanged('local'), true, 'vectors from the removed on-device provider')
+  assert.equal(reembed.embedProviderChanged(null), true, 'an install that predates the marker')
 })
 
 test('with the embed role off, nothing is queued AND no marker is written', async () => {
-  reset([NOTE], null)
+  reset([NOTE], 'local')
   enabledImpl = () => ({ llm: false, embed: false, vision: false })
 
-  assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'local', wasRemote: true }), false)
+  assert.equal(reembed.queueEmbedProviderReembed(), false)
   await drain()
   assert.equal(embedCalls.length, 0)
-  assert.equal(storedProvider, null, 'recording a provider the role never embedded with would strand the library')
+  assert.equal(storedProvider, 'local', 'recording a provider the role never embedded with would strand the library')
   assert.deepEqual(savedPatches, [], 'the role being off is not evidence of anything worth recording')
 
-  // Role switched back on: the absent marker means the change is still owed.
+  // Role switched back on: the old marker means the change is still owed.
   enabledImpl = () => ({ llm: true, embed: true, vision: true })
-  assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'local', wasRemote: true }), true)
+  assert.equal(reembed.queueEmbedProviderReembed(), true)
   // Undrained, this sweep finished inside the next test and wrote its marker
   // over that test's reset — once the sweep grew a registry reseed step.
   await drain()
 })
 
-test('unchanged with no stored marker records the inference so a later flip is measurable', async () => {
-  reset([NOTE], null)
+test('vectors already from an endpoint queue nothing and leave the marker alone', async () => {
+  reset([NOTE], 'remote')
 
-  assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'remote', wasRemote: true }), false)
-  await drain()
-  assert.equal(embedCalls.length, 0, 'nothing changed, so nothing to re-embed')
-  assert.equal(storedProvider, 'remote', 'the inference must be written down the first time it is made')
-})
-
-test('unchanged with a stored marker queues nothing and leaves the marker alone', async () => {
-  reset([NOTE], 'local')
-
-  assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'local', wasRemote: true }), false)
+  assert.equal(reembed.queueEmbedProviderReembed(), false)
   await drain()
   assert.equal(embedCalls.length, 0)
-  assert.equal(storedProvider, 'local')
+  assert.equal(storedProvider, 'remote')
   assert.deepEqual(savedPatches, [], 'the marker already says the right thing')
 })
 
-test('a changed provider with an empty library records the new value without sweeping', async () => {
-  reset([], 'remote')
+test('an empty library records the endpoint without sweeping', async () => {
+  reset([], 'local')
 
-  assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'local', wasRemote: true }), false)
+  assert.equal(reembed.queueEmbedProviderReembed(), false)
   await drain()
   assert.equal(embedCalls.length, 0)
-  assert.equal(storedProvider, 'local', 'a fresh install must not be told it owes a re-embed on every boot')
+  assert.equal(storedProvider, 'remote', 'a fresh install must not be told it owes a re-embed on every boot')
 })
 
-test('a changed provider with notes sweeps the library and records the marker only afterwards', async () => {
-  reset([NOTE, { ...NOTE, id: 'n2' }], 'remote')
+test('a library of on-device vectors is re-embedded, and the marker moves only afterwards', async () => {
+  reset([NOTE, { ...NOTE, id: 'n2' }], 'local')
 
-  assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'local', wasRemote: true }), true)
-  assert.equal(storedProvider, 'remote', 'the marker must not move before the job has even run')
+  assert.equal(reembed.queueEmbedProviderReembed(), true)
+  assert.equal(storedProvider, 'local', 'the marker must not move before the job has even run')
   await drain()
 
   assert.equal(embedCalls.length, 2)
   assert.ok(
-    embedCalls.every(c => c.markerNow === 'remote'),
+    embedCalls.every(c => c.markerNow === 'local'),
     'a marker written mid-sweep would claim vectors that do not exist yet if the process died',
   )
-  assert.equal(storedProvider, 'local')
-})
-
-test('an install that was embedding remotely still notices a later wholesale flip to local', async () => {
-  reset([NOTE], null)
-
-  // Boot one: nothing changed, but the inference gets written down.
-  assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'remote', wasRemote: true }), false)
-  await drain()
-  assert.equal(embedCalls.length, 0)
   assert.equal(storedProvider, 'remote')
-
-  // Boot two, after KOTHAI_AI_PROVIDER was flipped wholesale. Inferring from
-  // the environment again would compare 'local' against 'local' and miss it.
-  assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'local', wasRemote: false }), true)
-  await drain()
-  assert.equal(embedCalls.length, 1, 'the library was still holding vectors from the endpoint')
-  assert.equal(storedProvider, 'local')
 })

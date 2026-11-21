@@ -6,29 +6,21 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, existsSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { _reset, initProvider } from '../../../server/ai/index.ts'
-import type { ProviderKind } from '../../../server/ai/routing.ts'
+import { _reset, initProvider, roleEnabled } from '../../../server/ai/index.ts'
 import { handleSetup, handleSetupEndpoint, handleGetSettings } from '../../../server/routes/settings.ts'
 import { _resetDb } from '../../../server/data/db.ts'
 import * as settings from '../../../server/data/settings.ts'
 import { setAiCredentials, getAiConfig } from '../../../server/config.ts'
 import { readCredentials } from '../../../server/data/credentials.ts'
 import { mockReq, mockRes, record, records } from '../../helpers/http.ts'
-import { loader, provider } from '../../helpers/providers.ts'
+import { provider } from '../../helpers/providers.ts'
 
 const fakeReq = (body: unknown) => mockReq({ body: JSON.stringify(body) })
 const dir = () => mkdtempSync(path.join(tmpdir(), 'kothai-setup-'))
 
-// A stand-in provider. Without this, initProvider('local') resolves the REAL
-// on-device provider and handleSetup's queued job tries to download several GB
-// of weights — which is what hung an earlier version of this file. The facade
-// reaches local-only calls through L()?.boot?.() and friends, so a fake that
-// omits them is fine: those resolve to Promise.resolve().
-const fakeProvider = (kind: ProviderKind) =>
-  provider({
-    capabilities: () => ({ kind, managesResidency: kind === 'local', downloadsWeights: kind === 'local' }),
-  })
-const load = loader(fakeProvider)
+// A stand-in for the provider at boot. The routes reconfigure without it, onto
+// the real remote provider pointed at ENDPOINT below.
+const load = () => provider({ capabilities: () => ({ kind: 'remote' }) })
 
 // Unreachable on purpose: remote.init() probes /models best-effort and
 // swallows the failure, so a refused connection settles instantly instead of
@@ -45,7 +37,7 @@ beforeEach(async () => {
 
 test('an endpoint posted at first run is stored and takes effect immediately', async () => {
   const d = dir()
-  await initProvider('local', {}, { load, localAvailable: true })
+  await initProvider({}, { load })
   const { res, sent } = mockRes()
   await handleSetup(
     fakeReq({
@@ -57,12 +49,12 @@ test('an endpoint posted at first run is stored and takes effect immediately', a
   )
   assert.equal(sent.code, 200)
   assert.deepEqual(readCredentials(d), { baseUrl: ENDPOINT, apiKey: 'sk-wizard', providerId: 'openai' })
-  assert.equal(getAiConfig().provider, 'remote', 'the running process must be remote now')
+  assert.equal(getAiConfig().roles.llm.baseUrl, ENDPOINT, 'the running process must use it now')
 })
 
 test('the credential file is 0600', async () => {
   const d = dir()
-  await initProvider('local', {}, { load, localAvailable: true })
+  await initProvider({}, { load })
   await handleSetup(fakeReq({ endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-x' } }), mockRes().res, {
     dir: d,
   })
@@ -71,14 +63,14 @@ test('the credential file is 0600', async () => {
 
 test('a setup with no endpoint writes no credential file at all', async () => {
   const d = dir()
-  await initProvider('local', {}, { load, localAvailable: true })
-  await handleSetup(fakeReq({ llm: 'QWEN3_1_7B_INST_Q4' }), mockRes().res, { dir: d })
+  await initProvider({}, { load })
+  await handleSetup(fakeReq({ remote: { llm: 'gpt-4o-mini' } }), mockRes().res, { dir: d })
   assert.equal(existsSync(path.join(d, 'credentials.json')), false)
 })
 
 test('an endpoint with no base URL is rejected before anything is written', async () => {
   const d = dir()
-  await initProvider('local', {}, { load, localAvailable: true })
+  await initProvider({}, { load })
   const { res, sent } = mockRes()
   await handleSetup(fakeReq({ endpoint: { providerId: 'openai', apiKey: 'sk-x' } }), res, { dir: d })
   assert.equal(sent.code, 400)
@@ -86,7 +78,7 @@ test('an endpoint with no base URL is rejected before anything is written', asyn
 })
 
 test('GET /api/settings offers the catalogue so the wizard can render tiles', async () => {
-  await initProvider('local', {}, { load, localAvailable: true })
+  await initProvider({}, { load })
   const { res, sent } = mockRes()
   await handleGetSettings(res)
   const endpoints = records(sent.json().catalogue)
@@ -99,7 +91,7 @@ test('GET /api/settings offers the catalogue so the wizard can render tiles', as
 // against a 60s budget, with captioning off entirely. A hosted endpoint is
 // what Railway gets now; Ollama belongs on the user's own hardware.
 test('a Railway install is not offered an Ollama on Railway', async () => {
-  await initProvider('local', {}, { load, localAvailable: true })
+  await initProvider({}, { load })
   process.env.RAILWAY_ENVIRONMENT = 'production'
   try {
     const { res, sent } = mockRes()
@@ -113,7 +105,7 @@ test('a Railway install is not offered an Ollama on Railway', async () => {
 
 test('GET /api/settings still never echoes a credential', async () => {
   setAiCredentials({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-secret' })
-  await initProvider('remote', {}, { load, localAvailable: false })
+  await initProvider({}, { load })
   const { res, sent } = mockRes()
   await handleGetSettings(res)
   assert.ok(!JSON.stringify(sent.json()).includes('sk-secret'))
@@ -125,7 +117,7 @@ test('GET /api/settings still never echoes a credential', async () => {
 // picker would never get to submit anything.
 test('applying an endpoint mid-first-run does not mark the install configured', async () => {
   const d = dir()
-  await initProvider('local', {}, { load, localAvailable: true })
+  await initProvider({}, { load })
   const { res, sent } = mockRes()
   await handleSetupEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-mid' } }), res, {
     dir: d,
@@ -137,18 +129,17 @@ test('applying an endpoint mid-first-run does not mark the install configured', 
 
 test('applying an endpoint reports the capabilities the picker should draw against', async () => {
   const d = dir()
-  await initProvider('local', {}, { load, localAvailable: true })
+  await initProvider({}, { load })
   const { res, sent } = mockRes()
   await handleSetupEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-mid' } }), res, {
     dir: d,
   })
   const body = sent.json()
-  assert.ok(body.capabilities, 'the client re-reads roles from this')
-  assert.equal(record(record(body.capabilities).roles).llm, 'remote')
+  assert.deepEqual(body.capabilities, { kind: 'remote' })
 })
 
 test('a request with no endpoint is rejected rather than silently doing nothing', async () => {
-  await initProvider('local', {}, { load, localAvailable: true })
+  await initProvider({}, { load })
   const { res, sent } = mockRes()
   await handleSetupEndpoint(fakeReq({}), res, { dir: dir() })
   assert.equal(sent.code, 400)
@@ -157,7 +148,7 @@ test('a request with no endpoint is rejected rather than silently doing nothing'
 // The installer asks which service in the terminal, because that answer picks
 // the image. Echoing it back is what stops the wizard asking a second time.
 test('GET /api/settings reports what the installer already asked', async () => {
-  await initProvider('local', {}, { load, localAvailable: true })
+  await initProvider({}, { load })
   const { res, sent } = mockRes()
   await handleGetSettings(res)
   const body = sent.json()
@@ -165,12 +156,11 @@ test('GET /api/settings reports what the installer already asked', async () => {
   assert.ok('providerId' in record(body.setup))
 })
 
-// The whole point of the seeding: naming an endpoint embedding model is what
-// keeps the role off this machine. Connecting OpenAI and still being handed a
-// 300 MB local download was the bug.
+// Seeded with the endpoint, so the picker is drawn with the provider's models
+// already in place.
 test('a provider that serves embeddings takes the embedding role too', async () => {
   const d = dir()
-  await initProvider('local', {}, { load, localAvailable: true })
+  await initProvider({}, { load })
   const { res, sent } = mockRes()
   await handleSetupEndpoint(
     fakeReq({
@@ -181,17 +171,16 @@ test('a provider that serves embeddings takes the embedding role too', async () 
     { dir: d },
   )
   assert.equal(sent.code, 200)
-  const roles = record(record(sent.json().capabilities).roles)
-  assert.equal(roles.embed, 'remote', 'no local download for a provider that serves it')
   assert.equal(settings.getRemote().embed, 'text-embedding-3-small')
+  assert.equal(roleEnabled('embed'), true)
 })
 
-// Not a catalogue entry — the offered providers all serve embeddings now. This
-// is the endpoint someone points at themselves with --endpoint or
-// KOTHAI_AI_BASE_URL, where naming no embedding model is the whole signal.
-test('an endpoint with no embedding model named leaves that role on this machine', async () => {
+// Not a catalogue entry. This is the endpoint someone points at themselves
+// with --endpoint or KOTHAI_AI_BASE_URL; with no embedding model named, the
+// role has nothing to run, and there is no on-device model to fall back on.
+test('an endpoint with no embedding model named leaves that role off', async () => {
   const d = dir()
-  await initProvider('local', {}, { load, localAvailable: true })
+  await initProvider({}, { load })
   const { res, sent } = mockRes()
   await handleSetupEndpoint(
     fakeReq({
@@ -201,9 +190,9 @@ test('an endpoint with no embedding model named leaves that role on this machine
     res,
     { dir: d },
   )
-  const roles = record(record(sent.json().capabilities).roles)
-  assert.equal(roles.embed, 'local', 'it serves no embeddings, so we keep one here')
-  assert.equal(roles.llm, 'remote')
+  assert.equal(sent.code, 200)
+  assert.equal(roleEnabled('embed'), false)
+  assert.equal(roleEnabled('llm'), true)
 })
 
 // The exact flow a person walks: connect a provider in the wizard, then press
@@ -212,7 +201,7 @@ test('an endpoint with no embedding model named leaves that role on this machine
 // 409 "already configured" and stranded them on the picker.
 test('connecting a provider then finishing first run is not "already configured"', async () => {
   const d = dir()
-  await initProvider('remote', {}, { load, localAvailable: false })
+  await initProvider({}, { load })
   const applied = mockRes()
   await handleSetupEndpoint(
     fakeReq({
@@ -239,7 +228,7 @@ test('connecting a provider then finishing first run is not "already configured"
 // the embedding role's own entry while the shared one stays Claude.
 test('an endpoint applied mid-first-run for one role is written as that role alone', async () => {
   const d = dir()
-  await initProvider('local', {}, { load, localAvailable: true })
+  await initProvider({}, { load })
   await handleSetupEndpoint(
     fakeReq({
       endpoint: { providerId: 'claude', baseUrl: ENDPOINT, apiKey: 'sk-ant' },
@@ -264,4 +253,16 @@ test('an endpoint applied mid-first-run for one role is written as that role alo
   assert.equal(creds?.roles?.embed?.providerId, 'openai')
   assert.equal(settings.getRemote().embed, 'text-embedding-3-small')
   assert.equal(settings.getRemote().llm, 'claude-haiku-5-5', "a role's save names only that role's model")
+})
+
+// Skip used to store every role as 'off' and leave the model names; with
+// residency gone, the cleared names are what keep a skipped install's roles off.
+test('skipping first run marks it done and clears every model name', async () => {
+  await settings.save({ remote: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small', vision: 'gpt-4.1-mini' } })
+  await initProvider({}, { load })
+  const { res, sent } = mockRes()
+  await handleSetup(fakeReq({ skip: true }), res, { dir: dir() })
+  assert.equal(sent.code, 200)
+  assert.equal(settings.isConfigured(), true)
+  assert.deepEqual(settings.getRemote(), { llm: '', embed: '', vision: '' })
 })

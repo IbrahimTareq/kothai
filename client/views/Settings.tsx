@@ -4,13 +4,13 @@
 // components/settings/SettingsRow.tsx, so per-section components can use them too —
 // Import is one, see components/settings/ImportSection.tsx).
 // Model Cores is a group: each model role (language / embedding / vision) is a
-// collapsible <RoleAccordion> whose header shows the role, its purpose, and the
-// currently selected model. Picking applies via /api/settings; the server swaps
-// models in the background. Everything below it — export, backup, import,
+// row whose header shows the role, its purpose, and the model it is set to,
+// above the field that names it. Naming applies via /api/settings. Everything
+// below it — export, backup, import,
 // re-tag, erase — is one row list, each row a title + explanation on the left
 // and its control on the right, expanding in place when a step needs confirming.
 import { useState, useEffect } from 'react'
-import { RoleAccordion, RemoteModelField, ROLE_META, fmtGB, type Role } from '../components/settings/ModelPicker'
+import { RemoteModelField, ROLE_META, type Role } from '../components/settings/ModelPicker'
 import { SettingsGroup, SettingsRow, RowStatus } from '../components/settings/SettingsRow'
 import { ConnectionPanel } from '../components/settings/ConnectionPanel'
 import { ImportSection } from '../components/settings/ImportSection'
@@ -22,9 +22,8 @@ import { RestoreRow } from '../components/settings/RestoreRow'
 import { BackupsRow } from '../components/settings/BackupsRow'
 import { DriveRow } from '../components/settings/DriveRow'
 import { EnrichmentRow } from '../components/settings/EnrichmentRow'
-import { ModelFilesRow } from '../components/settings/ModelFilesRow'
 import { API, apiError } from '../data/api'
-import type { Residency, SettingsResponse, ModelLoad } from '../types'
+import type { SettingsResponse } from '../types'
 import { Button } from '../ui/Button'
 import { PageHeader } from '../ui/PageHeader'
 import { Segmented } from '../ui/Segmented'
@@ -32,23 +31,19 @@ import { Confirm } from '../ui/Confirm'
 import { DemoSettings, useDemo } from '../components/Demo'
 
 export function SettingsView({
-  modelLoad,
   theme,
   setTheme,
 }: {
-  modelLoad: ModelLoad
   theme: 'dark' | 'light'
   setTheme: (t: 'dark' | 'light') => void
 }) {
   const demo = !!useDemo()
   const [cfg, setCfg] = useState<SettingsResponse | null>(null)
   const [busyRole, setBusyRole] = useState<Role | null>(null)
-  const [pendingRole, setPendingRole] = useState<Role | null>(null) // role currently downloading
   // Bumped after anything here queues enrichment, so the Enrichment row
   // re-reads at once rather than waiting for a poll it isn't running.
   const [enrichNudge, setEnrichNudge] = useState(0)
-  // Note count for the re-tag confirmation. It lives on /api/status rather
-  // than on the ModelLoad prop, which is only the model-loading view of it.
+  // Note count for the re-tag confirmation, from /api/status.
   const [noteCount, setNoteCount] = useState<number | null>(null)
   const [retagArmed, setRetagArmed] = useState(false)
   const [retagging, setRetagging] = useState(false)
@@ -70,61 +65,26 @@ export function SettingsView({
       .catch(() => {})
   }, [])
 
-  const switching = modelLoad.state === 'loading'
-  useEffect(() => {
-    if (!switching) setPendingRole(null)
-  }, [switching])
-
-  // The three pickers below differ only in which field they set. The envelope
-  // is the same every time — mark the role busy, move the UI before the server
-  // answers, and on failure re-read the server rather than trying to undo the
-  // optimistic edit by hand — and the revert in particular had been written
-  // out three times. `project` is how the row should look if the write lands.
-  const saveRole = async (
-    role: Role,
-    patch: Parameters<typeof API.saveSettings>[0],
-    project: (c: SettingsResponse) => SettingsResponse,
-  ) => {
+  // Mark the role busy, move the UI before the server answers, and on failure
+  // re-read the server rather than trying to undo the optimistic edit by hand.
+  const pickRemote = async (role: Role, name: string) => {
+    if (!cfg || busyRole || cfg.remote[role] === name) return
+    // A blank name is the role off, so naming one turns it on.
+    const waking = !cfg.remote[role] && Boolean(name)
     setBusyRole(role)
-    setCfg(c => (c ? project(c) : c))
+    setCfg(c => (c ? { ...c, remote: { ...c.remote, [role]: name } } : c))
     try {
-      await API.saveSettings(patch)
-      return true
+      await API.saveSettings({ remote: { [role]: name } })
+      // Only once the name actually stuck: a role now on may have notes to
+      // fill, and the Enrichment row should count them straight away.
+      if (waking) setEnrichNudge(n => n + 1)
     } catch {
       API.settings()
         .then(setCfg)
         .catch(() => {}) // revert to server truth
-      return false
     } finally {
       setBusyRole(null)
     }
-  }
-
-  const pick = (role: Role, key: string) => {
-    if (!cfg || busyRole || cfg.current[role] === key) return
-    setPendingRole(role)
-    return saveRole(role, { [role]: key }, c => ({ ...c, current: { ...c.current, [role]: key } }))
-  }
-
-  const pickRemote = (role: Role, name: string) => {
-    if (!cfg || busyRole || cfg.remote[role] === name) return
-    return saveRole(role, { remote: { [role]: name } }, c => ({ ...c, remote: { ...c.remote, [role]: name } }))
-  }
-
-  const pickPolicy = async (role: Role, p: Residency) => {
-    if (!cfg || busyRole || cfg.residency[role] === p) return
-    // Turning a role on can trigger a real (possibly multi-GB) background
-    // download — give it the same per-role "↓ X%" feedback + auto-expand a
-    // model-key swap already gets, instead of only the generic top progress bar.
-    const waking = cfg.residency[role] === 'off' && p !== 'off'
-    if (waking) setPendingRole(role)
-    const saved = await saveRole(role, { residency: { [role]: p } }, c => ({
-      ...c,
-      residency: { ...c.residency, [role]: p },
-    }))
-    // Only once the residency actually stuck: a role now on may have notes to
-    // fill, and the Enrichment row should count them straight away.
-    if (saved && waking) setEnrichNudge(n => n + 1)
   }
 
   // Re-tag everything. Deliberately two-step: it re-runs the language model
@@ -188,29 +148,11 @@ export function SettingsView({
     return `${parts.join(', ')}. Your models and settings are untouched.`
   }
 
-  // Approximate RAM footprint: idle = always-on roles, peak = everything enabled.
   const roles = Object.keys(ROLE_META) as Role[]
-  const sizeOf = (c: SettingsResponse, r: Role) => c.presets[r].find(p => p.key === c.current[r])?.sizeBytes || 0
-  const idleGB = cfg
-    ? fmtGB(roles.filter(r => cfg.residency[r] === 'always').reduce((s, r) => s + sizeOf(cfg, r), 0))
-    : ''
-  const peakGB = cfg ? fmtGB(roles.filter(r => cfg.residency[r] !== 'off').reduce((s, r) => s + sizeOf(cfg, r), 0)) : ''
-  // Per role, not per install: a mixed setup serves embedding from on-device
-  // presets and the other two from endpoint-defined ids in the same panel.
-  const isRemote = (role: Role) => cfg?.capabilities.roles[role] === 'remote'
 
   return (
     <div className="settings-view">
       <PageHeader title="Settings" />
-
-      {switching && (
-        <div className="settings-progress">
-          <div className="settings-progress-track">
-            <div className="settings-progress-bar" style={{ width: `${modelLoad.pct || 0}%` }}></div>
-          </div>
-          <span className="settings-progress-msg">{modelLoad.msg || modelLoad.txt}</span>
-        </div>
-      )}
 
       {/* On the demo the server refuses every setting here, and a page of
           greyed controls leaves gaps a fieldset cannot close: import takes a
@@ -225,75 +167,30 @@ export function SettingsView({
 
           <SettingsGroup
             label="Model cores"
-            sub={
-              roles.some(isRemote) ? (
-                // Named by the same titles the accordions below carry, so the
-                // sentence and the rows it describes read as one thing.
-                `Inference ${
-                  roles.every(isRemote)
-                    ? ''
-                    : `for ${roles
-                        .filter(isRemote)
-                        .map(r => ROLE_META[r].title.toLowerCase())
-                        .join(' and ')} `
-                }runs on a remote endpoint${cfg.endpoint.host ? ` (${cfg.endpoint.host})` : ''}. The endpoint and its key were set during setup and are stored on this machine only; KOTHAI_AI_BASE_URL and KOTHAI_AI_API_KEY override them.`
-              ) : (
-                <>
-                  Idle ≈ <b>{idleGB || '0.0 GB'}</b> · Peak ≈ <b>{peakGB || '0.0 GB'}</b> of RAM, from each model's
-                  residency below.
-                </>
-              )
-            }
+            sub={`Inference runs on a remote endpoint${cfg.endpoint.host ? ` (${cfg.endpoint.host})` : ''}. The endpoint and its key were set during setup and are stored on this machine only; KOTHAI_AI_BASE_URL and KOTHAI_AI_API_KEY override them.`}
           >
-            {roles.map(role =>
-              isRemote(role) ? (
-                <div key={role} className="role-acc open">
-                  <div className="role-acc-head">
-                    <span className="role-acc-info">
-                      <span className="role-acc-title">{ROLE_META[role].title}</span>
-                      <span className="role-acc-sub">{ROLE_META[role].sub}</span>
-                    </span>
-                    <span className="role-acc-current">{cfg.remote[role] || '—'}</span>
-                  </div>
-                  <div className="model-list">
-                    <RemoteModelField
-                      role={role}
-                      value={cfg.remote[role]}
-                      options={cfg.presets[role]}
-                      busy={busyRole === role}
-                      envSet={cfg.envModels[role]}
-                      onCommit={v => pickRemote(role, v)}
-                    />
-                  </div>
+            {roles.map(role => (
+              <div key={role} className="role-acc open">
+                <div className="role-acc-head">
+                  <span className="role-acc-info">
+                    <span className="role-acc-title">{ROLE_META[role].title}</span>
+                    <span className="role-acc-sub">{ROLE_META[role].sub}</span>
+                  </span>
+                  <span className="role-acc-current">{cfg.remote[role] || '—'}</span>
                 </div>
-              ) : (
-                <RoleAccordion
-                  key={role}
-                  role={role}
-                  presets={cfg.presets[role]}
-                  currentKey={cfg.current[role]}
-                  policy={cfg.residency[role]}
-                  onPolicy={p => pickPolicy(role, p)}
-                  busy={busyRole !== null || switching}
-                  switching={switching && pendingRole === role}
-                  pct={modelLoad.pct || 0}
-                  defaultOpen={switching && pendingRole === role}
-                  onPick={key => pick(role, key)}
-                  confirm
-                />
-              ),
-            )}
-          </SettingsGroup>
-
-          {/* Only where weights exist: a remote-inference install downloads
-                nothing, and the routes behind this row 404 there. */}
-          {cfg.capabilities.downloadsWeights && (
-            <SettingsGroup label="Storage">
-              <div className="settings-rows">
-                <ModelFilesRow />
+                <div className="model-list">
+                  <RemoteModelField
+                    role={role}
+                    value={cfg.remote[role]}
+                    options={cfg.presets[role]}
+                    busy={busyRole === role}
+                    envSet={cfg.envModels[role]}
+                    onCommit={v => pickRemote(role, v)}
+                  />
+                </div>
               </div>
-            </SettingsGroup>
-          )}
+            ))}
+          </SettingsGroup>
 
           <ImportSection />
 

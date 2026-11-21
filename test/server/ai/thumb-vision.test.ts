@@ -3,7 +3,7 @@
 // describeThumb used to run only inside the Instagram reclassify path, which
 // meant a TikTok, a YouTube video or any other link with an og:image never got
 // its cover frame looked at. It now runs from enrichNote for any note carrying
-// a thumb. These tests pin the gating (residency, idempotency marker, presence
+// a thumb. These tests pin the gating (role enabled, idempotency marker, presence
 // of a thumb) and that the description reaches classify, embed and the note —
 // the same harness shape as test/enrich-article.test.ts, so no network and no
 // model are involved.
@@ -122,7 +122,7 @@ test('the prompt asks for burned-in text to be transcribed — the best retrieva
   assert.doesNotMatch(DESCRIBE_THUMB_PROMPT, /Instagram/i)
 })
 
-test('vision residency off skips the describe call entirely, and the rest of enrichment still runs', async () => {
+test('vision off skips the describe call entirely, and the rest of enrichment still runs', async () => {
   seed()
   enabledImpl = () => ({ llm: true, embed: true, vision: false })
   await run()

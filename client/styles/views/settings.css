@@ -24,13 +24,12 @@
    picked model in mono too, so one row switched face twice. Mono is only for
    literal text in a field or <code> (see base.css).
 
-   The title list sets its size rather than inheriting it: the accordion
-   header is a <button>, and a button's font-size does not come from the page. */
+   The title list sets its size rather than inheriting it: a provider row is a
+   <button>, and a button's font-size does not come from the page. */
 .settings-row-title,
 .role-acc-title,
 .conn-where,
-.model-name,
-.wizard-choice-title {
+.model-name {
   font-size: var(--text-sm);
   font-weight: var(--fw-medium);
   color: var(--ink);
@@ -41,19 +40,15 @@
 .conn-warn,
 .role-acc-sub,
 .model-desc,
-.wizard-choice-desc,
 .wizard-field-label,
 .wizard-field-hint,
-.residency-desc,
 .remote-model-desc {
   font-size: var(--text-xs);
   color: var(--ink-dim);
   line-height: var(--leading-normal);
   letter-spacing: var(--tracking-tight);
 }
-.model-size,
-.mf-size,
-.onboarding-size,
+.file-size,
 .role-acc-current {
   font-size: var(--text-xs);
   color: var(--ink-mute);
@@ -66,15 +61,6 @@
 .wizard-input{width:100%}
 
 .settings-loading{color:var(--ink-mute);font-size:var(--text-xs);padding:var(--space-32) 0}
-.settings-progress{display:flex;align-items:center;gap:var(--space-14);margin-top:var(--space-14);padding:var(--space-12) var(--space-14);
-  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg)}
-.settings-progress-track{flex:1;height:5px;border-radius:var(--radius-full);
-  background:var(--panel-2);overflow:hidden}
-.settings-progress-bar{height:100%;border-radius:var(--radius-full);background:var(--accent);
-  transition:width var(--dur-slower) ease}
-.settings-progress-msg{font-size:var(--text-xs);color:var(--ink-dim);flex-shrink:0;max-width:46%;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.model-dl{color:var(--ink)}
 /* modular settings group — one reusable block, drop in a new group to extend */
 .settings-group{margin-top:var(--space-22)}
 .settings-group:first-child{margin-top:var(--space-16)}
@@ -96,9 +82,6 @@
    it keeps full --ink where the rest of the meta role sits at --ink-mute. */
 .role-acc-current{color:var(--ink);flex-shrink:0;text-align:right;
   max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.role-acc-chev{flex-shrink:0;display:grid;place-items:center;color:var(--ink-faint);
-  transition:transform var(--dur-fast) ease}
-.role-acc.open .role-acc-chev{transform:rotate(180deg);color:var(--ink-dim)}
 .model-list{display:flex;flex-direction:column;gap:var(--space-6);padding:var(--space-2) var(--space-10) var(--space-12)}
 .model-row{display:flex;align-items:center;gap:var(--space-12);width:100%;text-align:left;cursor:pointer;
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
@@ -112,12 +95,11 @@
 .model-radio-dot{width:8px;height:8px;border-radius:var(--radius-circle);background:var(--accent)}
 .model-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--space-4)}
 .model-name{display:flex;align-items:center;gap:var(--space-8);flex-wrap:wrap}
-.model-size{flex-shrink:0}
 
 /* ─────────────────────────── first-run onboarding ─────────────────────────── */
 /* brief splash while the first /api/status poll resolves */
 .app-splash{display:grid;place-items:center;height:100%;font-size:var(--text-xs);color:var(--ink-mute)}
-/* full-screen picker shown before any model has downloaded */
+/* full-screen first-run screen, shown until setup is done */
 .onboarding{height:100%;width:100%;overflow-y:auto;display:flex;align-items:flex-start;
   justify-content:center;padding:60px var(--space-24)}
 .onboarding-card{width:100%;max-width:620px;margin:auto 0}
@@ -132,14 +114,7 @@
 .onboarding-picker{display:flex;flex-direction:column}
 .onboarding-foot{display:flex;align-items:center;justify-content:space-between;gap:var(--space-16);margin-top:var(--space-22)}
 .onboarding-foot .btn:last-child{margin-left:auto}
-.onboarding-progress{display:flex;flex-direction:column;gap:var(--space-14);align-items:center;
-  padding:var(--space-36) 0 var(--space-10)}
-.onboarding-progress .settings-progress-track{width:100%;max-width:360px}
-.onboarding-progress .settings-progress-msg{max-width:100%;text-align:center}
 
-/* Residency (Off / On demand / Always on): a <Segmented> and its description */
-.residency { padding: var(--space-10) var(--space-12) var(--space-4); }
-.residency-desc { margin-top: var(--space-8); }
 
 /* Settings row list — one bordered card, each row an action: title and
    explanation on the left, its control on the right. Confirmation steps and
@@ -288,12 +263,12 @@
    status rather than in the row's own action slot, which is unconditional. */
 .avail-actions{margin-top:var(--space-10)}
 
-/* Downloaded models. A row list inside a settings row: one line per cache
-   entry, its size on the right of the name, and either a delete button or the
-   badge saying which role is holding it. The name is the only elastic part —
-   sizes and controls keep their width so the column of numbers stays readable
-   as the list scrolls. */
-.model-files {
+/* A file list inside a settings row (BackupsRow, DriveRow): one line per file,
+   its size on the right of the name, and its control after. The name is the
+   only elastic part — sizes and controls keep their width so the column of
+   numbers stays readable as the list scrolls. First drawn for the removed
+   on-device model cache. */
+.file-list {
   margin: var(--space-10) 0 0;
   padding: 0;
   list-style: none;
@@ -301,16 +276,16 @@
   border-radius: var(--radius-lg);
   background: var(--panel);
 }
-.model-file {
+.file-row {
   display: flex;
   align-items: center;
   gap: var(--space-10);
   padding: var(--space-10) var(--space-14);
   border-top: 1px solid var(--line);
 }
-.model-file:first-child { border-top: none; }
-.mf-main { display: flex; align-items: baseline; gap: var(--space-8); min-width: 0; flex: 1; }
-.mf-name {
+.file-row:first-child { border-top: none; }
+.file-main { display: flex; align-items: baseline; gap: var(--space-8); min-width: 0; flex: 1; }
+.file-name {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -318,26 +293,15 @@
   color: var(--ink);
   font-size: var(--text-xs);
 }
-.mf-size { flex: none; }
-/* Reads as a state, not a disabled button: there is no action here to enable,
-   the file is spoken for until a different model is picked. */
-.mf-badge {
-  flex: none;
-  color: var(--ink-mute);
-  font-size: var(--text-xs);
-  letter-spacing: var(--tracking-tight);
-  text-transform: lowercase;
-}
-.mf-delete, .mf-confirm { flex: none; }
+.file-size { flex: none; }
 
 /* Phone: the name gets the full width and its controls drop beneath it, rather
    than three things fighting over 375px. Same --bp-sm as the row above it, so
    a row and its file list reflow together (written out — custom properties
    cannot be read inside a media condition). */
 @media (max-width: 560px) {
-  .model-file { flex-wrap: wrap; }
-  .mf-main { flex: 1 1 100%; }
-  .mf-delete, .mf-confirm, .mf-badge { margin-left: auto; }
+  .file-row { flex-wrap: wrap; }
+  .file-main { flex: 1 1 100%; }
   .dup-note { flex-wrap: wrap; }
   .dup-title { flex: 1 1 100%; }
   .dup-action { margin-left: auto; }
@@ -406,17 +370,7 @@
 /* ---- first-run wizard ---------------------------------------------------- */
 /* Spacing tokens are literal pixels (--space-12 is 12px), and the house style
    in this file is compact single-line declarations — match both. */
-.wizard-choices{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-12);margin:var(--space-24) 0}
-.wizard-choice{display:flex;flex-direction:column;gap:var(--space-8);padding:var(--space-20);text-align:left;
-  background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-lg);cursor:pointer}
-.wizard-choice:hover:not(:disabled){border-color:var(--line-hover)}
-.wizard-choice:disabled{background:none;cursor:default}
-.wizard-choice:disabled .wizard-choice-title,.wizard-choice:disabled .wizard-choice-desc{color:var(--ink-faint)}
-
 .wizard-providers{display:flex;flex-direction:column;gap:var(--space-6);margin:var(--space-24) 0}
-/* .model-row's disabled state means "busy switching" and says so with a wait
-   cursor; a provider row is disabled because it is unavailable here. */
-.wizard-providers .model-row:disabled{cursor:default}
 
 .wizard-field{margin-bottom:var(--space-14)}
 .wizard-field-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-12);

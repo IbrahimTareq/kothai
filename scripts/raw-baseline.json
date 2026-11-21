@@ -29,7 +29,7 @@
     "fields": 1
   },
   "client/components/settings/ModelPicker.tsx": {
-    "buttons": 4
+    "buttons": 2
   },
   "client/components/RailButton.tsx": {
     "buttons": 1
@@ -59,7 +59,7 @@
     "sizes": 5
   },
   "client/styles/views/settings.css": {
-    "sizes": 15
+    "sizes": 13
   },
   "client/styles/views/shell.css": {
     "sizes": 4
@@ -82,7 +82,7 @@
     "buttons": 1
   },
   "client/views/SetupWizard.tsx": {
-    "buttons": 4
+    "buttons": 1
   },
   "client/views/Space.tsx": {
     "buttons": 2,

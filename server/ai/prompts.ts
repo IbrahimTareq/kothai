@@ -1,9 +1,9 @@
 // Prompt text and response schema shared by every inference provider.
 //
-// Pure: no SDK, no HTTP. Both providers build their requests from these
-// builders so a note classified on-device and one classified against a
-// remote endpoint are asked exactly the same question. Inlining prompts in
-// a provider would guarantee drift the first time one gets tuned.
+// Pure: no SDK, no HTTP. Kept apart from the provider since the on-device one
+// and the remote one both built their requests from these, so a note was asked
+// exactly the same question either way; inlining prompts in a provider would
+// guarantee drift the first time one gets tuned.
 import { normalizeTags } from '../data/tags.ts'
 
 // The note fields the answer context is built from. Deliberately NOT

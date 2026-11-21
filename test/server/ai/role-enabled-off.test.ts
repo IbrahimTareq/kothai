@@ -1,39 +1,55 @@
-// A role stored as 'off' (first-run Skip) stays disabled even when its
-// provider has an endpoint and a model — env-pinned endpoints and models are
-// invisible to the remote provider's own check. See roleEnabled in ai/index.ts.
-import { test, mock } from 'node:test'
+// A role stored as 'off' (first-run Skip, or a role switched off in the old
+// residency picker) stays off after the upgrade that removed residency: the
+// boot migration in data/settings.ts clears that role's endpoint model name,
+// so an install with an endpoint does not start AI calls it never made before.
+import { test, beforeEach, after } from 'node:test'
 import assert from 'node:assert/strict'
-import type { Residency } from '../../../server/ai/roles.ts'
-import { OFF_RESIDENCY } from '../../../server/ai/roles.ts'
-import { loader, provider } from '../../helpers/providers.ts'
+import { _resetDb } from '../../../server/data/db.ts'
+import { setAiCredentials } from '../../../server/config.ts'
+import * as settings from '../../../server/data/settings.ts'
+import { initProvider, roleEnabled, _reset } from '../../../server/ai/index.ts'
 
-let stored: Residency = OFF_RESIDENCY
-const realSettings = await import('../../../server/data/settings.ts')
-mock.module('../../../server/data/settings.ts', {
-  namedExports: { ...realSettings, getResidency: () => stored },
-})
+// Port 9 (discard) refuses at once, so the boot probe fails fast; roleEnabled
+// asks only whether a role has an endpoint and a model, not whether it answers.
+setAiCredentials({ baseUrl: 'http://127.0.0.1:9/v1', apiKey: null, providerId: null })
+after(() => setAiCredentials(null))
 
-const { initProvider, roleEnabled, _reset } = await import('../../../server/ai/index.ts')
-const { stepsFor } = await import('../../../server/ai/backlog.ts')
-
-async function remoteWithEndpointAndModel() {
-  _reset()
-  const remote = provider({
-    capabilities: () => ({ kind: 'remote', managesResidency: false, downloadsWeights: false }),
-    roleEnabled: () => true,
-  })
-  await initProvider('remote', {}, { load: loader(() => remote), localAvailable: false })
+function seed(residency: Record<'llm' | 'embed' | 'vision', string>) {
+  _resetDb()
+    .prepare(`
+      INSERT INTO settings (id, llm, embed, vision, residency_llm, residency_embed, residency_vision, configured, remote_llm, remote_embed, remote_vision)
+      VALUES (1, 'a', 'b', 'c', ?, ?, ?, 1, 'gpt-4o-mini', 'text-embedding-3-small', 'gpt-4.1-mini')
+    `)
+    .run(residency.llm, residency.embed, residency.vision)
+  settings._reset()
 }
 
-test('a skipped install with an endpoint and a model has every role off and queues no steps', async () => {
-  stored = OFF_RESIDENCY
-  await remoteWithEndpointAndModel()
+beforeEach(() => _reset())
+
+test('a skipped install with an endpoint and models boots with every role off', async () => {
+  seed({ llm: 'off', embed: 'off', vision: 'off' })
+  await settings.load()
+  assert.deepEqual(settings.getRemote(), { llm: '', embed: '', vision: '' })
+  await initProvider(settings.getRemote())
   for (const role of ['llm', 'embed', 'vision'] as const) assert.equal(roleEnabled(role), false, role)
-  assert.deepEqual(stepsFor({ ai: {}, thumb: '/uploads/a.jpg' }, roleEnabled), [])
 })
 
-test('roles stored as always or ondemand stay enabled when the provider says so', async () => {
-  stored = { llm: 'ondemand', embed: 'always', vision: 'ondemand' }
-  await remoteWithEndpointAndModel()
-  for (const role of ['llm', 'embed', 'vision'] as const) assert.equal(roleEnabled(role), true, role)
+test('a role stored always or ondemand keeps its model and stays on', async () => {
+  seed({ llm: 'always', embed: 'off', vision: 'ondemand' })
+  await settings.load()
+  assert.deepEqual(settings.getRemote(), { llm: 'gpt-4o-mini', embed: '', vision: 'gpt-4.1-mini' })
+  await initProvider(settings.getRemote())
+  assert.equal(roleEnabled('llm'), true)
+  assert.equal(roleEnabled('embed'), false)
+  assert.equal(roleEnabled('vision'), true)
+})
+
+// Once only: a model the user picks after the upgrade must survive the next boot.
+test('running the migration again changes nothing more', async () => {
+  seed({ llm: 'off', embed: 'always', vision: 'off' })
+  await settings.load()
+  await settings.save({ remote: { llm: 'picked-after-upgrade' } })
+  settings._reset()
+  await settings.load()
+  assert.deepEqual(settings.getRemote(), { llm: 'picked-after-upgrade', embed: 'text-embedding-3-small', vision: '' })
 })

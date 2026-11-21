@@ -10,22 +10,16 @@ import { mockRes } from '../../helpers/http.ts'
 
 test('handleStatus includes a capabilities descriptor', async () => {
   _reset()
-  await initProvider('local', {})
+  await initProvider({})
   const { res, sent } = mockRes()
   handleStatus(res, null)
   assert.equal(sent.code, 200)
-  // `roles` says who serves each role; a pure-local install owns all three.
-  assert.deepEqual(sent.json().capabilities, {
-    kind: 'local',
-    managesResidency: true,
-    downloadsWeights: true,
-    roles: { llm: 'local', embed: 'local', vision: 'local' },
-  })
+  assert.deepEqual(sent.json().capabilities, { kind: 'remote' })
 })
 
 test('handleStatus still carries the fields the client already reads', async () => {
   _reset()
-  await initProvider('local', {})
+  await initProvider({})
   const { res, sent } = mockRes()
   handleStatus(res, null)
   const body = sent.json()
@@ -34,31 +28,21 @@ test('handleStatus still carries the fields the client already reads', async () 
   }
 })
 
-// The first-run gate. A provider that downloads weights has something to
-// consent to, so the stored flag decides. One that does not still needs a
-// model name per role before anything can run, so the gate stays open until
-// there is one — otherwise a pure-remote install lands in the app with every
-// role dark and nothing pointing at Settings.
-test('firstRunComplete defers to the stored flag when weights are downloaded', () => {
-  const caps = { downloadsWeights: true }
-  assert.equal(firstRunComplete(caps, false, false), false)
-  assert.equal(firstRunComplete(caps, true, false), true)
-  // Being a pre-gate install is irrelevant here: a local install downloads
-  // weights, so only the stored flag can say first run is over.
-  assert.equal(firstRunComplete(caps, false, true), false)
+// The first-run gate. An endpoint still needs a model name per role before
+// anything can run, so the gate stays open until first run is done —
+// otherwise an install lands in the app with every role dark and nothing
+// pointing at Settings.
+test('an install that has never been set up has not finished first run', () => {
+  assert.equal(firstRunComplete(false, false), false)
 })
 
-test('a pure-remote install that has never been set up has not finished first run', () => {
-  assert.equal(firstRunComplete({ downloadsWeights: false }, false, false), false)
-})
-
-test('a pure-remote install predating the gate is left alone', () => {
+test('an install predating the gate is left alone', () => {
   // Those installs never posted /api/setup, so `configured` is false — but
   // they carry names, which settings.load() reports as preGate. They must not
   // be sent back through setup.
-  assert.equal(firstRunComplete({ downloadsWeights: false }, false, true), true)
+  assert.equal(firstRunComplete(false, true), true)
   // And an explicit skip stands on its own, with no names at all.
-  assert.equal(firstRunComplete({ downloadsWeights: false }, true, false), true)
+  assert.equal(firstRunComplete(true, false), true)
 })
 
 // The regression this shape exists to prevent. The wizard seeds endpoint model
@@ -68,14 +52,14 @@ test('a pure-remote install predating the gate is left alone', () => {
 test('names written DURING first run do not end it', () => {
   // preGate is decided at load and stays false for a fresh install, however
   // many names get written afterwards.
-  assert.equal(firstRunComplete({ downloadsWeights: false }, false, false), false)
+  assert.equal(firstRunComplete(false, false), false)
 })
 
 // The demo's banner, its capture box and its New space button read these, so a
 // visitor sees what they have left before a refusal tells them.
 test('on the demo, status tells a visitor what they have left today', async () => {
   _reset()
-  await initProvider('local', {})
+  await initProvider({})
   demoLimits.save.reset()
   demoLimits.ask.reset()
   demoLimits.space.reset()
@@ -90,7 +74,7 @@ test('on the demo, status tells a visitor what they have left today', async () =
 
 test('on the demo, the note count leaves out other visitors’ links', async () => {
   _reset()
-  await initProvider('local', {})
+  await initProvider({})
   store._reset()
   await store.addNote({ type: 'link', content: 'seed' })
   await store.addNote({ type: 'link', content: 'theirs', visitor: 'b' })

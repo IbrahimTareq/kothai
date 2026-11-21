@@ -8,9 +8,9 @@
 // rejection, so a model id that ages out never blocks setup.
 //
 // `servesEmbeddings` is the one field with teeth. Some hosted endpoints expose
-// no /embeddings route at all (see ai/routing.ts), and semantic search needs
-// one — so the installer reads this to decide whether a provider can run on the
-// lite image or needs the full one, where the embedding role stays on-device.
+// no /embeddings route at all, and semantic search needs one — so an embedding
+// role borrowing such an endpoint resolves to no endpoint at all (see
+// ai/endpoint-config.ts), and the wizard asks for a second provider.
 //
 // A tile on the first-run screen is a recommendation, and recommending an
 // endpoint that cannot do half the job is not one — which is why every entry
@@ -44,10 +44,6 @@ export interface Endpoint {
   // Where the key is made. The key field is where first run stalls for
   // anyone who has not got one yet, so the tile says where to go.
   keyUrl?: string
-  // Runs beside Kothai rather than as a hosted service. Greyed on the lite
-  // image, beside first run's own "On this machine": lite is what Railway
-  // runs, where there is no machine of the user's beside Kothai to reach.
-  onThisMachine?: boolean
   // Only the endpoints whose embedding catalogue lives off /v1/models carry
   // this — see the OpenRouter entry below.
   embeddingsPath?: string
@@ -72,7 +68,6 @@ export const ENDPOINTS: Endpoint[] = [
     baseUrl: 'http://host.docker.internal:11434/v1',
     needsKey: false,
     servesEmbeddings: true,
-    onThisMachine: true,
     note: 'Nothing leaves your machine, and you manage the models in Ollama.',
     defaults: { llm: 'llama3.2:3b', embed: 'nomic-embed-text', vision: 'llama3.2-vision' },
   },

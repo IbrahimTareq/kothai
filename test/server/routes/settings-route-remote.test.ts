@@ -21,24 +21,23 @@ beforeEach(async () => {
 })
 
 test('GET /api/settings carries capabilities so the client can pick a UI shape', async () => {
-  await initProvider('local', {})
+  await initProvider({})
   const { res, sent } = mockRes()
   await handleGetSettings(res)
-  const caps = record(sent.json().capabilities)
-  assert.equal(caps.kind, 'local')
-  assert.equal(caps.managesResidency, true)
+  assert.deepEqual(sent.json().capabilities, { kind: 'remote' })
 })
 
 test('GET /api/settings keeps the fields the current client already reads', async () => {
-  await initProvider('local', {})
+  await initProvider({})
   const { res, sent } = mockRes()
   await handleGetSettings(res)
   const body = sent.json()
-  for (const k of ['current', 'residency', 'presets']) assert.ok(k in body, `missing ${k}`)
+  for (const k of ['remote', 'presets', 'endpoints', 'catalogue']) assert.ok(k in body, `missing ${k}`)
+  for (const k of ['residency', 'localSupported', 'localPresets']) assert.ok(!(k in body), `stale ${k}`)
 })
 
 test('GET /api/settings never returns an API key or a full endpoint URL', async () => {
-  await initProvider('local', {})
+  await initProvider({})
   const { res, sent } = mockRes()
   await handleGetSettings(res)
   const body = sent.json()
@@ -50,30 +49,21 @@ test('GET /api/settings never returns an API key or a full endpoint URL', async 
 
 test('GET /api/settings includes the remote model selection', async () => {
   await settings.save({ remote: { llm: 'gpt-4o-mini' } })
-  await initProvider('local', {})
+  await initProvider({})
   const { res, sent } = mockRes()
   await handleGetSettings(res)
   assert.equal(record(sent.json().remote).llm, 'gpt-4o-mini')
 })
 
-// A pure-remote install downloads nothing, so it used to report `configured`
-// unconditionally and skip first-run altogether — landing the user in the app
-// with no endpoint model ids set and every role throwing FeatureDisabledError.
-// The names are the one thing setup still has to collect there.
-// localAvailable:false is the lite image: @qvac/sdk is not installed, so no
-// role can fall back on-device. Plain initProvider('remote') will not do here
-// — in a dev checkout the SDK IS present, so routing keeps embedding local and
-// the install comes out mixed, which downloads weights and takes the other
-// branch entirely.
-const LITE = { localAvailable: false }
-
-test('GET /api/status leaves first run open on a fresh pure-remote install', async () => {
-  await initProvider('remote', {}, LITE)
+// An endpoint downloads nothing, so a pure-remote install used to report
+// `configured` unconditionally and skip first-run altogether — landing the user
+// in the app with no endpoint model ids set and every role throwing
+// FeatureDisabledError. The names are the one thing setup still has to collect.
+test('GET /api/status leaves first run open on a fresh install', async () => {
+  await initProvider({})
   const { res, sent } = mockRes()
   handleStatus(res, null)
-  const body = sent.json()
-  assert.equal(record(body.capabilities).downloadsWeights, false)
-  assert.equal(body.configured, false)
+  assert.equal(sent.json().configured, false)
 })
 
 test('GET /api/status leaves an install that predates the gate alone', async () => {
@@ -84,7 +74,7 @@ test('GET /api/status leaves an install that predates the gate alone', async () 
   await settings.save({ remote: { llm: 'gpt-oss:120b' } })
   settings._reset()
   await settings.load()
-  await initProvider('remote', {}, LITE)
+  await initProvider({})
   const { res, sent } = mockRes()
   handleStatus(res, null)
   assert.equal(sent.json().configured, true)
@@ -96,23 +86,11 @@ test('GET /api/status leaves an install that predates the gate alone', async () 
 // gate inferred completion from "are there names?", that seeding ended first
 // run early and Save & start came back 409 "already configured".
 test('names written DURING first run leave it open', async () => {
-  await initProvider('remote', {}, LITE)
+  await initProvider({})
   await settings.save({ remote: { llm: 'gpt-oss:120b' } })
   const { res, sent } = mockRes()
   handleStatus(res, null)
   assert.equal(sent.json().configured, false, 'first run is not over until the user says so')
-})
-
-test('a mixed install is gated on the stored flag, not on endpoint ids', async () => {
-  // Embedding stays on-device here, so there ARE weights to consent to and
-  // naming a remote model must not skip the download screen.
-  await settings.save({ remote: { llm: 'gpt-oss:120b' } })
-  await initProvider('remote', {}, { localAvailable: true })
-  const { res, sent } = mockRes()
-  handleStatus(res, null)
-  const body = sent.json()
-  assert.equal(record(body.capabilities).kind, 'mixed')
-  assert.equal(body.configured, false)
 })
 
 // Setup used to refuse outright for a provider that downloads nothing, and to
@@ -120,8 +98,8 @@ test('a mixed install is gated on the stored flag, not on endpoint ids', async (
 // the one thing worth collecting — the endpoint's model ids — had nowhere to
 // go. They must land in the remote store, which is the only one the remote
 // provider reads back.
-test('POST /api/setup stores endpoint ids on a pure-remote install', async () => {
-  await initProvider('remote', {}, { localAvailable: false })
+test('POST /api/setup stores endpoint ids', async () => {
+  await initProvider({})
   const req = mockReq({
     body: JSON.stringify({ remote: { llm: 'gpt-oss:120b', embed: 'nomic-embed-text', vision: 'llava' } }),
   })
@@ -134,8 +112,7 @@ test('POST /api/setup stores endpoint ids on a pure-remote install', async () =>
     embed: 'nomic-embed-text',
     vision: 'llava',
   })
-  // The local columns keep their preset defaults: an endpoint id written there
-  // would be read back as a QVAC registry key and resolve to nothing.
+  // The obsolete local columns keep their filler (data/db.ts).
   assert.deepEqual(settings.get(), localBefore)
 
   const status = mockRes()
@@ -147,7 +124,7 @@ test('POST /api/setup refuses once first run is already closed', async () => {
   // Closed the way it actually closes: the flag, set by a completed setup or
   // an explicit skip. Names alone no longer mean anything here.
   await settings.save({ remote: { llm: 'gpt-oss:120b' }, configured: true })
-  await initProvider('remote', {}, { localAvailable: false })
+  await initProvider({})
   const req = mockReq({ body: JSON.stringify({ remote: { llm: 'other' } }) })
   const { res, sent } = mockRes()
   await handleSetup(req, res)
@@ -155,26 +132,21 @@ test('POST /api/setup refuses once first run is already closed', async () => {
   assert.equal(settings.getRemote().llm, 'gpt-oss:120b')
 })
 
-// Regression. Sending untouched blanks once blocked mixed first run entirely,
+// Regression. Sending untouched blanks once blocked first run entirely,
 // because a blank endpoint id was rejected. A blank now means "this role is
 // off" (see the Settings test below), so it validates — and first run still
 // sends only the names actually filled in.
 test('a blank endpoint id validates as the role being off', async () => {
-  await initProvider('remote', {}, { localAvailable: true })
-  const local = settings.get()
+  await initProvider({})
 
-  const withBlanks = _validateModels({ ...local, remote: { llm: '', embed: '', vision: '' } })
+  const withBlanks = _validateModels({ remote: { llm: '', embed: '', vision: '' } })
   assert.equal(withBlanks.error, undefined)
 
-  // What a mixed first run sends once the endpoint's models are named: local
-  // keys at the root, endpoint ids under remote, each to its own store.
-  const filled = _validateModels({ ...local, remote: { llm: 'gpt-oss:120b', vision: 'llava:7b' } })
+  const filled = _validateModels({ remote: { llm: 'gpt-oss:120b', vision: 'llava:7b' } })
   assert.equal(filled.error, undefined)
   assert.deepEqual(filled.remote, { llm: 'gpt-oss:120b', vision: 'llava:7b' })
-  assert.equal(filled.local.embed, local.embed)
 
-  // And left blank, the local picks alone still validate.
-  const omitted = _validateModels(local)
+  const omitted = _validateModels({})
   assert.equal(omitted.error, undefined)
   assert.deepEqual(omitted.remote, {})
 })
@@ -189,7 +161,7 @@ test('clearing an endpoint model name in Settings turns that role off', async t 
   setAiCredentials({ baseUrl: 'http://127.0.0.1:1/v1' })
   t.after(() => setAiCredentials(null))
   await settings.save({ remote: { llm: 'llama3.2:3b', embed: 'nomic-embed-text', vision: 'llama3.2:3b' } })
-  await initProvider('remote', { remote: settings.getRemote() }, LITE)
+  await initProvider(settings.getRemote())
   assert.equal(roleEnabled('vision'), true)
 
   const { res, sent } = mockRes()

@@ -12,8 +12,6 @@ test('defaults: every path sits under the repo root, port is 5173', () => {
   const c = resolveConfig({}, ROOT)
   assert.equal(c.PORT, 5173)
   assert.equal(c.DATA_DIR, path.join(ROOT, 'data'))
-  assert.equal(c.MODELS_DIR, path.join(ROOT, 'models'))
-  assert.equal(c.CONFIG_PATH, path.join(ROOT, 'qvac.config.json'))
 })
 
 test('UPLOAD_DIR is always derived from DATA_DIR, never set directly', () => {
@@ -31,32 +29,19 @@ test('PORT: env wins, non-numeric falls back to the default', () => {
   assert.equal(resolveConfig({ PORT: '0' }, ROOT).PORT, 0)
 })
 
-test('KOTHAI_HOME derives all three paths from one root (single-volume hosts)', () => {
+test('KOTHAI_HOME derives the paths from one root (single-volume hosts)', () => {
   const c = resolveConfig({ KOTHAI_HOME: '/data' }, ROOT)
   assert.equal(c.DATA_DIR, '/data/data')
-  assert.equal(c.MODELS_DIR, '/data/models')
-  assert.equal(c.CONFIG_PATH, '/data/qvac.config.json')
   assert.equal(c.UPLOAD_DIR, '/data/data/uploads')
 })
 
-test('a specific var beats KOTHAI_HOME; unset siblings still derive from it', () => {
-  const c = resolveConfig({ KOTHAI_HOME: '/data', KOTHAI_MODELS_DIR: '/big/models' }, ROOT)
-  assert.equal(c.MODELS_DIR, '/big/models')
-  assert.equal(c.DATA_DIR, '/data/data')
-  assert.equal(c.CONFIG_PATH, '/data/qvac.config.json')
-})
-
-test('the QVAC config path always derives from the root, never from its own var', () => {
-  assert.equal(
-    resolveConfig({ KOTHAI_CONFIG_PATH: '/elsewhere.json' }, ROOT).CONFIG_PATH,
-    path.join(ROOT, 'qvac.config.json'),
-  )
+test('a specific var beats KOTHAI_HOME', () => {
+  assert.equal(resolveConfig({ KOTHAI_HOME: '/data', KOTHAI_DATA_DIR: '/big/notes' }, ROOT).DATA_DIR, '/big/notes')
 })
 
 test('relative env values resolve against the root; absolute ones are kept', () => {
-  const c = resolveConfig({ KOTHAI_DATA_DIR: 'notes', KOTHAI_MODELS_DIR: '/mnt/w' }, ROOT)
-  assert.equal(c.DATA_DIR, path.join(ROOT, 'notes'))
-  assert.equal(c.MODELS_DIR, '/mnt/w')
+  assert.equal(resolveConfig({ KOTHAI_DATA_DIR: 'notes' }, ROOT).DATA_DIR, path.join(ROOT, 'notes'))
+  assert.equal(resolveConfig({ KOTHAI_DATA_DIR: '/mnt/w' }, ROOT).DATA_DIR, '/mnt/w')
 })
 
 test('empty-string vars are ignored rather than resolving to the root', () => {
@@ -81,12 +66,6 @@ test('PASSWORD is null unless KOTHAI_PASSWORD is set — auth stays off for ever
   assert.equal(resolveConfig({ KOTHAI_PASSWORD: 'hunter2' }, '/app').PASSWORD, 'hunter2')
 })
 
-test('AI_EMBED_PROVIDER is null unless set, and passes its raw value through', () => {
-  assert.equal(resolveConfig({}, ROOT).AI_EMBED_PROVIDER, null)
-  assert.equal(resolveConfig({ KOTHAI_AI_EMBED_PROVIDER: 'remote' }, ROOT).AI_EMBED_PROVIDER, 'remote')
-  assert.equal(resolveConfig({ KOTHAI_AI_EMBED_PROVIDER: 'local' }, ROOT).AI_EMBED_PROVIDER, 'local')
-})
-
-// The inference endpoint (base URL, key, provider kind) is no longer part of
+// The inference endpoint (base URL and key per role) is no longer part of
 // this frozen resolution — it is resolved on demand so it can change at
 // runtime. Its precedence rules are covered in test/server/config-ai.test.ts.

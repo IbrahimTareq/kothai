@@ -14,18 +14,16 @@ beforeEach(() => setAiCredentials(null))
 test('a stored credential reaches getAiConfig once loaded', () => {
   const d = mkdtempSync(path.join(tmpdir(), 'kothai-boot-'))
   writeCredentials({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-boot' }, d)
-  assert.equal(getAiConfig().provider, 'local', 'not loaded yet')
+  assert.equal(getAiConfig().roles.llm.baseUrl, null, 'not loaded yet')
   setAiCredentials(readCredentials(d))
-  const c = getAiConfig()
-  assert.equal(c.provider, 'remote')
-  assert.equal(c.baseUrl, 'https://api.openai.com/v1')
+  assert.equal(getAiConfig().roles.llm.baseUrl, 'https://api.openai.com/v1')
 })
 
-test('clearing the loaded credential returns the process to local', () => {
+test('clearing the loaded credential leaves the process with no endpoint', () => {
   setAiCredentials({ baseUrl: 'https://x.example/v1', apiKey: 'k' })
-  assert.equal(getAiConfig().provider, 'remote')
+  assert.equal(getAiConfig().source, 'file')
   setAiCredentials(null)
-  assert.equal(getAiConfig().provider, 'local')
+  assert.equal(getAiConfig().source, 'none')
 })
 
 test('an env endpoint still wins over a loaded credential', () => {
@@ -33,5 +31,5 @@ test('an env endpoint still wins over a loaded credential', () => {
     { KOTHAI_AI_BASE_URL: 'https://env.example/v1' },
     { baseUrl: 'https://file.example/v1', apiKey: 'file-key' },
   )
-  assert.equal(c.baseUrl, 'https://env.example/v1')
+  assert.equal(c.roles.llm.baseUrl, 'https://env.example/v1')
 })

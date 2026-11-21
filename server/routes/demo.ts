@@ -161,7 +161,7 @@ export async function resetDemo(): Promise<void> {
 // them, as are models already chosen.
 export async function configureDemo(): Promise<void> {
   if (settings.getRemote().llm) return
-  const preset = ENDPOINTS.find(e => e.baseUrl === getAiConfig().baseUrl)
+  const preset = ENDPOINTS.find(e => e.baseUrl === getAiConfig().roles.llm.baseUrl)
   if (!preset) return
   await settings.save({ configured: true, remote: preset.defaults })
 }

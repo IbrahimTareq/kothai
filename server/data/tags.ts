@@ -1,5 +1,5 @@
 // Single source of truth for tag handling. Pure — no store/model dependency —
-// so generation (qvac), collection matching, and manual edits all canonicalize
+// so generation (the model), collection matching, and manual edits all canonicalize
 // tags the exact same way. Conservative normalization only: no singularization,
 // no synonym maps (deferred).
 

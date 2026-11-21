@@ -74,8 +74,8 @@ const everyRole = (baseUrl: string, apiKey: string | null = null) => ({
 const make = (models = { llm: 'llama3.2:3b', embed: 'nomic-embed-text', vision: 'llava' }) =>
   createRemoteProvider({ endpoints: everyRole(base), models })
 
-test('capabilities reports a remote provider that neither manages residency nor downloads weights', () => {
-  assert.deepEqual(make().capabilities(), { kind: 'remote', managesResidency: false, downloadsWeights: false })
+test('capabilities reports a remote provider', () => {
+  assert.deepEqual(make().capabilities(), { kind: 'remote' })
 })
 
 test('embedText posts to /embeddings and returns the vector', async () => {
@@ -121,7 +121,7 @@ test('embedText leaves input untouched for an endpoint serving a model that is n
   assert.equal(seen.input, 'brown butter pasta')
 })
 
-test('embedText truncates very long input to a TOKEN budget, the same way the local provider does', async () => {
+test('embedText truncates very long input to a TOKEN budget', async () => {
   // A character cap cannot keep the request inside the model's fixed batch
   // size, because characters are not tokens — see prompts.ts's clipToTokens.
   let seen: Record<string, unknown> = {}

@@ -173,9 +173,9 @@ test('a provider failure mid-stream arrives as an error frame, not a dead connec
   assert.equal(frames.filter(f => f.event === 'done').length, 0)
 })
 
-// A rejection is not necessarily an Error. providers/local.ts rethrows the QVAC
-// SDK's own rejection value unwrapped through ai/index.ts, so the caught value
-// is whatever the SDK threw — and for `null`/`undefined` a bare `e.message`
+// A rejection is not necessarily an Error. The removed on-device provider
+// rethrew the QVAC SDK's own rejection value unwrapped through ai/index.ts, so
+// the caught value was whatever the SDK threw — and for `null`/`undefined` a bare `e.message`
 // makes the catch block itself throw. That second failure lands after the 200
 // SSE header is out, where the router's json(res, 500, …) can only produce
 // ERR_HTTP_HEADERS_SENT: the client is left with a stream that just stops,

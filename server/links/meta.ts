@@ -173,7 +173,7 @@ async function resolveRedditShare(url: string): Promise<string | null> {
 // dependency-free house rule. What it transfers is upkeep, not code: it
 // tracks how YouTube's caption endpoint is reached, which Google reshapes
 // periodically. Vetted at 1.3.1: MIT, ZERO dependencies, 64 KB, ESM with a
-// real exports map, node >= 18 — so the lite image gains a rounding error.
+// real exports map, node >= 18 — so the image gains a rounding error.
 // youtubei.js was the alternative and was rejected: 16 MB unpacked and three
 // transitive dependencies, for a full InnerTube client when all that is
 // needed here is one endpoint.

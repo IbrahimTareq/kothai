@@ -233,7 +233,7 @@ test('a landed caption triggers exactly one classify, built from stored fields �
   assert.equal(classifyCalls.length, 1, 'nothing re-queues itself — the counts stay put')
 })
 
-test('thumbnail vision respects the vision residency — off means no describeImage call, caption still reclassifies', async () => {
+test('thumbnail vision respects the vision role — off means no describeImage call, caption still reclassifies', async () => {
   reset()
   const id = 'n2b'
   enabledImpl = () => ({ llm: true, embed: true, vision: false })

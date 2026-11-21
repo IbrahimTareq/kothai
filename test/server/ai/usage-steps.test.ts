@@ -14,7 +14,7 @@ import {
   answerStream,
 } from '../../../server/ai/index.ts'
 import * as tagvocab from '../../../server/data/tagvocab.ts'
-import { loader, provider } from '../../helpers/providers.ts'
+import { provider } from '../../helpers/providers.ts'
 
 const CALL = {
   provider: 'remote' as const,
@@ -31,7 +31,7 @@ const CALL = {
 // A provider whose every call records a row, the way the real ones do on
 // the wire. The step on the row is whatever the facade wrapped the call in.
 const recording = provider({
-  capabilities: () => ({ kind: 'remote', managesResidency: false, downloadsWeights: false }),
+  capabilities: () => ({ kind: 'remote' }),
   available: () => true,
   roleEnabled: () => true,
   classify: async () => {
@@ -64,7 +64,7 @@ beforeEach(async () => {
   _resetDb()
   await startUsageLog()
   _reset()
-  await initProvider('remote', {}, { load: loader(() => recording), localAvailable: false })
+  await initProvider({}, { load: () => recording })
 })
 
 test('each facade method records under its own step', async () => {

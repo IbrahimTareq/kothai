@@ -5,23 +5,23 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { resolveAiConfig } from '../../server/ai/endpoint-config.ts'
 
-test('nothing configured anywhere is the local provider', () => {
+test('nothing configured anywhere is no endpoint for any role', () => {
   const c = resolveAiConfig({}, null)
-  assert.deepEqual([c.baseUrl, c.apiKey, c.providerId, c.provider, c.source], [null, null, null, 'local', 'none'])
+  const none = { baseUrl: null, apiKey: null, providerId: null }
+  assert.deepEqual(c.roles, { llm: none, vision: none, embed: none })
+  assert.equal(c.source, 'none')
 })
 
 test('env alone works exactly as it did before the credential file existed', () => {
   const c = resolveAiConfig({ KOTHAI_AI_BASE_URL: 'https://ollama.com/v1/', KOTHAI_AI_API_KEY: 'k' }, null)
-  assert.equal(c.baseUrl, 'https://ollama.com/v1')
-  assert.equal(c.apiKey, 'k')
-  assert.equal(c.provider, 'remote')
+  assert.equal(c.roles.llm.baseUrl, 'https://ollama.com/v1')
+  assert.equal(c.roles.llm.apiKey, 'k')
 })
 
 test('the credential file supplies the endpoint when env does not', () => {
   const c = resolveAiConfig({}, { baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-1' })
-  assert.equal(c.baseUrl, 'https://api.openai.com/v1')
-  assert.equal(c.apiKey, 'sk-1')
-  assert.equal(c.provider, 'remote')
+  assert.equal(c.roles.llm.baseUrl, 'https://api.openai.com/v1')
+  assert.equal(c.roles.llm.apiKey, 'sk-1')
 })
 
 test('env wins over the file as a PAIR — a file key never attaches to an env URL', () => {
@@ -29,26 +29,12 @@ test('env wins over the file as a PAIR — a file key never attaches to an env U
     { KOTHAI_AI_BASE_URL: 'https://env.example/v1' },
     { baseUrl: 'https://file.example/v1', apiKey: 'file-key' },
   )
-  assert.equal(c.baseUrl, 'https://env.example/v1')
-  assert.equal(c.apiKey, null, 'a key from the file must not be sent to an endpoint from env')
-})
-
-test('the lite image default — provider=remote with no URL yet — still resolves remote', () => {
-  const c = resolveAiConfig({ KOTHAI_AI_PROVIDER: 'remote' }, null)
-  assert.equal(c.provider, 'remote')
-  assert.equal(c.baseUrl, null)
-})
-
-test('a stored endpoint implies remote without KOTHAI_AI_PROVIDER being set', () => {
-  assert.equal(resolveAiConfig({}, { baseUrl: 'https://api.openai.com/v1' }).provider, 'remote')
-})
-
-test('an unknown provider value degrades to local rather than throwing', () => {
-  assert.equal(resolveAiConfig({ KOTHAI_AI_PROVIDER: 'nonsense' }, null).provider, 'local')
+  assert.equal(c.roles.llm.baseUrl, 'https://env.example/v1')
+  assert.equal(c.roles.llm.apiKey, null, 'a key from the file must not be sent to an endpoint from env')
 })
 
 test('a trailing slash is stripped whichever source the URL came from', () => {
-  assert.equal(resolveAiConfig({}, { baseUrl: 'https://x.example/v1///' }).baseUrl, 'https://x.example/v1')
+  assert.equal(resolveAiConfig({}, { baseUrl: 'https://x.example/v1///' }).roles.llm.baseUrl, 'https://x.example/v1')
 })
 
 const NONE = { baseUrl: null, apiKey: null, providerId: null }
@@ -104,7 +90,6 @@ test('an old single-endpoint file resolves every role to it', () => {
   const c = resolveAiConfig({}, { baseUrl: 'https://f/', apiKey: 'fk', providerId: 'openai' })
   const ep = { baseUrl: 'https://f', apiKey: 'fk', providerId: 'openai' }
   assert.deepEqual(c.roles, { llm: ep, vision: ep, embed: ep })
-  assert.deepEqual([c.baseUrl, c.apiKey, c.providerId], ['https://f', 'fk', 'openai'])
 })
 
 test('a file with only a role entry leaves the other roles unconfigured', () => {

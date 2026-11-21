@@ -1,7 +1,6 @@
 // Tests for server/routes/wipe.ts — POST /api/wipe erases the user's CONTENT
 // (notes, spaces, chats, tag vocab, uploaded images) while deliberately
-// leaving model settings and residency alone, so the app stays configured and
-// no multi-GB weights need re-downloading. This is the one irreversible
+// leaving model settings alone, so the app stays configured. This is the one irreversible
 // destructive route in the app, so the confirmation token is enforced
 // server-side too — a stray fetch() must not be able to wipe anything.
 import { test, mock } from 'node:test'

@@ -1,7 +1,6 @@
-// Unit tests for server/ai/prompts.ts — the prompt text and JSON schema both
-// providers share. These are the only guarantee that a note classified
-// on-device and one classified against a remote endpoint get asked the same
-// question; if these drift, the two providers silently produce different tags.
+// Unit tests for server/ai/prompts.ts — the prompt text and JSON schema the
+// provider sends. Written when an on-device provider and a remote one shared
+// them; they still pin the question every note is asked.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {

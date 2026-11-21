@@ -30,7 +30,7 @@ import { DemoBanner } from '../components/Demo'
 const KNOWN_TYPES = new Set(Object.keys(CAT))
 
 export default function App() {
-  const { modelLoad, llmOff, llmWarming, needsSetup, setNeedsSetup } = useStatusPoll()
+  const { llmOff, llmWarming, needsSetup, setNeedsSetup } = useStatusPoll()
   const {
     collections,
     createCollection,
@@ -330,7 +330,7 @@ export default function App() {
         <span>Starting…</span>
       </div>
     )
-  if (needsSetup) return <Onboarding modelLoad={modelLoad} onComplete={() => setNeedsSetup(false)} />
+  if (needsSetup) return <Onboarding onComplete={() => setNeedsSetup(false)} />
 
   return (
     <div className="app">
@@ -404,7 +404,7 @@ export default function App() {
               }}
             />
           ) : nav === 'settings' ? (
-            <SettingsView modelLoad={modelLoad} theme={theme} setTheme={setTheme} />
+            <SettingsView theme={theme} setTheme={setTheme} />
           ) : nav === 'spaces' ? (
             <SpacesView {...{ collections, createCollection, navigate }} />
           ) : nav.startsWith('space:') ? (

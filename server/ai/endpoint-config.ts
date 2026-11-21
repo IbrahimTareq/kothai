@@ -24,11 +24,6 @@ export interface AiCredentials extends Partial<RoleEndpoint> {
 }
 
 export interface AiConfig {
-  // Equal to roles.llm; kept for existing callers until the provider switch is gone.
-  baseUrl: string | null
-  apiKey: string | null
-  providerId: string | null
-  provider: 'local' | 'remote'
   roles: Record<Role, RoleEndpoint>
   envModels: Partial<Record<Role, string>>
   source: 'env' | 'file' | 'none'
@@ -79,9 +74,5 @@ export function resolveAiConfig(env: NodeJS.ProcessEnv = process.env, creds: AiC
     const any = ROLES.some(r => roles[r].baseUrl)
     source = any ? 'file' : 'none'
   }
-  // An endpoint from either source implies remote. KOTHAI_AI_PROVIDER=remote
-  // with no URL stays remote too — that is the lite image's default, and it
-  // produces the "set a base URL" state rather than a crash.
-  const provider = env.KOTHAI_AI_PROVIDER === 'remote' || roles.llm.baseUrl ? 'remote' : 'local'
-  return { ...roles.llm, provider, roles, envModels, source }
+  return { roles, envModels, source }
 }

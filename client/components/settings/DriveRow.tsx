@@ -7,8 +7,7 @@
 import { useEffect, useState } from 'react'
 import { SettingsRow, RowStatus } from './SettingsRow'
 import { API, apiError } from '../../data/api'
-import { fmtSize } from '../../domain/modelFiles'
-import { relTime } from '../../util/format'
+import { relTime, fmtSize } from '../../util/format'
 import { writeClipboard } from '../../util/clipboard'
 import type { DriveResponse } from '../../types'
 import { Button } from '../../ui/Button'
@@ -154,12 +153,12 @@ export function DriveRow() {
       )}
       {open && data.connected && (
         <div className="settings-row-extra">
-          <ul className="model-files">
+          <ul className="file-list">
             {data.backups.map(b => (
-              <li key={b.id} className="model-file">
-                <div className="mf-main">
-                  <span className="mf-name">{when(b.at)}</span>
-                  <span className="mf-size">{fmtSize(b.size)}</span>
+              <li key={b.id} className="file-row">
+                <div className="file-main">
+                  <span className="file-name">{when(b.at)}</span>
+                  <span className="file-size">{fmtSize(b.size)}</span>
                 </div>
                 {armed === b.id ? (
                   <Confirm

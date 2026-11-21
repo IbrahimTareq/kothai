@@ -8,6 +8,8 @@ export interface UsageRow {
   at: number
   step: string
   trigger: string
+  // Rows from before the on-device provider was removed say 'local'; every
+  // row written since says 'remote'.
   provider: 'local' | 'remote'
   model: string
   ok: boolean

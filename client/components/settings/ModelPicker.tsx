@@ -1,27 +1,19 @@
-// ModelPicker.tsx — shared model-selection primitives used by both the Settings
-// tab (hot-swap an already-running model) and the first-run Onboarding flow
-// (pick models before the initial download). A role is a collapsible accordion
-// of presets; each preset is a radio-style row showing its label, blurb, and size.
+// ModelPicker.tsx — the model-name field shared by the Settings tab and the
+// first-run Onboarding flow, and the copy each role is introduced with.
 import { useState, useEffect } from 'react'
 import { Icon } from '../icons'
-import type { ModelPreset, Residency } from '../../types'
+import type { ModelOption } from '../../types'
 import { relevantModels } from '../../domain/modelRelevance'
 import { Button } from '../../ui/Button'
-import { Segmented } from '../../ui/Segmented'
 import { Input } from '../../ui/Input'
 import { Popover } from '../../ui/Popover'
-import { Confirm } from '../../ui/Confirm'
 
 export type Role = 'llm' | 'embed' | 'vision'
-
-export function fmtGB(bytes: number): string {
-  return bytes ? `${(bytes / 1e9).toFixed(1)} GB` : ''
-}
 
 export const ROLE_META: Record<Role, { title: string; sub: string }> = {
   llm: { title: 'Language', sub: 'Classifies what you save and answers your questions.' },
   embed: { title: 'Embedding', sub: 'Powers semantic search. Switching re-indexes every note in the background.' },
-  vision: { title: 'Vision', sub: 'Describes images so they become searchable. Loads only when needed.' },
+  vision: { title: 'Vision', sub: 'Describes images so they become searchable.' },
 }
 
 // A role-shaped example beats a generic one: the placeholder is the only hint
@@ -32,181 +24,9 @@ const ROLE_PLACEHOLDER: Record<Role, string> = {
   vision: 'e.g. gpt-4.1-mini',
 }
 
-// Human copy for the three residency policies, in display order.
-const POLICY_META: { key: Residency; label: string; desc: string }[] = [
-  { key: 'off', label: 'Off', desc: 'No download, no RAM. Features that need this model are disabled.' },
-  {
-    key: 'ondemand',
-    label: 'On demand',
-    desc: 'Loads when needed, frees its RAM after a few idle minutes. First use after idle takes a moment.',
-  },
-  { key: 'always', label: 'Always on', desc: 'Fastest responses — stays in RAM the whole time the app runs.' },
-]
-
-// Segmented Off / On demand / Always control + a one-line tradeoff blurb.
-function ResidencyControl({
-  value,
-  busy,
-  onPick,
-}: {
-  value: Residency
-  busy: boolean
-  onPick: (p: Residency) => void
-}) {
-  const current = POLICY_META.find(p => p.key === value)
-  return (
-    <div className="residency">
-      <Segmented
-        label="Keep in memory"
-        value={value}
-        onChange={onPick}
-        disabled={busy}
-        options={POLICY_META.map(p => ({ value: p.key, label: p.label }))}
-      />
-      {current && <div className="residency-desc">{current.desc}</div>}
-    </div>
-  )
-}
-
-interface ModelRowProps {
-  p: ModelPreset
-  active: boolean
-  busy: boolean
-  switching: boolean
-  pct: number
-  tabbable: boolean
-  onPick: () => void
-}
-
-// Arrow keys move between rows the way a radiogroup's do; only the checked row
-// sits in the tab order. Moving focus picks nothing — Enter or a click does.
-function moveFocus(e: React.KeyboardEvent<HTMLButtonElement>) {
-  const step =
-    e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0
-  if (!step) return
-  e.preventDefault()
-  const rows = [
-    ...(e.currentTarget.closest('[role="radiogroup"]')?.querySelectorAll<HTMLElement>('[role="radio"]') ?? []),
-  ]
-  rows[(rows.indexOf(e.currentTarget) + step + rows.length) % rows.length]?.focus()
-}
-
-function ModelRow({ p, active, busy, switching, pct, tabbable, onPick }: ModelRowProps) {
-  return (
-    <button
-      className={`model-row${active ? ' active' : ''}`}
-      role="radio"
-      aria-checked={active}
-      tabIndex={tabbable ? 0 : -1}
-      disabled={busy}
-      onClick={onPick}
-      onKeyDown={moveFocus}
-    >
-      <span className="model-radio">{active && <span className="model-radio-dot"></span>}</span>
-      <span className="model-main">
-        <span className="model-name">{p.label}</span>
-        <span className="model-desc">{p.desc}</span>
-      </span>
-      <span className="model-size">
-        {active && switching ? <span className="model-dl">↓ {pct}%</span> : fmtGB(p.sizeBytes)}
-      </span>
-    </button>
-  )
-}
-
-interface RoleAccordionProps {
-  role: Role
-  presets: ModelPreset[]
-  currentKey: string
-  busy: boolean
-  switching: boolean
-  pct: number
-  defaultOpen?: boolean
-  onPick: (key: string) => void
-  policy?: Residency
-  onPolicy?: (p: Residency) => void
-  /** Ask before a pick commits. Settings switches a running model on the pick;
-      onboarding only selects ahead of its own submit. */
-  confirm?: boolean
-}
-
-// One collapsible model role. Collapsed, the header still communicates state by
-// showing the selected model's label.
-export function RoleAccordion({
-  role,
-  presets,
-  currentKey,
-  busy,
-  switching,
-  pct,
-  defaultOpen,
-  onPick,
-  policy,
-  onPolicy,
-  confirm,
-}: RoleAccordionProps) {
-  const [open, setOpen] = useState(!!defaultOpen)
-  const [armed, setArmed] = useState<ModelPreset | null>(null)
-  const current = presets.find(p => p.key === currentKey)
-  const meta = ROLE_META[role]
-  // The checked row is the group's one tab stop; with none checked, the first.
-  const tabKey = current?.key ?? presets[0]?.key
-  return (
-    <div className={`role-acc${open ? ' open' : ''}`}>
-      <button className="role-acc-head" onClick={() => setOpen(o => !o)} aria-expanded={open}>
-        <span className="role-acc-info">
-          <span className="role-acc-title">{meta.title}</span>
-          <span className="role-acc-sub">{meta.sub}</span>
-        </span>
-        <span className="role-acc-current">
-          {switching ? <span className="model-dl">↓ {pct}%</span> : policy === 'off' ? 'Off' : current?.label || '—'}
-        </span>
-        <span className="role-acc-chev">
-          <Icon name="chevron" size={16} />
-        </span>
-      </button>
-      {open && (
-        <div className="model-list">
-          {policy && onPolicy && <ResidencyControl value={policy} busy={busy} onPick={onPolicy} />}
-          <div role="radiogroup" aria-label={`${meta.title} model`}>
-            {presets.map(p => (
-              <ModelRow
-                key={p.key}
-                p={p}
-                active={currentKey === p.key}
-                busy={busy}
-                switching={switching}
-                pct={pct}
-                tabbable={p.key === tabKey}
-                onPick={() => (p.key === currentKey ? undefined : confirm ? setArmed(p) : onPick(p.key))}
-              />
-            ))}
-          </div>
-          {armed && confirm && (
-            <Confirm
-              question={[
-                `Switch ${meta.title.toLowerCase()} to ${armed.label}?`,
-                armed.sizeBytes ? `Up to ${fmtGB(armed.sizeBytes)} to download.` : '',
-                role === 'embed' ? 'Every note is re-indexed in the background.' : '',
-              ].join(' ')}
-              confirmLabel="Switch"
-              onConfirm={() => {
-                setArmed(null)
-                onPick(armed.key)
-              }}
-              onCancel={() => setArmed(null)}
-            />
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Remote model names are endpoint-defined ids, not a curated catalogue, so
-// this is a free-text field with the endpoint's list as suggestions rather
-// than a radio group. Residency and download size have no meaning here: there
-// is no RAM to manage and nothing to download.
+// Model names are endpoint-defined ids, not a curated catalogue, so this is a
+// free-text field with the endpoint's list as suggestions rather than a radio
+// group.
 export function RemoteModelField({
   role,
   value,
@@ -217,7 +37,7 @@ export function RemoteModelField({
 }: {
   role: Role
   value: string
-  options: ModelPreset[]
+  options: ModelOption[]
   busy: boolean
   // KOTHAI_AI_<ROLE>_MODEL wins over a saved name (remote-singleton.ts's
   // withEnvModels), so an editable field would take a name nothing uses.

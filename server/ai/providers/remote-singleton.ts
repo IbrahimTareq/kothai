@@ -7,7 +7,7 @@ import { findEndpoint } from '../endpoints.ts'
 import type { RoleEndpoint } from '../endpoint-config.ts'
 import type { Role } from '../roles.ts'
 import { createRemoteProvider } from './remote.ts'
-import type { ModelSelection, Provider, ProviderConfig } from './types.ts'
+import type { ModelSelection, Provider } from './types.ts'
 
 let singleton: Provider | null = null
 // Held here rather than handed to one instance: boot() replaces the instance
@@ -37,11 +37,8 @@ export const remoteProvider = {
   shutdown: async () => {
     if (singleton) await singleton.shutdown()
   },
-  // Config arrives as { local, remote } — both selections, since the caller
-  // resolves settings before it knows which provider was chosen. This provider
-  // reads only the remote half.
-  init: async ({ remote = {} }: ProviderConfig = {}) => {
-    await boot(remote).init()
+  init: async (models: ModelSelection = {}) => {
+    await boot(models).init()
   },
 } satisfies Provider
 

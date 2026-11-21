@@ -7,10 +7,7 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { _reset, initProvider, localSupported } from '../../../server/ai/index.ts'
-import type { Residency } from '../../../server/ai/roles.ts'
-import type { ProviderKind } from '../../../server/ai/routing.ts'
-import type { ModelSelection } from '../../../server/ai/providers/types.ts'
+import { _reset, initProvider } from '../../../server/ai/index.ts'
 import { handleSaveEndpoint, handleClearEndpoint, handleGetSettings } from '../../../server/routes/settings.ts'
 import { _resetDb } from '../../../server/data/db.ts'
 import * as settings from '../../../server/data/settings.ts'
@@ -19,50 +16,28 @@ import * as enrich from '../../../server/ai/enrich.ts'
 import { setAiCredentials, getAiConfig } from '../../../server/config.ts'
 import { readCredentials, writeCredentials } from '../../../server/data/credentials.ts'
 import { mockReq, mockRes, record } from '../../helpers/http.ts'
-import { loader, provider } from '../../helpers/providers.ts'
+import { provider } from '../../helpers/providers.ts'
 
 const fakeReq = (body: unknown) => mockReq({ body: JSON.stringify(body) })
 const dir = () => mkdtempSync(path.join(tmpdir(), 'kothai-chg-'))
 
-// Records what the facade asks of the local provider, which is where the
-// switch back actually lands.
-const localCalls: { residency: Residency[]; models: ModelSelection[]; boots: number; remoteEmbeds: number } = {
-  residency: [],
-  models: [],
-  boots: 0,
-  // Not a local call: how many notes the endpoint was asked to embed, which is
-  // how a queued re-embed shows itself.
-  remoteEmbeds: 0,
-}
-// The three optional members are stubbed here precisely because they are the
-// on-device calls a role coming home has to produce; everything else the
-// facade touches gets the fixture's empty answer.
-const fakeProvider = (kind: ProviderKind) =>
+// How many notes the endpoint was asked to embed, which is how a queued
+// re-embed shows itself.
+const calls = { remoteEmbeds: 0 }
+const fakeProvider = () =>
   provider({
-    applyResidency: async r => {
-      if (kind === 'local') localCalls.residency.push(r)
-    },
-    configureModels: async m => {
-      if (kind === 'local') localCalls.models.push(m)
-    },
-    boot: async () => {
-      if (kind === 'local') localCalls.boots++
-    },
     embedText: async () => {
-      if (kind === 'remote') localCalls.remoteEmbeds++
+      calls.remoteEmbeds++
       return [1]
     },
-    capabilities: () => ({ kind, managesResidency: kind === 'local', downloadsWeights: kind === 'local' }),
+    capabilities: () => ({ kind: 'remote' }),
   })
-const load = loader(fakeProvider)
+const load = fakeProvider
 const A = 'http://127.0.0.1:1/v1'
 const B = 'http://127.0.0.1:2/v1'
 
 beforeEach(async () => {
-  localCalls.residency.length = 0
-  localCalls.models.length = 0
-  localCalls.boots = 0
-  localCalls.remoteEmbeds = 0
+  calls.remoteEmbeds = 0
   _resetDb()
   settings._reset()
   await settings.load()
@@ -75,7 +50,7 @@ test('the endpoint can be changed once first run is over', async () => {
   writeCredentials({ baseUrl: A, apiKey: 'old-key' }, d)
   setAiCredentials(readCredentials(d))
   await settings.save({ configured: true })
-  await initProvider('remote', {}, { load, localAvailable: false })
+  await initProvider({}, { load })
 
   const { res, sent } = mockRes()
   await handleSaveEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: B, apiKey: 'new-key' } }), res, {
@@ -84,7 +59,7 @@ test('the endpoint can be changed once first run is over', async () => {
   })
   assert.equal(sent.code, 200)
   assert.deepEqual(readCredentials(d), { baseUrl: B, apiKey: 'new-key', providerId: 'openai' })
-  assert.equal(getAiConfig().baseUrl, B, 'and the running process follows')
+  assert.equal(getAiConfig().roles.llm.baseUrl, B, 'and the running process follows')
 })
 
 test('rotating just the key keeps the endpoint', async () => {
@@ -92,7 +67,7 @@ test('rotating just the key keeps the endpoint', async () => {
   writeCredentials({ baseUrl: A, apiKey: 'old-key' }, d)
   setAiCredentials(readCredentials(d))
   await settings.save({ configured: true })
-  await initProvider('remote', {}, { load, localAvailable: false })
+  await initProvider({}, { load })
 
   await handleSaveEndpoint(
     fakeReq({ endpoint: { providerId: 'openai', baseUrl: A, apiKey: 'rotated' } }),
@@ -102,19 +77,20 @@ test('rotating just the key keeps the endpoint', async () => {
   assert.deepEqual(readCredentials(d), { baseUrl: A, apiKey: 'rotated', providerId: 'openai' })
 })
 
-test('disconnecting removes the credential and takes the roles back on-device', async () => {
+// There is no on-device provider to fall back on: disconnecting leaves AI off.
+test('disconnecting removes the credential and leaves every role with no endpoint', async () => {
   const d = dir()
   writeCredentials({ baseUrl: A, apiKey: 'k' }, d)
   setAiCredentials(readCredentials(d))
   await settings.save({ configured: true, remote: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small' } })
-  await initProvider('remote', {}, { load, localAvailable: true })
+  await initProvider({}, { load })
 
   const { res, sent } = mockRes()
   await handleClearEndpoint(fakeReq({}), res, { dir: d, load })
   assert.equal(sent.code, 200)
   assert.equal(existsSync(path.join(d, 'credentials.json')), false, 'the key is gone from disk')
-  assert.equal(getAiConfig().provider, 'local')
-  assert.equal(record(record(sent.json().capabilities).roles).llm, 'local')
+  assert.equal(getAiConfig().source, 'none')
+  assert.deepEqual(sent.json().capabilities, { kind: 'remote' })
 })
 
 // The endpoint's model names are deliberately left alone on disconnect: they
@@ -125,7 +101,7 @@ test('disconnecting keeps the endpoint model names for next time', async () => {
   writeCredentials({ baseUrl: A, apiKey: 'k' }, d)
   setAiCredentials(readCredentials(d))
   await settings.save({ configured: true, remote: { llm: 'gpt-4o-mini' } })
-  await initProvider('remote', {}, { load, localAvailable: true })
+  await initProvider({}, { load })
   await handleClearEndpoint(fakeReq({}), mockRes().res, { dir: d, load })
   assert.equal(settings.getRemote().llm, 'gpt-4o-mini')
 })
@@ -135,35 +111,12 @@ test('a malformed endpoint is refused and the working one survives', async () =>
   writeCredentials({ baseUrl: A, apiKey: 'good' }, d)
   setAiCredentials(readCredentials(d))
   await settings.save({ configured: true })
-  await initProvider('remote', {}, { load, localAvailable: false })
+  await initProvider({}, { load })
 
   const { res, sent } = mockRes()
   await handleSaveEndpoint(fakeReq({ endpoint: { providerId: null, baseUrl: 'not a url' } }), res, { dir: d, load })
   assert.equal(sent.code, 400)
   assert.deepEqual(readCredentials(d), { baseUrl: A, apiKey: 'good', providerId: null }, 'the old one is untouched')
-})
-
-test('GET /api/settings says whether this image could run models locally', async () => {
-  await initProvider('remote', {}, { load, localAvailable: false })
-  const { res, sent } = mockRes()
-  await handleGetSettings(res)
-  assert.ok('localSupported' in sent.json(), 'Settings needs it to know whether to offer the switch')
-})
-
-// Greyed rather than hidden, beside first run's own "On this machine": a
-// lone pair of hosted tiles read as the only way Kothai can run.
-test('on the lite image a provider on this machine is offered but unavailable', async () => {
-  await initProvider('remote', {}, { load, localAvailable: false })
-  // What the lite image's import of the on-device provider throws. The probe
-  // caches its answer, so handleGetSettings reads this one.
-  await localSupported(() => {
-    throw Object.assign(new Error('absent'), { code: 'ERR_MODULE_NOT_FOUND' })
-  })
-  const { res, sent } = mockRes()
-  await handleGetSettings(res)
-  const offered = sent.json().catalogue as { id: string; available: boolean }[]
-  assert.equal(offered.find(e => e.id === 'ollama-local')?.available, false)
-  assert.equal(offered.find(e => e.id === 'openai')?.available, true, 'a hosted provider is unaffected by the image')
 })
 
 // The wizard's Continue used to send a blank key for OpenAI, and first run
@@ -173,7 +126,7 @@ test('a provider that needs a key is refused without one, and the working one su
   writeCredentials({ baseUrl: A, apiKey: 'good' }, d)
   setAiCredentials(readCredentials(d))
   await settings.save({ configured: true })
-  await initProvider('remote', {}, { load, localAvailable: false })
+  await initProvider({}, { load })
 
   const { res, sent } = mockRes()
   await handleSaveEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: A, apiKey: ' ' } }), res, {
@@ -184,93 +137,6 @@ test('a provider that needs a key is refused without one, and the working one su
   assert.deepEqual(readCredentials(d), { baseUrl: A, apiKey: 'good', providerId: null })
 })
 
-// Disconnecting moved the roles back on paper and left them dead in practice.
-// While llm and vision were served remotely the local provider had them pinned
-// 'off' — correct then, and nothing re-applied residency when they came back —
-// so the app returned to local with only embedding working, and an aggregate
-// still cheerfully reporting Ready.
-test('switching back to local turns the returning roles on', async () => {
-  const d = dir()
-  writeCredentials({ baseUrl: A, apiKey: 'k' }, d)
-  setAiCredentials(readCredentials(d))
-  await settings.save({ configured: true, residency: { llm: 'ondemand', embed: 'always', vision: 'ondemand' } })
-  await initProvider('remote', {}, { load, localAvailable: true })
-
-  await handleClearEndpoint(fakeReq({}), mockRes().res, { dir: d, load })
-
-  const last = localCalls.residency.at(-1)
-  assert.ok(last, 'residency must be re-applied when the role map changes')
-  assert.equal(last.llm, 'ondemand', 'language is local again, so it must not stay off')
-  assert.equal(last.vision, 'ondemand')
-  assert.equal(last.embed, 'always')
-})
-
-test('switching back to local hands the local provider its own model names', async () => {
-  const d = dir()
-  writeCredentials({ baseUrl: A, apiKey: 'k' }, d)
-  setAiCredentials(readCredentials(d))
-  await settings.save({ configured: true })
-  await initProvider('remote', {}, { load, localAvailable: true })
-
-  await handleClearEndpoint(fakeReq({}), mockRes().res, { dir: d, load })
-  const names = localCalls.models.at(-1)
-  assert.ok(names, 'the roles it now serves need models configured')
-  assert.ok(names.llm, `expected a language model, got ${JSON.stringify(names)}`)
-})
-
-// The other direction leaks rather than breaks: a role that moves OUT to an
-// endpoint leaves its weights resident until something unloads them.
-test('switching to a service releases the roles it takes over', async () => {
-  const d = dir()
-  await settings.save({ configured: true, residency: { llm: 'always', embed: 'always', vision: 'ondemand' } })
-  await initProvider('local', {}, { load, localAvailable: true })
-
-  await handleSaveEndpoint(
-    fakeReq({
-      endpoint: { providerId: 'openai', baseUrl: A, apiKey: 'k' },
-      models: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small' },
-    }),
-    mockRes().res,
-    { dir: d },
-  )
-  const last = localCalls.residency.at(-1)
-  assert.ok(last, 'residency must be re-applied here too')
-  assert.equal(last.llm, 'off', 'the endpoint serves language now — stop holding its weights')
-})
-
-// Switching back used to leave you on whatever defaults were stored, with the
-// model pickers only reachable afterwards as a separate, unprompted step.
-test('disconnecting can choose the on-device models in the same request', async () => {
-  const d = dir()
-  writeCredentials({ baseUrl: A, apiKey: 'k' }, d)
-  setAiCredentials(readCredentials(d))
-  await settings.save({ configured: true })
-  await initProvider('remote', {}, { load, localAvailable: true })
-
-  const { res, sent } = mockRes()
-  await handleClearEndpoint(fakeReq({ models: { llm: 'QWEN3_4B_INST_Q4_K_M' } }), res, { dir: d, load })
-  assert.equal(sent.code, 200)
-  assert.equal(settings.get().llm, 'QWEN3_4B_INST_Q4_K_M', 'the choice made during the switch sticks')
-})
-
-test('disconnecting with no choice keeps what was already stored', async () => {
-  const d = dir()
-  writeCredentials({ baseUrl: A, apiKey: 'k' }, d)
-  setAiCredentials(readCredentials(d))
-  await settings.save({ configured: true, llm: 'QWEN3_1_7B_INST_Q4' })
-  await initProvider('remote', {}, { load, localAvailable: true })
-
-  await handleClearEndpoint(fakeReq({}), mockRes().res, { dir: d, load })
-  assert.equal(settings.get().llm, 'QWEN3_1_7B_INST_Q4')
-})
-
-test('GET /api/settings carries on-device presets with sizes while a service is connected', async () => {
-  await initProvider('remote', {}, { load, localAvailable: true })
-  const { res, sent } = mockRes()
-  await handleGetSettings(res)
-  assert.ok('localPresets' in sent.json(), 'Settings cannot price the switch without them')
-})
-
 // ---- an endpoint per role --------------------------------------------------
 // Claude serves chat and images but no embeddings, so connecting it means a
 // second endpoint for the embedding role alone. That override has to be
@@ -279,7 +145,7 @@ const connected = async (d: string) => {
   writeCredentials({ baseUrl: A, apiKey: 'shared-key', providerId: 'claude' }, d)
   setAiCredentials(readCredentials(d))
   await settings.save({ configured: true, remote: { llm: 'claude-haiku-5-5', embed: 'text-embedding-3-small' } })
-  await initProvider('remote', {}, { load, localAvailable: false })
+  await initProvider({}, { load })
 }
 
 test('an endpoint saved for one role is written beside the shared one, not over it', async () => {
@@ -356,7 +222,7 @@ test('GET /api/settings reports each role, and which ones borrow the shared endp
   setAiCredentials({ baseUrl: A, apiKey: 'k', roles: { embed: { baseUrl: B, apiKey: 'e', providerId: 'openai' } } })
   process.env.KOTHAI_AI_EMBED_MODEL = 'pinned-embed'
   t.after(() => delete process.env.KOTHAI_AI_EMBED_MODEL)
-  await initProvider('remote', {}, { load, localAvailable: false })
+  await initProvider({}, { load })
   const { res, sent } = mockRes()
   await handleGetSettings(res)
   const body = sent.json()
@@ -388,7 +254,7 @@ test('moving the embedding role to another endpoint re-embeds the library, even 
     { dir: d, load },
   )
   await enrich.queueJob(() => {}) // drain
-  assert.equal(localCalls.remoteEmbeds, 1, 'the note was embedded again at the new endpoint')
+  assert.equal(calls.remoteEmbeds, 1, 'the note was embedded again at the new endpoint')
 
   // Saving the same endpoint again moves nothing.
   await handleSaveEndpoint(
@@ -397,7 +263,7 @@ test('moving the embedding role to another endpoint re-embeds the library, even 
     { dir: d, load },
   )
   await enrich.queueJob(() => {})
-  assert.equal(localCalls.remoteEmbeds, 1, 'a rotated key is not a new vector space')
+  assert.equal(calls.remoteEmbeds, 1, 'a rotated key is not a new vector space')
 })
 
 // ---- other roles are left alone --------------------------------------------
@@ -417,7 +283,7 @@ const withOwnEmbed = async (d: string) => {
     configured: true,
     remote: { llm: 'gpt-4o-mini', embed: 'nomic-embed-text', vision: 'gpt-4.1-mini' },
   })
-  await initProvider('remote', {}, { load, localAvailable: false })
+  await initProvider({}, { load })
 }
 
 // The shared save seeded every role's model from the new tile's defaults, so
@@ -440,7 +306,7 @@ test('saving the shared endpoint leaves the model of a role with its own endpoin
   assert.equal(settings.getRemote().embed, 'nomic-embed-text')
   assert.equal(settings.getRemote().llm, 'openai/gpt-4o-mini', 'the shared roles still take the new names')
   assert.equal(settings.getRemote().vision, 'openai/gpt-4.1-mini')
-  assert.equal(localCalls.remoteEmbeds, 0, 'embeddings did not move, so nothing is re-embedded')
+  assert.equal(calls.remoteEmbeds, 0, 'embeddings did not move, so nothing is re-embedded')
 })
 
 // The override's model stayed stored after it was cleared, so OpenRouter's
@@ -459,7 +325,7 @@ test('swapping the shared endpoint re-embeds when embeddings borrow it', async (
   writeCredentials({ baseUrl: A, apiKey: 'k', providerId: 'openai' }, d)
   setAiCredentials(readCredentials(d))
   await settings.save({ configured: true, remote: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small' } })
-  await initProvider('remote', {}, { load, localAvailable: false })
+  await initProvider({}, { load })
   await store.addNote({ title: 'Brown butter pasta', embedding: [1, 0] })
   await handleSaveEndpoint(
     fakeReq({
@@ -470,7 +336,7 @@ test('swapping the shared endpoint re-embeds when embeddings borrow it', async (
     { dir: d, load },
   )
   await enrich.queueJob(() => {})
-  assert.equal(localCalls.remoteEmbeds, 1)
+  assert.equal(calls.remoteEmbeds, 1)
 })
 
 // Settings → Change → Claude while embeddings borrowed the shared endpoint:
@@ -482,7 +348,7 @@ test('switching the shared endpoint to Claude turns embeddings off rather than s
   writeCredentials({ baseUrl: A, apiKey: 'k', providerId: 'openai' }, d)
   setAiCredentials(readCredentials(d))
   await settings.save({ configured: true, remote: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small' } })
-  await initProvider('remote', {}, { load, localAvailable: false })
+  await initProvider({}, { load })
   await store.addNote({ title: 'Brown butter pasta', embedding: [1, 0] })
   await handleSaveEndpoint(
     fakeReq({
@@ -493,7 +359,7 @@ test('switching the shared endpoint to Claude turns embeddings off rather than s
     { dir: d, load },
   )
   await enrich.queueJob(() => {})
-  assert.equal(localCalls.remoteEmbeds, 0, 'no re-embed against an endpoint with no embeddings')
+  assert.equal(calls.remoteEmbeds, 0, 'no re-embed against an endpoint with no embeddings')
   assert.equal(getAiConfig().roles.embed.baseUrl, null)
   const { res, sent } = mockRes()
   await handleGetSettings(res)

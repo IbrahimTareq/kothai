@@ -1,64 +1,40 @@
-// reconfigure() re-resolves which provider serves which role and re-boots the
-// remote provider against whatever config now says. The local provider is
-// deliberately left alone: re-initialising it would unload and reload model
-// weights for a change that has nothing to do with them.
+// reconfigure() re-boots the provider against whatever config now says, so an
+// endpoint saved in the browser takes effect without a container restart.
 import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { initProvider, reconfigure, capabilities, _reset } from '../../../server/ai/index.ts'
-import type { ProviderKind } from '../../../server/ai/routing.ts'
-import { loader, provider } from '../../helpers/providers.ts'
+import { provider } from '../../helpers/providers.ts'
 
-// Only init() and capabilities() are stubbed: this file is about which
-// providers get brought up and in what order, and every other member the
-// facade touches on the way there has an empty answer that nothing here reads.
-const fakeProvider = (kind: ProviderKind, log: string[]) =>
+const fakeProvider = (name: string, log: unknown[]) =>
   provider({
-    init: async () => {
-      log.push(`${kind}:init`)
+    init: async models => {
+      log.push(['init', models])
     },
-    capabilities: () => ({ kind, managesResidency: kind === 'local', downloadsWeights: kind === 'local' }),
+    capabilities: () => ({ kind: name }),
   })
 
 beforeEach(() => _reset())
 
-test('re-boots the remote provider so it picks up the new endpoint', async () => {
-  const log: string[] = []
-  const load = loader(kind => fakeProvider(kind, log))
-  await initProvider('remote', {}, { load, localAvailable: false })
+test('re-inits the provider with the stored model names', async () => {
+  const log: unknown[] = []
+  const load = () => fakeProvider('remote', log)
+  await initProvider({}, { load })
   log.length = 0
-  await reconfigure({}, { load, provider: 'remote', localAvailable: false })
-  assert.deepEqual(log, ['remote:init'])
+  await reconfigure({ llm: 'gpt-4o-mini' }, { load })
+  assert.deepEqual(log, [['init', { llm: 'gpt-4o-mini' }]])
 })
 
-test('leaves an already-initialised local provider untouched', async () => {
-  const log: string[] = []
-  const load = loader(kind => fakeProvider(kind, log))
-  await initProvider('remote', {}, { load, localAvailable: true }) // mixed: embed stays local
-  assert.equal(capabilities().kind, 'mixed')
-  log.length = 0
-  await reconfigure({}, { load, provider: 'remote', localAvailable: true })
-  assert.ok(!log.includes('local:init'), 'weights must not be reloaded for an endpoint change')
+test('reconfigure before init fails loudly', async () => {
+  await assert.rejects(() => reconfigure({}), /not initialised/)
 })
 
-test('initialises a provider kind that was not in use before', async () => {
-  const log: string[] = []
-  const load = loader(kind => fakeProvider(kind, log))
-  await initProvider('local', {}, { load, localAvailable: true })
-  log.length = 0
-  await reconfigure({}, { load, provider: 'remote', localAvailable: true })
-  assert.ok(log.includes('remote:init'), 'the remote provider must be brought up')
-  assert.equal(capabilities().roles.llm, 'remote')
-})
-
-test('a failure leaves the previous provider map live rather than half-built', async () => {
-  const log: string[] = []
-  const load = loader(kind =>
-    kind === 'remote' && log.includes('poisoned')
-      ? Promise.reject(new Error('endpoint provider exploded'))
-      : fakeProvider(kind, log),
-  )
-  await initProvider('local', {}, { load, localAvailable: true })
-  log.push('poisoned')
-  await assert.rejects(() => reconfigure({}, { load, provider: 'remote', localAvailable: true }), /exploded/)
-  assert.equal(capabilities().kind, 'local', 'the working map must survive a failed reconfigure')
+test('a failure leaves the previous provider live rather than half-built', async () => {
+  const log: unknown[] = []
+  await initProvider({}, { load: () => fakeProvider('before', log) })
+  const broken = fakeProvider('after', log)
+  broken.init = async () => {
+    throw new Error('endpoint provider exploded')
+  }
+  await assert.rejects(() => reconfigure({}, { load: () => broken }), /exploded/)
+  assert.equal(capabilities().kind, 'before', 'the working provider must survive a failed reconfigure')
 })

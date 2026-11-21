@@ -14,29 +14,8 @@
 //
 // Defaults are the emptiest legal provider rather than a plausible one: a test
 // that depends on a value it did not stub should fail, not quietly pass on this
-// file's opinion. That is why `capabilities()` reports no kind and claims
-// nothing — every caller sets the kind, because the kind is what each of them
-// is about.
-import type { initProvider } from '../../server/ai/index.ts'
-import type { ProviderKind } from '../../server/ai/routing.ts'
+// file's opinion. That is why `capabilities()` reports no kind.
 import type { Provider } from '../../server/ai/providers/types.ts'
-
-// The `load` seam's own type, queried off initProvider rather than re-spelled:
-// server/ai/index.ts derives ProviderLoader for itself and does not export it,
-// and a second hand-written copy here would be the first thing to drift.
-export type ProviderLoader = NonNullable<NonNullable<Parameters<typeof initProvider>[2]>['load']>
-
-// The seam's `kind` is optional — the availability probe calls load() with no
-// argument, because that path only cares whether resolving throws. No test
-// that hands back a *per-kind* fake can survive that call: it would not know
-// which fake to build. So the absence is refused here, once, instead of every
-// caller either widening its fake's parameter or writing `kind!`.
-export function loader(build: (kind: ProviderKind) => Provider | Promise<Provider>): ProviderLoader {
-  return kind => {
-    if (!kind) throw new Error('loader: the facade asked for a provider without naming its kind')
-    return build(kind)
-  }
-}
 
 export function provider(partial: Partial<Provider> = {}): Provider {
   return {
@@ -44,7 +23,7 @@ export function provider(partial: Partial<Provider> = {}): Provider {
     applySettings: async () => {},
     shutdown: async () => {},
 
-    capabilities: () => ({ kind: '', managesResidency: false, downloadsWeights: false }),
+    capabilities: () => ({ kind: '' }),
     available: () => false,
     roleEnabled: () => false,
     statusSnapshot: () => ({
@@ -70,9 +49,9 @@ export function provider(partial: Partial<Provider> = {}): Provider {
     describeImage: async () => '',
     answer: async () => '',
 
-    // The seven optional members are deliberately left absent. That is what a
-    // pure-remote provider looks like, and it is what makes the facade's
-    // `L()?.boot?.() ?? Promise.resolve()` fallbacks reachable from a test.
+    // The optional members (answerStream, onRecover) are deliberately left
+    // absent: it is what makes the facade's streaming fallback reachable from
+    // a test.
     ...partial,
   }
 }

@@ -1,99 +1,50 @@
-// Onboarding.tsx — first-run model picker. On a fresh install the server holds
-// off on downloading any model until the user confirms a selection here. Picking
-// only updates local state; "Download & start" commits the choice via
-// /api/setup, which kicks off the initial download. We then show the shared boot
-// progress bar until the models report ready, at which point onComplete() hands
-// control to the main app.
+// Onboarding.tsx — first run. With no endpoint yet, the SetupWizard connects
+// one; then each role is given a model the endpoint serves, and "Save & start"
+// commits the names via /api/setup and hands control to the main app.
 import { useState, useEffect } from 'react'
 import { Icon } from '../components/icons'
-import { RoleAccordion, RemoteModelField, ROLE_META, fmtGB, type Role } from '../components/settings/ModelPicker'
+import { RemoteModelField, ROLE_META, type Role } from '../components/settings/ModelPicker'
 import { API } from '../data/api'
-import type { SettingsResponse, ModelLoad } from '../types'
+import type { SettingsResponse } from '../types'
 import { SetupWizard } from './SetupWizard'
 import { Button } from '../ui/Button'
 
-// Every locally-served role downloads up front at setup (on-demand roles are
-// then unloaded), so first use is a fast local load — count them all toward the
-// download size. Roles an endpoint serves download nothing and are filtered out
-// below, so a mixed install only asks about the ones it will fetch.
-const UPFRONT: Role[] = ['llm', 'embed', 'vision']
+const ROLES: Role[] = ['llm', 'embed', 'vision']
 
-export function Onboarding({ modelLoad, onComplete }: { modelLoad: ModelLoad; onComplete: () => void }) {
+export function Onboarding({ onComplete }: { onComplete: () => void }) {
   const [cfg, setCfg] = useState<SettingsResponse | null>(null)
-  const [sel, setSel] = useState<Record<Role, string> | null>(null)
   const [remoteSel, setRemoteSel] = useState<Record<Role, string> | null>(null)
-  const [submitted, setSubmitted] = useState(false)
   const [err, setErr] = useState<string | null>(null)
-  // The wizard runs only when this install has no endpoint yet. A full local
-  // image has nothing to connect, so it falls straight through to the picker.
+  // The wizard runs only when this install has no endpoint yet.
   const [wizardDone, setWizardDone] = useState(false)
 
   useEffect(() => {
     API.settings()
       .then(c => {
         setCfg(c)
-        setSel({ ...c.current })
         setRemoteSel({ ...c.remote })
       })
       .catch(() => setErr('Could not reach the server.'))
   }, [])
 
-  // The models start loading once we submit; when they're ready, enter the app.
-  useEffect(() => {
-    if (submitted && modelLoad.state === 'ready') onComplete()
-  }, [submitted, modelLoad.state, onComplete])
-
-  const pick = (role: Role, key: string) => setSel(s => (s ? { ...s, [role]: key } : s))
   const pickRemote = (role: Role, id: string) => setRemoteSel(s => (s ? { ...s, [role]: id } : s))
 
-  // Each role is asked about in the shape its own provider needs: a preset
-  // picker for the ones this machine serves, a model id for the ones the
-  // endpoint does. A mixed install shows both.
-  const localRoles = cfg ? UPFRONT.filter(role => cfg.capabilities.roles[role] === 'local') : []
-  const remoteRoles = cfg ? UPFRONT.filter(role => cfg.capabilities.roles[role] === 'remote') : []
-  const allLocal = localRoles.length === UPFRONT.length
-  // Nothing served on-device: the endpoint's model ids are the only thing
-  // first-run has to collect, and there is no download to wait on.
-  const noneLocal = Boolean(cfg) && localRoles.length === 0
-
-  // Only ids for roles the endpoint actually serves, and only ones that were
-  // filled in. An empty name is rejected by validation, so sending a blank the
-  // user was never going to fill would block first run on a field that is
-  // legitimately optional — the role simply stays off until Settings.
+  // Only ids that were filled in: a blank is a role left off until Settings,
+  // and sending it would say nothing the server does not already assume.
   const remotePatch = () =>
-    Object.fromEntries(remoteRoles.map(role => [role, (remoteSel?.[role] || '').trim()]).filter(([, id]) => id))
-
-  const upfrontBytes =
-    cfg && sel
-      ? localRoles.reduce((sum, role) => sum + (cfg.presets[role].find(p => p.key === sel[role])?.sizeBytes || 0), 0)
-      : 0
+    Object.fromEntries(ROLES.map(role => [role, (remoteSel?.[role] || '').trim()]).filter(([, id]) => id))
 
   const start = async () => {
-    if (!sel || submitted) return
     setErr(null)
-    // With nothing to download there is nothing to wait for, so save and enter
-    // the way skip() does — the progress bar below would never move.
-    const remote = remotePatch()
-    if (noneLocal) {
-      try {
-        await API.setup({ remote })
-        onComplete()
-      } catch (e) {
-        setErr((e as Error).message || 'Setup failed. Please try again.')
-      }
-      return
-    }
-    setSubmitted(true)
     try {
-      await API.setup(Object.keys(remote).length ? { ...sel, remote } : sel)
+      await API.setup({ remote: remotePatch() })
+      onComplete()
     } catch (e) {
-      setSubmitted(false)
       setErr((e as Error).message || 'Setup failed. Please try again.')
     }
   }
 
   const skip = async () => {
-    if (submitted) return
     setErr(null)
     try {
       await API.setup({ skip: true })
@@ -104,23 +55,18 @@ export function Onboarding({ modelLoad, onComplete }: { modelLoad: ModelLoad; on
   }
 
   // What the installer already asked, so the wizard never asks it twice.
-  // 'local' means the operator chose on-device models at install time: there is
-  // no endpoint to connect and the picker is the whole of first run.
   const preAnswered = cfg?.setup?.providerId || null
-  const needsWizard = Boolean(cfg) && !cfg!.endpoint.configured && !wizardDone && preAnswered !== 'local'
+  const needsWizard = Boolean(cfg) && !cfg!.endpoint.configured && !wizardDone
   if (needsWizard) {
     return (
       <SetupWizard
         endpoints={cfg!.catalogue}
         preselect={preAnswered}
-        localSupported={cfg!.localSupported}
-        onLocal={() => setWizardDone(true)}
         onSkip={skip}
         onConnected={async (r, embed) => {
-          // Apply it NOW rather than at submit. The picker below asks about
-          // each role in the shape its provider needs, and connecting an
-          // endpoint is what decides which provider that is — so the server
-          // has to know before we re-read capabilities and draw it. A failure
+          // Apply it NOW rather than at submit. The picker below offers each
+          // role the catalogue of the endpoint that serves it, so the server
+          // has to know before we re-read settings and draw it. A failure
           // rejects back to the wizard, which shows it beside the key; moving
           // on regardless left the model picker drawn for an endpoint that
           // was never saved.
@@ -133,7 +79,6 @@ export function Onboarding({ modelLoad, onComplete }: { modelLoad: ModelLoad; on
           }
           const fresh = await API.settings()
           setCfg(fresh)
-          setSel({ ...fresh.current })
           // Seed the endpoint's model fields from the provider's defaults so
           // the next screen is filled in rather than three empty boxes.
           setRemoteSel({ ...fresh.remote, ...r.defaults, ...(embed && { embed: embed.defaults.embed }) })
@@ -150,64 +95,23 @@ export function Onboarding({ modelLoad, onComplete }: { modelLoad: ModelLoad; on
           <span className="onboarding-mark">
             <Icon name="settings" size={22} />
           </span>
-          <h1>{noneLocal ? 'Name your models' : 'Choose your models'}</h1>
-          {/* Until settings arrive, assume the all-local case — it's the common
-              one, and the other two would be wrong for it. */}
+          <h1>Name your models</h1>
           <p className="onboarding-lede">
-            {!cfg || allLocal ? (
-              <>
-                Kothai runs entirely on your machine. Pick the local models that fit your hardware — you can change any
-                of these later in Settings.
-              </>
-            ) : noneLocal ? (
-              <>
-                Every role runs on {cfg.endpoint.host || 'your endpoint'}. Name a model it serves for each one — nothing
-                downloads, and you can change these later in Settings.
-              </>
-            ) : (
-              <>
-                Some of this runs on {cfg.endpoint.host || 'your endpoint'} and some stays on your machine. Pick what
-                fits your hardware, and name a model the endpoint serves for the rest — leave one blank to set it later
-                in Settings.
-              </>
-            )}
+            Every role runs on {cfg?.endpoint.host || 'your endpoint'}. Name a model it serves for each one — nothing
+            downloads, and you can change these later in Settings.
           </p>
         </header>
 
         {err && <div className="onboarding-err">{err}</div>}
 
-        {!cfg || !sel ? (
+        {!cfg ? (
           <div className="settings-loading">Loading…</div>
-        ) : submitted ? (
-          <div className="onboarding-progress">
-            <div className="settings-progress-track">
-              <div className="settings-progress-bar" style={{ width: `${modelLoad.pct || 0}%` }}></div>
-            </div>
-            <span className="settings-progress-msg">
-              {modelLoad.state === 'error'
-                ? modelLoad.msg || 'Model load failed'
-                : modelLoad.msg || 'Downloading models…'}
-            </span>
-          </div>
         ) : (
           <>
             <div className="onboarding-picker">
-              {localRoles.map(role => (
-                <RoleAccordion
-                  key={role}
-                  role={role}
-                  presets={cfg.presets[role]}
-                  currentKey={sel[role]}
-                  busy={false}
-                  switching={false}
-                  pct={0}
-                  defaultOpen={role === localRoles[0]}
-                  onPick={key => pick(role, key)}
-                />
-              ))}
-              {remoteRoles.map(role => (
-                // Same markup Settings uses for an endpoint-served role, so
-                // the two screens don't drift apart visually.
+              {ROLES.map(role => (
+                // Same markup Settings uses for each role, so the two screens
+                // don't drift apart visually.
                 <div key={role} className="role-acc open">
                   <div className="role-acc-head">
                     <span className="role-acc-info">
@@ -228,17 +132,12 @@ export function Onboarding({ modelLoad, onComplete }: { modelLoad: ModelLoad; on
               ))}
             </div>
             <footer className="onboarding-foot">
-              <span className="onboarding-size">
-                {!noneLocal && upfrontBytes ? `Initial download ≈ ${fmtGB(upfrontBytes)}` : ''}
-              </span>
               <Button tone="solid" size="lg" onClick={start}>
-                {noneLocal ? 'Save & start' : <>Download &amp; start</>}
+                Save &amp; start
               </Button>
             </footer>
             <button className="onboarding-skip" onClick={skip}>
-              {allLocal || noneLocal
-                ? 'Skip for now — run without AI. You can enable models any time in Settings.'
-                : 'Skip for now — run on your endpoint alone. You can enable these models any time in Settings.'}
+              Skip for now — run without AI. You can enable models any time in Settings.
             </button>
           </>
         )}

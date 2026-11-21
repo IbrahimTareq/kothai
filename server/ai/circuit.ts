@@ -1,8 +1,6 @@
 // Circuit breaker for the remote inference provider.
 //
-// Pure, with an injected clock so tests never sleep — the same posture as
-// RoleManager's injectable timers. Only the remote provider uses this: local
-// inference fails per-call, never systemically, so there is nothing to trip.
+// Pure, with an injected clock so tests never sleep.
 //
 // Failures marked { transient: false } (bad API key, unknown model) open the
 // circuit immediately rather than after N tries: retrying cannot fix a

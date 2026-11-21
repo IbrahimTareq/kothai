@@ -1,5 +1,5 @@
-// The live model-status poll: is the app booted, is the language model off or
-// still warming, and is this a fresh install that has not been set up yet.
+// The live model-status poll: is the language model off or still warming, and
+// is this a fresh install that has not been set up yet.
 //
 // Lifted out of App.tsx as a unit. It was already self-contained — one effect,
 // four pieces of state nothing else writes — but sitting inline it read as
@@ -11,26 +11,23 @@
 import { useEffect, useState } from 'react'
 import { API } from './api'
 import { setDemo } from '../components/Demo'
-import type { ModelLoad } from '../types'
 
 const TICK_LOADING_MS = 1300
 const TICK_READY_MS = 4000
 const TICK_ERROR_MS = 2200
 
 export interface StatusPoll {
-  modelLoad: ModelLoad
   llmOff: boolean
   llmWarming: string
   // First-run gate: null until the first poll resolves; true shows the model
   // picker (fresh install), false enters the normal app.
   needsSetup: boolean | null
-  // Onboarding flips the gate false itself, once the chosen models finish
-  // downloading — which is why this is handed out rather than kept private.
+  // Onboarding flips the gate false itself, once first run is saved — which
+  // is why this is handed out rather than kept private.
   setNeedsSetup: (v: boolean) => void
 }
 
 export function useStatusPoll(): StatusPoll {
-  const [modelLoad, setModelLoad] = useState<ModelLoad>({ state: 'loading', txt: 'Starting', pct: 0 })
   const [llmOff, setLlmOff] = useState(false)
   const [llmWarming, setLlmWarming] = useState('')
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null)
@@ -41,7 +38,7 @@ export function useStatusPoll(): StatusPoll {
       try {
         const s = await API.status()
         // Decided once, from the first successful poll — afterwards Onboarding
-        // owns the gate, so it stays up through the download.
+        // owns the gate.
         setNeedsSetup(v => (v === null ? !s.configured : v))
         setDemo(s.demo)
         setLlmOff(s.roles.llm.state === 'off')
@@ -50,17 +47,7 @@ export function useStatusPoll(): StatusPoll {
         // up in the background, which would otherwise show a misleading
         // message under a text answer that isn't waiting on that role at all.
         setLlmWarming(s.roles.llm.state === 'loading' ? s.roles.llm.message || 'Warming up the language model…' : '')
-        const a = s.aggregate
-        if (a.state === 'error') setModelLoad({ state: 'error', txt: 'Failed', pct: a.progress || 0, msg: a.message })
-        else if (a.state === 'loading')
-          setModelLoad({
-            state: 'loading',
-            txt: `LOADING ${a.progress || 0}%`,
-            pct: a.progress || 0,
-            msg: a.message,
-          })
-        else setModelLoad({ state: 'ready', txt: 'Ready', pct: 100, msg: '' })
-        if (!stop) window.setTimeout(tick, a.state === 'loading' ? TICK_LOADING_MS : TICK_READY_MS)
+        if (!stop) window.setTimeout(tick, s.aggregate.state === 'loading' ? TICK_LOADING_MS : TICK_READY_MS)
       } catch {
         if (!stop) window.setTimeout(tick, TICK_ERROR_MS)
       }
@@ -71,5 +58,5 @@ export function useStatusPoll(): StatusPoll {
     }
   }, [])
 
-  return { modelLoad, llmOff, llmWarming, needsSetup, setNeedsSetup }
+  return { llmOff, llmWarming, needsSetup, setNeedsSetup }
 }

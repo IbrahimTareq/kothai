@@ -1,4 +1,4 @@
-// Time / date / gradient formatting helpers.
+// Time / date / size / gradient formatting helpers.
 
 // Wall-clock time for a chat message. Absolute rather than relative: a thread
 // is read top to bottom, and "2m ago" on every line goes stale the moment the
@@ -32,4 +32,16 @@ export function imgGradient(seed: number): string {
   const h = (seed * 47) % 360
   const h2 = (h + 50) % 360
   return `linear-gradient(135deg, hsl(${h} 40% 22%), hsl(${h2} 45% 10%))`
+}
+
+// GB once it earns the unit, MB below that: a list running from a few-MB
+// backup to a multi-GB one would hide exactly the difference being weighed up
+// if the small end rounded to "0.0 GB".
+//
+// Below half a megabyte a file that exists would round to "0 MB", which reads
+// as empty — a new library's backup (BackupsRow) is a few KB.
+export function fmtSize(bytes: number): string {
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`
+  if (bytes > 0 && bytes < 5e5) return 'under 1 MB'
+  return `${Math.round(bytes / 1e6)} MB`
 }

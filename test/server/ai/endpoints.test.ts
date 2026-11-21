@@ -83,7 +83,7 @@ test('findEndpoint returns null for an unknown id rather than throwing', () => {
   assert.equal(findEndpoint(undefined), null)
 })
 
-test('openai is the one provider that needs no on-device fallback', () => {
+test('openai serves embeddings and needs a key', () => {
   const openai = findEndpoint('openai')
   assert.ok(openai, 'openai must be in the catalogue')
   assert.equal(openai.servesEmbeddings, true)

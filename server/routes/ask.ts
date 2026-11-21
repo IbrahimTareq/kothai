@@ -11,10 +11,10 @@ import { demoLimits, visibleTo } from './demo.ts'
 // nothing has checked it. Narrowed at each use below rather than annotated.
 //
 // It guards the caught values too. `e.message` rather than the usual
-// `e instanceof Error ? e.message : e`: a QVAC rejection reaches this file
-// unwrapped (see providers/local.ts — describeImage and answerStream rethrow
-// the SDK's own value), so what these messages have always printed is that
-// property read, not a stringified throw. The guard only stops a null
+// `e instanceof Error ? e.message : e`: a QVAC rejection reached this file
+// unwrapped (the removed on-device provider's describeImage and answerStream
+// rethrew the SDK's own value), so what these messages have always printed is
+// that property read, not a stringified throw. The guard only stops a null
 // rejection from turning the read itself into a second failure — one thrown
 // after the 200 SSE header is out, where the router's 500 cannot land.
 function isRecord(v: unknown): v is Record<string, unknown> {

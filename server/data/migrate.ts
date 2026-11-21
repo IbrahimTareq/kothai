@@ -23,8 +23,7 @@ import { rename } from 'node:fs/promises'
 import type { DatabaseSync } from 'node:sqlite'
 import { DATA_DIR } from '../config.ts'
 import { readJson } from './json.ts'
-import type { Role, SavedSettings } from '../ai/roles.ts'
-import { ROLES, resolveResidency } from '../ai/roles.ts'
+import { ROLES } from '../ai/roles.ts'
 import { DEFAULTS } from '../ai/presets.ts'
 import { encodeEmbedding } from './embedding.ts'
 import { stripThinking } from '../ai/normalise.ts'
@@ -146,38 +145,18 @@ async function migrateSettings(db: DatabaseSync) {
   await withLegacyFile('settings.json', saved => {
     if (!isRecord(saved)) return
     const configured = saved.configured === true
-    // Rebuilt field by field rather than handed to resolveResidency whole: its
-    // SavedSettings shape promises typed fields, and this object came off disk.
-    // `saved.residency ? … : null` keeps the truthiness resolveResidency tests
-    // to choose the legacy default — narrowing it to a record first would turn
-    // a non-object residency value into the legacy branch instead of the fresh
-    // one.
-    const rawResidency = isRecord(saved.residency) ? saved.residency : null
-    const residencyIn: Partial<Record<Role, string>> = {}
-    for (const role of ROLES) {
-      const v = rawResidency?.[role]
-      if (typeof v === 'string') residencyIn[role] = v
-    }
-    const legacy: SavedSettings = { configured, residency: saved.residency ? residencyIn : null }
-    const residency = resolveResidency(legacy)
     const settings = { ...DEFAULTS }
     for (const role of ROLES) {
       const v = saved[role]
       if (typeof v === 'string' && v) settings[role] = v
     }
+    // residency_* are written blank: they described the removed on-device
+    // provider, and a JSON-era install had no endpoint model to clear.
     db.prepare(`
       INSERT INTO settings (id, llm, embed, vision, residency_llm, residency_embed, residency_vision, configured)
-      VALUES (1, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (1, ?, ?, ?, '', '', '', ?)
       ON CONFLICT(id) DO NOTHING
-    `).run(
-      settings.llm,
-      settings.embed,
-      settings.vision,
-      residency.llm,
-      residency.embed,
-      residency.vision,
-      configured ? 1 : 0,
-    )
+    `).run(settings.llm, settings.embed, settings.vision, configured ? 1 : 0)
   })
 }
 

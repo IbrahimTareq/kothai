@@ -24,7 +24,6 @@ import { handleGetDrive, handleConnectDrive, handleDisconnectDrive } from './rou
 import { handleListBackups, handleSetBackups, handleDownloadBackup } from './routes/backups.ts'
 import { handleCheckpoint } from './routes/checkpoint.ts'
 import { handleWipe } from './routes/wipe.ts'
-import { handleModelFiles, handleDeleteModelFile } from './routes/models.ts'
 import { handleAsk } from './routes/ask.ts'
 import { withTrigger } from './ai/usage.ts'
 import { handleGetCaptureToken, handleCreateCaptureToken, handleClearCaptureToken } from './routes/capture-token.ts'
@@ -127,14 +126,6 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     }
     if (req.method === 'POST' && p === '/api/checkpoint') return await handleCheckpoint(res)
     if (req.method === 'POST' && p === '/api/wipe') return await handleWipe(req, res)
-    if (req.method === 'GET' && p === '/api/models/files') return await handleModelFiles(res)
-    // The parameter is a cache FILENAME, so it arrives percent-encoded and is
-    // decoded here; routes/models.ts re-validates it before any path is built
-    // from it. Anchored so only a direct child name can match — a nested path
-    // falls through to the 405 below rather than reaching the handler.
-    if (req.method === 'DELETE' && /^\/api\/models\/files\/[^/]+$/.test(p)) {
-      return await handleDeleteModelFile(res, decodeURIComponent(p.slice('/api/models/files/'.length)))
-    }
     if (req.method === 'POST' && p === '/api/availability/remove') return await handleAvailabilityRemove(req, res)
     if (req.method === 'GET' && p === '/api/duplicates') return handleDuplicates(res)
     if (req.method === 'GET' && p === '/api/usage') return await handleUsage(res, url)

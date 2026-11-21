@@ -12,15 +12,13 @@
 // Embeddings and images can each have an endpoint of their own: Claude serves
 // no embeddings, so connecting it needs a second service for search by meaning.
 import { useState } from 'react'
-import { RoleAccordion, fmtGB, type Role } from './ModelPicker'
 import { SettingsGroup } from './SettingsRow'
 import { EndpointPicker, type EndpointChoice } from './EndpointPicker'
 import { API } from '../../data/api'
 import type { SettingsResponse } from '../../types'
 import { Button } from '../../ui/Button'
+import { Confirm } from '../../ui/Confirm'
 import { Menu } from '../../ui/Menu'
-
-const ROLES = ['llm', 'embed', 'vision'] as const
 
 // The shared endpoint, or one role's own.
 type Target = 'shared' | 'embed' | 'vision'
@@ -48,22 +46,9 @@ export function ConnectionPanel({
   const [pending, setPending] = useState<EndpointChoice | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
-  // Disconnecting is where the on-device models get chosen, so the confirm step
-  // is a panel rather than a second click: falling back to stored defaults meant
-  // the pickers were only reachable afterwards, unprompted.
+  // Disconnecting turns AI off, with no on-device models to fall back on any
+  // more, so it asks first.
   const [leaving, setLeaving] = useState(false)
-  const [leaveSel, setLeaveSel] = useState<Record<Role, string> | null>(null)
-
-  // "up to", not "exactly": a model already in the download cache costs
-  // nothing, and Settings cannot see that cache while an endpoint serves every
-  // role — the route that lists it is gated on the install downloading weights.
-  const leaveBytes =
-    cfg.localPresets && leaveSel
-      ? ROLES.reduce(
-          (sum, role) => sum + (cfg.localPresets![role].find(p => p.key === leaveSel[role])?.sizeBytes || 0),
-          0,
-        )
-      : 0
 
   // Both writes end the same way — adopt the server's new settings and close
   // whichever panel was open — so only the call and the message differ.
@@ -77,7 +62,6 @@ export function ConnectionPanel({
       setTarget(null)
       setPending(null)
       setLeaving(false)
-      setLeaveSel(null)
       setChoice(null)
     } catch (e) {
       setErr((e as Error).message || whenItFails)
@@ -119,8 +103,7 @@ export function ConnectionPanel({
     }, 'Could not save that endpoint.')
   }
 
-  const disconnect = () =>
-    commit(() => API.clearEndpoint(leaveSel ? { models: leaveSel } : {}), 'Could not disconnect.')
+  const disconnect = () => commit(() => API.clearEndpoint(), 'Could not disconnect.')
 
   const host = cfg.endpoint.configured ? cfg.endpoint.host : ''
   const ownRoles = (['embed', 'vision'] as const).filter(r => !cfg.endpoints[r].inherited)
@@ -152,14 +135,12 @@ export function ConnectionPanel({
               mismatches this surface had. A hostname is machine text and keeps
               the mono face; the sentence is prose and takes the title role. */}
           <span className={`conn-where${host ? ' mono' : ''}`}>
-            {cfg.endpoint.configured ? host || 'a remote endpoint' : 'Models run on this machine'}
+            {cfg.endpoint.configured ? host || 'a remote endpoint' : 'No service connected'}
           </span>
           <span className="conn-sub">
             {cfg.endpoint.configured
               ? 'Your key is stored on this machine only, and never appears in a backup or an export.'
-              : cfg.localSupported
-                ? 'Nothing leaves the box. Connect a service to stop hosting models yourself.'
-                : 'This is the lite image, which runs no models itself — it needs a service.'}
+              : 'AI is off. Connect a service, or an Ollama on your own hardware, to have what you save read and filed.'}
           </span>
           {ownRoles.map(role => (
             <span key={role} className="conn-sub">
@@ -181,12 +162,11 @@ export function ConnectionPanel({
             {cfg.endpoint.configured && (
               <Menu trigger={<Button disabled={busy}>Per role</Button>} empty="" items={roleItems} />
             )}
-            {cfg.endpoint.configured && cfg.localSupported && (
+            {cfg.endpoint.configured && (
               <Button
                 disabled={busy}
                 onClick={() => {
                   setLeaving(true)
-                  setLeaveSel({ ...cfg.current })
                   setErr(null)
                 }}
               >
@@ -197,39 +177,16 @@ export function ConnectionPanel({
         )}
       </div>
 
-      {leaving && cfg.localPresets && leaveSel && (
+      {leaving && (
         <div className="conn-edit">
-          <p className="conn-warn">
-            These will run on this machine instead. Nothing is sent anywhere, and there is no key or bill — but the
-            weights have to be downloaded the first time each one is used.
-          </p>
-          {ROLES.map(role => (
-            <RoleAccordion
-              key={role}
-              role={role}
-              presets={cfg.localPresets![role]}
-              currentKey={leaveSel[role]}
-              busy={busy}
-              switching={false}
-              pct={0}
-              defaultOpen={false}
-              onPick={key => setLeaveSel(sel => (sel ? { ...sel, [role]: key } : sel))}
-            />
-          ))}
-          <div className="conn-actions">
-            <Button tone="solid" disabled={busy} onClick={disconnect}>
-              {busy ? 'Switching…' : `Switch — up to ${fmtGB(leaveBytes)} to download`}
-            </Button>
-            <Button
-              disabled={busy}
-              onClick={() => {
-                setLeaving(false)
-                setLeaveSel(null)
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
+          <Confirm
+            question="Disconnect? Nothing new is read, filed or searchable by meaning until you connect a service again."
+            confirmLabel="Disconnect"
+            busyLabel="Disconnecting…"
+            busy={busy}
+            onConfirm={disconnect}
+            onCancel={() => setLeaving(false)}
+          />
         </div>
       )}
 

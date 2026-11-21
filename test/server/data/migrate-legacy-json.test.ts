@@ -120,15 +120,12 @@ test('settings: legacy shape maps onto the typed row', async () => {
   write('settings.json', {
     llm: 'CUSTOM_LLM',
     configured: true,
-    residency: { llm: 'always', embed: 'off', vision: 'ondemand' },
   })
   const db = freshDb()
   await migrateLegacyJson(db)
   const row = rowOf(db.prepare('SELECT * FROM settings WHERE id = 1').get())
   assert.equal(row.llm, 'CUSTOM_LLM')
   assert.equal(row.configured, 1)
-  assert.equal(row.residency_llm, 'always')
-  assert.equal(row.residency_embed, 'off')
 })
 
 test('tag_vocab: registry entries all land, order-independent', async () => {

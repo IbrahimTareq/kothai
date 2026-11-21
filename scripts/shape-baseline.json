@@ -8,7 +8,7 @@
     "exports": 1
   },
   "client/data/api.ts": {
-    "lines": 479,
+    "lines": 462,
     "exports": 4
   },
   "client/layout/canvas.ts": {
@@ -23,25 +23,17 @@
     "lines": 541,
     "exports": 1
   },
-  "client/views/Settings.tsx": {
-    "lines": 492,
-    "exports": 1
-  },
   "server/ai/enrich.ts": {
-    "lines": 724,
+    "lines": 719,
     "exports": 7
   },
   "server/ai/index.ts": {
-    "lines": 368,
-    "exports": 29
+    "lines": 98,
+    "exports": 19
   },
   "server/ai/prompts.ts": {
     "lines": 349,
     "exports": 16
-  },
-  "server/ai/providers/local.ts": {
-    "lines": 542,
-    "exports": 25
   },
   "server/data/collections.ts": {
     "lines": 286,
@@ -59,14 +51,10 @@
     "lines": 410,
     "exports": 1
   },
-  "server/routes/settings.ts": {
-    "lines": 430,
-    "exports": 6
-  },
   "_governance": {
     "claudeMdLines": 45,
     "cleanCodeRulesLines": 40,
-    "baselineEntries": 16,
-    "exportTotal": 577
+    "baselineEntries": 13,
+    "exportTotal": 513
   }
 }

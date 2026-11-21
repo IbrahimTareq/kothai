@@ -1,4 +1,4 @@
-// Backend bridge — maps a server note (QVAC) into the UI item shape and exposes
+// Backend bridge — maps a server note into the UI item shape and exposes
 // the real /api endpoints.
 import type {
   Chat,
@@ -7,11 +7,9 @@ import type {
   CaptureTokenState,
   Collection,
   CollectionPatch,
-  ModelFilesResponse,
   DuplicatesResponse,
   UsageResponse,
   ModelStatus,
-  Residency,
   ServerNote,
   SettingsResponse,
   TelegramState,
@@ -133,11 +131,7 @@ interface EndpointPatch {
 type ModelIds = Partial<Record<'llm' | 'embed' | 'vision', string>>
 
 interface SettingsPatch {
-  llm?: string
-  embed?: string
-  vision?: string
-  residency?: Partial<Record<'llm' | 'embed' | 'vision', Residency>>
-  remote?: Partial<Record<'llm' | 'embed' | 'vision', string>>
+  remote?: ModelIds
 }
 
 export const API = {
@@ -325,7 +319,7 @@ export const API = {
   async settings(): Promise<SettingsResponse> {
     return apiGet<SettingsResponse>('/api/settings')
   },
-  async saveSettings(patch: SettingsPatch): Promise<{ ok: boolean; current: SettingsPatch }> {
+  async saveSettings(patch: SettingsPatch): Promise<{ ok: boolean }> {
     return apiPost('/api/settings', patch)
   },
   // telegram capture
@@ -336,17 +330,16 @@ export const API = {
   captureToken: (): Promise<CaptureTokenState> => apiGet<CaptureTokenState>('/api/capture-token'),
   createCaptureToken: (): Promise<CaptureTokenState> => apiPost<CaptureTokenState>('/api/capture-token'),
   clearCaptureToken: (): Promise<CaptureTokenState> => apiDel<CaptureTokenState>('/api/capture-token'),
-  // first-run: commit the chosen models and kick off their initial download
+  // first-run: commit the chosen model names
   // Throws if the endpoint refuses the key; providerId lets it check one /models would take from anyone.
   async checkEndpoint(providerId: string, baseUrl: string, apiKey: string): Promise<void> {
     const r = await apiPost<{ ok: boolean; error?: string }>('/api/setup/test', { providerId, baseUrl, apiKey })
     if (!r.ok) throw new Error(r.error || 'Could not reach that service.')
   },
-  // Apply an endpoint mid-first-run, BEFORE the model picker is drawn: which
-  // provider serves each role decides what that picker has to ask for.
-  // `models` are the provider's default ids. They are sent WITH the endpoint
-  // because naming an embedding model is what sends that role to the endpoint
-  // rather than downloading one — see server/ai/routing.ts.
+  // Apply an endpoint mid-first-run, BEFORE the model picker is drawn: the
+  // picker offers each role the catalogue of the endpoint that serves it.
+  // `models` are the provider's default ids, sent WITH the endpoint so the
+  // provider boots with them.
   // With `role`, the endpoint is that role's own and the shared one is untouched.
   async applyEndpoint(endpoint: EndpointPatch, models?: ModelIds, role?: 'embed' | 'vision'): Promise<{ ok: boolean }> {
     return apiPost('/api/setup/endpoint', { endpoint, models, role })
@@ -357,21 +350,14 @@ export const API = {
   async saveEndpoint(endpoint: EndpointPatch, models?: ModelIds, role?: 'embed' | 'vision'): Promise<{ ok: boolean }> {
     return apiPost('/api/settings/endpoint', { endpoint, models, role })
   },
-  // Forget the credential and take every role back on-device. The endpoint's
-  // model names are kept, so reconnecting the same service is one paste. With
-  // `role`, forget only that role's own endpoint; it goes back to the shared one.
-  async clearEndpoint(body: { models?: ModelIds; role?: 'embed' | 'vision' } = {}): Promise<{ ok: boolean }> {
+  // Forget the credential, which leaves AI off. The endpoint's model names are
+  // kept, so reconnecting the same service is one paste. With `role`, forget
+  // only that role's own endpoint; it goes back to the shared one.
+  async clearEndpoint(body: { role?: 'embed' | 'vision' } = {}): Promise<{ ok: boolean }> {
     return apiDel('/api/settings/endpoint', body)
   },
-  async setup(
-    patch: (SettingsPatch & { endpoint?: EndpointPatch }) | { skip: true },
-  ): Promise<{ ok: boolean; current: SettingsPatch }> {
+  async setup(patch: (SettingsPatch & { endpoint?: EndpointPatch }) | { skip: true }): Promise<{ ok: boolean }> {
     return apiPost('/api/setup', patch)
-  },
-  // downloaded weights on disk, and reclaiming their space. Nothing prunes the
-  // cache — see server/routes/models.ts.
-  async modelFiles(): Promise<ModelFilesResponse> {
-    return apiGet<ModelFilesResponse>('/api/models/files')
   },
   // The backups Kothai keeps in data/backups, and the switch for the daily one.
   backups: (): Promise<BackupsResponse> => apiGet<BackupsResponse>('/api/backups'),
@@ -381,13 +367,10 @@ export const API = {
   connectDrive: (): Promise<DriveResponse['pending']> => apiPost('/api/drive/connect', {}),
   disconnectDrive: (): Promise<DriveResponse> => apiDel<DriveResponse>('/api/drive'),
   restoreFromDrive: (id: string): Promise<{ savedAs: string }> => apiPost('/api/drive/restore', { id }),
-  async deleteModelFile(name: string): Promise<{ deleted: string; freedBytes: number }> {
-    return apiDel(`/api/models/files/${encodeURIComponent(name)}`)
-  },
   async status(): Promise<ModelStatus> {
     return apiGet<ModelStatus>('/api/status')
   },
-  // enrichment backlog: how many notes the current residency could enrich,
+  // enrichment backlog: how many notes the enabled roles could enrich,
   // and how far the queue is through its current run (total 0 = idle)
   async backlog(): Promise<{ count: number; done: number; total: number }> {
     return apiGet('/api/enrich/backlog')

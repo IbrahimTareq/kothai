@@ -11,7 +11,7 @@
    every button-shaped class in the app: .seg-btn (drawn by <Segmented>),
    .rail-btn, .send-btn and .attach-btn are distinct components with their own
    box, not .btn under another name. A view may still add a rule for genuine layout
-   (.mf-delete pinning itself right) on top of .btn. */
+   on top of .btn. */
 
 /* ── button ───────────────────────────────────────────────────────────────── */
 .btn{

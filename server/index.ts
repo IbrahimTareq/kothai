@@ -1,13 +1,7 @@
-// Kothai backend entry — boots the local models and HTTP server.
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { PORT, MODELS_DIR, CONFIG_PATH, PASSWORD, getAiConfig, setAiCredentials } from './config.ts'
+// Kothai backend entry — boots the inference provider and HTTP server.
+import { PORT, PASSWORD, setAiCredentials } from './config.ts'
 import { readCredentials } from './data/credentials.ts'
 
-mkdirSync(MODELS_DIR, { recursive: true })
-writeFileSync(CONFIG_PATH, `${JSON.stringify({ cacheDirectory: MODELS_DIR }, null, 2)}\n`)
-process.env.QVAC_CONFIG_PATH = CONFIG_PATH
-
-// Imported AFTER the env var above so the local provider picks up the right cache config.
 const { createServer } = await import('./router.ts')
 const ai = await import('./ai/index.ts')
 const store = await import('./data/notes.ts')
@@ -40,14 +34,12 @@ if (demo.DEMO) {
 // milliseconds of the first poll returning.
 const telegramActive = telegram.startTelegramCapture()
 const hadTagRegistry = await tagvocab.load()
-// Before any provider is resolved: a stored endpoint decides which provider
-// kind initProvider picks, so loading it later would boot the wrong one.
+// Before the provider starts: it reads each role's endpoint from config at
+// init, so loading the credential later would boot every role with none.
 setAiCredentials(readCredentials())
 // Before the provider starts, which reads the model names once.
 if (demo.DEMO) await demo.configureDemo()
-// Both selections are passed; each provider reads only its own half.
-await ai.initProvider(undefined, { local: settings.get(), remote: settings.getRemote() })
-if (ai.capabilities().managesResidency) await ai.applyResidency(settings.getResidency())
+await ai.initProvider(settings.getRemote())
 // Before the first model call: the boot sweeps below are the first thing to
 // make one. Off until here, so tests and scripts never write usage rows.
 await startUsageLog()
@@ -59,17 +51,10 @@ shrinkStoredThumbs().catch(e => console.error('[thumb] stored-thumbnail sweep fa
 // changed recipe re-embeds the library once, in the background, on the same
 // job queue as everything else.
 const reembedding = reembed.queueRecipeReembed()
-// Vectors from an on-device model and vectors from an endpoint's model live
-// in different spaces too, so the embed role changing provider invalidates
-// the library just as thoroughly as a recipe change does.
-const providerReembedding = reembed.queueEmbedProviderReembed({
-  resolved: ai.capabilities().roles.embed,
-  wasRemote: getAiConfig().provider === 'remote',
-})
-// On a fresh install we hold off on downloading any models until the user
-// picks them in the first-run flow (POST /api/setup boots them then). A
-// configured install boots its always-roles immediately; on-demand roles
-// load lazily on first use.
+// Vectors from the removed on-device model and vectors from an endpoint's
+// model live in different spaces too, so a library still holding the former
+// is invalidated just as thoroughly as by a recipe change.
+const providerReembedding = reembed.queueEmbedProviderReembed()
 if (settings.isConfigured()) {
   if (!hadTagRegistry && ai.roleEnabled('embed')) {
     withTrigger('boot', () =>
@@ -84,7 +69,7 @@ if (settings.isConfigured()) {
 if (demo.DEMO) await demo.seedDemo()
 // Daily backups into data/backups (server/backups.ts), then the newest copied
 // to Google Drive when it is connected (server/drive.ts): checked hourly, the
-// first time a minute after boot rather than during it, while models load. Not
+// first time a minute after boot rather than during the boot sweeps. Not
 // on the demo, whose library resets nightly and whose host keeps no volume.
 if (!demo.DEMO) {
   const backups = await import('./backups.ts')
@@ -112,12 +97,7 @@ server.listen(PORT, () => {
   if (telegramActive) console.log('  Telegram capture: on\n')
   if (reembedding || providerReembedding)
     console.log('  Re-embedding the library in the background after an embedding change…\n')
-  if (!ai.capabilities().downloadsWeights) console.log(`  Inference: remote endpoint\n`)
-  else if (settings.isConfigured())
-    console.log('  Loading local QVAC models in the background (first run downloads them)…\n')
-  else console.log('  Waiting for first-run model selection at the app before downloading models…\n')
 })
-if (settings.isConfigured()) ai.boot().catch(() => {})
 
 process.on('SIGINT', async () => {
   console.log('\nShutting down…')

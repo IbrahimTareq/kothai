@@ -111,50 +111,33 @@ export function queueRecipeReembed() {
   return true
 }
 
-// Did the embedding role change provider since the last boot? Pure so the
-// inference for installs that predate the marker is testable on its own.
-export function embedProviderChanged({
-  stored,
-  resolved,
-  wasRemote,
-}: {
-  stored: string | null
-  resolved: string
-  wasRemote: boolean
-}) {
-  const previous = stored || (wasRemote ? 'remote' : 'local')
-  return previous !== resolved
+// Were the stored vectors made anywhere but an endpoint? 'local' marks
+// vectors from the removed on-device provider, and null an install that
+// predates the marker; either way they sit in another space than the
+// endpoint's model, and a library holding both answers every query badly.
+export function embedProviderChanged(stored: string | null): boolean {
+  return stored !== 'remote'
 }
 
-// Queue a full re-embed when the embedding role has changed hands — an
-// on-device model and an endpoint's model produce vectors in different
-// spaces, and a library holding both answers every query badly. Same guards
-// as queueRecipeReembed, in the same order: the role being off comes first,
-// and an empty library just records the new value.
-export function queueEmbedProviderReembed({ resolved, wasRemote }: { resolved: string; wasRemote: boolean }) {
+// Queue a full re-embed when the stored vectors did not come from an endpoint.
+// Same guards as queueRecipeReembed, in the same order: the role being off
+// comes first, and an empty library just records the new value.
+export function queueEmbedProviderReembed() {
   // Nothing has been embedded with anything, so there is nothing to compare
   // and nothing to record — the same self-healing choice queueRecipeReembed
   // makes when the role is off.
   if (!inference.roleEnabled('embed')) return false
 
   const stored = settings.getEmbedProvider()
-  if (!embedProviderChanged({ stored, resolved, wasRemote })) {
-    // Record the inference the first time it is made. Without this, an install
-    // whose marker is still null re-derives "what it was doing" from the
-    // current environment on every boot, so a later wholesale KOTHAI_AI_PROVIDER
-    // flip is measured against the new value and looks like no change at all —
-    // and the library keeps serving vectors from a model it no longer runs.
-    if (!stored) settings.save({ embedProvider: resolved }).catch(() => {})
-    return false
-  }
+  if (!embedProviderChanged(stored)) return false
 
   if (!store.count()) {
-    settings.save({ embedProvider: resolved }).catch(() => {})
+    settings.save({ embedProvider: 'remote' }).catch(() => {})
     return false
   }
   queueJob(async () => {
-    await reembedAll(`embed provider ${stored || (wasRemote ? 'remote' : 'local')} → ${resolved}`)
-    await settings.save({ embedProvider: resolved })
+    await reembedAll(`embed provider ${stored || 'unset'} → remote`)
+    await settings.save({ embedProvider: 'remote' })
   })
   return true
 }

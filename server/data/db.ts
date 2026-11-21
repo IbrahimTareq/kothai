@@ -22,6 +22,11 @@ const DB_FILE = path.join(DATA_DIR, 'kothai.db')
 //   creation (a chat moves to the front when you ask it a new question), so
 //   its `seq` is a plain column the store bumps by hand on every touch —
 //   AUTOINCREMENT only ever moves forward on INSERT, never on UPDATE.
+// - settings.llm/embed/vision and residency_* are obsolete: they held the
+//   removed on-device provider's model keys and residency, and are kept only
+//   because ensureColumns cannot drop a column. A fresh row fills them with
+//   presets.ts DEFAULTS and ''; settings.ts blanks a residency once it has
+//   cleared a role that was stored 'off'.
 // - tag_vocab.embedding is a BLOB for the same reason as notes.embedding. It
 //   was the larger of the two by far: on a real 1,686-note install this table
 //   held 2,663 vectors as JSON text, 41.5 MB of a 51.5 MB database. Databases
@@ -137,9 +142,8 @@ export interface SettingsRow {
   llm: string
   embed: string
   vision: string
-  residency_llm: string
-  residency_embed: string
-  residency_vision: string
+  // residency_llm/embed/vision are left out: obsolete, and never read back
+  // (see the column notes at the top of this file).
   // SQLite has no boolean type; 0 or 1.
   configured: number
   // Nullable because every one of these arrived via ensureColumns below, after

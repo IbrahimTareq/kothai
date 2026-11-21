@@ -7,8 +7,7 @@
 import { useEffect, useState } from 'react'
 import { SettingsRow, RowStatus } from './SettingsRow'
 import { API, apiError } from '../../data/api'
-import { fmtSize } from '../../domain/modelFiles'
-import { relTime } from '../../util/format'
+import { relTime, fmtSize } from '../../util/format'
 import type { BackupsResponse } from '../../types'
 import { Button } from '../../ui/Button'
 import { Segmented } from '../../ui/Segmented'
@@ -92,14 +91,14 @@ export function BackupsRow() {
       )}
       {open && data && (
         <div className="settings-row-extra">
-          <ul className="model-files">
+          <ul className="file-list">
             {data.files.map(f => (
-              <li key={f.name} className="model-file">
-                <div className="mf-main">
-                  <span className="mf-name" title={f.name}>
+              <li key={f.name} className="file-row">
+                <div className="file-main">
+                  <span className="file-name" title={f.name}>
                     {new Date(f.at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })} · {KIND[f.kind]}
                   </span>
-                  <span className="mf-size">{fmtSize(f.size)}</span>
+                  <span className="file-size">{fmtSize(f.size)}</span>
                 </div>
                 <Button asChild>
                   <a href={`/api/backups/${encodeURIComponent(f.name)}`} download>

@@ -42,7 +42,6 @@ mock.module('../../../server/data/settings.ts', {
   namedExports: {
     ...realSettings,
     get: () => ({ llm: 'model-a' }),
-    getResidency: () => ({ llm: 'always' }),
   },
 })
 
@@ -62,5 +61,5 @@ test('handleExport bundles notes, spaces, chats, and settings with a download he
   assert.deepEqual(bundle.notes, [N1])
   assert.deepEqual(bundle.collections, [{ id: 's1', name: 'Space one', itemIds: ['n1'] }])
   assert.deepEqual(bundle.chats, [{ id: 'c1', title: 'Chat one', messages: [{ role: 'user', text: 'hi' }] }])
-  assert.deepEqual(bundle.settings, { current: { llm: 'model-a' }, residency: { llm: 'always' } })
+  assert.deepEqual(bundle.settings, { current: { llm: 'model-a' } })
 })

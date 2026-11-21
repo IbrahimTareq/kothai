@@ -1,9 +1,10 @@
 // Provider-independent post-processing for model output, plus the heuristic
 // fallbacks used when no model is available (or when one returns garbage).
 //
-// Pure: no SDK, no HTTP. Both providers run their raw model output through
-// normaliseClassification, so a note classified on-device and one classified
-// remotely land in the same shape with the same junk filtering applied.
+// Pure: no SDK, no HTTP. The provider runs its raw model output through
+// normaliseClassification, as the removed on-device provider did, so every
+// note lands in the same shape with the same junk filtering however it was
+// classified.
 import type { NoteType } from '../types.ts'
 import { normalizeTags } from '../data/tags.ts'
 

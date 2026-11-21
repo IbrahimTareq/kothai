@@ -1,23 +1,20 @@
-// SQLite-backed user settings — the model selection per role (llm / embed /
-// vision), the residency map controlling whether each role is off / on-demand
-// / always-loaded, and a `configured` flag marking that the first-run picker
-// has been completed. Single row (id = 1) in the `settings` table.
+// SQLite-backed user settings — the endpoint model name per role (llm / embed /
+// vision) and a `configured` flag marking that first run has been completed.
+// Single row (id = 1) in the `settings` table.
 import type { SQLOutputValue } from 'node:sqlite'
 import { getDb } from './db.ts'
 import type { SettingsRow } from './db.ts'
 import { DEFAULTS } from '../ai/presets.ts'
-import { ROLES, POLICIES, FRESH_RESIDENCY, resolveResidency } from '../ai/roles.ts'
-import type { Policy, Residency, Role } from '../ai/roles.ts'
+import { ROLES } from '../ai/roles.ts'
+import type { Role } from '../ai/roles.ts'
 
-// What save() accepts. Model keys and residency values are plain strings, not
-// the narrow unions: a patch arrives from an HTTP body and has proved nothing
-// yet — see the note on save() for what happens to a value that fails.
+// What save() accepts. Model names are plain strings: a patch arrives from an
+// HTTP body and has proved nothing yet.
 export interface SettingsPatch {
   llm?: string
   embed?: string
   vision?: string
   configured?: boolean
-  residency?: Partial<Record<Role, string>> | null
   remote?: Partial<Record<Role, string>> | null
   embedRecipe?: string | null
   embedProvider?: string | null
@@ -43,9 +40,6 @@ function readRow(row: Record<string, SQLOutputValue>): SettingsRow {
     llm: text(row.llm),
     embed: text(row.embed),
     vision: text(row.vision),
-    residency_llm: text(row.residency_llm),
-    residency_embed: text(row.residency_embed),
-    residency_vision: text(row.residency_vision),
     configured: Number(row.configured),
     remote_llm: nullableText(row.remote_llm),
     remote_embed: nullableText(row.remote_embed),
@@ -56,16 +50,22 @@ function readRow(row: Record<string, SQLOutputValue>): SettingsRow {
   }
 }
 
-// The residency columns are NOT NULL TEXT that only save() below writes, and
-// it only ever stores a POLICIES member — but the column's declared type is
-// `string`, so the stored value still has to prove itself here. find(), not
-// includes(): it hands back the Policy-typed member, so nothing is asserted
-// afterwards (the same trick resolveResidency plays on the JSON side). The
-// fallback is unreachable.
-const policy = (role: Role, stored: string): Policy => POLICIES.find(p => p === stored) ?? FRESH_RESIDENCY[role]
+// One-time, for installs from before the on-device provider was removed. A
+// role stored 'off' (first-run Skip stored it for all three) was kept off by
+// its residency, and residency is no longer read: without clearing that role's
+// endpoint model name, an install with an endpoint would start classify, embed
+// and vision calls after the upgrade that it never made before. The residency
+// column is blanked as the role is cleared, which is what makes this run once:
+// a model picked after the upgrade survives every later boot.
+function clearRolesStoredOff(db: Awaited<ReturnType<typeof getDb>>): void {
+  for (const role of ROLES) {
+    db.prepare(
+      `UPDATE settings SET remote_${role} = '', residency_${role} = '' WHERE id = 1 AND residency_${role} = 'off'`,
+    ).run()
+  }
+}
 
 let settings: Record<Role, string> = { ...DEFAULTS }
-let residency: Residency = resolveResidency({})
 let remote: Record<Role, string> = { llm: '', embed: '', vision: '' }
 let configured = false
 let embedRecipe: string | null = null
@@ -82,15 +82,11 @@ let preGate = false
 export async function load(): Promise<void> {
   if (loaded) return
   const db = await getDb()
+  clearRolesStoredOff(db)
   const raw = db.prepare('SELECT * FROM settings WHERE id = 1').get()
   if (raw) {
     const row = readRow(raw)
     configured = !!row.configured
-    residency = {
-      llm: policy('llm', row.residency_llm),
-      embed: policy('embed', row.residency_embed),
-      vision: policy('vision', row.residency_vision),
-    }
     settings = { llm: row.llm, embed: row.embed, vision: row.vision }
     remote = { llm: row.remote_llm || '', embed: row.remote_embed || '', vision: row.remote_vision || '' }
     embedRecipe = row.embed_recipe || null
@@ -101,7 +97,6 @@ export async function load(): Promise<void> {
     preGate = !configured && ROLES.some(r => Boolean(remote[r]))
   } else {
     configured = false
-    residency = resolveResidency({})
     settings = { ...DEFAULTS }
     remote = { llm: '', embed: '', vision: '' }
     embedRecipe = null
@@ -116,12 +111,6 @@ export function get(): Record<Role, string> {
   return { ...settings }
 }
 
-export function getResidency(): Residency {
-  return { ...residency }
-}
-
-// Remote model names, kept separate from the local selection: local keys are
-// QVAC registry constants, remote ones are endpoint-defined ids.
 // True only for installs that had endpoint model names before the first-run
 // gate existed — see the note on `preGate`. Never becomes true because first
 // run wrote names.
@@ -129,6 +118,8 @@ export function isPreGate(): boolean {
   return preGate
 }
 
+// Endpoint model names, kept in their own columns: the local ones held QVAC
+// registry constants for the removed on-device provider.
 export function getRemote(): Record<Role, string> {
   return { ...remote }
 }
@@ -145,9 +136,10 @@ export function getEmbedRecipe(): string | null {
   return embedRecipe
 }
 
-// Which provider produced the stored vectors ('local' | 'remote'). null on an
-// install that predates the marker — see reembed.embedProviderChanged, which
-// infers the answer from how that install was configured.
+// Which provider produced the stored vectors ('local' | 'remote'). 'local'
+// marks vectors from the removed on-device provider, kept so a library still
+// holding them boots and is re-embedded; null is an install that predates the
+// marker. See reembed.embedProviderChanged.
 export function getEmbedProvider(): string | null {
   return embedProvider
 }
@@ -162,14 +154,9 @@ export function isConfigured(): boolean {
   return configured
 }
 
-// Patch model keys and/or the residency map. `patch.residency` may be partial.
-// Callers are expected to validate residency values before calling save()
-// (routes/settings.ts does), but an invalid value here is ignored — kept at
-// its current value — rather than silently reset to a fresh-install default,
-// which resolveResidency's migration semantics would otherwise produce.
+// Patch model keys and/or the flags beside them.
 export async function save(patch: SettingsPatch): Promise<Record<Role, string>> {
   const {
-    residency: rPatch,
     remote: remotePatch,
     embedRecipe: recipePatch,
     embedProvider: providerPatch,
@@ -181,16 +168,6 @@ export async function save(patch: SettingsPatch): Promise<Record<Role, string>> 
   if (recipePatch !== undefined) embedRecipe = recipePatch
   if (providerPatch !== undefined) embedProvider = providerPatch
   if (backupsPatch !== undefined) backups = backupsPatch
-  if (rPatch) {
-    const merged = { ...residency }
-    // find(), not includes(): a patch value is an unproved string, and find
-    // both rejects a bad one and hands back the Policy-typed member.
-    for (const role of ROLES) {
-      const p = POLICIES.find(candidate => candidate === rPatch[role])
-      if (p) merged[role] = p
-    }
-    residency = merged
-  }
   if (remotePatch) {
     // undefined means "not in this patch"; '' means "clear this role".
     for (const role of ROLES) if (remotePatch[role] !== undefined) remote[role] = String(remotePatch[role])
@@ -198,10 +175,9 @@ export async function save(patch: SettingsPatch): Promise<Record<Role, string>> 
   const db = await getDb()
   db.prepare(`
     INSERT INTO settings (id, llm, embed, vision, residency_llm, residency_embed, residency_vision, configured, remote_llm, remote_embed, remote_vision, embed_recipe, embed_provider, backups)
-    VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (1, ?, ?, ?, '', '', '', ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       llm = excluded.llm, embed = excluded.embed, vision = excluded.vision,
-      residency_llm = excluded.residency_llm, residency_embed = excluded.residency_embed, residency_vision = excluded.residency_vision,
       configured = excluded.configured,
       remote_llm = excluded.remote_llm, remote_embed = excluded.remote_embed, remote_vision = excluded.remote_vision,
       embed_recipe = excluded.embed_recipe,
@@ -211,9 +187,6 @@ export async function save(patch: SettingsPatch): Promise<Record<Role, string>> 
     settings.llm,
     settings.embed,
     settings.vision,
-    residency.llm,
-    residency.embed,
-    residency.vision,
     configured ? 1 : 0,
     remote.llm,
     remote.embed,

@@ -21,7 +21,7 @@ export function handleExport(res: ServerResponse) {
     notes: store.allNotes(),
     collections: collections.all(),
     chats: chats.all(),
-    settings: { current: settings.get(), residency: settings.getResidency() },
+    settings: { current: settings.get() },
   }
   const stamp = bundle.exportedAt.slice(0, 10)
   downloadJson(res, `kothai-export-${stamp}.json`, bundle)

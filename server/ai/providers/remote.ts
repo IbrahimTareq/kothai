@@ -2,8 +2,8 @@
 // llama.cpp server, vLLM, OpenAI, OpenRouter, anything speaking /v1.
 //
 // Prompts and result normalisation come from the shared pure modules, so a
-// note classified here is asked the same question and filtered the same way
-// as one classified on-device.
+// note classified here was asked the same question and filtered the same way
+// as one classified by the on-device provider this replaced.
 //
 // Each role calls its own endpoint (remote-endpoint.ts); roles naming the same
 // URL and key share one. Credentials arrive from config and are never persisted
@@ -13,7 +13,6 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { FeatureDisabledError, ROLES } from '../roles.ts'
 import type { Role, RoleStatus } from '../roles.ts'
-import type { Aggregate, ProviderStatus } from '../routing.ts'
 import { Circuit } from '../circuit.ts'
 import { createEndpoint } from './remote-endpoint.ts'
 import type { Endpoint, RemoteEndpoint } from './remote-endpoint.ts'
@@ -30,6 +29,7 @@ import {
 import { normaliseClassification, stripThinking } from '../normalise.ts'
 import { postJson, TIMEOUTS, RemoteError } from './remote-http.ts'
 import type {
+  Aggregate,
   AnswerArgs,
   AnswerStreamArgs,
   ClassifyArgs,
@@ -38,6 +38,7 @@ import type {
   ModelOption,
   ModelSelection,
   Provider,
+  ProviderStatus,
   ValidationResult,
 } from './types.ts'
 
@@ -168,7 +169,7 @@ export function createRemoteProvider({ endpoints, models, onRecover }: RemotePro
   }
 
   return {
-    capabilities: () => ({ kind: 'remote', managesResidency: false, downloadsWeights: false }),
+    capabilities: () => ({ kind: 'remote' }),
 
     roleEnabled: (role: Role) => Boolean(endpointOf[role]) && Boolean(modelFor(role)),
 
@@ -176,8 +177,8 @@ export function createRemoteProvider({ endpoints, models, onRecover }: RemotePro
 
     validateModel(role: Role, key: string): ValidationResult {
       const k = (key || '').trim()
-      // Empty is how a role is switched off: an endpoint has no residency to
-      // set, so a blank name is the only "off" there is. Rejecting it left a
+      // Empty is how a role is switched off: a blank name is the only "off"
+      // there is. Rejecting it left a
       // Railway install stuck with vision naming a text-only model and no way
       // to clear it — every thumbnail drew a 400 from Ollama.
       if (!k) return { ok: true }
@@ -201,8 +202,7 @@ export function createRemoteProvider({ endpoints, models, onRecover }: RemotePro
       // Railway, Ollama pulls for minutes while Kothai boots in seconds, and the
       // picker stayed empty until a restart. The circuit bounds the re-probing.
       await Promise.all(distinct().map(ep => (!ep.catalogue.length && ep.circuit.allow() ? ep.probe() : null)))
-      const asOpts = (ids: string[] = []): ModelOption[] =>
-        ids.map(id => ({ key: id, label: id, desc: '', best: [], sizeBytes: 0 }))
+      const asOpts = (ids: string[] = []): ModelOption[] => ids.map(id => ({ key: id, label: id }))
       const { llm, embed, vision } = endpointOf
       return {
         llm: asOpts(llm?.catalogue),
@@ -241,8 +241,7 @@ export function createRemoteProvider({ endpoints, models, onRecover }: RemotePro
         embed: statusFor('embed'),
         vision: statusFor('vision'),
       }
-      // No endpoint configured at all is AI-free mode, not a fault — the same
-      // state local reports when every role's residency is 'off'.
+      // No endpoint configured at all is AI-free mode, not a fault.
       const anyOn = ROLES.some(r => roles[r].state !== 'off')
       const broken = ROLES.find(r => roles[r].state === 'error')
       const ep = broken && endpointOf[broken]
@@ -254,8 +253,8 @@ export function createRemoteProvider({ endpoints, models, onRecover }: RemotePro
     },
 
     // `mode` ('document' | 'query') selects the task prefix for
-    // prompt-instructed embedding models. Applied here too, not just locally,
-    // because the endpoint may well be serving EmbeddingGemma — but keyed on
+    // prompt-instructed embedding models, because the endpoint may well be
+    // serving EmbeddingGemma — but keyed on
     // the configured model NAME, since it may equally be serving nomic, bge
     // or an OpenAI text-embedding-*, none of which want the prefix. See
     // prompts.ts's embedInput.
@@ -352,8 +351,8 @@ export function createRemoteProvider({ endpoints, models, onRecover }: RemotePro
           TIMEOUTS.vision,
         ),
       )
-      // See the local provider: a reasoning model's <think> block must not
-      // become the note's description or its embedding input.
+      // A reasoning model's <think> block must not become the note's
+      // description or its embedding input.
       return stripThinking(textOf(res))
     },
 

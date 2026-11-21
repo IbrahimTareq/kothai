@@ -1,5 +1,5 @@
 // Unit tests for the remote provider's circuit breaker. Pure module with an
-// injected clock, mirroring how RoleManager takes injectable timers.
+// injected clock.
 //
 // Why this exists: with ~1500 notes in the enrichment backlog, an endpoint
 // outage would otherwise mean 1500 failed calls — and against a metered

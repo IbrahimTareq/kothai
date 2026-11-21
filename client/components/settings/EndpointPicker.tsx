@@ -59,19 +59,11 @@ export function EndpointPicker({
         {endpoints.map(e => {
           const on = picked?.id === e.id
           return (
-            <button
-              key={e.id}
-              type="button"
-              className={`model-row${on ? ' active' : ''}`}
-              disabled={!e.available}
-              onClick={() => pick(e)}
-            >
+            <button key={e.id} type="button" className={`model-row${on ? ' active' : ''}`} onClick={() => pick(e)}>
               <span className="model-radio">{on && <span className="model-radio-dot"></span>}</span>
               <span className="model-main">
                 <span className="model-name">{e.label}</span>
-                <span className="model-desc">
-                  {e.available ? e.note : 'Not on the lite image, which runs nothing on this machine.'}
-                </span>
+                <span className="model-desc">{e.note}</span>
               </span>
             </button>
           )

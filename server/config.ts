@@ -18,9 +18,6 @@ interface Config {
   PORT: number
   DATA_DIR: string
   UPLOAD_DIR: string
-  MODELS_DIR: string
-  CONFIG_PATH: string
-  AI_EMBED_PROVIDER: string | null
   SETUP_PROVIDER: string | null
   ALLOW_PRIVATE_FETCH: boolean
   PASSWORD: string | null
@@ -41,17 +38,10 @@ export function resolveConfig(env: NodeJS.ProcessEnv = process.env, root: string
     PORT: /^\d+$/.test(env.PORT ?? '') ? Number(env.PORT) : 5173,
     DATA_DIR,
     UPLOAD_DIR: path.join(DATA_DIR, 'uploads'),
-    MODELS_DIR: pick('KOTHAI_MODELS_DIR', 'models'),
-    // No env override: the server writes this file itself at boot, so there is
-    // nothing for an operator to point it at.
-    CONFIG_PATH: path.join(home ?? root, 'qvac.config.json'),
-    // Which provider serves the embedding role when AI_PROVIDER is 'remote'.
-    // Unset means "on-device if this image has a local provider" — see
-    // ai/routing.ts's resolveRoleProviders, which is also where an
-    // unrecognised value is ignored rather than rejected here.
-    AI_EMBED_PROVIDER: env.KOTHAI_AI_EMBED_PROVIDER || null,
     // Which provider the INSTALLER already asked about, so the first-run
-    // screen does not ask again. An id from ai/endpoints.ts, or 'local'. Never
+    // screen does not ask again. An id from ai/endpoints.ts; an older
+    // installer's 'local' (the removed on-device provider) matches none, so
+    // first run asks as if nobody had. Never
     // a credential — the installer deliberately collects none, because a key
     // typed on a command line lands in shell history.
     SETUP_PROVIDER: env.KOTHAI_SETUP_PROVIDER || null,
@@ -75,9 +65,6 @@ const config = Object.freeze(resolveConfig())
 export const PORT: number = config.PORT
 export const DATA_DIR: string = config.DATA_DIR
 export const UPLOAD_DIR: string = config.UPLOAD_DIR
-export const MODELS_DIR: string = config.MODELS_DIR
-export const CONFIG_PATH: string = config.CONFIG_PATH
-export const AI_EMBED_PROVIDER: string | null = config.AI_EMBED_PROVIDER
 export const SETUP_PROVIDER: string | null = config.SETUP_PROVIDER
 export const ALLOW_PRIVATE_FETCH: boolean = config.ALLOW_PRIVATE_FETCH
 export const PASSWORD: string | null = config.PASSWORD

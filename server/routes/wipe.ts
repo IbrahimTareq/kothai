@@ -1,8 +1,8 @@
 // POST /api/wipe — the Settings "danger zone" reset. Erases the user's
 // CONTENT (notes, spaces, chats, the learned tag vocabulary, and the uploaded
-// images those notes referenced) and deliberately leaves model settings and
-// residency policy untouched: the multi-GB weights on disk stay valid and the
-// app comes back configured rather than dumped into first-run setup.
+// images those notes referenced) and deliberately leaves model settings
+// untouched: the app comes back configured rather than dumped into first-run
+// setup.
 //
 // This is the only irreversible destructive route in the app, so the
 // confirmation is enforced HERE and not just in the UI — a mis-fired fetch(),

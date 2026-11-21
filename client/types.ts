@@ -85,8 +85,6 @@ export interface Detection {
   host: string
 }
 
-export type Residency = 'off' | 'ondemand' | 'always'
-
 export interface RoleStatus {
   state: 'off' | 'idle' | 'loading' | 'ready' | 'error'
   progress: number
@@ -109,14 +107,6 @@ export interface DemoAllowance {
   savesLeft: number
   asksLeft: number
   spacesLeft: number
-}
-
-// Derived, UI-facing view of /api/status: how far the models are through loading.
-export interface ModelLoad {
-  state: 'loading' | 'ready' | 'error'
-  txt: string
-  pct: number
-  msg?: string
 }
 
 export interface ChatSummary {
@@ -162,26 +152,10 @@ export interface ThreadMsg {
   streaming?: boolean // tokens are still arriving into `lead`
 }
 
-export interface ModelPreset {
+// One entry of an endpoint's model catalogue.
+export interface ModelOption {
   key: string
   label: string
-  desc: string
-  best: string[]
-  proj?: string
-  sizeBytes: number
-}
-
-// Which provider serves a role: on-device weights, or an OpenAI-compatible
-// endpoint. A single install can mix the two (embedding local, the rest remote).
-export type Provider = 'local' | 'remote'
-
-export interface Capabilities {
-  kind: Provider | 'mixed'
-  managesResidency: boolean
-  downloadsWeights: boolean
-  // Which provider serves each role. Present in every mode, so branch on this
-  // rather than on `kind`.
-  roles: { llm: Provider; embed: Provider; vision: Provider }
 }
 
 export interface EndpointInfo {
@@ -201,17 +175,13 @@ export interface EndpointOption {
   servesEmbeddings: boolean
   note: string
   keyUrl?: string
-  // False for a provider on this machine, on the lite image.
-  available: boolean
   defaults: { llm: string; embed: string; vision: string }
 }
 
 export interface SettingsResponse {
-  current: { llm: string; embed: string; vision: string }
   remote: { llm: string; embed: string; vision: string }
-  residency: { llm: Residency; embed: Residency; vision: Residency }
-  presets: { llm: ModelPreset[]; embed: ModelPreset[]; vision: ModelPreset[] }
-  capabilities: Capabilities
+  // The endpoint's model catalogue per role.
+  presets: { llm: ModelOption[]; embed: ModelOption[]; vision: ModelOption[] }
   endpoint: EndpointInfo
   // Per role; `endpoint` is the llm entry, which is also the shared one.
   endpoints: { llm: EndpointInfo; embed: EndpointInfo; vision: EndpointInfo }
@@ -219,15 +189,9 @@ export interface SettingsResponse {
   envModels: Partial<Record<'llm' | 'embed' | 'vision', true>>
   // The known services the wizard and Settings offer as tiles.
   catalogue: EndpointOption[]
-  // Which provider the installer already asked about — an id from `endpoints`,
-  // 'local', or null when the install did not go through the installer.
+  // Which provider the installer already asked about — an id from `catalogue`,
+  // or null when the install did not go through the installer.
   setup: { providerId: string | null }
-  // Whether this image could serve a role on-device at all — false on lite,
-  // where there is no on-device provider to switch back to.
-  localSupported: boolean
-  // On-device presets with sizes, present even while an endpoint serves every
-  // role — `presets` reports the endpoint's catalogue then. null on lite.
-  localPresets: { llm: ModelPreset[]; embed: ModelPreset[]; vision: ModelPreset[] } | null
 }
 
 // GET/POST/DELETE /api/telegram all answer with this shape — never the bot
@@ -245,24 +209,6 @@ export interface CaptureTokenState {
   gated: boolean
   /** Present only in the response that created it; never sent again. */
   token?: string
-}
-
-// One entry in the model download cache — a weights file, or a companion-set
-// directory. `usedBy` is the role whose current selection needs it; the server
-// refuses to delete anything with one (server/routes/models.ts).
-export interface ModelFile {
-  name: string
-  kind: 'file' | 'dir'
-  sizeBytes: number
-  inUse: boolean
-  usedBy: 'llm' | 'embed' | 'vision' | null
-}
-
-export interface ModelFilesResponse {
-  dir: string
-  entries: ModelFile[]
-  totalBytes: number
-  reclaimableBytes: number
 }
 
 // GET /api/duplicates — notes sharing a link, oldest first within each group

@@ -31,7 +31,7 @@ process.env.KOTHAI_AI_EMBED_MODEL = 'env-embed'
 const { remoteProvider } = await import('../../../../server/ai/providers/remote-singleton.ts')
 
 test('boot sends embed to its own endpoint with the env model', async () => {
-  await remoteProvider.init({ remote: { llm: 'm', embed: 'settings-embed', vision: '' } })
+  await remoteProvider.init({ llm: 'm', embed: 'settings-embed', vision: '' })
   seen.length = 0
   await remoteProvider.embedText('x')
   assert.deepEqual(
@@ -42,7 +42,7 @@ test('boot sends embed to its own endpoint with the env model', async () => {
 })
 
 test('a settings save leaves an env-named model alone and moves the rest', async () => {
-  await remoteProvider.init({ remote: { llm: 'm', embed: 'settings-embed', vision: '' } })
+  await remoteProvider.init({ llm: 'm', embed: 'settings-embed', vision: '' })
   await remoteProvider.applySettings({ embed: 'other', llm: 'new' })
   assert.equal(remoteProvider.statusSnapshot().roles.embed.model, 'env-embed')
   assert.equal(remoteProvider.statusSnapshot().roles.llm.model, 'new')
