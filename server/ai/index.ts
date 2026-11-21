@@ -12,8 +12,17 @@
 // is safe because server/index.ts awaits initProvider() before the HTTP server
 // listens, so no request can arrive first.
 import { getAiConfig, AI_EMBED_PROVIDER } from '../config.ts'
+import * as settings from '../data/settings.ts'
 import { ROLES } from './roles.ts'
-import { resolveRoleProviders, kindsInUse, mergeStatus, mergeListModels, mergeCapabilities } from './routing.ts'
+import {
+  resolveRoleProviders,
+  kindsInUse,
+  localResidency,
+  localOnly,
+  mergeStatus,
+  mergeListModels,
+  mergeCapabilities,
+} from './routing.ts'
 import { withStep } from './usage.ts'
 // Type-only, so it survives none of the above: `import type` is erased before
 // the module runs and pulls in no provider. providers/types.ts is itself a
@@ -269,8 +278,14 @@ export function available(): boolean {
 }
 
 // ---- per-role -------------------------------------------------------------
+// A role the user turned off stays off whichever provider serves it. First-run
+// "Skip" stores 'off' for all three roles, and the remote provider's own
+// roleEnabled (endpoint + model) cannot see that: a skipped install whose
+// endpoint or model came from env would start classify/embed/vision calls
+// against a possibly metered endpoint. Task 6 replaces this with a migration
+// that clears model names for roles stored as 'off', and the AND goes.
 export function roleEnabled(role: Role): boolean {
-  return R(role).roleEnabled(role)
+  return settings.getResidency()[role] !== 'off' && R(role).roleEnabled(role)
 }
 export function validateModel(role: Role, key: string): ValidationResult {
   return R(role).validateModel(role, key)
@@ -319,45 +334,16 @@ export const shutdown = async (): Promise<void> => {
 // Optional on the contract, so a pure-remote install resolves them to no-ops
 // exactly as before.
 
-// Residency decides what sits in THIS machine's RAM, so a role served remotely
-// has none: it is pinned 'off' before the local provider sees the map.
-// Without this, warmCache() pre-downloads the language and vision weights on a
-// mixed install — several gigabytes for roles that will never run here, which
-// is the exact cost the endpoint was chosen to avoid.
-function localResidency(residency: Residency): Residency {
-  const { byRole } = ready()
-  // Seeded by spreading the input rather than starting from {} — every value
-  // is replaced by the loop, but the spread is what makes the result carry all
-  // three roles by construction. Same reason roles.ts's resolveResidency()
-  // spreads a base map before overwriting it.
-  const out: Residency = { ...residency }
-  for (const role of ROLES) out[role] = byRole[role] === 'local' ? residency[role] : 'off'
-  return out
-}
-
-// Same reasoning for model names: hand the local provider only the roles it
-// serves, so a remote role's endpoint-defined id is never looked up in the
-// on-device registry.
-function localOnly(patch: ModelSelection = {}): ModelSelection {
-  const { byRole } = ready()
-  const out: ModelSelection = {}
-  for (const role of ROLES) {
-    const name = patch[role]
-    if (byRole[role] === 'local' && name !== undefined) out[role] = name
-  }
-  return out
-}
-
 export const boot = (...a: Parameters<NonNullable<Provider['boot']>>): Promise<void> =>
   L()?.boot?.(...a) ?? Promise.resolve()
 export const warmRole = (...a: Parameters<NonNullable<Provider['warmRole']>>): Promise<void> =>
   L()?.warmRole?.(...a) ?? Promise.resolve()
 export const warmCache = (residency: Residency): Promise<void> =>
-  L()?.warmCache?.(localResidency(residency)) ?? Promise.resolve()
+  L()?.warmCache?.(localResidency(residency, ready().byRole)) ?? Promise.resolve()
 export const applyResidency = (residency: Residency): Promise<void> =>
-  L()?.applyResidency?.(localResidency(residency)) ?? Promise.resolve()
+  L()?.applyResidency?.(localResidency(residency, ready().byRole)) ?? Promise.resolve()
 export const configureModels = (patch: ModelSelection): Promise<void> =>
-  L()?.configureModels?.(localOnly(patch)) ?? Promise.resolve()
+  L()?.configureModels?.(localOnly(patch, ready().byRole)) ?? Promise.resolve()
 // Model files on disk, for the cache-management routes. A provider that
 // downloads nothing claims no files, so the routes' capability gate is the
 // only thing that has to know about the difference.
@@ -367,4 +353,4 @@ export const configureModels = (patch: ModelSelection): Promise<void> =>
 // them. Claiming them would leave a mixed install unable to delete the exact
 // multi-gigabyte files it switched to an endpoint to avoid.
 export const weightsInUse = (selection: ModelSelection): Record<string, Role> =>
-  L()?.weightsInUse?.(localOnly(selection)) ?? {}
+  L()?.weightsInUse?.(localOnly(selection, ready().byRole)) ?? {}

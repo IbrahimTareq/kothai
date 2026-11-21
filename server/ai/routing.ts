@@ -5,7 +5,8 @@
 // without a provider, an endpoint or @qvac/sdk. server/ai/index.ts is the
 // only caller.
 import { ROLES } from './roles.ts'
-import type { Role, RoleStatus } from './roles.ts'
+import type { Residency, Role, RoleStatus } from './roles.ts'
+import type { ModelSelection } from './providers/types.ts'
 
 export type ProviderKind = 'local' | 'remote'
 // Who serves each role, right now. The single shape every merge below reads.
@@ -90,7 +91,7 @@ export function resolveRoleProviders({
 
 // Distinct provider kinds a role map needs, so the facade initialises exactly
 // the providers it will use and no more.
-export function kindsInUse(byRole: RoleProviders): ProviderKind[] {
+function kindsInUse(byRole: RoleProviders): ProviderKind[] {
   return [...new Set(ROLES.map(role => byRole[role]))]
 }
 
@@ -150,3 +151,34 @@ export function mergeCapabilities(byRole: RoleProviders, caps: ByKind<Capabiliti
         }
   return { ...base, roles: { ...byRole } }
 }
+
+// Residency decides what sits in THIS machine's RAM, so a role served remotely
+// has none: it is pinned 'off' before the local provider sees the map.
+// Without this, warmCache() pre-downloads the language and vision weights on a
+// mixed install — several gigabytes for roles that will never run here, which
+// is the exact cost the endpoint was chosen to avoid.
+function localResidency(residency: Residency, byRole: RoleProviders): Residency {
+  // Seeded by spreading the input rather than starting from {} — every value
+  // is replaced by the loop, but the spread is what makes the result carry all
+  // three roles by construction. Same reason roles.ts's resolveResidency()
+  // spreads a base map before overwriting it.
+  const out: Residency = { ...residency }
+  for (const role of ROLES) out[role] = byRole[role] === 'local' ? residency[role] : 'off'
+  return out
+}
+
+// Same reasoning for model names: hand the local provider only the roles it
+// serves, so a remote role's endpoint-defined id is never looked up in the
+// on-device registry.
+function localOnly(patch: ModelSelection, byRole: RoleProviders): ModelSelection {
+  const out: ModelSelection = {}
+  for (const role of ROLES) {
+    const name = patch[role]
+    if (byRole[role] === 'local' && name !== undefined) out[role] = name
+  }
+  return out
+}
+
+// One statement, so the move out of ai/index.ts adds no export to the shape
+// ratchet's total.
+export { kindsInUse, localResidency, localOnly }

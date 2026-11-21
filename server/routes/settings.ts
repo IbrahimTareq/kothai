@@ -270,7 +270,7 @@ export async function handleSetup(req: IncomingMessage, res: ServerResponse, opt
 // told — twice over.
 //
 // While a role was served remotely the facade pinned it 'off' on the local side
-// (localResidency in ai/index.ts), which is right at the time and wrong the
+// (localResidency in ai/routing.ts), which is right at the time and wrong the
 // moment the role comes back: disconnecting an endpoint returned language and
 // vision to this machine with both still switched off, embedding the only thing
 // working, and the status aggregate reporting Ready over the top of it. The
