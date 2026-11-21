@@ -5,13 +5,9 @@
 import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { initProvider, roleEnabled, _reset } from '../../../server/ai/index.ts'
-import {
-  handleGetSettings,
-  handleSaveSettings,
-  handleStatus,
-  handleSetup,
-  _validateModels,
-} from '../../../server/routes/settings.ts'
+import { handleGetSettings, handleSaveSettings, handleSetup } from '../../../server/routes/settings.ts'
+import { _validateModels } from '../../../server/routes/model-selection.ts'
+import { handleStatus } from '../../../server/routes/status.ts'
 import { _resetDb } from '../../../server/data/db.ts'
 import { setAiCredentials } from '../../../server/config.ts'
 import * as settings from '../../../server/data/settings.ts'

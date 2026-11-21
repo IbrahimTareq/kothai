@@ -130,6 +130,7 @@ interface EndpointPatch {
   baseUrl: string
   apiKey: string
 }
+type ModelIds = Partial<Record<'llm' | 'embed' | 'vision', string>>
 
 interface SettingsPatch {
   llm?: string
@@ -346,25 +347,21 @@ export const API = {
   // `models` are the provider's default ids. They are sent WITH the endpoint
   // because naming an embedding model is what sends that role to the endpoint
   // rather than downloading one — see server/ai/routing.ts.
-  async applyEndpoint(
-    endpoint: EndpointPatch,
-    models?: Partial<Record<'llm' | 'embed' | 'vision', string>>,
-  ): Promise<{ ok: boolean }> {
-    return apiPost('/api/setup/endpoint', { endpoint, models })
+  // With `role`, the endpoint is that role's own and the shared one is untouched.
+  async applyEndpoint(endpoint: EndpointPatch, models?: ModelIds, role?: 'embed' | 'vision'): Promise<{ ok: boolean }> {
+    return apiPost('/api/setup/endpoint', { endpoint, models, role })
   },
   // Change the endpoint AFTER first run — a rotated key, or a different
   // service. Distinct from applyEndpoint, which only works while first run is
   // still open.
-  async saveEndpoint(
-    endpoint: EndpointPatch,
-    models?: Partial<Record<'llm' | 'embed' | 'vision', string>>,
-  ): Promise<{ ok: boolean }> {
-    return apiPost('/api/settings/endpoint', { endpoint, models })
+  async saveEndpoint(endpoint: EndpointPatch, models?: ModelIds, role?: 'embed' | 'vision'): Promise<{ ok: boolean }> {
+    return apiPost('/api/settings/endpoint', { endpoint, models, role })
   },
   // Forget the credential and take every role back on-device. The endpoint's
-  // model names are kept, so reconnecting the same service is one paste.
-  async clearEndpoint(models?: Partial<Record<'llm' | 'embed' | 'vision', string>>): Promise<{ ok: boolean }> {
-    return apiDel('/api/settings/endpoint', models ? { models } : {})
+  // model names are kept, so reconnecting the same service is one paste. With
+  // `role`, forget only that role's own endpoint; it goes back to the shared one.
+  async clearEndpoint(body: { models?: ModelIds; role?: 'embed' | 'vision' } = {}): Promise<{ ok: boolean }> {
+    return apiDel('/api/settings/endpoint', body)
   },
   async setup(
     patch: (SettingsPatch & { endpoint?: EndpointPatch }) | { skip: true },

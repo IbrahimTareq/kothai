@@ -60,8 +60,8 @@
     "exports": 1
   },
   "server/routes/settings.ts": {
-    "lines": 464,
-    "exports": 9
+    "lines": 430,
+    "exports": 6
   },
   "_governance": {
     "claudeMdLines": 45,

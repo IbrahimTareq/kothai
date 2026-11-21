@@ -14,6 +14,8 @@ import type { ModelSelection } from '../../../server/ai/providers/types.ts'
 import { handleSaveEndpoint, handleClearEndpoint, handleGetSettings } from '../../../server/routes/settings.ts'
 import { _resetDb } from '../../../server/data/db.ts'
 import * as settings from '../../../server/data/settings.ts'
+import * as store from '../../../server/data/notes.ts'
+import * as enrich from '../../../server/ai/enrich.ts'
 import { setAiCredentials, getAiConfig } from '../../../server/config.ts'
 import { readCredentials, writeCredentials } from '../../../server/data/credentials.ts'
 import { mockReq, mockRes, record } from '../../helpers/http.ts'
@@ -24,10 +26,13 @@ const dir = () => mkdtempSync(path.join(tmpdir(), 'kothai-chg-'))
 
 // Records what the facade asks of the local provider, which is where the
 // switch back actually lands.
-const localCalls: { residency: Residency[]; models: ModelSelection[]; boots: number } = {
+const localCalls: { residency: Residency[]; models: ModelSelection[]; boots: number; remoteEmbeds: number } = {
   residency: [],
   models: [],
   boots: 0,
+  // Not a local call: how many notes the endpoint was asked to embed, which is
+  // how a queued re-embed shows itself.
+  remoteEmbeds: 0,
 }
 // The three optional members are stubbed here precisely because they are the
 // on-device calls a role coming home has to produce; everything else the
@@ -43,6 +48,10 @@ const fakeProvider = (kind: ProviderKind) =>
     boot: async () => {
       if (kind === 'local') localCalls.boots++
     },
+    embedText: async () => {
+      if (kind === 'remote') localCalls.remoteEmbeds++
+      return [1]
+    },
     capabilities: () => ({ kind, managesResidency: kind === 'local', downloadsWeights: kind === 'local' }),
   })
 const load = loader(fakeProvider)
@@ -53,6 +62,7 @@ beforeEach(async () => {
   localCalls.residency.length = 0
   localCalls.models.length = 0
   localCalls.boots = 0
+  localCalls.remoteEmbeds = 0
   _resetDb()
   settings._reset()
   await settings.load()
@@ -151,7 +161,7 @@ test('on the lite image a provider on this machine is offered but unavailable', 
   })
   const { res, sent } = mockRes()
   await handleGetSettings(res)
-  const offered = sent.json().endpoints as { id: string; available: boolean }[]
+  const offered = sent.json().catalogue as { id: string; available: boolean }[]
   assert.equal(offered.find(e => e.id === 'ollama-local')?.available, false)
   assert.equal(offered.find(e => e.id === 'openai')?.available, true, 'a hosted provider is unaffected by the image')
 })
@@ -259,4 +269,132 @@ test('GET /api/settings carries on-device presets with sizes while a service is 
   const { res, sent } = mockRes()
   await handleGetSettings(res)
   assert.ok('localPresets' in sent.json(), 'Settings cannot price the switch without them')
+})
+
+// ---- an endpoint per role --------------------------------------------------
+// Claude serves chat and images but no embeddings, so connecting it means a
+// second endpoint for the embedding role alone. That override has to be
+// written and removed without touching the shared entry it sits beside.
+const connected = async (d: string) => {
+  writeCredentials({ baseUrl: A, apiKey: 'shared-key', providerId: 'claude' }, d)
+  setAiCredentials(readCredentials(d))
+  await settings.save({ configured: true, remote: { llm: 'claude-haiku-5-5', embed: 'text-embedding-3-small' } })
+  await initProvider('remote', {}, { load, localAvailable: false })
+}
+
+test('an endpoint saved for one role is written beside the shared one, not over it', async () => {
+  const d = dir()
+  await connected(d)
+  const { res, sent } = mockRes()
+  await handleSaveEndpoint(
+    fakeReq({
+      endpoint: { providerId: 'openai', baseUrl: B, apiKey: 'embed-key' },
+      models: { embed: 'text-embedding-3-small' },
+      role: 'embed',
+    }),
+    res,
+    { dir: d, load },
+  )
+  assert.equal(sent.code, 200)
+  const creds = readCredentials(d)
+  assert.equal(creds?.roles?.embed?.baseUrl, B)
+  assert.equal(creds?.baseUrl, A, 'the shared entry is unchanged')
+  assert.equal(creds?.apiKey, 'shared-key')
+  assert.equal(getAiConfig().roles.embed.baseUrl, B, 'and the running process follows')
+})
+
+test('clearing one role removes only that override', async () => {
+  const d = dir()
+  await connected(d)
+  writeCredentials(
+    {
+      baseUrl: A,
+      apiKey: 'shared-key',
+      providerId: 'claude',
+      roles: { embed: { baseUrl: B, apiKey: 'e', providerId: 'openai' } },
+    },
+    d,
+  )
+  setAiCredentials(readCredentials(d))
+
+  const { res, sent } = mockRes()
+  await handleClearEndpoint(fakeReq({ role: 'embed' }), res, { dir: d, load })
+  assert.equal(sent.code, 200)
+  assert.deepEqual(readCredentials(d), { baseUrl: A, apiKey: 'shared-key', providerId: 'claude' })
+  assert.equal(getAiConfig().roles.embed.baseUrl, A, 'embedding falls back to the shared endpoint')
+})
+
+// The credential file is ignored entirely once any *_BASE_URL is set by env,
+// so a save there would answer 200 and change nothing at all.
+test('with the endpoint set by environment, both routes refuse rather than write a file nobody reads', async t => {
+  const d = dir()
+  await connected(d)
+  process.env.KOTHAI_AI_BASE_URL = A
+  t.after(() => delete process.env.KOTHAI_AI_BASE_URL)
+
+  const saved = mockRes()
+  await handleSaveEndpoint(
+    fakeReq({ endpoint: { providerId: 'openai', baseUrl: B, apiKey: 'k' }, role: 'embed' }),
+    saved.res,
+    {
+      dir: d,
+      load,
+    },
+  )
+  assert.equal(saved.sent.code, 409)
+  assert.equal(saved.sent.json().code, 'env_managed')
+
+  const cleared = mockRes()
+  await handleClearEndpoint(fakeReq({}), cleared.res, { dir: d, load })
+  assert.equal(cleared.sent.code, 409)
+  assert.equal(cleared.sent.json().code, 'env_managed')
+  assert.equal(readCredentials(d)?.baseUrl, A, 'the file is untouched')
+})
+
+test('GET /api/settings reports each role, and which ones borrow the shared endpoint', async t => {
+  setAiCredentials({ baseUrl: A, apiKey: 'k', roles: { embed: { baseUrl: B, apiKey: 'e', providerId: 'openai' } } })
+  process.env.KOTHAI_AI_EMBED_MODEL = 'pinned-embed'
+  t.after(() => delete process.env.KOTHAI_AI_EMBED_MODEL)
+  await initProvider('remote', {}, { load, localAvailable: false })
+  const { res, sent } = mockRes()
+  await handleGetSettings(res)
+  const body = sent.json()
+  const endpoints = record(body.endpoints)
+  assert.deepEqual(endpoints.vision, { configured: true, host: '127.0.0.1', inherited: true })
+  assert.deepEqual(endpoints.embed, { configured: true, host: '127.0.0.1', inherited: false })
+  assert.equal(record(endpoints.llm).inherited, false)
+  assert.deepEqual(body.endpoint, endpoints.llm, 'the old field is the shared entry')
+  assert.deepEqual(body.envModels, { embed: true }, 'the model name itself stays out of the response')
+})
+
+// The vectors in the library belong to one model at one endpoint. Pointing the
+// role somewhere new while keeping the model's name is still a new space: two
+// hosts serving "text-embedding-3-small" need not agree, and the library would
+// keep the old one's vectors while queries used the new one.
+test('moving the embedding role to another endpoint re-embeds the library, even under the same model name', async () => {
+  const d = dir()
+  store._reset({ keepDb: true })
+  await connected(d)
+  await store.addNote({ title: 'Brown butter pasta', embedding: [1, 0] })
+
+  await handleSaveEndpoint(
+    fakeReq({
+      endpoint: { providerId: 'openai', baseUrl: B, apiKey: 'e' },
+      models: { embed: 'text-embedding-3-small' },
+      role: 'embed',
+    }),
+    mockRes().res,
+    { dir: d, load },
+  )
+  await enrich.queueJob(() => {}) // drain
+  assert.equal(localCalls.remoteEmbeds, 1, 'the note was embedded again at the new endpoint')
+
+  // Saving the same endpoint again moves nothing.
+  await handleSaveEndpoint(
+    fakeReq({ endpoint: { providerId: 'openai', baseUrl: B, apiKey: 'e2' }, role: 'embed' }),
+    mockRes().res,
+    { dir: d, load },
+  )
+  await enrich.queueJob(() => {})
+  assert.equal(localCalls.remoteEmbeds, 1, 'a rotated key is not a new vector space')
 })

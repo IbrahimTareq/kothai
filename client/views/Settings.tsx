@@ -261,6 +261,7 @@ export function SettingsView({
                       value={cfg.remote[role]}
                       options={cfg.presets[role]}
                       busy={busyRole === role}
+                      envSet={cfg.envModels[role]}
                       onCommit={v => pickRemote(role, v)}
                     />
                   </div>

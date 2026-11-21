@@ -3,7 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { initProvider, _reset } from '../../../server/ai/index.ts'
-import { handleStatus, firstRunComplete } from '../../../server/routes/settings.ts'
+import { handleStatus, firstRunComplete } from '../../../server/routes/status.ts'
 import { demoLimits } from '../../../server/routes/demo.ts'
 import * as store from '../../../server/data/notes.ts'
 import { mockRes } from '../../helpers/http.ts'

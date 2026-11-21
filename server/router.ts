@@ -37,8 +37,8 @@ import {
   handleRemoveItem,
   handleDeleteCollection,
 } from './routes/collections.ts'
+import { handleStatus } from './routes/status.ts'
 import {
-  handleStatus,
   handleGetSettings,
   handleSaveSettings,
   handleSetup,

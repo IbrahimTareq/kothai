@@ -187,6 +187,8 @@ export interface Capabilities {
 export interface EndpointInfo {
   configured: boolean
   host: string | null
+  // A vision or embed role with no endpoint of its own, borrowing the shared one.
+  inherited: boolean
 }
 
 // One entry in the server's catalogue of known endpoints (server/ai/endpoints.ts).
@@ -211,7 +213,12 @@ export interface SettingsResponse {
   presets: { llm: ModelPreset[]; embed: ModelPreset[]; vision: ModelPreset[] }
   capabilities: Capabilities
   endpoint: EndpointInfo
-  endpoints: EndpointOption[]
+  // Per role; `endpoint` is the llm entry, which is also the shared one.
+  endpoints: { llm: EndpointInfo; embed: EndpointInfo; vision: EndpointInfo }
+  // Roles whose model name an env var sets. Shown read-only: a saved name would never be used.
+  envModels: Partial<Record<'llm' | 'embed' | 'vision', true>>
+  // The known services the wizard and Settings offer as tiles.
+  catalogue: EndpointOption[]
   // Which provider the installer already asked about — an id from `endpoints`,
   // 'local', or null when the install did not go through the installer.
   setup: { providerId: string | null }

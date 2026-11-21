@@ -43,7 +43,8 @@ mock.module('../../../server/ai/index.ts', {
   },
 })
 
-const { _validateModels, handleSaveSettings } = await import('../../../server/routes/settings.ts')
+const { _validateModels } = await import('../../../server/routes/model-selection.ts')
+const { handleSaveSettings } = await import('../../../server/routes/settings.ts')
 
 test('validateModels splits a patch by the provider that owns each role', async () => {
   provider.caps = caps({ llm: 'remote', embed: 'local', vision: 'remote' }, true)
@@ -179,5 +180,37 @@ test('changing the endpoint embedding model re-embeds the library and the tag re
     return [0, 0, 1]
   }
   await save('new-embed')
+  assert.equal(calls, 0)
+})
+
+// KOTHAI_AI_EMBED_MODEL wins over the stored name at boot and on every save
+// (remote-singleton.ts's withEnvModels), so a Settings change to the stored
+// embed name changes nothing the endpoint is asked. Comparing against the
+// stored setting re-embedded the whole library for a model it never ran.
+test('with the embedding model pinned by env, a Settings change to it re-embeds nothing', async t => {
+  provider.caps = caps({ llm: 'remote', embed: 'remote', vision: 'remote' }, false)
+  process.env.KOTHAI_AI_EMBED_MODEL = 'pinned-embed'
+  t.after(() => delete process.env.KOTHAI_AI_EMBED_MODEL)
+
+  const { _resetDb } = await import('../../../server/data/db.ts')
+  const settings = await import('../../../server/data/settings.ts')
+  const store = await import('../../../server/data/notes.ts')
+  const enrich = await import('../../../server/ai/enrich.ts')
+  _resetDb()
+  settings._reset()
+  await settings.load()
+  store._reset({ keepDb: true })
+  await settings.save({ remote: { llm: 'gpt-4o-mini', embed: 'old-embed', vision: 'gpt-4o-mini' } })
+  await store.addNote({ title: 'Brown butter pasta', embedding: [1, 0] })
+
+  let calls = 0
+  provider.embed = async () => {
+    calls++
+    return [0, 0, 1]
+  }
+  const { res, sent } = mockRes()
+  await handleSaveSettings(mockReq({ body: JSON.stringify({ remote: { embed: 'new-embed' } }) }), res)
+  assert.equal(sent.code, 200, JSON.stringify(sent.json()))
+  await enrich.queueJob(() => {}) // drain
   assert.equal(calls, 0)
 })

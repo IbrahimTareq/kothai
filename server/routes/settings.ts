@@ -6,12 +6,12 @@ import * as enrich from '../ai/enrich.ts'
 import * as reembed from '../ai/reembed.ts'
 import { ROLES, POLICIES, OFF_RESIDENCY } from '../ai/roles.ts'
 import { json, readBody } from '../lib/http.ts'
-import { demoLimits, visibleTo } from './demo.ts'
+import { firstRunComplete } from './status.ts'
+import { _validateModels } from './model-selection.ts'
 import { getAiConfig, setAiCredentials, SETUP_PROVIDER } from '../config.ts'
-import { writeCredentials, clearCredentials } from '../data/credentials.ts'
+import { writeCredentials, writeRoleCredentials, clearCredentials } from '../data/credentials.ts'
 import { ENDPOINTS, findEndpoint } from '../ai/endpoints.ts'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import type { Capabilities } from '../ai/routing.ts'
 import type { Policy, Role } from '../ai/roles.ts'
 import type { ModelSelection } from '../ai/providers/types.ts'
 import type { SettingsPatch } from '../data/settings.ts'
@@ -31,86 +31,74 @@ interface RouteOptions {
   load?: NonNullable<Parameters<typeof ai.reconfigure>[1]>['load']
 }
 
-// One return shape rather than two, because every caller destructures the
-// result and then checks `error` — a union would make the success fields
-// unreachable to the checker at exactly the point they are read. The fields
-// beside an `error` are what had validated so far; nothing reads them, because
-// every caller answers 400 and returns.
-interface ValidatedModels {
-  error?: string
-  local: ModelSelection
-  remote: ModelSelection
-  warnings: string[]
-}
-
 interface ValidatedResidency {
   error?: string
   patch: Partial<Record<Role, Policy>>
-}
-
-// A provider with nothing to download has nothing to CONSENT to — but it still
-// needs one model name per role before any role can run, and on a pure-remote
-// install collecting those names is the only thing first-run has left to do.
-// Skipping the screen there dropped people into the app with every role dark
-// and no signpost but Settings.
-//
-// `preGate` is the one concession: an install configured before this gate
-// existed has names and no flag, and must not be dragged back through first
-// run. It is decided once when settings load (server/data/settings.ts) rather
-// than inferred here from whether names exist — because first run now WRITES
-// names partway through. The wizard seeds them so the embedding role can
-// resolve before the picker is drawn, and inferring from them meant the server
-// called first run finished the moment a provider was connected, then answered
-// "already configured" when the user pressed Save & start.
-// Exported for the unit tests.
-export function firstRunComplete(
-  caps: Pick<Capabilities, 'downloadsWeights'>,
-  configured: boolean,
-  preGate: boolean,
-): boolean {
-  if (caps.downloadsWeights) return configured
-  return configured || preGate
-}
-
-// `viewer` is the demo visitor (routes/demo.ts), null on an ordinary install.
-export function handleStatus(res: ServerResponse, viewer: string | null): void {
-  const caps = ai.capabilities()
-  json(res, 200, {
-    ...ai.statusSnapshot(),
-    configured: firstRunComplete(caps, settings.isConfigured(), settings.isPreGate()),
-    count: store.allNotes().filter(visibleTo(viewer)).length,
-    capabilities: caps,
-    // Polled every few seconds, so the demo banner's allowance stays current.
-    demo: viewer ? demoLimits.leftFor(viewer) : null,
-  })
 }
 
 // ---- settings: model selection + residency -------------------------------
 // Only the endpoint's HOSTNAME is echoed — never the full URL and never the
 // key. Some providers carry credentials in the URL path, so the whole string
 // is treated as secret.
-function endpointInfo() {
-  const { baseUrl } = getAiConfig()
-  if (!baseUrl) return { configured: false, host: null }
+//
+// `inherited` is identity, not equality: resolveAiConfig hands an inheriting
+// role the shared entry itself, so a role given its own entry at the same URL
+// still reports as its own — the one the user can clear.
+function endpointInfo(role: Role = 'llm') {
+  const { roles } = getAiConfig()
+  const { baseUrl } = roles[role]
+  const inherited = role !== 'llm' && roles[role] === roles.llm
+  if (!baseUrl) return { configured: false, host: null, inherited }
   try {
-    return { configured: true, host: new URL(baseUrl).hostname }
+    return { configured: true, host: new URL(baseUrl).hostname, inherited }
   } catch {
-    return { configured: true, host: null }
+    return { configured: true, host: null, inherited }
   }
 }
+
+// What the library's vectors were made with: the embedding role's model, env
+// winning as it does in the provider, at its endpoint. Only ever compared,
+// never logged — the URL is treated as secret (see endpointInfo).
+function embedSource(): string | null {
+  const { roles, envModels } = getAiConfig()
+  const model = envModels.embed || settings.getRemote().embed
+  return model ? `${model} ${roles.embed.baseUrl}` : null
+}
+
+// Re-embed when the embedding role now answers from a different model or a
+// different endpoint than `before`. Comparing the stored setting instead
+// re-embedded the library for a Settings edit that KOTHAI_AI_EMBED_MODEL
+// overrode, and missed a move to another endpoint under the same model name.
+function reembedIfMoved(before: string | null, reason: string): void {
+  const after = embedSource()
+  if (after && after !== before && ai.capabilities().roles.embed === 'remote')
+    enrich.queueJob(() => reembed.reembedAll(reason))
+}
+
+// A role is 'embed' or 'vision'; anything else, absent included, is the shared
+// endpoint, which also serves llm.
+const endpointRole = (v: unknown): 'embed' | 'vision' | null => (v === 'embed' || v === 'vision' ? v : null)
+
+// Once any *_BASE_URL is set by env the credential file is ignored entirely
+// (ai/endpoint-config.ts), so a save there answered 200 and changed nothing.
+const ENV_MANAGED = { error: 'The endpoint is set by environment variables on this install.', code: 'env_managed' }
 
 export async function handleGetSettings(res: ServerResponse): Promise<void> {
   const caps = ai.capabilities()
   const localSupported = await ai.localSupported()
+  const endpoints = { llm: endpointInfo('llm'), embed: endpointInfo('embed'), vision: endpointInfo('vision') }
   json(res, 200, {
     current: settings.get(),
     remote: settings.getRemote(),
     residency: settings.getResidency(),
     presets: await ai.listModels(),
     capabilities: caps,
-    endpoint: ROLES.some(r => caps.roles[r] === 'remote') ? endpointInfo() : { configured: false, host: null },
+    endpoint: endpoints.llm,
+    endpoints,
+    // Which roles' model names env pins, so Settings shows them read-only. Flags, not the names.
+    envModels: Object.fromEntries(Object.keys(getAiConfig().envModels).map(r => [r, true])),
     // Static and credential-free, so the wizard needs no second request. `available`: see onThisMachine.
-    endpoints: ENDPOINTS.map(e => ({ ...e, available: localSupported || !e.onThisMachine })),
+    catalogue: ENDPOINTS.map(e => ({ ...e, available: localSupported || !e.onThisMachine })),
     // What the installer already asked. An id only; null when nobody asked.
     setup: { providerId: SETUP_PROVIDER },
     // Whether this image COULD run models on-device — false on lite, where
@@ -122,41 +110,6 @@ export async function handleGetSettings(res: ServerResponse): Promise<void> {
     // what switching back would cost or offer anything to pick.
     localPresets: await ai.localPresets(),
   })
-}
-
-// Validation is provider-specific and now role-by-role: local rejects a key
-// that isn't in its preset catalogue, remote accepts any non-empty string and
-// only warns about one the endpoint doesn't list, because saving settings must
-// not fail whenever the endpoint happens to be down.
-//
-// A role served on-device reads its key from the body root; a role served
-// remotely reads its id from body.remote. In a single-provider install that is
-// exactly the old behaviour — all three roles resolve to the same source — and
-// on a mixed one it is what keeps an endpoint's model ids out of the on-device
-// columns, where nothing would ever read them again.
-// Exported under an underscore for the unit tests.
-export function _validateModels(body: unknown): ValidatedModels {
-  const { roles } = ai.capabilities()
-  const fields = isRecord(body) ? body : {}
-  const remoteFields = isRecord(fields.remote) ? fields.remote : {}
-  const local: ModelSelection = {}
-  const remote: ModelSelection = {}
-  const warnings: string[] = []
-  for (const role of ROLES) {
-    const isLocal = roles[role] === 'local'
-    const key = (isLocal ? fields : remoteFields)[role]
-    if (key === undefined) continue
-    // A model id that is not a string is rejected here rather than handed on.
-    // Both providers already refused it, but only one of them politely: the
-    // remote provider's first act is `key.trim()`, so a JSON body carrying a
-    // number turned /api/settings into a 500 instead of the 400 it is.
-    if (typeof key !== 'string') return { error: `invalid ${role} model`, local, remote, warnings }
-    const r = ai.validateModel(role, key)
-    if (!r.ok) return { error: r.error, local, remote, warnings }
-    if (r.warning) warnings.push(r.warning)
-    ;(isLocal ? local : remote)[role] = key
-  }
-  return { local, remote, warnings }
 }
 
 function validateResidency(body: unknown): ValidatedResidency {
@@ -188,6 +141,7 @@ async function applyEndpointFromSetup(
   endpoint: unknown,
   opts: RouteOptions = {},
   models: unknown = null,
+  role: 'embed' | 'vision' | null = null,
 ): Promise<{ error?: string }> {
   const fields = isRecord(endpoint) ? endpoint : {}
   const baseUrl = typeof fields.baseUrl === 'string' ? fields.baseUrl.trim().replace(/\/+$/, '') : ''
@@ -201,8 +155,8 @@ async function applyEndpointFromSetup(
   const apiKey = typeof fields.apiKey === 'string' && fields.apiKey.trim() ? fields.apiKey.trim() : null
   const providerId = typeof fields.providerId === 'string' ? fields.providerId : null
   if (findEndpoint(providerId)?.needsKey && !apiKey) return { error: 'This service needs an API key.' }
-  const creds = writeCredentials({ baseUrl, apiKey, providerId }, opts.dir)
-  setAiCredentials(creds)
+  const ep = { baseUrl, apiKey, providerId }
+  setAiCredentials(role ? writeRoleCredentials(role, ep, opts.dir) : writeCredentials(ep, opts.dir))
 
   // Seed the endpoint's model names BEFORE reconfiguring. Which provider serves
   // the embedding role is decided by whether one is named (see ai/routing.ts),
@@ -212,10 +166,11 @@ async function applyEndpointFromSetup(
   if (models) {
     const named = isRecord(models) ? models : {}
     const patch: ModelSelection = {}
-    for (const role of ROLES) {
-      const raw = named[role]
+    // A role's endpoint names only that role's model.
+    for (const r of role ? [role] : ROLES) {
+      const raw = named[r]
       const id = typeof raw === 'string' ? raw.trim() : ''
-      if (id) patch[role] = id
+      if (id) patch[r] = id
     }
     if (Object.keys(patch).length) await settings.save({ remote: patch })
   }
@@ -248,7 +203,7 @@ export async function handleSetupEndpoint(
   const body = await readBody(req)
   const fields = isRecord(body) ? body : {}
   if (!fields.endpoint) return json(res, 400, { error: 'an endpoint is required' })
-  const { error } = await applyEndpointFromSetup(fields.endpoint, opts, fields.models)
+  const { error } = await applyEndpointFromSetup(fields.endpoint, opts, fields.models, endpointRole(fields.role))
   if (error) return json(res, 400, { error })
   const caps = ai.capabilities()
   json(res, 200, { ok: true, capabilities: caps, endpoint: endpointInfo() })
@@ -343,15 +298,19 @@ export async function handleSaveEndpoint(
   res: ServerResponse,
   opts: RouteOptions = {},
 ): Promise<void> {
+  if (getAiConfig().source === 'env') return json(res, 409, ENV_MANAGED)
   const body = await readBody(req)
   const fields = isRecord(body) ? body : {}
   if (!fields.endpoint) return json(res, 400, { error: 'an endpoint is required' })
-  const { error } = await applyEndpointFromSetup(fields.endpoint, opts, fields.models)
+  const before = embedSource()
+  const { error } = await applyEndpointFromSetup(fields.endpoint, opts, fields.models, endpointRole(fields.role))
   if (error) return json(res, 400, { error })
+  reembedIfMoved(before, 'embedding endpoint changed')
   json(res, 200, { ok: true, capabilities: ai.capabilities(), endpoint: endpointInfo() })
 }
 
-// Disconnect: forget the credential and take every role back on-device.
+// Disconnect: forget the credential and take every role back on-device. With
+// { role }, forget only that role's own endpoint; it falls back to the shared one.
 //
 // The endpoint's model names are deliberately kept. They cost nothing while
 // unused, and keeping them means reconnecting the same service later does not
@@ -365,9 +324,15 @@ export async function handleClearEndpoint(
   // in the same breath as disconnecting. They are applied AFTER reconfigure,
   // because _validateModels asks which provider serves each role and the answer
   // is only right once the endpoint is gone.
+  if (getAiConfig().source === 'env') return json(res, 409, ENV_MANAGED)
   const body: unknown = await readBody(req).catch(() => ({}))
-  clearCredentials(opts.dir)
-  setAiCredentials(null)
+  const role = endpointRole(isRecord(body) && body.role)
+  const before = embedSource()
+  if (role) setAiCredentials(writeRoleCredentials(role, null, opts.dir))
+  else {
+    clearCredentials(opts.dir)
+    setAiCredentials(null)
+  }
   await ai.reconfigure({ local: settings.get(), remote: settings.getRemote() }, { load: opts.load })
 
   if (isRecord(body) && body.models) {
@@ -377,9 +342,10 @@ export async function handleClearEndpoint(
   }
 
   await settleRoleMap()
+  reembedIfMoved(before, 'embedding endpoint changed')
   // Roles just handed back need their weights. Queued, because for someone who
   // set up on an endpoint this is the first download of any model at all.
-  enrich.queueJob(() => ai.warmCache(settings.getResidency()))
+  if (!role) enrich.queueJob(() => ai.warmCache(settings.getResidency()))
   json(res, 200, { ok: true, capabilities: ai.capabilities(), endpoint: endpointInfo() })
 }
 
@@ -400,13 +366,13 @@ export async function handleSaveSettings(req: IncomingMessage, res: ServerRespon
   // local swap below: treated like llm and vision, it left the library on the
   // old model's vectors while queries used the new one, and search degraded
   // silently. A blank id is the role switched off, with nothing to embed with.
-  const remoteEmbedChanged = Boolean(models.remote.embed) && models.remote.embed !== settings.getRemote().embed
+  const embedBefore = embedSource()
   if (Object.keys(models.remote).length) {
     await settings.save({ remote: models.remote })
     // Role-keyed { llm, embed, vision } — the same shape both providers take.
     await ai.applySettings(settings.getRemote())
   }
-  if (remoteEmbedChanged) enrich.queueJob(() => reembed.reembedAll(`endpoint model → ${models.remote.embed}`))
+  if (models.remote.embed) reembedIfMoved(embedBefore, `endpoint model → ${models.remote.embed}`)
 
   const prev = settings.get()
   const prevRes = settings.getResidency()

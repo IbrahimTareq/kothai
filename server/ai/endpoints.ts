@@ -12,12 +12,13 @@
 // one — so the installer reads this to decide whether a provider can run on the
 // lite image or needs the full one, where the embedding role stays on-device.
 //
-// Every entry here currently serves embeddings, and that is the point: a tile
-// on the first-run screen is a recommendation, and recommending an endpoint
-// that cannot do half the job is not one. Chat-only services still work — by
-// --endpoint, or KOTHAI_AI_BASE_URL, or by typing the model names in Settings —
-// they are just not offered as a one-click answer. The field stays because
-// resolveRoleProviders still has to handle an endpoint configured that way.
+// A tile on the first-run screen is a recommendation, and recommending an
+// endpoint that cannot do half the job is not one — which is why every entry
+// served embeddings until Claude. Claude is the deliberate exception: picking
+// a `servesEmbeddings: false` tile makes the wizard ask a second question, a
+// provider for search by meaning, saved as the embedding role's own endpoint
+// (views/SetupWizard.tsx). Other chat-only services still work by --endpoint,
+// KOTHAI_AI_BASE_URL, or typing the model names in Settings; they are not tiles.
 //
 // It is a claim about somebody else's product, so check it rather than assume,
 // and check the RIGHT list: a provider's chat-model catalogue says nothing
@@ -64,6 +65,18 @@ export interface Endpoint {
 // the base URL lives in its credential file, not here.
 export const ENDPOINTS: Endpoint[] = [
   {
+    id: 'ollama-local',
+    label: 'Ollama on this machine',
+    // host.docker.internal resolves to the host from inside the container on
+    // Docker Desktop; on Linux the installer adds --add-host for it.
+    baseUrl: 'http://host.docker.internal:11434/v1',
+    needsKey: false,
+    servesEmbeddings: true,
+    onThisMachine: true,
+    note: 'Nothing leaves your machine, and you manage the models in Ollama.',
+    defaults: { llm: 'llama3.2:3b', embed: 'nomic-embed-text', vision: 'llama3.2-vision' },
+  },
+  {
     id: 'openai',
     label: 'OpenAI',
     baseUrl: 'https://api.openai.com/v1',
@@ -98,16 +111,14 @@ export const ENDPOINTS: Endpoint[] = [
     defaults: { llm: 'openai/gpt-4o-mini', embed: 'openai/text-embedding-3-small', vision: 'openai/gpt-4.1-mini' },
   },
   {
-    id: 'ollama-local',
-    label: 'Ollama on this machine',
-    // host.docker.internal resolves to the host from inside the container on
-    // Docker Desktop; on Linux the installer adds --add-host for it.
-    baseUrl: 'http://host.docker.internal:11434/v1',
-    needsKey: false,
-    servesEmbeddings: true,
-    onThisMachine: true,
-    note: 'Nothing leaves your machine, and you manage the models in Ollama.',
-    defaults: { llm: 'llama3.2:3b', embed: 'nomic-embed-text', vision: 'llama3.2-vision' },
+    id: 'claude',
+    label: 'Claude',
+    baseUrl: 'https://api.anthropic.com/v1',
+    needsKey: true,
+    servesEmbeddings: false,
+    keyUrl: 'https://console.anthropic.com/settings/keys',
+    note: 'Chat and images only. Search by meaning needs a second provider for embeddings.',
+    defaults: { llm: 'claude-haiku-5-5', vision: 'claude-haiku-5-5', embed: '' },
   },
 ]
 

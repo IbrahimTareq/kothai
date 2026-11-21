@@ -111,12 +111,12 @@ export function Onboarding({ modelLoad, onComplete }: { modelLoad: ModelLoad; on
   if (needsWizard) {
     return (
       <SetupWizard
-        endpoints={cfg!.endpoints}
+        endpoints={cfg!.catalogue}
         preselect={preAnswered}
         localSupported={cfg!.localSupported}
         onLocal={() => setWizardDone(true)}
         onSkip={skip}
-        onConnected={async r => {
+        onConnected={async (r, embed) => {
           // Apply it NOW rather than at submit. The picker below asks about
           // each role in the shape its provider needs, and connecting an
           // endpoint is what decides which provider that is — so the server
@@ -125,12 +125,18 @@ export function Onboarding({ modelLoad, onComplete }: { modelLoad: ModelLoad; on
           // on regardless left the model picker drawn for an endpoint that
           // was never saved.
           await API.applyEndpoint({ providerId: r.providerId, baseUrl: r.baseUrl, apiKey: r.apiKey }, r.defaults)
+          // A tile that serves no embeddings came with a second provider for
+          // them, or none if the user chose keyword search only.
+          if (embed) {
+            const { providerId, baseUrl, apiKey } = embed
+            await API.applyEndpoint({ providerId, baseUrl, apiKey }, { embed: embed.defaults.embed }, 'embed')
+          }
           const fresh = await API.settings()
           setCfg(fresh)
           setSel({ ...fresh.current })
           // Seed the endpoint's model fields from the provider's defaults so
           // the next screen is filled in rather than three empty boxes.
-          setRemoteSel({ ...fresh.remote, ...r.defaults })
+          setRemoteSel({ ...fresh.remote, ...r.defaults, ...(embed && { embed: embed.defaults.embed }) })
           setWizardDone(true)
         }}
       />

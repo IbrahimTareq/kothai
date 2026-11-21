@@ -36,18 +36,27 @@ test('a provider that serves embeddings offers a language and an embedding defau
   }
 })
 
-// The current invariant, asserted directly rather than left to a filter that
-// happens to match nothing: a tile is a recommendation, and an endpoint that
-// cannot do semantic search is not one. Chat-only services still work through
-// --endpoint or KOTHAI_AI_BASE_URL; they are just not offered here.
-test('every offered provider can do the whole job', () => {
-  for (const e of ENDPOINTS) {
+// A tile is a recommendation, and an endpoint that cannot do semantic search
+// is half of one. Claude is the one deliberate exception: first run follows
+// its tile with a second step that picks a provider for embeddings
+// (views/SetupWizard.tsx), so the half it cannot do is still asked for.
+test('every offered provider can do the whole job, except Claude', () => {
+  for (const e of ENDPOINTS.filter(x => x.id !== 'claude')) {
     assert.equal(e.servesEmbeddings, true, `${e.id} would leave search half-working`)
   }
+  const claude = findEndpoint('claude')
+  assert.ok(claude, 'claude must be in the catalogue')
+  assert.equal(claude.servesEmbeddings, false)
+  assert.match(claude.note, /embeddings/, 'its tile says search by meaning needs a second provider')
 })
 
-// Kept as a guard on whatever gets added next: the moment a chat-only provider
-// is offered again, it must not claim an embedding model it cannot serve.
+// First in the list because it is the one that needs no account and no bill.
+test('the provider on this machine is offered first', () => {
+  assert.equal(ENDPOINTS[0].id, 'ollama-local')
+})
+
+// A chat-only provider must not claim an embedding model it cannot serve: the
+// seed would send the embedding role to a route that is not there.
 test('a chat-only provider would leave the embedding default empty', () => {
   for (const e of ENDPOINTS.filter(x => !x.servesEmbeddings)) {
     assert.equal(e.defaults.embed, '', `${e.id} must not claim an embedding model`)

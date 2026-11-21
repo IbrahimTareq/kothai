@@ -89,7 +89,7 @@ test('GET /api/settings offers the catalogue so the wizard can render tiles', as
   await initProvider('local', {}, { load, localAvailable: true })
   const { res, sent } = mockRes()
   await handleGetSettings(res)
-  const endpoints = records(sent.json().endpoints)
+  const endpoints = records(sent.json().catalogue)
   assert.ok(endpoints.some(e => e.id === 'openai'))
 })
 
@@ -104,7 +104,7 @@ test('a Railway install is not offered an Ollama on Railway', async () => {
   try {
     const { res, sent } = mockRes()
     await handleGetSettings(res)
-    const ids = records(sent.json().endpoints).map(e => e.id)
+    const ids = records(sent.json().catalogue).map(e => e.id)
     assert.ok(!ids.includes('ollama-railway'), `offered: ${ids.join(', ')}`)
   } finally {
     delete process.env.RAILWAY_ENVIRONMENT
@@ -232,4 +232,36 @@ test('connecting a provider then finishing first run is not "already configured"
   )
   assert.equal(done.sent.code, 200, `Save & start was refused: ${JSON.stringify(done.sent.body)}`)
   assert.equal(settings.isConfigured(), true, 'and first run is genuinely over afterwards')
+})
+
+// The second step of connecting Claude: it serves no embeddings, so first run
+// asks for another provider for search by meaning, and that choice lands as
+// the embedding role's own entry while the shared one stays Claude.
+test('an endpoint applied mid-first-run for one role is written as that role alone', async () => {
+  const d = dir()
+  await initProvider('local', {}, { load, localAvailable: true })
+  await handleSetupEndpoint(
+    fakeReq({
+      endpoint: { providerId: 'claude', baseUrl: ENDPOINT, apiKey: 'sk-ant' },
+      models: { llm: 'claude-haiku-5-5' },
+    }),
+    mockRes().res,
+    { dir: d },
+  )
+  const { res, sent } = mockRes()
+  await handleSetupEndpoint(
+    fakeReq({
+      endpoint: { providerId: 'openai', baseUrl: 'http://127.0.0.1:2/v1', apiKey: 'sk-oa' },
+      models: { embed: 'text-embedding-3-small', llm: 'not-this-one' },
+      role: 'embed',
+    }),
+    res,
+    { dir: d },
+  )
+  assert.equal(sent.code, 200)
+  const creds = readCredentials(d)
+  assert.equal(creds?.providerId, 'claude', 'the shared entry is still Claude')
+  assert.equal(creds?.roles?.embed?.providerId, 'openai')
+  assert.equal(settings.getRemote().embed, 'text-embedding-3-small')
+  assert.equal(settings.getRemote().llm, 'claude-haiku-5-5', "a role's save names only that role's model")
 })

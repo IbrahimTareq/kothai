@@ -212,12 +212,16 @@ export function RemoteModelField({
   value,
   options,
   busy,
+  envSet,
   onCommit,
 }: {
   role: Role
   value: string
   options: ModelPreset[]
   busy: boolean
+  // KOTHAI_AI_<ROLE>_MODEL wins over a saved name (remote-singleton.ts's
+  // withEnvModels), so an editable field would take a name nothing uses.
+  envSet?: boolean
   onCommit: (v: string) => void
 }) {
   const [draft, setDraft] = useState(value)
@@ -261,6 +265,20 @@ export function RemoteModelField({
       setOpen(false)
       setDraft(value)
     }
+  }
+
+  if (envSet) {
+    return (
+      <div className="remote-model">
+        <Input
+          compact
+          readOnly
+          className="remote-model-input mono"
+          aria-label={`${role} model`}
+          value={`Set by KOTHAI_AI_${role.toUpperCase()}_MODEL`}
+        />
+      </div>
+    )
   }
 
   return (
