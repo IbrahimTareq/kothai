@@ -64,7 +64,7 @@ export function UsageSection() {
       <div className="settings-rows">
         <SettingsRow
           title="Last 30 days"
-          desc="Every model call, local or through an endpoint: how many, how many tokens, how long, and what it cost where the endpoint says."
+          desc="Every model call through an endpoint: how many, how many tokens, how long, and what it cost where the endpoint says."
           action={
             <Segmented
               label="Break usage down by"

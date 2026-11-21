@@ -159,3 +159,18 @@ test('a library of on-device vectors is re-embedded, and the marker moves only a
   )
   assert.equal(storedProvider, 'remote')
 })
+
+// Connecting an endpoint or naming an embedding model in Settings re-embeds a
+// QVAC library at runtime. The marker stayed 'local' afterwards, so the next
+// boot queued a second full re-embed through a possibly paid endpoint.
+test('a Settings-triggered re-embed marks the vectors remote, so the next boot queues nothing', async () => {
+  reset([NOTE], 'local')
+
+  await reembed.reembedAll('embedding endpoint changed')
+  assert.equal(storedProvider, 'remote')
+
+  embedCalls = []
+  assert.equal(reembed.queueEmbedProviderReembed(), false, 'the boot after finds nothing owed')
+  await drain()
+  assert.equal(embedCalls.length, 0)
+})

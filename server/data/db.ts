@@ -196,18 +196,19 @@ async function open(): Promise<DatabaseSync> {
   db = new DatabaseSync(DB_FILE)
   db.exec('PRAGMA journal_mode = WAL')
   createSchema(db)
-  // Remote model names live alongside local ones but in their own columns:
-  // local keys are QVAC registry constants, remote ones are endpoint-defined
-  // ids. Sharing columns would leave a local→remote→local round trip with a
-  // value the other provider's validation rejects.
+  // Remote model names live alongside the local ones but in their own columns:
+  // local keys were QVAC registry constants for the removed on-device
+  // provider, remote ones are endpoint-defined ids. Sharing columns would have
+  // left a local→remote→local round trip with a value the other provider's
+  // validation rejected.
   ensureColumns(db, 'settings', { remote_llm: 'TEXT', remote_embed: 'TEXT', remote_vision: 'TEXT' })
   // Which embedding recipe the stored vectors were built under — see
   // prompts.ts's EMBED_RECIPE. NULL on an existing install, which is exactly
   // the mismatch that triggers the one-time re-embed.
   ensureColumns(db, 'settings', { embed_recipe: 'TEXT' })
   // Which provider produced the stored vectors. NULL on an install that
-  // predates the marker — reembed.embedProviderChanged infers the answer from
-  // how that install was configured rather than re-embedding on a guess.
+  // predates the marker, which reembed.embedProviderChanged treats like
+  // 'local': not known to come from an endpoint, so re-embedded once.
   ensureColumns(db, 'settings', { embed_provider: 'TEXT' })
   // Daily backups, on unless switched off — including on every existing install.
   ensureColumns(db, 'settings', { backups: 'INTEGER NOT NULL DEFAULT 1' })

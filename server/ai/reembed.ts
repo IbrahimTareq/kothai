@@ -73,7 +73,12 @@ async function reembedEach(reason: string) {
     }
   }
   await store.flush() // one write for the whole batch, not one per note
-  await settings.save({ embedRecipe: EMBED_RECIPE })
+  // The provider marker moves here, once the vectors exist, and on every path
+  // that rebuilds them: recorded only by the boot check, a Settings-triggered
+  // re-embed of a QVAC library left the marker on 'local', and the next boot
+  // re-embedded the whole library again through a possibly paid endpoint.
+  // After the flush, so an interrupted sweep is retried on the next boot.
+  await settings.save({ embedRecipe: EMBED_RECIPE, embedProvider: 'remote' })
   // Tag snapping compares each new tag's vector against the registry's, so the
   // registry has to move to the new model too: left on the old one, every
   // comparison scored 0 (different width) or noise (same width), and new tags
@@ -135,9 +140,7 @@ export function queueEmbedProviderReembed() {
     settings.save({ embedProvider: 'remote' }).catch(() => {})
     return false
   }
-  queueJob(async () => {
-    await reembedAll(`embed provider ${stored || 'unset'} → remote`)
-    await settings.save({ embedProvider: 'remote' })
-  })
+  // reembedAll records the marker itself, once the sweep is done.
+  queueJob(() => reembedAll(`embed provider ${stored || 'unset'} → remote`))
   return true
 }

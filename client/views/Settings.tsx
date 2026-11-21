@@ -165,32 +165,37 @@ export function SettingsView({
         <div className="settings-body">
           <ConnectionPanel cfg={cfg} onChanged={setCfg} />
 
-          <SettingsGroup
-            label="Model cores"
-            sub={`Inference runs on a remote endpoint${cfg.endpoint.host ? ` (${cfg.endpoint.host})` : ''}. The endpoint and its key were set during setup and are stored on this machine only; KOTHAI_AI_BASE_URL and KOTHAI_AI_API_KEY override them.`}
-          >
-            {roles.map(role => (
-              <div key={role} className="role-acc open">
-                <div className="role-acc-head">
-                  <span className="role-acc-info">
-                    <span className="role-acc-title">{ROLE_META[role].title}</span>
-                    <span className="role-acc-sub">{ROLE_META[role].sub}</span>
-                  </span>
-                  <span className="role-acc-current">{cfg.remote[role] || '—'}</span>
+          {/* Not while nothing is connected: three fields with no catalogue
+              under copy saying inference runs on an endpoint was false, and the
+              Connection panel above already says what to do. */}
+          {cfg.endpoint.configured && (
+            <SettingsGroup
+              label="Model cores"
+              sub={`Inference runs on a remote endpoint${cfg.endpoint.host ? ` (${cfg.endpoint.host})` : ''}. The endpoint and its key were set during setup and are stored on this machine only; KOTHAI_AI_BASE_URL and KOTHAI_AI_API_KEY override them.`}
+            >
+              {roles.map(role => (
+                <div key={role} className="role-acc open">
+                  <div className="role-acc-head">
+                    <span className="role-acc-info">
+                      <span className="role-acc-title">{ROLE_META[role].title}</span>
+                      <span className="role-acc-sub">{ROLE_META[role].sub}</span>
+                    </span>
+                    <span className="role-acc-current">{cfg.remote[role] || '—'}</span>
+                  </div>
+                  <div className="model-list">
+                    <RemoteModelField
+                      role={role}
+                      value={cfg.remote[role]}
+                      options={cfg.presets[role]}
+                      busy={busyRole === role}
+                      envSet={cfg.envModels[role]}
+                      onCommit={v => pickRemote(role, v)}
+                    />
+                  </div>
                 </div>
-                <div className="model-list">
-                  <RemoteModelField
-                    role={role}
-                    value={cfg.remote[role]}
-                    options={cfg.presets[role]}
-                    busy={busyRole === role}
-                    envSet={cfg.envModels[role]}
-                    onCommit={v => pickRemote(role, v)}
-                  />
-                </div>
-              </div>
-            ))}
-          </SettingsGroup>
+              ))}
+            </SettingsGroup>
+          )}
 
           <ImportSection />
 
