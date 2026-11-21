@@ -88,6 +88,10 @@ async function sweep(reason: string) {
   let stopped = false
   const refused: string[] = []
   for (const n of notes) {
+    // A restore replaced the library: the rest of these notes are gone, and
+    // embedding them anyway sent the whole old library through a possibly
+    // paid endpoint only to throw every vector away.
+    if (superseded) break
     const body = embedBodyFor(n)
     if (!body) continue
     try {
@@ -101,6 +105,12 @@ async function sweep(reason: string) {
         break
       }
     }
+  }
+  // Before anything below writes: a refused id may now name a restored note.
+  // The markers, the registry and the vectors are the follow-up sweep's.
+  if (superseded) {
+    console.log('[enrich] re-embedding superseded by a restore; the sweep it queued takes over')
+    return notes.length
   }
   // Every note refused is the model, not the notes (a chat model named for
   // embeddings 400s on everything), and is handled as the endpoint's failure.
@@ -129,7 +139,8 @@ async function sweep(reason: string) {
   // Not when a restore replaced the library while this one ran: these markers
   // would describe notes it never saw, and the restored ones kept the backup's
   // on-device vectors under a current marker. The sweep libraryReplaced queued
-  // marks the library, and rebuilds the registry.
+  // marks the library, and rebuilds the registry. Checked again here because
+  // the restore can land during the flush above.
   if (superseded) {
     console.log('[enrich] re-embedding superseded by a sweep queued meanwhile')
     return notes.length

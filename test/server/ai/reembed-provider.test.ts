@@ -412,3 +412,57 @@ test('a recovery or a first-run finish during a running sweep queues nothing', a
   assert.equal(sweeps(), 1, 'the markers move once')
   assert.equal(storedProvider, 'remote')
 })
+
+// A Settings model or endpoint swap re-embeds with the markers already current
+// ('remote' and this recipe). A restore during it must still supersede it:
+// without that, nothing was queued and the swap's sweep marked the restored
+// library, whose vectors are the backup's.
+test('a restore during a sweep over current markers still gets its own sweep', async () => {
+  const restored = { ...NOTE, id: 'restored', title: 'From the backup', embedding: [0.5, 0.6] }
+  reset([NOTE, { ...NOTE, id: 'n2', title: 'Second' }], 'remote')
+  let replaced = false
+  failWith = () => {
+    if (!replaced) {
+      replaced = true
+      notes = [{ ...restored }]
+      void reembed.libraryReplaced()
+    }
+    return null
+  }
+  // On the job queue, as routes/settings.ts's reembedIfMoved queues it.
+  enrich.queueJob(() => reembed.reembedAll('embedding endpoint changed'))
+  await drain()
+  await drain()
+  assert.ok(
+    embedCalls.some(c => c.text === reembed.embedBodyFor(restored)),
+    'the restored notes are re-embedded',
+  )
+  assert.notDeepEqual(notes[0].embedding, [0.5, 0.6])
+  assert.equal(sweeps(), 1, 'only the follow-up marks the library')
+})
+
+// Superseded, the old sweep went on embedding the rest of the library it held,
+// through a possibly paid endpoint, only to throw every vector away.
+test('a superseded sweep makes no embed call after the restore', async () => {
+  const restored = { ...NOTE, id: 'restored', title: 'From the backup' }
+  const old = [NOTE, { ...NOTE, id: 'n2', title: 'Second' }, { ...NOTE, id: 'n3', title: 'Third' }]
+  reset(old, 'local')
+  let at = -1
+  failWith = () => {
+    if (at < 0) {
+      at = embedCalls.length
+      notes = [{ ...restored }]
+      void reembed.libraryReplaced()
+    }
+    return null
+  }
+  assert.equal(reembed.queueOwedReembed(), true)
+  await drain()
+  await drain()
+  const after = embedCalls.slice(at).map(c => c.text)
+  assert.deepEqual(
+    after,
+    [reembed.embedBodyFor(restored)],
+    'only the follow-up sweep embeds, and only the restored note',
+  )
+})
