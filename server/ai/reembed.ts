@@ -141,8 +141,29 @@ export function queueRecipeReembed() {
     settings.save({ embedRecipe: EMBED_RECIPE }).catch(() => {})
     return false
   }
-  queueJob(() => reembedAll(`recipe ${settings.getEmbedRecipe() || 'unset'} → ${EMBED_RECIPE}`))
+  queueSweep(`recipe ${settings.getEmbedRecipe() || 'unset'} → ${EMBED_RECIPE}`)
   return true
+}
+
+// The sweep a stale marker asks for, queued at most once until it has run.
+// Boot, the end of first run and every recovery of the endpoint ask, and a
+// circuit that flaps recovers several times while the first sweep still waits
+// its turn: each would have queued the whole library again behind it.
+let owed: Promise<unknown> | null = null
+function queueSweep(reason: string) {
+  owed ??= queueJob(() => reembedAll(reason)).finally(() => {
+    owed = null
+  })
+}
+
+// Does the library owe a sweep? Asked at boot, at the end of first run (where
+// an empty library is simply marked), and when the endpoint recovers: a sweep
+// an outage stopped keeps its markers stale, and before the recovery asked,
+// only a reboot or a reconnect retried it. The provider check runs only when
+// the recipe one queued nothing: the recipe sweep records both markers, and an
+// unfinished one leaves both stale, which queued the whole library twice.
+export function queueOwedReembed(): boolean {
+  return queueRecipeReembed() || queueEmbedProviderReembed()
 }
 
 // Were the stored vectors made anywhere but an endpoint? 'local' marks
@@ -170,6 +191,6 @@ export function queueEmbedProviderReembed() {
     return false
   }
   // reembedAll records the marker itself, once the sweep is done.
-  queueJob(() => reembedAll(`embed provider ${stored || 'unset'} → remote`))
+  queueSweep(`embed provider ${stored || 'unset'} → remote`)
   return true
 }

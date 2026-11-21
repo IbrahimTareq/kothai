@@ -40,7 +40,8 @@ export function handleStatus(res: ServerResponse, viewer: string | null): void {
       // the banner this drives, the install just went quiet, with nothing to
       // say AI had gone or where it went.
       upgradeNeeded: settings.isConfigured() && settings.getEmbedProvider() === 'local' && !ROLES.some(ai.roleEnabled),
-      keywordOnly: !ai.roleEnabled('embed'),
+      // As Ask decides it (routes/ask.ts): no query vector until the library's are the endpoint's.
+      keywordOnly: !ai.roleEnabled('embed') || settings.getEmbedProvider() !== 'remote',
     },
     // Polled every few seconds, so the demo banner's allowance stays current.
     demo: viewer ? demoLimits.leftFor(viewer) : null,

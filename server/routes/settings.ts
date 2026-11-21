@@ -212,6 +212,10 @@ export async function handleSetup(req: IncomingMessage, res: ServerResponse, opt
   }
 
   await settings.save({ configured: true })
+  // Marks an empty library as the endpoint's, or sweeps one that predates
+  // first run. Unmarked, Ask stayed keyword-only until the next boot, which
+  // then re-embedded every note to set the markers it could have set here.
+  reembed.queueOwedReembed()
   // Through the job queue so it can't race in-flight enrichment.
   if (ai.roleEnabled('embed')) enrich.queueJob(() => tagvocab.rebuildFromNotes(store.allNotes()))
   json(res, 200, { ok: true })

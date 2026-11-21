@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import * as ai from '../ai/index.ts'
 import * as store from '../data/notes.ts'
 import * as chats from '../data/chats.ts'
+import * as settings from '../data/settings.ts'
 import * as prompts from '../ai/prompts.ts'
 import type { ServerNote } from '../types.ts'
 import { json, readBody, saveImage } from '../lib/http.ts'
@@ -158,13 +159,17 @@ export async function handleAsk(req: IncomingMessage, res: ServerResponse, viewe
     // (see notes.ts). They miss in opposite directions — cosine loses rare
     // literal tokens, keyword loses every paraphrase — so one strong signal
     // is enough for a note to surface. With the embed role off there is no
-    // query embedding and the fusion degrades to keyword-only.
-    const queryEmbedding = ai.roleEnabled('embed')
-      ? // A question is embedded as a query, not as a document — see
-        // prompts.ts's embedInput. The two are different kinds of text and a
-        // prompt-instructed model encodes them differently.
-        await ai.embedText(queryText, { mode: 'query' })
-      : null
+    // query embedding and the fusion degrades to keyword-only. So too until
+    // the library is marked as the endpoint's: mid-upgrade its vectors are the
+    // removed on-device model's, and Ollama's nomic-embed-text is as wide as
+    // EmbeddingGemma, so cosine ranked noise rather than scoring 0.
+    const queryEmbedding =
+      ai.roleEnabled('embed') && settings.getEmbedProvider() === 'remote'
+        ? // A question is embedded as a query, not as a document — see
+          // prompts.ts's embedInput. The two are different kinds of text and a
+          // prompt-instructed model encodes them differently.
+          await ai.embedText(queryText, { mode: 'query' })
+        : null
     const sources = store.hybridSearch(queryEmbedding, queryText, visible)
     // The cards can render while the prose is still arriving, so the sources
     // go out as soon as retrieval has them rather than with the answer.

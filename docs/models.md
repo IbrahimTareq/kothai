@@ -74,4 +74,4 @@ On Railway, use a hosted endpoint. Railway has no GPUs, and a model on its share
 
 ## Upgrading from on-device models
 
-Earlier versions ran models inside the container. That is gone. An upgraded install keeps every note and opens with a banner. Search is keyword-only until you connect an embeddings endpoint, then Kothai re-embeds your library once in the background. A note the endpoint refuses during that pass loses its old vector and is found by keyword. You can delete `./models`.
+Earlier versions ran models inside the container. That is gone. An upgraded install keeps every note and opens with a banner. Search is keyword-only until you connect an embeddings endpoint and Kothai has re-embedded your library once in the background. If the endpoint drops out partway, the re-embed resumes when it comes back. A note the endpoint refuses during that pass loses its old vector and is found by keyword. You can delete `./models`.

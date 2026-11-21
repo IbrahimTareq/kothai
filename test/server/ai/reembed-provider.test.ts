@@ -15,6 +15,7 @@ import type { NoteRecord } from '../../../server/data/notes.ts'
 import type { SettingsPatch } from '../../../server/data/settings.ts'
 import type { Role } from '../../../server/ai/roles.ts'
 import { RemoteError } from '../../../server/ai/providers/remote-http.ts'
+import { EMBED_RECIPE } from '../../../server/ai/prompts.ts'
 
 let notes: NoteRecord[] = []
 let embedCalls: { text: string; markerNow: string | null }[] = []
@@ -23,6 +24,8 @@ let storedProvider: string | null = null
 let savedPatches: SettingsPatch[] = []
 // What the next embed call throws, by input text; null embeds normally.
 let failWith: (text: string) => Error | null = () => null
+// Tags handed to the registry to snap.
+let snapped: string[] = []
 
 const realStore = await import('../../../server/data/notes.ts')
 const realTags = await import('../../../server/data/tags.ts')
@@ -52,7 +55,10 @@ mock.module('../../../server/data/tags.ts', { namedExports: { ...realTags, build
 mock.module('../../../server/data/tagvocab.ts', {
   namedExports: {
     ...realTagvocab,
-    canonicalize: async (t: string[]) => t,
+    canonicalize: async (t: string[]) => {
+      snapped.push(...t)
+      return t
+    },
     clearAll: async () => 0,
     rebuildFromNotes: async () => {},
   },
@@ -61,7 +67,7 @@ mock.module('../../../server/ai/index.ts', {
   namedExports: {
     roleEnabled: (role: Role) => enabledImpl()[role],
     ...realNormalise,
-    classify: async () => ({ type: 'link', category: 'General', title: 'T', summary: 'S', tags: [] }),
+    classify: async () => ({ type: 'link', category: 'General', title: 'T', summary: 'S', tags: ['pasta'] }),
     // Each call records the marker as it stands mid-sweep, so the test can see
     // whether the new value was written before the vectors it describes exist.
     embedText: async (text: string) => {
@@ -76,7 +82,8 @@ mock.module('../../../server/data/collections.ts', { namedExports: { ...realColl
 mock.module('../../../server/data/settings.ts', {
   namedExports: {
     ...realSettings,
-    getEmbedRecipe: () => 'recipe-current',
+    // Current, so only the provider marker decides (a recovery asks about both).
+    getEmbedRecipe: () => EMBED_RECIPE,
     getEmbedProvider: () => storedProvider,
     save: async (patch: SettingsPatch) => {
       savedPatches.push(patch)
@@ -86,8 +93,21 @@ mock.module('../../../server/data/settings.ts', {
   },
 })
 
+// recovery.ts registers its handler here; each test plays the circuit closing.
+let recover = () => {}
+mock.module('../../../server/ai/providers/remote-singleton.ts', {
+  namedExports: {
+    remoteProvider: {
+      onRecover: (fn: () => void) => {
+        recover = fn
+      },
+    },
+  },
+})
+
 const enrich = await import('../../../server/ai/enrich.ts')
 const reembed = await import('../../../server/ai/reembed.ts')
+await import('../../../server/ai/recovery.ts')
 
 const NOTE: NoteRecord = note({
   id: 'n1',
@@ -253,4 +273,42 @@ test('a note with nothing to embed does not hold the marker back', async () => {
   await reembed.reembedAll('embedding endpoint changed')
   assert.equal(embedCalls.length, 1)
   assert.equal(storedProvider, 'remote')
+})
+
+// A sweep an outage stopped keeps its markers stale, and before this only a
+// reboot or a reconnect retried it: the endpoint coming back re-queued the
+// notes the outage cost, and left the library on its on-device vectors.
+const ENRICHED = { ...NOTE, ai: { classify: true, embed: true } }
+const sweeps = () => savedPatches.filter(p => p.embedProvider === 'remote').length
+
+test('an endpoint coming back re-queues a sweep the markers say is owed, once', async () => {
+  reset([ENRICHED], 'local')
+  recover()
+  recover() // a flapping circuit recovers again before the first sweep has run
+  await drain()
+  assert.equal(embedCalls.length, 1, 'one sweep, not one per recovery')
+  assert.equal(sweeps(), 1)
+  assert.equal(storedProvider, 'remote')
+})
+
+test('with the markers current, a recovery queues no sweep', async () => {
+  reset([ENRICHED], 'remote')
+  recover()
+  await drain()
+  assert.equal(embedCalls.length, 0)
+})
+
+// The tag registry is rebuilt by the same sweep, so until it has run it holds
+// on-device vectors, and a new tag's endpoint vector snapped to noise against
+// them: the same 768 width for exactly the installs sent to Ollama.
+test('a note enriched before the library is the endpoint’s is not snapped to the old registry', async () => {
+  reset([{ ...NOTE, ai: {} }], 'local')
+  snapped = []
+  await enrich.queueEnrich('n1', 'text')
+  assert.equal(notes[0].title, 'T', 'the note was classified')
+  assert.deepEqual(snapped, [])
+
+  reset([{ ...NOTE, ai: {} }], 'remote')
+  await enrich.queueEnrich('n1', 'text')
+  assert.deepEqual(snapped, ['pasta'], 'and is once the sweep has marked the library')
 })

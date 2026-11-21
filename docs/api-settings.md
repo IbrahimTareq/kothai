@@ -6,7 +6,7 @@ Model selection, status, and first-run configuration.
 
 Returns AI state. If `configured: false`, show the first-run model picker.
 
-`ai.keywordOnly` is true when the embedding role is off, so search matches keywords only. `ai.upgradeNeeded` is true on an install upgraded from on-device models that has no endpoint connected yet.
+`ai.keywordOnly` is true when the embedding role is off, or while a library upgraded from on-device models is still being re-embedded, so search matches keywords only. `ai.upgradeNeeded` is true on an install upgraded from on-device models that has no endpoint connected yet.
 
 ## GET /api/settings
 

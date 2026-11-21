@@ -135,6 +135,24 @@ test('with only a language model connected, Ask answers from keywords and sends 
   assert.equal(settings.getEmbedProvider(), 'local', 'nothing has been rebuilt yet')
 })
 
+// The embed role on while the vectors are still on-device: a sweep stopped by
+// an outage, or one still running. Ollama's nomic-embed-text is 768 wide like
+// EmbeddingGemma, so cosine never scored 0 on a width mismatch: it ranked noise.
+test('until the sweep has marked the library remote, Ask is keyword-only even with an embed model', async () => {
+  await ai.applySettings({ embed: 'embed-m' }) // the provider's model, not the stored one: no sweep
+  assert.equal(ai.roleEnabled('embed'), true)
+
+  calls.length = 0
+  const r = await post('/api/ask', { question: 'brown butter pasta' })
+  assert.equal(r.status, 200)
+  const sources = record(await r.json()).sources
+  assert.ok(Array.isArray(sources))
+  assert.equal(record(sources[0]).title, 'Brown butter pasta')
+  assert.ok(!calls.includes('/embeddings'), 'a query vector would be ranked against on-device ones')
+  assert.deepEqual(await status(), { upgradeNeeded: false, keywordOnly: true }, 'and the hint says so')
+  await ai.applySettings({ embed: '' })
+})
+
 test('naming an embedding model rebuilds every vector, and only then marks the library remote', async () => {
   calls.length = 0
   const saved = await post('/api/settings', { remote: { embed: 'embed-m' } })

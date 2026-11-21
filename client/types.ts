@@ -99,7 +99,8 @@ export interface ModelStatus {
   count: number
   demo: DemoAllowance | null
   // upgradeNeeded: on-device vectors, first run done, no role with an
-  // endpoint. keywordOnly: no embedding model, so Ask retrieves by keyword.
+  // endpoint. keywordOnly: no embedding model, or the library's vectors not yet
+  // rebuilt on it, so Ask retrieves by keyword.
   ai: { upgradeNeeded: boolean; keywordOnly: boolean }
 }
 

@@ -14,6 +14,7 @@ import { setAiCredentials, getAiConfig } from '../../../server/config.ts'
 import { readCredentials } from '../../../server/data/credentials.ts'
 import { mockReq, mockRes, record, records } from '../../helpers/http.ts'
 import { provider } from '../../helpers/providers.ts'
+import { EMBED_RECIPE } from '../../../server/ai/prompts.ts'
 
 const fakeReq = (body: unknown) => mockReq({ body: JSON.stringify(body) })
 const dir = () => mkdtempSync(path.join(tmpdir(), 'kothai-setup-'))
@@ -222,6 +223,29 @@ test('connecting a provider then finishing first run is not "already configured"
   )
   assert.equal(done.sent.code, 200, `Save & start was refused: ${JSON.stringify(done.sent.body)}`)
   assert.equal(settings.isConfigured(), true, 'and first run is genuinely over afterwards')
+})
+
+// Ask searches by meaning only once the library is marked as the endpoint's
+// (routes/ask.ts). A fresh library was never marked: boot skips the check with
+// the embed role off, so every new install answered by keyword until a reboot
+// re-embedded the whole library for nothing.
+test('finishing first run with an embedding model marks an empty library as the endpoint’s', async () => {
+  const d = dir()
+  await initProvider({}, { load })
+  await handleSetupEndpoint(
+    fakeReq({
+      endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-m' },
+      models: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small' },
+    }),
+    mockRes().res,
+    { dir: d },
+  )
+  assert.equal(settings.getEmbedProvider(), null)
+  const done = mockRes()
+  await handleSetup(fakeReq({ remote: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small' } }), done.res, { dir: d })
+  assert.equal(done.sent.code, 200)
+  assert.equal(settings.getEmbedProvider(), 'remote')
+  assert.equal(settings.getEmbedRecipe(), EMBED_RECIPE)
 })
 
 // The second step of connecting Claude: it serves no embeddings, so first run

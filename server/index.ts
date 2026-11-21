@@ -51,14 +51,11 @@ shrinkStoredThumbs().catch(e => console.error('[thumb] stored-thumbnail sweep fa
 // Vectors built under an older embedding recipe (different task prefixes, or
 // a different set of note fields) are not comparable with new ones, so a
 // changed recipe re-embeds the library once, in the background, on the same
-// job queue as everything else.
-const reembedding = reembed.queueRecipeReembed()
-// Vectors from the removed on-device model and vectors from an endpoint's
-// model live in different spaces too, so a library still holding the former
-// is invalidated just as thoroughly as by a recipe change. Not when the recipe
-// sweep is already queued: it records both markers, and an unfinished sweep
-// leaves both stale, which queued the whole library twice.
-const providerReembedding = !reembedding && reembed.queueEmbedProviderReembed()
+// job queue as everything else. Vectors from the removed on-device model and
+// vectors from an endpoint's model live in different spaces too, so a library
+// still holding the former is invalidated just as thoroughly. One sweep covers
+// both (see reembed.queueOwedReembed).
+const reembedding = reembed.queueOwedReembed()
 if (settings.isConfigured()) {
   if (!hadTagRegistry && ai.roleEnabled('embed')) {
     withTrigger('boot', () =>
@@ -99,8 +96,7 @@ server.listen(PORT, () => {
       '  Auth: none — anyone who can reach this port has full access. Set KOTHAI_PASSWORD to require a password.\n',
     )
   if (telegramActive) console.log('  Telegram capture: on\n')
-  if (reembedding || providerReembedding)
-    console.log('  Re-embedding the library in the background after an embedding change…\n')
+  if (reembedding) console.log('  Re-embedding the library in the background after an embedding change…\n')
 })
 
 process.on('SIGINT', async () => {

@@ -11,6 +11,7 @@ import * as store from '../data/notes.ts'
 import type { NoteRecord } from '../data/notes.ts'
 import * as tags from '../data/tags.ts'
 import * as tagvocab from '../data/tagvocab.ts'
+import * as settings from '../data/settings.ts'
 import * as inference from './index.ts'
 import { fetchLinkMeta, isYouTubeVideo, fetchYouTubeCaptions } from '../links/meta.ts'
 import { isInstagramPost } from '../links/instagram.ts'
@@ -47,6 +48,10 @@ export {
   _igQueueState,
   queueJob,
 }
+
+// Until the library is the endpoint's (reembed.ts), the registry holds on-device vectors:
+// same width as Ollama's nomic-embed-text, so a new tag snapped to noise against them.
+const snap = (t: string[]) => (settings.getEmbedProvider() === 'remote' ? tagvocab.canonicalize(t) : t)
 
 // `url` is the note's saved content — every note is a link.
 export function queueEnrich(noteId: string, url: string) {
@@ -262,7 +267,7 @@ async function reclassifyWithCaption(id: string, { vision = true } = {}) {
         knownTags,
         candidateTags,
       })
-      meta.tags = await tagvocab.canonicalize(meta.tags)
+      meta.tags = await snap(meta.tags)
       meta.tags = tags.withAccountTag(meta.tags, existing.account)
       Object.assign(patch, meta)
       ai.classify = true
@@ -589,7 +594,7 @@ async function enrichNote(id: string, url: string) {
         candidateTags: isIgUrl ? tags.extractHashtags(linkMeta?.siteDesc) : [],
       })
       // Snap LLM-generated tags to existing semantic equivalents (forward-only).
-      meta.tags = await tagvocab.canonicalize(meta.tags)
+      meta.tags = await snap(meta.tags)
       // Deterministic — never routed through the LLM/junk-filter/canonicalize,
       // since a handle is an identity, not a concept those steps should judge.
       // patch.account first: the link metadata may have just taught us the

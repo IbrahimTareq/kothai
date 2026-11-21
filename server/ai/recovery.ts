@@ -1,4 +1,5 @@
-// Re-runs the model pass an endpoint outage cost, once the endpoint is back.
+// Re-runs the model pass an endpoint outage cost, once the endpoint is back:
+// each note's own pass, and a library re-embed the outage stopped.
 // Imported for its side effect by server/index.ts; it exports nothing.
 //
 // A note enriched while the endpoint was down (out of credits, timing out)
@@ -19,6 +20,7 @@ import * as store from '../data/notes.ts'
 import * as ai from './index.ts'
 import { stepsFor } from './backlog.ts'
 import { queueEnrich } from './enrich.ts'
+import { queueOwedReembed } from './reembed.ts'
 import { withTrigger } from './usage.ts'
 import { remoteProvider } from './providers/remote-singleton.ts'
 
@@ -36,4 +38,8 @@ remoteProvider.onRecover(() => {
     withTrigger('recovery', () => queueEnrich(n.id, n.content)).finally(() => queued.delete(n.id))
   }
   if (todo.length) console.log(`[enrich] inference endpoint recovered — re-queued ${todo.length} notes`)
+  // A re-embed sweep the outage stopped: its markers stayed stale, and only a
+  // reboot or a reconnect retried it, so an upgrading library sat on its
+  // on-device vectors after the endpoint was back. Queued at most once.
+  if (queueOwedReembed()) console.log('[enrich] inference endpoint recovered — resuming the library re-embed')
 })
