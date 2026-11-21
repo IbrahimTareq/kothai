@@ -23,8 +23,12 @@ Returns the current model selection and endpoints.
       type: 'object',
     },
     envModels: {
-      description: 'Roles whose model name is pinned by environment variable. Flags only, never the names.',
-      type: 'Partial<Record<role, true>>',
+      description: 'The model name each role has pinned by environment variable. Settings shows these read-only.',
+      type: 'Partial<Record<role, string>>',
+    },
+    source: {
+      description: "'env' when any KOTHAI_AI_*_BASE_URL is set, 'file' for an endpoint connected in the app, 'none' otherwise. In env mode every endpoint route returns 409.",
+      type: "'env' | 'file' | 'none'",
     },
     catalogue: {
       description: 'The provider tiles offered in the picker.',
@@ -45,7 +49,7 @@ Connects an endpoint. Pass `role` (`embed` or `vision`) to set that role's own e
 
 Forgets a stored endpoint. With `role`, forgets only that role's, and it falls back to the shared one.
 
-Both endpoint routes return `409` with `{ error, code: 'env_managed' }` when environment variables manage the endpoint.
+Both endpoint routes return `409` with `{ error, code: 'env_managed' }` when environment variables manage the endpoint. So do `POST /api/setup/endpoint` and an `endpoint` field on `POST /api/setup`.
 
 ## POST /api/setup
 

@@ -129,3 +129,20 @@ test('an embedding role with its own endpoint beside a chat-only shared one keep
   )
   assert.deepEqual(c.roles.embed, embed)
 })
+
+// KOTHAI_AI_BASE_URL=https://api.anthropic.com/v1 handed embeddings Anthropic's
+// URL, which has no /embeddings: with a model named every embed 404'd, the
+// breaker flapped, and every boot's sweep stopped at the first note. An env URL
+// names no catalogue entry, so it is matched on the entry's URL instead.
+test('in env mode, embeddings do not borrow a shared URL that is a chat-only catalogue entry', () => {
+  const claude = resolveAiConfig({ KOTHAI_AI_BASE_URL: 'https://api.anthropic.com/v1/', KOTHAI_AI_API_KEY: 'k' }, null)
+  assert.equal(claude.roles.embed.baseUrl, null, 'no endpoint, so keyword search, not 404s')
+  assert.equal(claude.roles.vision.baseUrl, 'https://api.anthropic.com/v1', 'images still borrow it')
+  const own = resolveAiConfig(
+    { KOTHAI_AI_BASE_URL: 'https://api.anthropic.com/v1', KOTHAI_AI_EMBED_BASE_URL: 'https://api.openai.com/v1' },
+    null,
+  )
+  assert.equal(own.roles.embed.baseUrl, 'https://api.openai.com/v1')
+  const openai = resolveAiConfig({ KOTHAI_AI_BASE_URL: 'https://api.openai.com/v1' }, null)
+  assert.equal(openai.roles.embed.baseUrl, 'https://api.openai.com/v1')
+})

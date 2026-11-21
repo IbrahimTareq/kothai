@@ -8,7 +8,13 @@ import { mkdtempSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { _reset, initProvider } from '../../../server/ai/index.ts'
-import { handleSaveEndpoint, handleClearEndpoint, handleGetSettings } from '../../../server/routes/settings.ts'
+import {
+  handleSaveEndpoint,
+  handleClearEndpoint,
+  handleGetSettings,
+  handleSetupEndpoint,
+  handleSetup,
+} from '../../../server/routes/settings.ts'
 import { _resetDb } from '../../../server/data/db.ts'
 import * as settings from '../../../server/data/settings.ts'
 import * as store from '../../../server/data/notes.ts'
@@ -229,7 +235,10 @@ test('GET /api/settings reports each role, and which ones borrow the shared endp
   assert.deepEqual(endpoints.embed, { configured: true, host: '127.0.0.1', inherited: false, providerId: 'openai' })
   assert.equal(record(endpoints.llm).inherited, false)
   assert.deepEqual(body.endpoint, endpoints.llm, 'the old field is the shared entry')
-  assert.deepEqual(body.envModels, { embed: true }, 'the model name itself stays out of the response')
+  // The name, so Settings shows the model in use rather than the stored one
+  // env overrides. A model id is not a credential.
+  assert.deepEqual(body.envModels, { embed: 'pinned-embed' })
+  assert.equal(body.source, 'file')
 })
 
 // The vectors in the library belong to one model at one endpoint. Pointing the
@@ -367,4 +376,32 @@ test('switching the shared endpoint to Claude turns embeddings off rather than s
     inherited: true,
     providerId: null,
   })
+})
+
+// With only KOTHAI_AI_EMBED_BASE_URL set, first run offered the wizard, which
+// wrote a credential file env mode ignores and answered 200.
+test('in env mode first run cannot write an endpoint either, and Settings is told why', async t => {
+  const d = dir()
+  await initProvider({}, { load })
+  process.env.KOTHAI_AI_EMBED_BASE_URL = B
+  t.after(() => delete process.env.KOTHAI_AI_EMBED_BASE_URL)
+
+  const applied = mockRes()
+  await handleSetupEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: A, apiKey: 'k' } }), applied.res, {
+    dir: d,
+    load,
+  })
+  assert.equal(applied.sent.code, 409)
+  assert.equal(applied.sent.json().code, 'env_managed')
+  const setup = mockRes()
+  await handleSetup(fakeReq({ endpoint: { providerId: 'openai', baseUrl: A, apiKey: 'k' } }), setup.res, {
+    dir: d,
+    load,
+  })
+  assert.equal(setup.sent.code, 409, 'nor by the endpoint field of the final setup post')
+  assert.equal(existsSync(path.join(d, 'credentials.json')), false)
+
+  const got = mockRes()
+  await handleGetSettings(got.res)
+  assert.equal(got.sent.json().source, 'env')
 })

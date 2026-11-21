@@ -151,7 +151,8 @@ export function queueRecipeReembed() {
 // its turn: each would have queued the whole library again behind it.
 let owed: Promise<unknown> | null = null
 function queueSweep(reason: string) {
-  owed ??= queueJob(() => reembedAll(reason)).finally(() => {
+  if (owed) return
+  owed = queueJob(() => reembedAll(reason)).finally(() => {
     owed = null
   })
 }

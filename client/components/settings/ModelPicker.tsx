@@ -41,7 +41,8 @@ export function RemoteModelField({
   busy: boolean
   // KOTHAI_AI_<ROLE>_MODEL wins over a saved name (remote-singleton.ts's
   // withEnvModels), so an editable field would take a name nothing uses.
-  envSet?: boolean
+  // The env model's name, or absent.
+  envSet?: string
   onCommit: (v: string) => void
 }) {
   const [draft, setDraft] = useState(value)

@@ -28,5 +28,8 @@ test('on a phone the notice is one row, so the dismiss button does not stack und
 
 test('the link opens the Connection panel’s picker, not just Settings', () => {
   assert.match(src('components/Demo.tsx'), /replaceState\(null, '', '\/settings#connect'\)/)
-  assert.match(src('components/settings/ConnectionPanel.tsx'), /location\.hash === '#connect' \? 'shared' : null/)
+  assert.match(
+    src('components/settings/ConnectionPanel.tsx'),
+    /location\.hash === '#connect' && cfg\.source !== 'env' \? 'shared' : null/,
+  )
 })

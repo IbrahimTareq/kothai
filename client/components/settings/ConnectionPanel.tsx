@@ -38,8 +38,11 @@ export function ConnectionPanel({
 }) {
   // Collapsed until asked for, because most people set this once and never
   // look at it again. The upgrade banner's link asks for it with #connect,
-  // which is dropped once read so a later visit opens collapsed.
-  const [target, setTarget] = useState<Target | null>(() => (location.hash === '#connect' ? 'shared' : null))
+  // which is dropped once read so a later visit opens collapsed. Not in env
+  // mode, where the picker could only save into a 409.
+  const [target, setTarget] = useState<Target | null>(() =>
+    location.hash === '#connect' && cfg.source !== 'env' ? 'shared' : null,
+  )
   useEffect(() => {
     if (location.hash === '#connect') history.replaceState(null, '', location.pathname)
   }, [])
@@ -109,6 +112,9 @@ export function ConnectionPanel({
   const disconnect = () => commit(() => API.clearEndpoint(), 'Could not disconnect.')
 
   const host = cfg.endpoint.configured ? cfg.endpoint.host : ''
+  // Set by KOTHAI_AI_*_BASE_URL: every endpoint route answers 409 env_managed,
+  // so Change, Per role and Disconnect were buttons that could only fail.
+  const env = cfg.source === 'env'
   const ownRoles = (['embed', 'vision'] as const).filter(r => !cfg.endpoints[r].inherited)
   // Claude for everything else: "use it for embeddings" would turn them off.
   const chatOnly = cfg.catalogue.find(e => e.id === cfg.endpoint.providerId)?.servesEmbeddings === false
@@ -142,21 +148,34 @@ export function ConnectionPanel({
               mismatches this surface had. A hostname is machine text and keeps
               the mono face; the sentence is prose and takes the title role. */}
           <span className={`conn-where${host ? ' mono' : ''}`}>
-            {cfg.endpoint.configured ? host || 'a remote endpoint' : 'No service connected'}
+            {cfg.endpoint.configured
+              ? host || 'a remote endpoint'
+              : env
+                ? 'No language model endpoint'
+                : 'No service connected'}
           </span>
           <span className="conn-sub">
-            {cfg.endpoint.configured
-              ? 'Your key is stored on this machine only, and never appears in a backup or an export.'
-              : 'AI is off. Connect a service, or an Ollama on your own hardware, to have what you save read and filed.'}
+            {env
+              ? `Set by KOTHAI_AI_* environment variables.${cfg.endpoints.embed.inherited ? ' To use a separate embeddings endpoint, set KOTHAI_AI_EMBED_BASE_URL.' : ''}`
+              : cfg.endpoint.configured
+                ? 'Your key is stored on this machine only, and never appears in a backup or an export.'
+                : 'AI is off. Connect a service, or an Ollama on your own hardware, to have what you save read and filed.'}
           </span>
-          {ownRoles.map(role => (
-            <span key={role} className="conn-sub">
-              {PER_ROLE[role].what} use <span className="mono">{cfg.endpoints[role].host || 'their own endpoint'}</span>
-              .
-            </span>
-          ))}
+          {/* Every role in env mode, since nothing here can be opened to look. */}
+          {(env ? (['embed', 'vision'] as const) : ownRoles).map(role =>
+            cfg.endpoints[role].configured || !env ? (
+              <span key={role} className="conn-sub">
+                {PER_ROLE[role].what} use{' '}
+                <span className="mono">{cfg.endpoints[role].host || 'their own endpoint'}</span>.
+              </span>
+            ) : (
+              <span key={role} className="conn-sub">
+                {PER_ROLE[role].what} are off.
+              </span>
+            ),
+          )}
         </div>
-        {!target && !leaving && (
+        {!env && !target && !leaving && (
           <div className="conn-actions">
             <Button
               onClick={() => {

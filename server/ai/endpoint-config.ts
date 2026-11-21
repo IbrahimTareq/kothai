@@ -1,4 +1,4 @@
-import { findEndpoint } from './endpoints.ts'
+import { ENDPOINTS, findEndpoint } from './endpoints.ts'
 import { ROLES, type Role } from './roles.ts'
 
 // ---- inference endpoint resolution ----------------------------------------
@@ -47,10 +47,18 @@ export function resolveAiConfig(env: NodeJS.ProcessEnv = process.env, creds: AiC
     const pair = (url: string | undefined, key: string | undefined): RoleEndpoint =>
       url ? { baseUrl: strip(url), apiKey: key || null, providerId: null } : NO_ENDPOINT
     const llm = pair(env.KOTHAI_AI_BASE_URL, env.KOTHAI_AI_API_KEY)
+    // The chat-only rule below, matched on the URL since env names no entry:
+    // KOTHAI_AI_BASE_URL=https://api.anthropic.com/v1 gave embeddings Claude's
+    // URL, every embed 404'd, and each boot's sweep stopped at the first note.
+    const chatOnly = ENDPOINTS.some(e => !e.servesEmbeddings && e.baseUrl === llm.baseUrl)
     roles = {
       llm,
       vision: env.KOTHAI_AI_VISION_BASE_URL ? pair(env.KOTHAI_AI_VISION_BASE_URL, env.KOTHAI_AI_VISION_API_KEY) : llm,
-      embed: env.KOTHAI_AI_EMBED_BASE_URL ? pair(env.KOTHAI_AI_EMBED_BASE_URL, env.KOTHAI_AI_EMBED_API_KEY) : llm,
+      embed: env.KOTHAI_AI_EMBED_BASE_URL
+        ? pair(env.KOTHAI_AI_EMBED_BASE_URL, env.KOTHAI_AI_EMBED_API_KEY)
+        : chatOnly
+          ? NO_ENDPOINT
+          : llm,
     }
     source = 'env'
   } else {
@@ -62,8 +70,8 @@ export function resolveAiConfig(env: NodeJS.ProcessEnv = process.env, creds: AiC
     // Borrowing an endpoint that serves no embeddings (Claude) is no endpoint
     // at all for that role: embeddings and every re-embed went to Claude's
     // URL and failed on every note. Decided here, so boot, roleEnabled and the
-    // settings route's re-embed check cannot disagree. Env names no catalogue
-    // entry (providerId is always null there), so this is file mode only.
+    // settings route's re-embed check cannot disagree. Env mode applies the
+    // same rule by URL, above.
     const chatOnly = findEndpoint(shared.providerId)?.servesEmbeddings === false
     const roleEntry = (role: 'vision' | 'embed'): RoleEndpoint => {
       const own = entry(creds?.roles?.[role])

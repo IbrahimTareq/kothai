@@ -83,8 +83,11 @@ export async function handleGetSettings(res: ServerResponse): Promise<void> {
     presets: await ai.listModels(),
     endpoint: endpoints.llm,
     endpoints,
-    // Which roles' model names env pins, so Settings shows them read-only. Flags, not the names.
-    envModels: Object.fromEntries(Object.keys(getAiConfig().envModels).map(r => [r, true])),
+    // 'env' draws the Connection panel read-only: every endpoint route refuses there.
+    source: getAiConfig().source,
+    // The model names env pins, so Settings shows the one in use, read-only.
+    // Flags only, it showed the stored name env overrides. Not a credential.
+    envModels: getAiConfig().envModels,
     // Static and credential-free, so the wizard needs no second request.
     catalogue: ENDPOINTS,
     // What the installer already asked. An id only; null when nobody asked.
@@ -165,6 +168,8 @@ export async function handleSetupEndpoint(
   if (firstRunComplete(settings.isConfigured(), settings.isPreGate())) {
     return json(res, 409, { error: 'already configured' })
   }
+  // With only KOTHAI_AI_EMBED_BASE_URL set, the wizard wrote a file env mode ignores and got a 200.
+  if (getAiConfig().source === 'env') return json(res, 409, ENV_MANAGED)
   const body = await readBody(req)
   const fields = isRecord(body) ? body : {}
   if (!fields.endpoint) return json(res, 400, { error: 'an endpoint is required' })
@@ -197,6 +202,7 @@ export async function handleSetup(req: IncomingMessage, res: ServerResponse, opt
   // Before _validateModels: a model id is checked against the catalogue of the
   // endpoint that serves it, and connecting one is exactly what changes it.
   if (fields.endpoint) {
+    if (getAiConfig().source === 'env') return json(res, 409, ENV_MANAGED)
     const { error: endpointError } = await applyEndpointFromSetup(fields.endpoint, opts)
     if (endpointError) return json(res, 400, { error: endpointError })
   }

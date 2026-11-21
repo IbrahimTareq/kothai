@@ -171,7 +171,7 @@ export function SettingsView({
           {cfg.endpoint.configured && (
             <SettingsGroup
               label="Model cores"
-              sub={`Inference runs on a remote endpoint${cfg.endpoint.host ? ` (${cfg.endpoint.host})` : ''}. The endpoint and its key were set during setup and are stored on this machine only; KOTHAI_AI_BASE_URL and KOTHAI_AI_API_KEY override them.`}
+              sub={`Inference runs on a remote endpoint${cfg.endpoint.host ? ` (${cfg.endpoint.host})` : ''}. ${cfg.source === 'env' ? 'It is set by KOTHAI_AI_* environment variables.' : 'The endpoint and its key are stored on this machine only; KOTHAI_AI_* environment variables override them.'}`}
             >
               {roles.map(role => (
                 <div key={role} className="role-acc open">
@@ -180,7 +180,7 @@ export function SettingsView({
                       <span className="role-acc-title">{ROLE_META[role].title}</span>
                       <span className="role-acc-sub">{ROLE_META[role].sub}</span>
                     </span>
-                    <span className="role-acc-current">{cfg.remote[role] || '—'}</span>
+                    <span className="role-acc-current">{cfg.envModels[role] || cfg.remote[role] || '—'}</span>
                   </div>
                   <div className="model-list">
                     <RemoteModelField

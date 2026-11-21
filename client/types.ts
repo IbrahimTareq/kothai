@@ -191,8 +191,10 @@ export interface SettingsResponse {
   endpoint: EndpointInfo
   // Per role; `endpoint` is the llm entry, which is also the shared one.
   endpoints: { llm: EndpointInfo; embed: EndpointInfo; vision: EndpointInfo }
-  // Roles whose model name an env var sets. Shown read-only: a saved name would never be used.
-  envModels: Partial<Record<'llm' | 'embed' | 'vision', true>>
+  // The model names env vars set. Shown read-only: a saved name would never be used.
+  envModels: Partial<Record<'llm' | 'embed' | 'vision', string>>
+  // 'env' when KOTHAI_AI_*_BASE_URL is set: the endpoint routes all refuse then.
+  source: 'env' | 'file' | 'none'
   // The known services the wizard and Settings offer as tiles.
   catalogue: EndpointOption[]
   // Which provider the installer already asked about — an id from `catalogue`,

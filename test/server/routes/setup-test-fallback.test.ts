@@ -24,8 +24,9 @@ const tile = (): Endpoint => ({
   note: '',
   defaults: { llm: 'a', embed: 'b', vision: 'c' },
 })
+const real = await import('../../../server/ai/endpoints.ts')
 mock.module('../../../server/ai/endpoints.ts', {
-  namedExports: { findEndpoint: (id: string | null) => (id === 'ollama-local' ? tile() : null) },
+  namedExports: { ...real, findEndpoint: (id: string | null) => (id === 'ollama-local' ? tile() : null) },
 })
 const { handleSetupTest } = await import('../../../server/routes/setup-test.ts')
 

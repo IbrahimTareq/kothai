@@ -15,7 +15,8 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
   const [cfg, setCfg] = useState<SettingsResponse | null>(null)
   const [remoteSel, setRemoteSel] = useState<Record<Role, string> | null>(null)
   const [err, setErr] = useState<string | null>(null)
-  // The wizard runs only when this install has no endpoint yet.
+  // The wizard runs only when this install has no endpoint yet, and never when
+  // env vars manage it: the server refuses every endpoint write then.
   const [wizardDone, setWizardDone] = useState(false)
 
   useEffect(() => {
@@ -66,7 +67,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
 
   // What the installer already asked, so the wizard never asks it twice.
   const preAnswered = cfg?.setup?.providerId || null
-  const needsWizard = Boolean(cfg) && !cfg!.endpoint.configured && !wizardDone
+  const needsWizard = Boolean(cfg) && cfg!.source !== 'env' && !cfg!.endpoint.configured && !wizardDone
   if (needsWizard) {
     return (
       <SetupWizard
