@@ -1,8 +1,8 @@
 **/node_modules
 dist
 data
+# Old installs kept downloaded weights here; keeps them out of the build context.
 models
-qvac.config.json
 .git
 .claude
 .DS_Store

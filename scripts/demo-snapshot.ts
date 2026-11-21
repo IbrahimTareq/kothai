@@ -38,7 +38,7 @@ const expected = library.split('\n').filter(l => l.trim() && !l.trim().startsWit
 const data = mkdtempSync(path.join(os.tmpdir(), 'kothai-demo-snapshot-'))
 
 const server = spawn(process.execPath, [path.join(ROOT, 'server', 'index.ts')], {
-  env: { ...process.env, KOTHAI_DEMO: '1', KOTHAI_AI_PROVIDER: 'remote', KOTHAI_DATA_DIR: data, PORT: String(PORT) },
+  env: { ...process.env, KOTHAI_DEMO: '1', KOTHAI_DATA_DIR: data, PORT: String(PORT) },
   stdio: 'inherit',
 })
 

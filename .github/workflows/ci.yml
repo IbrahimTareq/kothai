@@ -38,8 +38,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
-      # @qvac/sdk ships large native prebuilds, so this is the slow step —
-      # the pnpm store cache above keeps it to roughly a minute on repeat runs.
+      # The pnpm store cache above keeps this to roughly a minute on repeat runs.
       - name: Install
         run: pnpm install --frozen-lockfile
 
@@ -78,10 +77,6 @@ jobs:
       # step, so nothing else would notice a .js file reappearing under server/.
       # It would simply run, unchecked by tsc, until it broke something.
       #
-      # docker/nmtcpp-binding-stub.js is the one permanent exception: it is
-      # copied over a third-party CommonJS native binding inside node_modules
-      # and is consumed by @qvac/translation-nmtcpp, not by this repo.
-      #
       # test/ was out of scope while 50 test files were still .js: the hand-rolled
       # mockRes()/fakeReq() literals, server.address() nullability and res.json()
       # returning unknown each wanted a cast to typecheck, which was a worse
@@ -90,17 +85,16 @@ jobs:
       # with them — so the exclusion is closed and test/ is now in scope. It is
       # the half of the codebase most likely to regrow a .js file, since a test
       # runs fine as one and no build step objects.
-      - name: No JavaScript outside the binding stub
+      - name: No JavaScript outside the TypeScript tree
         run: |
           found=$(git ls-files server scripts docker test \
-                  | grep -E '\.(js|mjs|cjs)$' \
-                  | grep -v '^docker/nmtcpp-binding-stub\.js$' || true)
+                  | grep -E '\.(js|mjs|cjs)$' || true)
           if [ -n "$found" ]; then
             echo "::error::JavaScript found where TypeScript is required:"
             echo "$found"
             exit 1
           fi
-          echo "✅ no JavaScript outside docker/nmtcpp-binding-stub.js"
+          echo "✅ no JavaScript in server, scripts, docker or test"
 
       # Build BEFORE the tests. server/http.ts serves static assets out of
       # ./dist, and the auth-gate tests drive a real listening server to check

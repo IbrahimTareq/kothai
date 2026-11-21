@@ -3,11 +3,11 @@
 #
 # Runs the container, waits until it actually serves, opens the browser.
 #
-# Asks two questions, and only two: where the AI should run, and which service
-# if it is a hosted one. Those decide which image to pull, which is the one
-# choice that cannot be deferred to a screen in the app. Everything else —
-# the endpoint URL, the API key, the model names — is collected in the browser,
-# where a pasted key does not end up in your shell history.
+# Asks at most one question: which hosted service, if any, so the first-run
+# screen can open on it. There is one image for every install, so nothing asked
+# here changes what gets pulled. Everything else — the endpoint URL, the API
+# key, the model names — is collected in the browser, where a pasted key does
+# not end up in your shell history.
 #
 # The questions are read from /dev/tty, not stdin: the script's own stdin is
 # the script when it arrives through a pipe, but the terminal is still there.
@@ -27,7 +27,6 @@ TAG=latest
 NAME=kothai
 PORT=5173
 DIR=$(pwd)
-LITE=0
 LOCAL=0
 REPLACE=0
 PROVIDER=
@@ -44,11 +43,10 @@ usage() {
   Kothai installer
 
     --port N          host port to serve on (default 5173)
-    --dir PATH        where data and models live (default: current directory)
+    --dir PATH        where your data lives (default: current directory)
     --name NAME       container name (default kothai)
-    --lite            475 MB image, no on-device models
-    --local           full image, models on this machine (skips the questions)
-    --endpoint URL    OpenAI-compatible endpoint for language and vision
+    --lite            accepted and ignored: there is one image now
+    --endpoint URL    OpenAI-compatible endpoint (Ollama, OpenAI, OpenRouter...)
     --key KEY         API key for that endpoint, if it needs one
     --password VALUE  require a password before anything is served
     --replace         remove an existing container of the same name first
@@ -56,10 +54,9 @@ usage() {
     --tag TAG         image tag (default latest)
     -h, --help        this
 
-  Passing any of --lite, --local or --endpoint answers the questions up front,
-  so nothing is asked. With --endpoint on the full image, embedding stays on
-  your machine and only the language and vision roles go out — most hosted
-  endpoints serve no embeddings route, and semantic search needs one.
+  Passing --endpoint answers the question up front, so nothing is asked.
+  Running models on this machine means Ollama: install it and pick it during
+  setup in the browser.
 USAGE
   exit 0
 }
@@ -73,7 +70,7 @@ while [ $# -gt 0 ]; do
     --endpoint) ENDPOINT=${2:?--endpoint needs a value}; shift 2 ;;
     --key) APIKEY=${2:?--key needs a value}; shift 2 ;;
     --password) PASSWORD=${2:?--password needs a value}; shift 2 ;;
-    --lite) LITE=1; shift ;;
+    --lite) shift ;;
     --local) LOCAL=1; shift ;;
     --replace) REPLACE=1; shift ;;
     --no-shim) SHIM=0; shift ;;
@@ -87,8 +84,7 @@ case $PORT in ''|*[!0-9]*) die "--port must be a number, got: $PORT" ;; esac
 case $NAME in
   ''|*[!a-zA-Z0-9_.-]*) die "--name must be letters, digits, _ . or -, got: $NAME" ;;
 esac
-[ "$LITE" = 1 ] && [ "$LOCAL" = 1 ] && die "--lite and --local are opposites. Pick one."
-[ "$LITE" = 1 ] && TAG=lite
+[ "$LOCAL" = 1 ] && die "On-device models were removed in v2. Install Ollama and pick it during setup: https://getkothai.com/docs/how-it-works/models"
 
 # ---- the banner -----------------------------------------------------------
 # Embedded rather than fetched: this script is the entire download, and a second
@@ -114,15 +110,14 @@ ART
 
 banner
 
-# ---- the two questions ----------------------------------------------------
+# ---- the question ---------------------------------------------------------
 # Read from /dev/tty rather than stdin, because stdin is the script itself when
 # this arrives through a pipe. Anything that makes asking impossible — no
 # terminal, or a flag that already answers — falls through silently and leaves
 # the historical behaviour exactly as it was.
 #
-# Only the IMAGE is decided here. The endpoint URL and the API key are not
-# asked for on purpose: a key typed on a command line lands in shell history,
-# and the browser is two seconds away.
+# The endpoint URL and the API key are not asked for on purpose: a key typed on
+# a command line lands in shell history, and the browser is two seconds away.
 ask() {
   printf '%s' "$1" > /dev/tty
   read -r REPLY < /dev/tty || REPLY=
@@ -132,8 +127,6 @@ ask() {
 choose_setup() {
   # Already answered by a flag.
   [ -n "$ENDPOINT" ] && return 0
-  [ "$LITE" = 1 ] && return 0
-  [ "$LOCAL" = 1 ] && { PROVIDER=local; return 0; }
   # Nowhere to ask. Not an error: this is CI, a Dockerfile, or a NAS UI.
   #
   # Tested by actually OPENING it, in a subshell so a failure cannot take this
@@ -142,39 +135,19 @@ choose_setup() {
   # test passes and the first prompt then dies on a redirect.
   ( : < /dev/tty ) 2>/dev/null || return 0
 
-  printf '\n  Search in Kothai needs AI. Where should it run?\n\n' > /dev/tty
-  printf '    1) A cloud service like OpenAI — nothing to download, needs an API key\n' > /dev/tty
-  printf '    2) On this machine — private, no key, no bills but expect about ~3 GB of models\n\n' > /dev/tty
-  where=$(ask '  > ')
-
-  # Anything unrecognised takes the on-machine path: it is what this installer
-  # did before the question existed, and it needs nothing from the user.
-  case $where in
-    1) ;;
-    *) PROVIDER=local; return 0 ;;
-  esac
-
-  printf '\n  Which one?\n\n' > /dev/tty
+  printf '\n  Search in Kothai needs AI. Which service will you use?\n\n' > /dev/tty
   printf '    1) OpenAI\n' > /dev/tty
-  printf '    2) OpenRouter — many models behind one key\n\n' > /dev/tty
+  printf '    2) OpenRouter — many models behind one key\n' > /dev/tty
+  printf '    3) Something else, or Ollama on this machine — set it up in the browser\n\n' > /dev/tty
   which=$(ask '  > ')
 
-  # Both offered services serve embeddings, so both run on the lite image and
-  # nothing downloads. That was not always true — the menu used to carry
-  # chat-only services, which cannot do semantic search and so needed the full
-  # image to keep an embedding model here. Offering only endpoints that can do
-  # the whole job is what collapsed that branch.
-  #
-  # An unrecognised answer still takes the on-machine path rather than guessing
-  # a provider: it needs nothing from the user and always works. Anything else
-  # is reachable with --endpoint.
+  # Anything unrecognised leaves the provider unset, so the browser asks. There
+  # is no on-machine default to fall back to any more: Ollama is an endpoint
+  # like any other, and is picked there.
   case $which in
     1) PROVIDER=openai ;;
     2) PROVIDER=openrouter ;;
-    *) PROVIDER=local; return 0 ;;
   esac
-  LITE=1
-  TAG=lite
   return 0
 }
 
@@ -190,11 +163,9 @@ if docker ps -a --format '{{.Names}}' | grep -qx "$NAME"; then
 fi
 
 mkdir -p "$DIR/data" || die "Cannot write to $DIR"
-[ "$LITE" = 1 ] || mkdir -p "$DIR/models"
 
 set -- run -d --name "$NAME" --restart unless-stopped -p "$PORT:5173" -v "$DIR/data:/app/data"
-[ "$LITE" = 1 ] || set -- "$@" -v "$DIR/models:/app/models"
-[ -z "$ENDPOINT" ] || set -- "$@" -e KOTHAI_AI_PROVIDER=remote -e "KOTHAI_AI_BASE_URL=$ENDPOINT"
+[ -z "$ENDPOINT" ] || set -- "$@" -e "KOTHAI_AI_BASE_URL=$ENDPOINT"
 [ -z "$APIKEY" ] || set -- "$@" -e "KOTHAI_AI_API_KEY=$APIKEY"
 [ -z "$PASSWORD" ] || set -- "$@" -e "KOTHAI_PASSWORD=$PASSWORD"
 # An id, never a credential: it only tells the first-run screen which questions
@@ -226,8 +197,8 @@ exists() { docker ps -a --format '{{.Names}}' | grep -qx "$NAME"; }
 running() { [ "$(docker inspect -f '{{.State.Running}}' "$NAME" 2>/dev/null || echo false)" = true ]; }
 port() { docker inspect -f '{{(index (index .NetworkSettings.Ports "5173/tcp") 0).HostPort}}' "$NAME" 2>/dev/null || echo 5173; }
 # Matched on destination, never on position: Docker lists the mounts in its own
-# order, and it puts models first — so taking the first one calls the weights
-# directory your data.
+# order, and containers from before v2 also carry a models mount — taking the
+# first one calls the weights directory your data.
 datadir() { docker inspect -f '{{range .Mounts}}{{if eq .Destination "/app/data"}}{{.Source}}{{end}}{{end}}' "$NAME" 2>/dev/null; }
 
 wait_up() {
@@ -367,7 +338,7 @@ while [ "$i" -lt 60 ]; do
     say "Ready — http://localhost:$PORT"
     [ -z "$PASSWORD" ] || say "Password: the one you passed to --password."
     case $PROVIDER in
-      ''|local) say "Open it to choose your models." ;;
+      '') say "Open it to choose where the AI runs." ;;
       *) say "Open it to paste your API key — that is the last step." ;;
     esac
     install_shim || true

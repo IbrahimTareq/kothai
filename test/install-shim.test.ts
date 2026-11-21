@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
-import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { execFileSync, spawnSync } from 'node:child_process'
+import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -30,7 +30,7 @@ const mounts = [
   { Source: '/Users/me/My Stuff/models', Destination: '/app/models' },
   { Source: '/Users/me/My Stuff/data', Destination: '/app/data' },
 ]
-const env = ['KOTHAI_PASSWORD=two words here', 'KOTHAI_SETUP_PROVIDER=local', 'PATH=/usr/bin']
+const env = ['KOTHAI_PASSWORD=two words here', 'KOTHAI_SETUP_PROVIDER=openai', 'PATH=/usr/bin']
 const range = (t, items) => {
   const b = t.match(/\\{\\{range [^}]+\\}\\}([\\s\\S]*)\\{\\{end\\}\\}$/)[1]
   return items.map(i => b
@@ -70,6 +70,74 @@ test('kothai update carries mounts and env through intact, spaces and all', () =
 
   const pairs = (flag: string) => run.flatMap((v, i) => (v === flag ? [run[i + 1]] : []))
   assert.deepEqual(pairs('-v'), ['/Users/me/My Stuff/models:/app/models', '/Users/me/My Stuff/data:/app/data'])
-  assert.deepEqual(pairs('-e'), ['KOTHAI_PASSWORD=two words here', 'KOTHAI_SETUP_PROVIDER=local'])
+  assert.deepEqual(pairs('-e'), ['KOTHAI_PASSWORD=two words here', 'KOTHAI_SETUP_PROVIDER=openai'])
   assert.equal(run.at(-1), 'ghcr.io/ibrahimtareq/kothai:latest')
+})
+
+// The installer used to offer an on-device models option and pass
+// KOTHAI_SETUP_PROVIDER=local for it. On-device models are gone, so a fresh
+// install must never claim that provider, and --local must say why it is dead
+// instead of silently starting a container that can do nothing.
+const installerPath = fileURLToPath(new URL('../site/public/install.sh', import.meta.url))
+
+function runInstaller(args: string[]) {
+  const dir = mkdtempSync(join(tmpdir(), 'kothai-install-'))
+  const log = join(dir, 'run.json')
+  writeFileSync(
+    join(dir, 'docker'),
+    `#!${process.execPath}
+const a = process.argv.slice(2)
+if (a[0] === 'run') require('fs').writeFileSync(process.env.RUN_LOG, JSON.stringify(a))
+`,
+  )
+  for (const name of ['curl', 'open', 'xdg-open']) writeFileSync(join(dir, name), '#!/bin/sh\nexit 0\n')
+  for (const f of ['docker', 'curl', 'open', 'xdg-open']) chmodSync(join(dir, f), 0o755)
+  // detached drops the controlling terminal, so a developer's tty cannot make
+  // the installer stop and ask a question mid-test.
+  const r = spawnSync('sh', [installerPath, '--no-shim', '--dir', join(dir, 'home'), ...args], {
+    env: { PATH: `${dir}:/usr/bin:/bin`, RUN_LOG: log, HOME: dir, LANG: 'C' },
+    encoding: 'utf8',
+    detached: true,
+    input: '',
+  })
+  const run: string[] | null = existsSync(log) ? JSON.parse(readFileSync(log, 'utf8')) : null
+  return { status: r.status, output: r.stdout + r.stderr, run }
+}
+
+test('--local exits non-zero and points at Ollama', () => {
+  const r = runInstaller(['--local'])
+  assert.notEqual(r.status, 0)
+  assert.match(
+    r.output,
+    /On-device models were removed in v2\. Install Ollama and pick it during setup: https:\/\/getkothai\.com\/docs\/how-it-works\/models/,
+  )
+  assert.equal(r.run, null, 'must fail before starting a container')
+})
+
+test('--lite is an accepted no-op: same container as no flag', () => {
+  const plain = runInstaller([])
+  const lite = runInstaller(['--lite'])
+  assert.equal(lite.status, 0)
+  assert.equal(plain.status, 0)
+  // The temp --dir differs per run, so compare the argv with it masked out.
+  const mask = (run: string[] | null) => run?.map(v => v.replace(/^.*\/home\//, '<dir>/'))
+  assert.deepEqual(mask(lite.run), mask(plain.run))
+})
+
+test('a fresh install never emits KOTHAI_SETUP_PROVIDER=local', () => {
+  // The prompt only runs on a terminal, which the runs below cannot have, so
+  // the source is checked for the one path that could still set it.
+  assert.ok(!/PROVIDER=local/.test(installer), 'install.sh can still set PROVIDER=local')
+  for (const args of [[], ['--lite'], ['--endpoint', 'http://ollama:11434/v1']]) {
+    const { run } = runInstaller(args)
+    assert.ok(run, 'installer should have run docker')
+    assert.ok(!run.some(v => v.includes('KOTHAI_SETUP_PROVIDER=local')), `${args} emitted provider=local`)
+  }
+})
+
+test('the installer no longer mounts a models directory or sets the provider env', () => {
+  const { run } = runInstaller(['--endpoint', 'http://ollama:11434/v1'])
+  assert.ok(run)
+  assert.ok(!run.some(v => v.includes('/app/models')))
+  assert.ok(!run.some(v => v.startsWith('KOTHAI_AI_PROVIDER')))
 })

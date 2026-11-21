@@ -1,8 +1,8 @@
 node_modules/
 dist/
 /data/
+# Old installs kept downloaded weights here; stays until those folders are cleaned up.
 models/
-qvac.config.json
 *.log
 # Agent governance is versioned; only machine-local state is ignored.
 .claude/*

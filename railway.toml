@@ -1,7 +1,7 @@
 [build]
 # Railway-specific Dockerfile: no cache mounts, no VOLUME declarations.
 dockerfilePath = "Dockerfile.railway"
-dockerTarget = "runtime-lite"
+dockerTarget = "runtime"
 
 [deploy]
 healthcheckPath = "/api/health"
