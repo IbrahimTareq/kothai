@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { execFileSync, spawnSync } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -80,7 +80,7 @@ test('kothai update carries mounts and env through intact, spaces and all', () =
 // instead of silently starting a container that can do nothing.
 const installerPath = fileURLToPath(new URL('../site/public/install.sh', import.meta.url))
 
-function runInstaller(args: string[]) {
+async function runInstaller(args: string[]) {
   const dir = mkdtempSync(join(tmpdir(), 'kothai-install-'))
   const log = join(dir, 'run.json')
   writeFileSync(
@@ -92,20 +92,29 @@ if (a[0] === 'run') require('fs').writeFileSync(process.env.RUN_LOG, JSON.string
   )
   for (const name of ['curl', 'open', 'xdg-open']) writeFileSync(join(dir, name), '#!/bin/sh\nexit 0\n')
   for (const f of ['docker', 'curl', 'open', 'xdg-open']) chmodSync(join(dir, f), 0o755)
-  // detached drops the controlling terminal, so a developer's tty cannot make
-  // the installer stop and ask a question mid-test.
-  const r = spawnSync('sh', [installerPath, '--no-shim', '--dir', join(dir, 'home'), ...args], {
+  // Async spawn, not spawnSync: only spawn types `detached`, which makes the
+  // child a session leader with no controlling terminal, so a developer's tty
+  // cannot make the installer stop and ask a question mid-test.
+  const child = spawn('sh', [installerPath, '--no-shim', '--dir', join(dir, 'home'), ...args], {
     env: { PATH: `${dir}:/usr/bin:/bin`, RUN_LOG: log, HOME: dir, LANG: 'C' },
-    encoding: 'utf8',
     detached: true,
-    input: '',
+    stdio: ['pipe', 'pipe', 'pipe'],
   })
+  let output = ''
+  child.stdout.on('data', d => {
+    output += d
+  })
+  child.stderr.on('data', d => {
+    output += d
+  })
+  child.stdin.end()
+  const status = await new Promise<number | null>(resolve => child.on('close', resolve))
   const run: string[] | null = existsSync(log) ? JSON.parse(readFileSync(log, 'utf8')) : null
-  return { status: r.status, output: r.stdout + r.stderr, run }
+  return { status, output, run }
 }
 
-test('--local exits non-zero and points at Ollama', () => {
-  const r = runInstaller(['--local'])
+test('--local exits non-zero and points at Ollama', async () => {
+  const r = await runInstaller(['--local'])
   assert.notEqual(r.status, 0)
   assert.match(
     r.output,
@@ -114,9 +123,9 @@ test('--local exits non-zero and points at Ollama', () => {
   assert.equal(r.run, null, 'must fail before starting a container')
 })
 
-test('--lite is an accepted no-op: same container as no flag', () => {
-  const plain = runInstaller([])
-  const lite = runInstaller(['--lite'])
+test('--lite is an accepted no-op: same container as no flag', async () => {
+  const plain = await runInstaller([])
+  const lite = await runInstaller(['--lite'])
   assert.equal(lite.status, 0)
   assert.equal(plain.status, 0)
   // The temp --dir differs per run, so compare the argv with it masked out.
@@ -124,19 +133,19 @@ test('--lite is an accepted no-op: same container as no flag', () => {
   assert.deepEqual(mask(lite.run), mask(plain.run))
 })
 
-test('a fresh install never emits KOTHAI_SETUP_PROVIDER=local', () => {
+test('a fresh install never emits KOTHAI_SETUP_PROVIDER=local', async () => {
   // The prompt only runs on a terminal, which the runs below cannot have, so
   // the source is checked for the one path that could still set it.
   assert.ok(!/PROVIDER=local/.test(installer), 'install.sh can still set PROVIDER=local')
   for (const args of [[], ['--lite'], ['--endpoint', 'http://ollama:11434/v1']]) {
-    const { run } = runInstaller(args)
+    const { run } = await runInstaller(args)
     assert.ok(run, 'installer should have run docker')
     assert.ok(!run.some(v => v.includes('KOTHAI_SETUP_PROVIDER=local')), `${args} emitted provider=local`)
   }
 })
 
-test('the installer no longer mounts a models directory or sets the provider env', () => {
-  const { run } = runInstaller(['--endpoint', 'http://ollama:11434/v1'])
+test('the installer no longer mounts a models directory or sets the provider env', async () => {
+  const { run } = await runInstaller(['--endpoint', 'http://ollama:11434/v1'])
   assert.ok(run)
   assert.ok(!run.some(v => v.includes('/app/models')))
   assert.ok(!run.some(v => v.startsWith('KOTHAI_AI_PROVIDER')))
