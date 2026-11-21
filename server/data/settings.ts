@@ -139,7 +139,7 @@ export function getEmbedRecipe(): string | null {
 // Which provider produced the stored vectors ('local' | 'remote'). 'local'
 // marks vectors from the removed on-device provider, kept so a library still
 // holding them boots and is re-embedded; null is an install that predates the
-// marker. See reembed.embedProviderChanged.
+// marker. See reembed.vectorsCurrent.
 export function getEmbedProvider(): string | null {
   return embedProvider
 }

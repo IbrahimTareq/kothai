@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import * as ai from '../ai/index.ts'
 import * as store from '../data/notes.ts'
 import * as chats from '../data/chats.ts'
-import * as settings from '../data/settings.ts'
+import { vectorsCurrent } from '../ai/reembed.ts'
 import * as prompts from '../ai/prompts.ts'
 import type { ServerNote } from '../types.ts'
 import { json, readBody, saveImage } from '../lib/http.ts'
@@ -160,11 +160,11 @@ export async function handleAsk(req: IncomingMessage, res: ServerResponse, viewe
     // literal tokens, keyword loses every paraphrase — so one strong signal
     // is enough for a note to surface. With the embed role off there is no
     // query embedding and the fusion degrades to keyword-only. So too until
-    // the library is marked as the endpoint's: mid-upgrade its vectors are the
-    // removed on-device model's, and Ollama's nomic-embed-text is as wide as
+    // the library's vectors are current (reembed.vectorsCurrent): mid-upgrade,
+    // or after a restore, they are the removed on-device model's, and Ollama's nomic-embed-text is as wide as
     // EmbeddingGemma, so cosine ranked noise rather than scoring 0.
     const queryEmbedding =
-      ai.roleEnabled('embed') && settings.getEmbedProvider() === 'remote'
+      ai.roleEnabled('embed') && vectorsCurrent()
         ? // A question is embedded as a query, not as a document — see
           // prompts.ts's embedInput. The two are different kinds of text and a
           // prompt-instructed model encodes them differently.

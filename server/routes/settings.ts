@@ -86,7 +86,8 @@ export async function handleGetSettings(res: ServerResponse): Promise<void> {
     // 'env' draws the Connection panel read-only: every endpoint route refuses there.
     source: getAiConfig().source,
     // The model names env pins, so Settings shows the one in use, read-only.
-    // Flags only, it showed the stored name env overrides. Not a credential.
+    // When this carried only flags, Settings showed the stored name that env
+    // overrides. A model name is not a credential.
     envModels: getAiConfig().envModels,
     // Static and credential-free, so the wizard needs no second request.
     catalogue: ENDPOINTS,

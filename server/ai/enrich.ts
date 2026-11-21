@@ -11,7 +11,6 @@ import * as store from '../data/notes.ts'
 import type { NoteRecord } from '../data/notes.ts'
 import * as tags from '../data/tags.ts'
 import * as tagvocab from '../data/tagvocab.ts'
-import * as settings from '../data/settings.ts'
 import * as inference from './index.ts'
 import { fetchLinkMeta, isYouTubeVideo, fetchYouTubeCaptions } from '../links/meta.ts'
 import { isInstagramPost } from '../links/instagram.ts'
@@ -34,6 +33,7 @@ import {
   _igQueueState,
 } from '../links/instagram-queue.ts'
 import { queueJob } from './queue.ts'
+import { vectorsCurrent } from './reembed.ts'
 
 // The Instagram lane moved to ../links/instagram-queue.ts, and the job chain to
 // ./queue.ts. Re-exported here because the routes and their tests address them
@@ -49,9 +49,9 @@ export {
   queueJob,
 }
 
-// Until the library is the endpoint's (reembed.ts), the registry holds on-device vectors:
+// Until the library's vectors are current (reembed.ts), the registry holds on-device ones:
 // same width as Ollama's nomic-embed-text, so a new tag snapped to noise against them.
-const snap = (t: string[]) => (settings.getEmbedProvider() === 'remote' ? tagvocab.canonicalize(t) : t)
+const snap = (t: string[]) => (vectorsCurrent() ? tagvocab.canonicalize(t) : t)
 
 // `url` is the note's saved content — every note is a link.
 export function queueEnrich(noteId: string, url: string) {

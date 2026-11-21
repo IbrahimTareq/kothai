@@ -21,6 +21,7 @@ let notes: NoteRecord[] = []
 let embedCalls: { text: string; markerNow: string | null }[] = []
 let enabledImpl = (): Record<Role, boolean> => ({ llm: true, embed: true, vision: true })
 let storedProvider: string | null = null
+let storedRecipe: string | null = EMBED_RECIPE
 let savedPatches: SettingsPatch[] = []
 // What the next embed call throws, by input text; null embeds normally.
 let failWith: (text: string) => Error | null = () => null
@@ -82,12 +83,13 @@ mock.module('../../../server/data/collections.ts', { namedExports: { ...realColl
 mock.module('../../../server/data/settings.ts', {
   namedExports: {
     ...realSettings,
-    // Current, so only the provider marker decides (a recovery asks about both).
-    getEmbedRecipe: () => EMBED_RECIPE,
+    // Current unless a test says otherwise, so mostly the provider marker decides.
+    getEmbedRecipe: () => storedRecipe,
     getEmbedProvider: () => storedProvider,
     save: async (patch: SettingsPatch) => {
       savedPatches.push(patch)
       if (patch.embedProvider !== undefined) storedProvider = patch.embedProvider
+      if (patch.embedRecipe !== undefined) storedRecipe = patch.embedRecipe
       return {}
     },
   },
@@ -123,15 +125,25 @@ function reset(list: NoteRecord[] = [], marker: string | null = null) {
   savedPatches = []
   failWith = () => null
   storedProvider = marker
+  storedRecipe = EMBED_RECIPE
   enabledImpl = () => ({ llm: true, embed: true, vision: true })
 }
 
 const drain = () => enrich.queueJob(() => {})
 
-test('only vectors marked as coming from an endpoint are current', () => {
-  assert.equal(reembed.embedProviderChanged('remote'), false)
-  assert.equal(reembed.embedProviderChanged('local'), true, 'vectors from the removed on-device provider')
-  assert.equal(reembed.embedProviderChanged(null), true, 'an install that predates the marker')
+// Both markers: a restore of an older backup clears only the recipe and leaves
+// the provider 'remote', and Ask then ranked query vectors against the
+// backup's on-device ones until the restore's sweep finished.
+test('the vectors are current only from an endpoint and under this recipe', () => {
+  reset([], 'remote')
+  assert.equal(reembed.vectorsCurrent(), true)
+  storedProvider = 'local'
+  assert.equal(reembed.vectorsCurrent(), false, 'vectors from the removed on-device provider')
+  storedProvider = null
+  assert.equal(reembed.vectorsCurrent(), false, 'an install that predates the marker')
+  storedProvider = 'remote'
+  storedRecipe = null
+  assert.equal(reembed.vectorsCurrent(), false, 'a restore that owes a re-embed')
 })
 
 test('with the embed role off, nothing is queued AND no marker is written', async () => {
@@ -309,6 +321,43 @@ test('a note enriched before the library is the endpoint’s is not snapped to t
   assert.deepEqual(snapped, [])
 
   reset([{ ...NOTE, ai: {} }], 'remote')
+  storedRecipe = null // a restore that has not been re-embedded yet
+  await enrich.queueEnrich('n1', 'text')
+  assert.deepEqual(snapped, [], 'nor while a restore still owes its sweep')
+
+  reset([{ ...NOTE, ai: {} }], 'remote')
   await enrich.queueEnrich('n1', 'text')
   assert.deepEqual(snapped, ['pasta'], 'and is once the sweep has marked the library')
+})
+
+// A restore while an upgrade sweep runs: backup.ts clears the recipe and asks
+// for a sweep, and that request was swallowed because the running sweep still
+// counted as owed. The running sweep held the old notes, finished, and marked
+// the library current, leaving the restored notes' on-device vectors under a
+// current marker for good.
+test('a restore during a running sweep gets a sweep of its own, and the stale one marks nothing', async () => {
+  const restored = { ...NOTE, id: 'restored', title: 'From the backup', embedding: [0.1, 0.2] }
+  reset([NOTE, { ...NOTE, id: 'n2', title: 'Second' }], 'local')
+  let restoredQueued: boolean | null = null
+  failWith = () => {
+    if (restoredQueued === null) {
+      // The restore, as backup.ts does it: the library replaced, the recipe
+      // marked stale, and a sweep asked for.
+      notes = [{ ...restored }]
+      storedRecipe = null
+      restoredQueued = reembed.queueRecipeReembed()
+    }
+    return null
+  }
+  assert.equal(reembed.queueEmbedProviderReembed(), true)
+  await drain()
+  await drain()
+  assert.equal(restoredQueued, true)
+  assert.ok(
+    embedCalls.some(c => c.text === reembed.embedBodyFor(restored)),
+    'the restored notes are re-embedded',
+  )
+  assert.notDeepEqual(notes[0].embedding, [0.1, 0.2])
+  assert.equal(sweeps(), 1, 'only the sweep that saw the restored library marks it')
+  assert.equal(reembed.vectorsCurrent(), true)
 })

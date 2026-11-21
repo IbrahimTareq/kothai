@@ -3,6 +3,7 @@
 // by the setup routes there too, but it depends on nothing in that file.
 import * as ai from '../ai/index.ts'
 import { ROLES } from '../ai/roles.ts'
+import { vectorsCurrent } from '../ai/reembed.ts'
 import * as store from '../data/notes.ts'
 import * as settings from '../data/settings.ts'
 import { json } from '../lib/http.ts'
@@ -41,7 +42,7 @@ export function handleStatus(res: ServerResponse, viewer: string | null): void {
       // say AI had gone or where it went.
       upgradeNeeded: settings.isConfigured() && settings.getEmbedProvider() === 'local' && !ROLES.some(ai.roleEnabled),
       // As Ask decides it (routes/ask.ts): no query vector until the library's are the endpoint's.
-      keywordOnly: !ai.roleEnabled('embed') || settings.getEmbedProvider() !== 'remote',
+      keywordOnly: !ai.roleEnabled('embed') || !vectorsCurrent(),
     },
     // Polled every few seconds, so the demo banner's allowance stays current.
     demo: viewer ? demoLimits.leftFor(viewer) : null,

@@ -9,7 +9,8 @@ import * as inference from './index.ts'
 import * as settings from '../data/settings.ts'
 import { EMBED_RECIPE } from './prompts.ts'
 import { RemoteError } from './providers/remote-http.ts'
-import { queueJob } from './enrich.ts'
+// queue.ts, not enrich.ts's re-export of it: enrich.ts imports vectorsCurrent.
+import { queueJob } from './queue.ts'
 import { withTrigger } from './usage.ts'
 
 // Re-embed every note in the library, in one batched write.
@@ -107,6 +108,14 @@ async function reembedEach(reason: string) {
   // re-embed of a QVAC library left the marker on 'local', and the next boot
   // re-embedded the whole library again through a possibly paid endpoint.
   // After the flush, so an interrupted sweep is retried on the next boot.
+  //
+  // Not when another sweep was asked for while this one ran: a restore
+  // replaced the library under it, so these markers would describe notes it
+  // never saw. That sweep marks the library, and rebuilds the registry.
+  if (owed) {
+    console.log('[enrich] re-embedding superseded by a sweep queued meanwhile')
+    return notes.length
+  }
   await settings.save({ embedRecipe: EMBED_RECIPE, embedProvider: 'remote' })
   // Tag snapping compares each new tag's vector against the registry's, so the
   // registry has to move to the new model too: left on the old one, every
@@ -145,15 +154,20 @@ export function queueRecipeReembed() {
   return true
 }
 
-// The sweep a stale marker asks for, queued at most once until it has run.
+// The sweep a stale marker asks for, queued at most once while it waits.
 // Boot, the end of first run and every recovery of the endpoint ask, and a
 // circuit that flaps recovers several times while the first sweep still waits
 // its turn: each would have queued the whole library again behind it.
+//
+// Cleared as the sweep STARTS, not when it ends. Held until the end, a restore
+// during a running sweep asked for one and got nothing: the running sweep
+// held the old notes, finished, and marked the restored library current.
 let owed: Promise<unknown> | null = null
 function queueSweep(reason: string) {
   if (owed) return
-  owed = queueJob(() => reembedAll(reason)).finally(() => {
+  owed = queueJob(() => {
     owed = null
+    return reembedAll(reason)
   })
 }
 
@@ -167,12 +181,17 @@ export function queueOwedReembed(): boolean {
   return queueRecipeReembed() || queueEmbedProviderReembed()
 }
 
-// Were the stored vectors made anywhere but an endpoint? 'local' marks
-// vectors from the removed on-device provider, and null an install that
-// predates the marker; either way they sit in another space than the
-// endpoint's model, and a library holding both answers every query badly.
-export function embedProviderChanged(stored: string | null): boolean {
-  return stored !== 'remote'
+// Are the stored vectors the endpoint's, built under this recipe? Only then
+// may a query vector be ranked against them (routes/ask.ts, the keywordOnly
+// flag in routes/status.ts) or a new tag snapped to the registry (enrich.ts).
+// A provider marker of 'local' marks vectors from the removed on-device
+// provider, and null an install that predates the marker; either way they sit
+// in another space than the endpoint's model, and a library holding both
+// answers every query badly. The recipe counts too: a restore of an older
+// backup clears only that one, and the provider marker alone said current
+// while the restored vectors were the backup's.
+export function vectorsCurrent(): boolean {
+  return settings.getEmbedProvider() === 'remote' && settings.getEmbedRecipe() === EMBED_RECIPE
 }
 
 // Queue a full re-embed when the stored vectors did not come from an endpoint.
@@ -185,7 +204,7 @@ export function queueEmbedProviderReembed() {
   if (!inference.roleEnabled('embed')) return false
 
   const stored = settings.getEmbedProvider()
-  if (!embedProviderChanged(stored)) return false
+  if (stored === 'remote') return false
 
   if (!store.count()) {
     settings.save({ embedProvider: 'remote' }).catch(() => {})

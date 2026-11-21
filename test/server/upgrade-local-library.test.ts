@@ -52,6 +52,7 @@ const settings = await import('../../server/data/settings.ts')
 const ai = await import('../../server/ai/index.ts')
 const enrich = await import('../../server/ai/enrich.ts')
 const reembed = await import('../../server/ai/reembed.ts')
+const { EMBED_RECIPE } = await import('../../server/ai/prompts.ts')
 const { createServer } = await import('../../server/router.ts')
 
 // The seed: three notes carrying on-device vectors, and a settings row as an
@@ -173,6 +174,20 @@ test('naming an embedding model rebuilds every vector, and only then marks the l
     )
   }
   assert.equal(settings.getEmbedProvider(), 'remote')
+  assert.deepEqual(await status(), { upgradeNeeded: false, keywordOnly: false })
+})
+
+// A restore of an older backup clears only the recipe marker (backup.ts), so
+// the provider marker alone said the vectors were current while the restored
+// ones were the backup's.
+test('with the recipe marker stale, Ask is keyword-only again until the sweep runs', async () => {
+  await settings.save({ embedRecipe: null })
+  calls.length = 0
+  const r = await post('/api/ask', { question: 'brown butter pasta' })
+  assert.equal(r.status, 200)
+  assert.ok(!calls.includes('/embeddings'))
+  assert.deepEqual(await status(), { upgradeNeeded: false, keywordOnly: true })
+  await settings.save({ embedRecipe: EMBED_RECIPE })
   assert.deepEqual(await status(), { upgradeNeeded: false, keywordOnly: false })
 })
 
