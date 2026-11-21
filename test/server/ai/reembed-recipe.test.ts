@@ -153,7 +153,9 @@ test('reembedAll survives one unembeddable note rather than abandoning the rest 
   await reembed.reembedAll('test')
   assert.equal(embedCalls.length, 3, 'the sweep kept going')
   assert.equal(notes.filter(x => Array.isArray(x.embedding)).length, 2)
-  assert.equal(storedRecipe, EMBED_RECIPE)
+  // Not marked current: the note it lost still holds a vector from the old
+  // recipe, and a marker claiming otherwise means no sweep ever replaces it.
+  assert.equal(storedRecipe, null)
 })
 
 test('reembedAll skips a note with no embeddable text at all', async () => {

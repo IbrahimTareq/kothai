@@ -62,6 +62,7 @@ export function reembedAll(reason = 'settings') {
 async function reembedEach(reason: string) {
   const notes = store.allNotes()
   console.log(`[enrich] re-embedding ${notes.length} notes (${reason})…`)
+  let failed = 0
   for (const n of notes) {
     try {
       const body = embedBodyFor(n)
@@ -69,10 +70,22 @@ async function reembedEach(reason: string) {
         await store.updateNote(n.id, { embedding: await inference.embedText(body) }, { persist: false })
       }
     } catch (e) {
+      failed++
       console.error('[enrich] re-embed failed for', n.id, '-', e instanceof Error ? e.message : e)
     }
   }
   await store.flush() // one write for the whole batch, not one per note
+  // Any note lost to a failure (the endpoint down mid-sweep) keeps both
+  // markers stale, so the next boot or reconnect sweeps again. Marked anyway,
+  // an upgrading library had its on-device vectors labelled 'remote' and
+  // ranked against the endpoint's query vectors from then on. A note with no
+  // text is not a failure: it has nothing to embed, now or on any retry.
+  if (failed) {
+    console.error(
+      `[enrich] re-embed left ${failed} notes on their old vectors; markers unchanged so a later sweep retries`,
+    )
+    return notes.length
+  }
   // The provider marker moves here, once the vectors exist, and on every path
   // that rebuilds them: recorded only by the boot check, a Settings-triggered
   // re-embed of a QVAC library left the marker on 'local', and the next boot

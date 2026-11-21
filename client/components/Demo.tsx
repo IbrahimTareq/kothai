@@ -1,13 +1,17 @@
 // The public demo on the client: whether this is one, what the visitor may
-// still do today (see DemoAllowance), and the banner that says so.
+// still do today (see DemoAllowance), and the topbar line that says so. The
+// same line carries the one other notice the shell has, for an install whose
+// on-device models were removed: the two never meet (the demo always has an
+// endpoint), and the topbar band holds one line.
 //
 // A small store rather than a prop or a context: the controls it locks sit
 // several views deep in every view, and a provider round App's whole tree only
 // to carry one value re-indented all of it. Controls that simply vanish on the
 // demo are hidden by :root[data-demo] in shell.css instead, and never read it.
-import { useSyncExternalStore } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import type { DemoAllowance } from '../types'
 import { Button } from '../ui/Button'
+import { Icon } from './icons'
 import { SettingsGroup, SettingsRow } from './settings/SettingsRow'
 
 const GET_YOUR_OWN = 'https://getkothai.com/'
@@ -42,12 +46,50 @@ export const useDemo = () =>
 
 const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`
 
+// Dismissed for good on this browser: the notice is a pointer, not a nag, and
+// the Connection panel in Settings says the same thing for as long as AI is off.
+const UPGRADE_DISMISSED = 'kothai-upgrade-banner-dismissed'
+
 // The one line every visitor sees. What the demo refuses is locked or left out
 // where it sits, and Settings says why; "everything else is read-only" here
 // wrapped to three lines on a phone and lost the first.
-export function DemoBanner() {
+//
+// Off the demo it is the upgrade notice, shown only while the server reports
+// upgradeNeeded, so it goes by itself once any role has an endpoint.
+export function TopBanner({ upgradeNeeded, onConnect }: { upgradeNeeded: boolean; onConnect: () => void }) {
   const demo = useDemo()
-  if (!demo) return null
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem(UPGRADE_DISMISSED) === '1')
+  if (!demo) {
+    if (!upgradeNeeded || dismissed) return null
+    return (
+      <p className="demo-banner">
+        <span>
+          On-device models were removed. Connect an endpoint to turn AI back on. Ollama keeps everything on your
+          machine.
+        </span>
+        <a
+          href="/settings"
+          onClick={e => {
+            e.preventDefault()
+            onConnect()
+          }}
+        >
+          Connect a service
+        </a>
+        <Button
+          size="icon"
+          tone="ghost"
+          aria-label="Dismiss"
+          onClick={() => {
+            localStorage.setItem(UPGRADE_DISMISSED, '1')
+            setDismissed(true)
+          }}
+        >
+          <Icon name="close" size={14} />
+        </Button>
+      </p>
+    )
+  }
   return (
     <p className="demo-banner">
       <span>

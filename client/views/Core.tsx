@@ -6,9 +6,8 @@ import { Icon } from '../components/icons'
 import { clockTime } from '../util/format'
 import { ChatRow } from '../components/Chats'
 import { CitedCard, PreviewCard } from '../components/Cards'
-import { parseMarkdown } from '../util/markdown'
+import { parseMarkdown, type Inline } from '../util/markdown'
 import { writeClipboard } from '../util/clipboard'
-import type { Inline } from '../util/markdown'
 import type { ChatSummary, ThreadMsg, UIItem } from '../types'
 import { Button } from '../ui/Button'
 import { Chip } from '../ui/Chip'
@@ -46,6 +45,7 @@ interface CoreViewProps {
   chatTotal: number
   loadMoreChats: () => void
   llmOff: boolean
+  keywordOnly: boolean
   busy: boolean
   stop: () => void
   warming: string
@@ -75,6 +75,7 @@ export function CoreView({
   chatTotal,
   loadMoreChats,
   llmOff,
+  keywordOnly,
   busy,
   stop,
   warming,
@@ -302,7 +303,11 @@ export function CoreView({
               value={text}
               disabled={llmOff}
               aria-label="Ask a question about your vault"
-              placeholder={demo?.asksLeft === 0 ? 'That’s all the demo answers today' : 'Ask anything…'}
+              placeholder={
+                demo?.asksLeft === 0
+                  ? 'That’s all the demo answers today'
+                  : `Ask anything…${keywordOnly ? ' Keyword search only' : ''}`
+              }
               maxLength={demo ? 500 : undefined}
               onChange={e => setText(e.target.value)}
               onFocus={onFocus}

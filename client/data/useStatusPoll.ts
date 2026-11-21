@@ -19,6 +19,8 @@ const TICK_ERROR_MS = 2200
 export interface StatusPoll {
   llmOff: boolean
   llmWarming: string
+  upgradeNeeded: boolean
+  keywordOnly: boolean
   // First-run gate: null until the first poll resolves; true shows the model
   // picker (fresh install), false enters the normal app.
   needsSetup: boolean | null
@@ -31,6 +33,7 @@ export function useStatusPoll(): StatusPoll {
   const [llmOff, setLlmOff] = useState(false)
   const [llmWarming, setLlmWarming] = useState('')
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null)
+  const [ai, setAi] = useState({ upgradeNeeded: false, keywordOnly: false })
 
   useEffect(() => {
     let stop = false
@@ -41,6 +44,8 @@ export function useStatusPoll(): StatusPoll {
         // owns the gate.
         setNeedsSetup(v => (v === null ? !s.configured : v))
         setDemo(s.demo)
+        // Field by field, or a fresh object every poll re-renders the shell.
+        setAi(a => (a.upgradeNeeded === s.ai.upgradeNeeded && a.keywordOnly === s.ai.keywordOnly ? a : s.ai))
         setLlmOff(s.roles.llm.state === 'off')
         // Tied to the llm role specifically, not the aggregate — the aggregate
         // can be "loading" because an unrelated role (e.g. vision) is warming
@@ -58,5 +63,5 @@ export function useStatusPoll(): StatusPoll {
     }
   }, [])
 
-  return { llmOff, llmWarming, needsSetup, setNeedsSetup }
+  return { llmOff, llmWarming, ...ai, needsSetup, setNeedsSetup }
 }

@@ -2,6 +2,7 @@
 // routes/settings.ts, which had grown past its shape budget: the gate is read
 // by the setup routes there too, but it depends on nothing in that file.
 import * as ai from '../ai/index.ts'
+import { ROLES } from '../ai/roles.ts'
 import * as store from '../data/notes.ts'
 import * as settings from '../data/settings.ts'
 import { json } from '../lib/http.ts'
@@ -34,6 +35,14 @@ export function handleStatus(res: ServerResponse, viewer: string | null): void {
     configured: firstRunComplete(settings.isConfigured(), settings.isPreGate()),
     count: store.allNotes().filter(visibleTo(viewer)).length,
     capabilities: ai.capabilities(),
+    ai: {
+      // A library still holding on-device vectors, with first run long done
+      // and no role able to run: the upgrade removed what it ran on. Without
+      // the banner this drives, the install just went quiet, with nothing to
+      // say AI had gone or where it went.
+      upgradeNeeded: settings.isConfigured() && settings.getEmbedProvider() === 'local' && !ROLES.some(ai.roleEnabled),
+      keywordOnly: !ai.roleEnabled('embed'),
+    },
     // Polled every few seconds, so the demo banner's allowance stays current.
     demo: viewer ? demoLimits.leftFor(viewer) : null,
   })

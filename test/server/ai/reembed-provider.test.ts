@@ -20,6 +20,8 @@ let embedCalls: { text: string; markerNow: string | null }[] = []
 let enabledImpl = (): Record<Role, boolean> => ({ llm: true, embed: true, vision: true })
 let storedProvider: string | null = null
 let savedPatches: SettingsPatch[] = []
+// Which notes' embed calls throw, by input text. Empty per test.
+let failFor = new Set<string>()
 
 const realStore = await import('../../../server/data/notes.ts')
 const realTags = await import('../../../server/data/tags.ts')
@@ -63,6 +65,7 @@ mock.module('../../../server/ai/index.ts', {
     // whether the new value was written before the vectors it describes exist.
     embedText: async (text: string) => {
       embedCalls.push({ text, markerNow: storedProvider })
+      if (failFor.has(text)) throw new Error('endpoint unreachable')
       return [text.length]
     },
   },
@@ -96,6 +99,7 @@ function reset(list: NoteRecord[] = [], marker: string | null = null) {
   notes = list.map(n => ({ ...n }))
   embedCalls = []
   savedPatches = []
+  failFor = new Set()
   storedProvider = marker
   enabledImpl = () => ({ llm: true, embed: true, vision: true })
 }
@@ -173,4 +177,36 @@ test('a Settings-triggered re-embed marks the vectors remote, so the next boot q
   assert.equal(reembed.queueEmbedProviderReembed(), false, 'the boot after finds nothing owed')
   await drain()
   assert.equal(embedCalls.length, 0)
+})
+
+// A sweep that lost notes to a down endpoint used to mark the library rebuilt
+// anyway: per-note failures were logged and swallowed, then the marker moved.
+// On a library upgrading from the on-device provider that left QVAC vectors
+// labelled 'remote', ranked against an endpoint's query embeddings forever.
+test('a sweep with any failed note leaves the markers alone, so the next one retries', async () => {
+  const broken = { ...NOTE, id: 'n2', title: 'Unreachable' }
+  reset([NOTE, broken], 'local')
+  failFor = new Set([reembed.embedBodyFor(broken)])
+  const quiet = mock.method(console, 'error', () => {})
+
+  await reembed.reembedAll('embedding endpoint changed')
+  quiet.mock.restore()
+  assert.equal(embedCalls.length, 2, 'one failure must not abandon the rest of the library')
+  assert.equal(storedProvider, 'local')
+  assert.ok(
+    savedPatches.every(p => p.embedProvider === undefined && p.embedRecipe === undefined),
+    'neither marker may claim a rebuild that did not finish',
+  )
+  assert.equal(reembed.queueEmbedProviderReembed(), true, 'the next boot or reconnect owes the sweep again')
+  await drain()
+})
+
+// A note with no text has nothing to embed, and never will: counting it as a
+// failure would keep the marker stale and re-embed the library on every boot.
+test('a note with nothing to embed does not hold the marker back', async () => {
+  reset([NOTE, note({ id: 'empty', title: '', summary: '', content: '', tags: [] })], 'local')
+
+  await reembed.reembedAll('embedding endpoint changed')
+  assert.equal(embedCalls.length, 1)
+  assert.equal(storedProvider, 'remote')
 })

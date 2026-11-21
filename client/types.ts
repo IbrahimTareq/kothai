@@ -98,6 +98,9 @@ export interface ModelStatus {
   configured: boolean // false until the first-run model picker is completed
   count: number
   demo: DemoAllowance | null
+  // upgradeNeeded: on-device vectors, first run done, no role with an
+  // endpoint. keywordOnly: no embedding model, so Ask retrieves by keyword.
+  ai: { upgradeNeeded: boolean; keywordOnly: boolean }
 }
 
 // What this visitor may still do today on the public demo
