@@ -137,8 +137,13 @@ test('a mixed save survives a restart: endpoint ids land in the remote store, no
 // lengths score 0 in cosine and same-length vectors from another model score
 // noise, so search degraded silently. The tag registry has the same problem:
 // snapping compares a new tag's vector against the stored ones.
-test('changing the endpoint embedding model re-embeds the library and the tag registry', async () => {
+test('changing the endpoint embedding model re-embeds the library and the tag registry', async t => {
   provider.caps = caps({ llm: 'remote', embed: 'remote', vision: 'remote' }, false)
+  // An embedding role with no endpoint is off and owes no re-embed, so this
+  // one needs somewhere to point.
+  const { setAiCredentials } = await import('../../../server/config.ts')
+  setAiCredentials({ baseUrl: 'http://127.0.0.1:1/v1' })
+  t.after(() => setAiCredentials(null))
 
   const { _resetDb, getDb } = await import('../../../server/data/db.ts')
   const settings = await import('../../../server/data/settings.ts')
@@ -191,6 +196,9 @@ test('with the embedding model pinned by env, a Settings change to it re-embeds 
   provider.caps = caps({ llm: 'remote', embed: 'remote', vision: 'remote' }, false)
   process.env.KOTHAI_AI_EMBED_MODEL = 'pinned-embed'
   t.after(() => delete process.env.KOTHAI_AI_EMBED_MODEL)
+  const { setAiCredentials } = await import('../../../server/config.ts')
+  setAiCredentials({ baseUrl: 'http://127.0.0.1:1/v1' })
+  t.after(() => setAiCredentials(null))
 
   const { _resetDb } = await import('../../../server/data/db.ts')
   const settings = await import('../../../server/data/settings.ts')

@@ -42,6 +42,10 @@ export function ConnectionPanel({
   // look at it again.
   const [target, setTarget] = useState<Target | null>(null)
   const [choice, setChoice] = useState<EndpointChoice | null>(null)
+  // A checked shared tile that serves no embeddings, while embeddings borrow
+  // the shared endpoint: held until the embeddings step answers, as in first
+  // run. Saved alone, with only a warning, it left search by meaning nowhere.
+  const [pending, setPending] = useState<EndpointChoice | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   // Disconnecting is where the on-device models get chosen, so the confirm step
@@ -71,6 +75,7 @@ export function ConnectionPanel({
       await write()
       onChanged(await API.settings())
       setTarget(null)
+      setPending(null)
       setLeaving(false)
       setLeaveSel(null)
       setChoice(null)
@@ -80,16 +85,39 @@ export function ConnectionPanel({
     setBusy(false)
   }
 
-  const saveEndpoint = () =>
-    choice &&
-    target &&
+  const endpointOf = (c: EndpointChoice) => ({ providerId: c.providerId, baseUrl: c.baseUrl, apiKey: c.apiKey })
+  const picked = choice && cfg.catalogue.find(e => e.id === choice.providerId)
+
+  // `c` is the picker's choice; null only from the embeddings step's skip.
+  const saveEndpoint = async (c: EndpointChoice | null) => {
+    if (!target || busy) return
+    if (pending) {
+      return commit(async () => {
+        if (c) await API.checkEndpoint(c.providerId, c.baseUrl, c.apiKey)
+        await API.saveEndpoint(endpointOf(pending), pending.defaults)
+        if (c) await API.saveEndpoint(endpointOf(c), { embed: c.defaults.embed }, 'embed')
+      }, 'Could not save that endpoint.')
+    }
+    if (!c) return
+    if (target === 'shared' && picked && !picked.servesEmbeddings && cfg.endpoints.embed.inherited) {
+      setBusy(true)
+      setErr(null)
+      try {
+        await API.checkEndpoint(c.providerId, c.baseUrl, c.apiKey)
+        setPending(c)
+        setChoice(null)
+      } catch (e) {
+        setErr((e as Error).message || 'Could not reach that service.')
+      }
+      return setBusy(false)
+    }
     commit(async () => {
-      await API.checkEndpoint(choice.providerId, choice.baseUrl, choice.apiKey)
-      const ep = { providerId: choice.providerId, baseUrl: choice.baseUrl, apiKey: choice.apiKey }
+      await API.checkEndpoint(c.providerId, c.baseUrl, c.apiKey)
       // A role's own endpoint names only that role's model.
-      if (target === 'shared') await API.saveEndpoint(ep, choice.defaults)
-      else await API.saveEndpoint(ep, { [target]: choice.defaults[target] }, target)
+      if (target === 'shared') await API.saveEndpoint(endpointOf(c), c.defaults)
+      else await API.saveEndpoint(endpointOf(c), { [target]: c.defaults[target] }, target)
     }, 'Could not save that endpoint.')
+  }
 
   const disconnect = () =>
     commit(() => API.clearEndpoint(leaveSel ? { models: leaveSel } : {}), 'Could not disconnect.')
@@ -112,8 +140,8 @@ export function ConnectionPanel({
     ]
   })
   // The tile picked for embeddings has to serve them.
-  const offered = target === 'embed' ? cfg.catalogue.filter(e => e.servesEmbeddings) : cfg.catalogue
-  const picked = choice && cfg.catalogue.find(e => e.id === choice.providerId)
+  const forEmbed = target === 'embed' || Boolean(pending)
+  const offered = forEmbed ? cfg.catalogue.filter(e => e.servesEmbeddings) : cfg.catalogue
 
   return (
     <SettingsGroup label="Connection">
@@ -209,6 +237,15 @@ export function ConnectionPanel({
 
       {target && (
         <div className="conn-edit">
+          {pending && (
+            <>
+              <span className="conn-where">Pick a provider for search by meaning</span>
+              <p className="conn-warn">
+                {cfg.catalogue.find(e => e.id === pending.providerId)?.label || 'That service'} makes no embeddings,
+                which finding things by meaning needs. Another service can do just that part.
+              </p>
+            </>
+          )}
           {target !== 'shared' && (
             <p className="conn-warn">
               Only {PER_ROLE[target].what.toLowerCase()} will use this service. Everything else stays on{' '}
@@ -216,6 +253,7 @@ export function ConnectionPanel({
             </p>
           )}
           <EndpointPicker
+            key={pending ? 'embed' : target}
             endpoints={offered}
             keyPlaceholder={cfg.endpoint.configured ? 'paste a new key' : 'paste it here'}
             onChange={setChoice}
@@ -226,28 +264,26 @@ export function ConnectionPanel({
               borrows the shared endpoint moves with it. */}
           {choice &&
             Boolean(choice.defaults.embed) &&
-            (target === 'embed' || (target === 'shared' && cfg.endpoints.embed.inherited)) && (
+            (forEmbed || (target === 'shared' && cfg.endpoints.embed.inherited)) && (
               <p className="conn-warn">
                 This service serves embeddings, so search moves to it and every note is re-indexed in the background.
                 Search keeps working while that runs.
               </p>
             )}
-          {/* Claude as the shared endpoint takes embeddings with it unless they
-              have their own, and it serves none. */}
-          {target === 'shared' && picked && !picked.servesEmbeddings && cfg.endpoints.embed.inherited && (
-            <p className="conn-warn">
-              {picked.label} makes no embeddings. Afterwards, choose Per role, then a different endpoint for embeddings,
-              or search by meaning stops working.
-            </p>
-          )}
           <div className="conn-actions">
-            <Button tone="solid" disabled={!choice || busy} onClick={saveEndpoint}>
+            <Button tone="solid" disabled={!choice || busy} onClick={() => saveEndpoint(choice)}>
               {busy ? 'Saving…' : 'Save'}
             </Button>
+            {pending && (
+              <Button disabled={busy} onClick={() => saveEndpoint(null)}>
+                Skip: keyword search only
+              </Button>
+            )}
             <Button
               disabled={busy}
               onClick={() => {
                 setTarget(null)
+                setPending(null)
                 setChoice(null)
                 setErr(null)
               }}

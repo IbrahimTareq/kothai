@@ -1,3 +1,4 @@
+import { findEndpoint } from './endpoints.ts'
 import { ROLES, type Role } from './roles.ts'
 
 // ---- inference endpoint resolution ----------------------------------------
@@ -63,9 +64,16 @@ export function resolveAiConfig(env: NodeJS.ProcessEnv = process.env, creds: AiC
         ? { baseUrl: strip(e.baseUrl), apiKey: e.apiKey || null, providerId: e.providerId || null }
         : NO_ENDPOINT
     const shared = entry(creds ?? undefined)
+    // Borrowing an endpoint that serves no embeddings (Claude) is no endpoint
+    // at all for that role: embeddings and every re-embed went to Claude's
+    // URL and failed on every note. Decided here, so boot, roleEnabled and the
+    // settings route's re-embed check cannot disagree. Env names no catalogue
+    // entry (providerId is always null there), so this is file mode only.
+    const chatOnly = findEndpoint(shared.providerId)?.servesEmbeddings === false
     const roleEntry = (role: 'vision' | 'embed'): RoleEndpoint => {
       const own = entry(creds?.roles?.[role])
-      return own.baseUrl ? own : shared
+      if (own.baseUrl) return own
+      return role === 'embed' && chatOnly ? NO_ENDPOINT : shared
     }
     roles = { llm: shared, vision: roleEntry('vision'), embed: roleEntry('embed') }
     const any = ROLES.some(r => roles[r].baseUrl)

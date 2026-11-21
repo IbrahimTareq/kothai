@@ -43,11 +43,12 @@ interface ValidatedResidency {
 //
 // `inherited` is identity, not equality: resolveAiConfig hands an inheriting
 // role the shared entry itself, so a role given its own entry at the same URL
-// still reports as its own — the one the user can clear.
+// still reports as its own — the one the user can clear. No URL is no entry
+// either: embeddings borrowing a chat-only endpoint, which resolveAiConfig turns off.
 function endpointInfo(role: Role = 'llm') {
   const { roles } = getAiConfig()
   const { baseUrl } = roles[role]
-  const inherited = role !== 'llm' && roles[role] === roles.llm
+  const inherited = role !== 'llm' && (roles[role] === roles.llm || !baseUrl)
   if (!baseUrl) return { configured: false, host: null, inherited }
   try {
     return { configured: true, host: new URL(baseUrl).hostname, inherited }
@@ -56,31 +57,27 @@ function endpointInfo(role: Role = 'llm') {
   }
 }
 
-// What the library's vectors were made with: the embedding role's model, env
-// winning as it does in the provider, at its endpoint. Only ever compared,
-// never logged — the URL is treated as secret (see endpointInfo).
+// What the library's vectors were made with: the embedding model (env wins, as
+// in the provider) at its endpoint. Compared, never logged: the URL is secret.
 function embedSource(): string | null {
   const { roles, envModels } = getAiConfig()
   const model = envModels.embed || settings.getRemote().embed
-  return model ? `${model} ${roles.embed.baseUrl}` : null
+  return model && roles.embed.baseUrl ? `${model} ${roles.embed.baseUrl}` : null
 }
 
-// Re-embed when the embedding role now answers from a different model or a
-// different endpoint than `before`. Comparing the stored setting instead
-// re-embedded the library for a Settings edit that KOTHAI_AI_EMBED_MODEL
-// overrode, and missed a move to another endpoint under the same model name.
+// Re-embed when the embedding role now answers from another model or endpoint
+// than `before`. Comparing the stored setting re-embedded for a Settings edit
+// KOTHAI_AI_EMBED_MODEL overrode, and missed a move under the same model name.
 function reembedIfMoved(before: string | null, reason: string): void {
   const after = embedSource()
   if (after && after !== before && ai.capabilities().roles.embed === 'remote')
     enrich.queueJob(() => reembed.reembedAll(reason))
 }
 
-// A role is 'embed' or 'vision'; anything else, absent included, is the shared
-// endpoint, which also serves llm.
+// 'embed' or 'vision'; anything else, absent included, is the shared endpoint.
 const endpointRole = (v: unknown): 'embed' | 'vision' | null => (v === 'embed' || v === 'vision' ? v : null)
 
-// Once any *_BASE_URL is set by env the credential file is ignored entirely
-// (ai/endpoint-config.ts), so a save there answered 200 and changed nothing.
+// With any *_BASE_URL set by env the credential file is ignored, so a save answered 200 and changed nothing.
 const ENV_MANAGED = { error: 'The endpoint is set by environment variables on this install.', code: 'env_managed' }
 
 export async function handleGetSettings(res: ServerResponse): Promise<void> {
@@ -166,8 +163,11 @@ async function applyEndpointFromSetup(
   if (models) {
     const named = isRecord(models) ? models : {}
     const patch: ModelSelection = {}
-    // A role's endpoint names only that role's model.
-    for (const r of role ? [role] : ROLES) {
+    // A role's endpoint names only its own model; the shared one only the roles
+    // borrowing it. Seeding all three gave embeddings on their own Ollama the new
+    // tile's model name, and re-embedded the library with a model Ollama lacks.
+    const { roles } = getAiConfig()
+    for (const r of role ? [role] : ROLES.filter(r => roles[r] === roles.llm)) {
       const raw = named[r]
       const id = typeof raw === 'string' ? raw.trim() : ''
       if (id) patch[r] = id
@@ -328,8 +328,13 @@ export async function handleClearEndpoint(
   const body: unknown = await readBody(req).catch(() => ({}))
   const role = endpointRole(isRecord(body) && body.role)
   const before = embedSource()
-  if (role) setAiCredentials(writeRoleCredentials(role, null, opts.dir))
-  else {
+  if (role) {
+    setAiCredentials(writeRoleCredentials(role, null, opts.dir))
+    // Back on the shared provider's model: the override's stayed stored and was
+    // sent where it was unknown. A URL outside the catalogue has no default.
+    const fallback = findEndpoint(getAiConfig().roles.llm.providerId)?.defaults[role]
+    if (fallback) await settings.save({ remote: { [role]: fallback } })
+  } else {
     clearCredentials(opts.dir)
     setAiCredentials(null)
   }

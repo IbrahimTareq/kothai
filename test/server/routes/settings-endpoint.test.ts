@@ -321,7 +321,8 @@ test('clearing one role removes only that override', async () => {
   await handleClearEndpoint(fakeReq({ role: 'embed' }), res, { dir: d, load })
   assert.equal(sent.code, 200)
   assert.deepEqual(readCredentials(d), { baseUrl: A, apiKey: 'shared-key', providerId: 'claude' })
-  assert.equal(getAiConfig().roles.embed.baseUrl, A, 'embedding falls back to the shared endpoint')
+  // The shared entry is Claude, so falling back to it is no embeddings at all.
+  assert.equal(getAiConfig().roles.embed.baseUrl, null, 'embedding is off, not sent to Claude')
 })
 
 // The credential file is ignored entirely once any *_BASE_URL is set by env,
@@ -397,4 +398,104 @@ test('moving the embedding role to another endpoint re-embeds the library, even 
   )
   await enrich.queueJob(() => {})
   assert.equal(localCalls.remoteEmbeds, 1, 'a rotated key is not a new vector space')
+})
+
+// ---- other roles are left alone --------------------------------------------
+const OLLAMA = 'http://127.0.0.1:3/v1'
+const withOwnEmbed = async (d: string) => {
+  writeCredentials(
+    {
+      baseUrl: A,
+      apiKey: 'k',
+      providerId: 'openai',
+      roles: { embed: { baseUrl: OLLAMA, apiKey: null, providerId: 'ollama-local' } },
+    },
+    d,
+  )
+  setAiCredentials(readCredentials(d))
+  await settings.save({
+    configured: true,
+    remote: { llm: 'gpt-4o-mini', embed: 'nomic-embed-text', vision: 'gpt-4.1-mini' },
+  })
+  await initProvider('remote', {}, { load, localAvailable: false })
+}
+
+// The shared save seeded every role's model from the new tile's defaults, so
+// embeddings on their own Ollama were handed OpenRouter's embedding name, and a
+// whole-library re-embed was queued against a model that Ollama does not have.
+test('saving the shared endpoint leaves the model of a role with its own endpoint alone', async () => {
+  const d = dir()
+  store._reset({ keepDb: true })
+  await withOwnEmbed(d)
+  await store.addNote({ title: 'Brown butter pasta', embedding: [1, 0] })
+  await handleSaveEndpoint(
+    fakeReq({
+      endpoint: { providerId: 'openrouter', baseUrl: B, apiKey: 'or' },
+      models: { llm: 'openai/gpt-4o-mini', embed: 'openai/text-embedding-3-small', vision: 'openai/gpt-4.1-mini' },
+    }),
+    mockRes().res,
+    { dir: d, load },
+  )
+  await enrich.queueJob(() => {})
+  assert.equal(settings.getRemote().embed, 'nomic-embed-text')
+  assert.equal(settings.getRemote().llm, 'openai/gpt-4o-mini', 'the shared roles still take the new names')
+  assert.equal(settings.getRemote().vision, 'openai/gpt-4.1-mini')
+  assert.equal(localCalls.remoteEmbeds, 0, 'embeddings did not move, so nothing is re-embedded')
+})
+
+// The override's model stayed stored after it was cleared, so OpenRouter's
+// embedding name was sent to a shared OpenAI endpoint that does not know it.
+test('clearing a role override puts that role back on the shared provider’s default model', async () => {
+  const d = dir()
+  await withOwnEmbed(d)
+  await handleClearEndpoint(fakeReq({ role: 'embed' }), mockRes().res, { dir: d, load })
+  assert.equal(settings.getRemote().embed, 'text-embedding-3-small', "OpenAI's default, not Ollama's name")
+  assert.equal(settings.getRemote().llm, 'gpt-4o-mini', 'the other roles are untouched')
+})
+
+test('swapping the shared endpoint re-embeds when embeddings borrow it', async () => {
+  const d = dir()
+  store._reset({ keepDb: true })
+  writeCredentials({ baseUrl: A, apiKey: 'k', providerId: 'openai' }, d)
+  setAiCredentials(readCredentials(d))
+  await settings.save({ configured: true, remote: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small' } })
+  await initProvider('remote', {}, { load, localAvailable: false })
+  await store.addNote({ title: 'Brown butter pasta', embedding: [1, 0] })
+  await handleSaveEndpoint(
+    fakeReq({
+      endpoint: { providerId: 'openai', baseUrl: B, apiKey: 'k' },
+      models: { embed: 'text-embedding-3-small' },
+    }),
+    mockRes().res,
+    { dir: d, load },
+  )
+  await enrich.queueJob(() => {})
+  assert.equal(localCalls.remoteEmbeds, 1)
+})
+
+// Settings → Change → Claude while embeddings borrowed the shared endpoint:
+// the stored embedding name stayed, embeddings went to Claude's URL, and a
+// re-embed was queued that failed on every note. Now the role is off.
+test('switching the shared endpoint to Claude turns embeddings off rather than sending them to Claude', async () => {
+  const d = dir()
+  store._reset({ keepDb: true })
+  writeCredentials({ baseUrl: A, apiKey: 'k', providerId: 'openai' }, d)
+  setAiCredentials(readCredentials(d))
+  await settings.save({ configured: true, remote: { llm: 'gpt-4o-mini', embed: 'text-embedding-3-small' } })
+  await initProvider('remote', {}, { load, localAvailable: false })
+  await store.addNote({ title: 'Brown butter pasta', embedding: [1, 0] })
+  await handleSaveEndpoint(
+    fakeReq({
+      endpoint: { providerId: 'claude', baseUrl: B, apiKey: 'ak' },
+      models: { llm: 'claude-haiku-5-5', vision: 'claude-haiku-5-5', embed: '' },
+    }),
+    mockRes().res,
+    { dir: d, load },
+  )
+  await enrich.queueJob(() => {})
+  assert.equal(localCalls.remoteEmbeds, 0, 'no re-embed against an endpoint with no embeddings')
+  assert.equal(getAiConfig().roles.embed.baseUrl, null)
+  const { res, sent } = mockRes()
+  await handleGetSettings(res)
+  assert.deepEqual(record(sent.json().endpoints).embed, { configured: false, host: null, inherited: true })
 })

@@ -37,3 +37,13 @@ test('a model set by env is shown read-only, naming the variable', () => {
   assert.match(src('components/settings/ModelPicker.tsx'), /Set by KOTHAI_AI_\$\{role\.toUpperCase\(\)\}_MODEL/)
   assert.match(src('views/Settings.tsx'), /envSet=\{cfg\.envModels\[role\]\}/)
 })
+
+// Settings → Change → Claude used to save straight away with only a warning,
+// leaving embeddings with nowhere to go. It chains into the same step now.
+test('in Settings a chat-only tile chains into the embeddings picker, as first run does', () => {
+  const panel = src('components/settings/ConnectionPanel.tsx')
+  assert.match(panel, /Pick a provider for search by meaning/)
+  assert.match(panel, /Skip: keyword search only/)
+  assert.match(panel, /!picked\.servesEmbeddings && cfg\.endpoints\.embed\.inherited/)
+  assert.match(panel, /API\.saveEndpoint\(endpointOf\(c\), \{ embed: c\.defaults\.embed \}, 'embed'\)/)
+})

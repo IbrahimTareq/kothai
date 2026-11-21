@@ -122,3 +122,25 @@ test('model env vars land in envModels', () => {
 test('a model env var alone does not make the source env', () => {
   assert.equal(resolveAiConfig({ KOTHAI_AI_LLM_MODEL: 'm' }, null).source, 'none')
 })
+
+// Claude serves chat and images but no embeddings. An embedding role left to
+// borrow it was sent to Claude's URL: every note's re-embed failed, and so did
+// every search query's. Borrowing a chat-only endpoint is no endpoint at all —
+// the role is off, keyword search only — and the one place endpoints are
+// derived says so, so boot, roleEnabled and the re-embed check all agree.
+test('an embedding role borrowing a chat-only endpoint is unconfigured, and images still borrow it', () => {
+  const c = resolveAiConfig({}, { baseUrl: 'https://api.anthropic.com/v1', apiKey: 'ak', providerId: 'claude' })
+  assert.equal(c.roles.embed.baseUrl, null)
+  assert.equal(c.roles.embed.apiKey, null, 'and the Claude key goes nowhere near it')
+  assert.equal(c.roles.vision.baseUrl, 'https://api.anthropic.com/v1')
+  assert.equal(c.source, 'file')
+})
+
+test('an embedding role with its own endpoint beside a chat-only shared one keeps it', () => {
+  const embed = { baseUrl: 'https://api.openai.com/v1', apiKey: 'ok', providerId: 'openai' }
+  const c = resolveAiConfig(
+    {},
+    { baseUrl: 'https://api.anthropic.com/v1', apiKey: 'ak', providerId: 'claude', roles: { embed } },
+  )
+  assert.deepEqual(c.roles.embed, embed)
+})
