@@ -133,9 +133,16 @@ export function createRemoteProvider({ endpoints, models, onRecover }: RemotePro
   // 400 and 404 are answers about the request and the model named in it — a
   // model that cannot take images, an id the endpoint does not serve. Anything
   // else says the endpoint itself is down or refusing us.
+  //
+  // An embed 400 counts towards the role's threshold instead of opening it:
+  // embedding is one input per call, so a 400 there is usually about that
+  // input. Opening on the first one made a single rejected note fail every
+  // note after it in a library re-embed, which then never finished. A model
+  // that cannot embed at all 400s on every input and still trips it.
   function recordFailure(role: Role, ep: Endpoint, e: RemoteError) {
     const breaker = e.code === 'bad_request' || e.code === 'model_not_found' ? roleCircuits[role] : ep.circuit
-    breaker.recordFailure({ transient: e.transient, message: e.message, retryAfterMs: e.retryAfterMs })
+    const transient = e.transient || (role === 'embed' && e.code === 'bad_request')
+    breaker.recordFailure({ transient, message: e.message, retryAfterMs: e.retryAfterMs })
   }
 
   // Every network call funnels through here so success/failure bookkeeping

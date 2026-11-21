@@ -488,6 +488,35 @@ test('a model one role cannot use fails that role alone, not the whole endpoint'
   assert.equal(p.available(), true)
 })
 
+// A re-embed sweep met one note the endpoint rejected with 400 (too long, a
+// character it refuses). That 400 opened the embed role at once, every later
+// note in the sweep failed fast on the open circuit, and the library never
+// finished moving off its old vectors. One 400 is about one input; a model
+// that cannot embed at all 400s on every input, and still trips the role.
+test('one embed 400 is about that input and leaves the role open; a run of them trips it', async () => {
+  let reject = true
+  let hits = 0
+  routes['/embeddings'] = (_req, res) => {
+    hits++
+    if (!reject) return okJson(res, { data: [{ embedding: [0.1] }] })
+    res.writeHead(400, { 'content-type': 'application/json' })
+    res.end(JSON.stringify({ error: 'input too long' }))
+  }
+  const p = make({ llm: 'm', embed: 'nomic-embed-text', vision: '' })
+  await p.init()
+
+  await assert.rejects(() => p.embedText('bad'))
+  reject = false
+  assert.deepEqual(await p.embedText('good'), [0.1], 'the next input still reaches the endpoint')
+
+  reject = true
+  for (let i = 0; i < 5; i++) await p.embedText('bad').catch(() => {})
+  const before = hits
+  const e = await p.embedText('again').catch(x => x)
+  assert.ok(e instanceof FeatureDisabledError, 'a model rejecting everything still stops being called')
+  assert.equal(hits, before)
+})
+
 test('validateModel accepts any name, warns on one the endpoint does not list, and reads blank as off', async () => {
   const p = make()
   await p.init()

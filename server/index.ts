@@ -53,8 +53,10 @@ shrinkStoredThumbs().catch(e => console.error('[thumb] stored-thumbnail sweep fa
 const reembedding = reembed.queueRecipeReembed()
 // Vectors from the removed on-device model and vectors from an endpoint's
 // model live in different spaces too, so a library still holding the former
-// is invalidated just as thoroughly as by a recipe change.
-const providerReembedding = reembed.queueEmbedProviderReembed()
+// is invalidated just as thoroughly as by a recipe change. Not when the recipe
+// sweep is already queued: it records both markers, and an unfinished sweep
+// leaves both stale, which queued the whole library twice.
+const providerReembedding = !reembedding && reembed.queueEmbedProviderReembed()
 if (settings.isConfigured()) {
   if (!hadTagRegistry && ai.roleEnabled('embed')) {
     withTrigger('boot', () =>

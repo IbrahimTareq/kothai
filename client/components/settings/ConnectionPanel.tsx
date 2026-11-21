@@ -11,7 +11,7 @@
 //
 // Embeddings and images can each have an endpoint of their own: Claude serves
 // no embeddings, so connecting it needs a second service for search by meaning.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { SettingsGroup } from './SettingsRow'
 import { EndpointPicker, type EndpointChoice } from './EndpointPicker'
 import { API } from '../../data/api'
@@ -37,8 +37,12 @@ export function ConnectionPanel({
   onChanged: (next: SettingsResponse) => void
 }) {
   // Collapsed until asked for, because most people set this once and never
-  // look at it again.
-  const [target, setTarget] = useState<Target | null>(null)
+  // look at it again. The upgrade banner's link asks for it with #connect,
+  // which is dropped once read so a later visit opens collapsed.
+  const [target, setTarget] = useState<Target | null>(() => (location.hash === '#connect' ? 'shared' : null))
+  useEffect(() => {
+    if (location.hash === '#connect') history.replaceState(null, '', location.pathname)
+  }, [])
   const [choice, setChoice] = useState<EndpointChoice | null>(null)
   // A checked shared tile that serves no embeddings, while embeddings borrow
   // the shared endpoint: held until the embeddings step answers, as in first

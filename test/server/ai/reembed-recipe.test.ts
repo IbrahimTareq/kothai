@@ -14,6 +14,7 @@ import type { NoteRecord } from '../../../server/data/notes.ts'
 import type { SettingsPatch } from '../../../server/data/settings.ts'
 import type { EmbedOptions } from '../../../server/ai/providers/types.ts'
 import type { Role } from '../../../server/ai/roles.ts'
+import { RemoteError } from '../../../server/ai/providers/remote-http.ts'
 
 let notes: NoteRecord[] = []
 let embedCalls: { text: string; opts: EmbedOptions | undefined }[] = []
@@ -146,16 +147,14 @@ test('reembedAll embeds every note once, writes once, and records the new recipe
 test('reembedAll survives one unembeddable note rather than abandoning the rest of the library', async () => {
   reset([REEL, { ...REEL, id: 'r2' }, { ...REEL, id: 'r3' }])
   embedImpl = async (text: string) => {
-    if (embedCalls.length === 2) throw new Error('model blew up')
+    if (embedCalls.length === 2) throw new RemoteError('bad_request', 'rejected', { transient: false })
     return [text.length]
   }
 
   await reembed.reembedAll('test')
   assert.equal(embedCalls.length, 3, 'the sweep kept going')
   assert.equal(notes.filter(x => Array.isArray(x.embedding)).length, 2)
-  // Not marked current: the note it lost still holds a vector from the old
-  // recipe, and a marker claiming otherwise means no sweep ever replaces it.
-  assert.equal(storedRecipe, null)
+  assert.equal(storedRecipe, EMBED_RECIPE)
 })
 
 test('reembedAll skips a note with no embeddable text at all', async () => {

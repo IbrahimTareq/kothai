@@ -8,6 +8,7 @@ import * as tagvocab from '../data/tagvocab.ts'
 import * as inference from './index.ts'
 import * as settings from '../data/settings.ts'
 import { EMBED_RECIPE } from './prompts.ts'
+import { RemoteError } from './providers/remote-http.ts'
 import { queueJob } from './enrich.ts'
 import { withTrigger } from './usage.ts'
 
@@ -29,8 +30,8 @@ import { withTrigger } from './usage.ts'
 // It mirrors it, though, rather than sharing it — the two read different
 // shapes (an in-flight patch there, a persisted note here).
 //
-// Failures are per-note: one unembeddable note must not abandon the other
-// 1,700. `{ persist: false }` batches the writes into a single transaction at
+// A note the endpoint refuses must not abandon the other 1,700; an endpoint
+// that is down ends the sweep (see reembedEach). `{ persist: false }` batches the writes into a single transaction at
 // the end, exactly as before.
 export function embedBodyFor(
   note: Pick<
@@ -62,28 +63,43 @@ export function reembedAll(reason = 'settings') {
 async function reembedEach(reason: string) {
   const notes = store.allNotes()
   console.log(`[enrich] re-embedding ${notes.length} notes (${reason})…`)
-  let failed = 0
+  // A note the endpoint refuses (400) is that note's failure; anything else
+  // (down, rate-limited, bad key, the circuit open) is the endpoint's, and
+  // stops the sweep rather than send the rest of the library at it.
+  let embedded = 0
+  let stopped = false
+  const refused: string[] = []
   for (const n of notes) {
+    const body = embedBodyFor(n)
+    if (!body) continue
     try {
-      const body = embedBodyFor(n)
-      if (body) {
-        await store.updateNote(n.id, { embedding: await inference.embedText(body) }, { persist: false })
-      }
+      await store.updateNote(n.id, { embedding: await inference.embedText(body) }, { persist: false })
+      embedded++
     } catch (e) {
-      failed++
       console.error('[enrich] re-embed failed for', n.id, '-', e instanceof Error ? e.message : e)
+      if (e instanceof RemoteError && e.code === 'bad_request') refused.push(n.id)
+      else {
+        stopped = true
+        break
+      }
     }
   }
+  // Every note refused is the model, not the notes (a chat model named for
+  // embeddings 400s on everything), and is handled as the endpoint's failure.
+  // Otherwise a refused note loses its old vector: left on it, an on-device
+  // vector was ranked against the endpoint's query vectors. Keyword search
+  // still finds it.
+  const finished = !stopped && (embedded > 0 || !refused.length)
+  if (finished) for (const id of refused) await store.updateNote(id, { embedding: null }, { persist: false })
   await store.flush() // one write for the whole batch, not one per note
-  // Any note lost to a failure (the endpoint down mid-sweep) keeps both
-  // markers stale, so the next boot or reconnect sweeps again. Marked anyway,
-  // an upgrading library had its on-device vectors labelled 'remote' and
-  // ranked against the endpoint's query vectors from then on. A note with no
-  // text is not a failure: it has nothing to embed, now or on any retry.
-  if (failed) {
-    console.error(
-      `[enrich] re-embed left ${failed} notes on their old vectors; markers unchanged so a later sweep retries`,
-    )
+  // An unfinished sweep leaves the provider marker, so an upgrading library
+  // is retried at the next boot or reconnect; marking it anyway labelled its
+  // on-device vectors 'remote'. The recipe marker is cleared rather than left,
+  // because a library already 'remote' whose model changed has no other marker
+  // saying it still owes a sweep, and boot's recipe check is what retries it.
+  if (!finished) {
+    console.error('[enrich] re-embed stopped; the library is marked as still owing one')
+    await settings.save({ embedRecipe: null })
     return notes.length
   }
   // The provider marker moves here, once the vectors exist, and on every path

@@ -32,6 +32,7 @@
 .demo-banner{flex:1;display:flex;align-items:center;justify-content:center;gap:var(--space-12);margin:0;
   font-size:var(--text-xs);color:var(--ink-dim);letter-spacing:var(--tracking-tight)}
 .demo-banner a{color:var(--ink);text-underline-offset:3px}
+.upgrade-short{display:none}
 /* What the demo leaves out rather than locks: controls whose writes the server
    refuses (server/routes/demo.ts) and that a visitor would meet only to be told
    no. display:none rather than pointer-events, so they leave the tab order too.

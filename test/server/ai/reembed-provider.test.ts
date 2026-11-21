@@ -14,14 +14,15 @@ import { note } from '../../helpers/notes.ts'
 import type { NoteRecord } from '../../../server/data/notes.ts'
 import type { SettingsPatch } from '../../../server/data/settings.ts'
 import type { Role } from '../../../server/ai/roles.ts'
+import { RemoteError } from '../../../server/ai/providers/remote-http.ts'
 
 let notes: NoteRecord[] = []
 let embedCalls: { text: string; markerNow: string | null }[] = []
 let enabledImpl = (): Record<Role, boolean> => ({ llm: true, embed: true, vision: true })
 let storedProvider: string | null = null
 let savedPatches: SettingsPatch[] = []
-// Which notes' embed calls throw, by input text. Empty per test.
-let failFor = new Set<string>()
+// What the next embed call throws, by input text; null embeds normally.
+let failWith: (text: string) => Error | null = () => null
 
 const realStore = await import('../../../server/data/notes.ts')
 const realTags = await import('../../../server/data/tags.ts')
@@ -65,7 +66,8 @@ mock.module('../../../server/ai/index.ts', {
     // whether the new value was written before the vectors it describes exist.
     embedText: async (text: string) => {
       embedCalls.push({ text, markerNow: storedProvider })
-      if (failFor.has(text)) throw new Error('endpoint unreachable')
+      const failure = failWith(text)
+      if (failure) throw failure
       return [text.length]
     },
   },
@@ -99,7 +101,7 @@ function reset(list: NoteRecord[] = [], marker: string | null = null) {
   notes = list.map(n => ({ ...n }))
   embedCalls = []
   savedPatches = []
-  failFor = new Set()
+  failWith = () => null
   storedProvider = marker
   enabledImpl = () => ({ llm: true, embed: true, vision: true })
 }
@@ -179,28 +181,70 @@ test('a Settings-triggered re-embed marks the vectors remote, so the next boot q
   assert.equal(embedCalls.length, 0)
 })
 
-// A sweep that lost notes to a down endpoint used to mark the library rebuilt
-// anyway: per-note failures were logged and swallowed, then the marker moved.
-// On a library upgrading from the on-device provider that left QVAC vectors
-// labelled 'remote', ranked against an endpoint's query embeddings forever.
-test('a sweep with any failed note leaves the markers alone, so the next one retries', async () => {
-  const broken = { ...NOTE, id: 'n2', title: 'Unreachable' }
-  reset([NOTE, broken], 'local')
-  failFor = new Set([reembed.embedBodyFor(broken)])
+// Embed failures in a sweep come in two kinds, and treating them alike broke
+// the library both ways. A note the endpoint refuses (400) is that note's
+// problem: blocking the markers on it re-swept the whole library every boot
+// and never converged. A down endpoint is everyone's: marking the library
+// rebuilt anyway labelled on-device vectors 'remote', ranked against the
+// endpoint's query vectors from then on.
+const rejected = () => new RemoteError('bad_request', 'Endpoint rejected the request (400).', { transient: false })
+const down = () => new RemoteError('endpoint_error', 'Endpoint returned 503.', { transient: true })
+
+test('a note the endpoint rejects loses its old vector, and the rest of the sweep finishes', async () => {
+  const bad = { ...NOTE, id: 'bad', title: 'Rejected', embedding: [9, 9] }
+  reset([NOTE, bad, { ...NOTE, id: 'n3' }], 'local')
+  failWith = text => (text === reembed.embedBodyFor(bad) ? rejected() : null)
   const quiet = mock.method(console, 'error', () => {})
 
   await reembed.reembedAll('embedding endpoint changed')
   quiet.mock.restore()
-  assert.equal(embedCalls.length, 2, 'one failure must not abandon the rest of the library')
-  assert.equal(storedProvider, 'local')
-  assert.ok(
-    savedPatches.every(p => p.embedProvider === undefined && p.embedRecipe === undefined),
-    'neither marker may claim a rebuild that did not finish',
+  assert.equal(embedCalls.length, 3, 'the notes after it are still embedded')
+  assert.equal(
+    notes.find(n => n.id === 'bad')?.embedding,
+    null,
+    'an on-device vector left on it would be ranked against remote queries',
   )
-  assert.equal(reembed.queueEmbedProviderReembed(), true, 'the next boot or reconnect owes the sweep again')
+  assert.equal(storedProvider, 'remote')
+})
+
+test('an endpoint going down mid-sweep stops it and leaves the markers, so the next boot retries', async () => {
+  reset([NOTE, { ...NOTE, id: 'n2', title: 'Second' }, { ...NOTE, id: 'n3', title: 'Third' }], 'local')
+  failWith = () => (embedCalls.length === 2 ? down() : null)
+  const quiet = mock.method(console, 'error', () => {})
+
+  await reembed.reembedAll('embedding endpoint changed')
+  quiet.mock.restore()
+  assert.equal(embedCalls.length, 2, 'the rest of the library is not sent at a down endpoint')
+  assert.equal(storedProvider, 'local')
+  assert.ok(savedPatches.every(p => p.embedProvider === undefined))
+  // Cleared, not kept: a library already 'remote' whose model changed has no
+  // other marker saying it still owes a sweep.
+  assert.ok(savedPatches.some(p => p.embedRecipe === null))
+  assert.equal(reembed.queueEmbedProviderReembed(), true)
+  failWith = () => null
   await drain()
 })
 
+test('every note rejected is the model, not the notes: no vector is cleared and no marker moves', async () => {
+  reset(
+    [
+      { ...NOTE, embedding: [1] },
+      { ...NOTE, id: 'n2', title: 'Second', embedding: [2] },
+    ],
+    'local',
+  )
+  failWith = () => rejected()
+  const quiet = mock.method(console, 'error', () => {})
+
+  await reembed.reembedAll('embedding endpoint changed')
+  quiet.mock.restore()
+  assert.deepEqual(
+    notes.map(n => n.embedding),
+    [[1], [2]],
+  )
+  assert.equal(storedProvider, 'local')
+  assert.ok(savedPatches.some(p => p.embedRecipe === null))
+})
 // A note with no text has nothing to embed, and never will: counting it as a
 // failure would keep the marker stale and re-embed the library on every boot.
 test('a note with nothing to embed does not hold the marker back', async () => {

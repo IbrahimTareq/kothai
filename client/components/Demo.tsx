@@ -62,16 +62,22 @@ export function TopBanner({ upgradeNeeded, onConnect }: { upgradeNeeded: boolean
   if (!demo) {
     if (!upgradeNeeded || dismissed) return null
     return (
-      <p className="demo-banner">
-        <span>
+      <p className="demo-banner upgrade-banner">
+        {/* The whole sentence ran to three lines plus the link on a phone and
+            pushed its first line off the top of the band; there it is cut to
+            the fact and the way out. */}
+        <span className="upgrade-long">
           On-device models were removed. Connect an endpoint to turn AI back on. Ollama keeps everything on your
           machine.
         </span>
+        <span className="upgrade-short">On-device models were removed.</span>
         <a
           href="/settings"
           onClick={e => {
             e.preventDefault()
             onConnect()
+            // Opens the Connection panel's picker (ConnectionPanel reads it).
+            history.replaceState(null, '', '/settings#connect')
           }}
         >
           Connect a service
