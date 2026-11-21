@@ -49,6 +49,7 @@ export const CLASSIFY_SCHEMA = {
     tags: { type: 'array', items: { type: 'string' } },
   },
   required: ['type', 'category', 'title', 'summary', 'tags'],
+  additionalProperties: false,
 }
 
 export const DESCRIBE_IMAGE_PROMPT =

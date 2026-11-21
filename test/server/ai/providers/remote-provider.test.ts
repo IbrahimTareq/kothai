@@ -162,6 +162,20 @@ test('classify requests json_schema and normalises the result', async () => {
   assert.deepEqual(out.tags, ['a'], 'junk tag must be filtered by the shared normaliser')
 })
 
+test('classify sends a strict json_schema', async () => {
+  let seen: Record<string, unknown> = {}
+  routes['/chat/completions'] = (_req, res, body) => {
+    seen = record(body)
+    okJson(res, chatReply(JSON.stringify({ type: 'link', category: 'Tech', title: 'T', summary: 'S', tags: [] })))
+  }
+  const p = make()
+  await p.init()
+  await p.classify({ text: 'https://x.com', now: 'now' })
+  const jsonSchema = record(record(seen.response_format).json_schema)
+  assert.equal(jsonSchema.strict, true)
+  assert.equal(record(jsonSchema.schema).additionalProperties, false)
+})
+
 test('classify retries without json_schema when the endpoint rejects it', async () => {
   const bodies: Record<string, unknown>[] = []
   routes['/chat/completions'] = (_req, res, body) => {

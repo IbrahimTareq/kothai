@@ -320,15 +320,15 @@ export function createRemoteProvider({
       const req = { model: modelFor('llm'), messages, reasoning_effort: 'none' }
       let raw = ''
       try {
-        // Probe json_schema outside call() so a 400 "unsupported" response
-        // does not open the circuit before the plain-prompt retry runs.
+        // Probe json_schema outside call() so a 400 "unsupported" does not open the
+        // circuit before the plain retry. `strict`: Anthropic's endpoint 400s without it.
         raw = textOf(
           await chat(
             {
               ...req,
               response_format: {
                 type: 'json_schema',
-                json_schema: { name: 'classification', schema: CLASSIFY_SCHEMA },
+                json_schema: { name: 'classification', strict: true, schema: CLASSIFY_SCHEMA },
               },
             },
             TIMEOUTS.classify,
