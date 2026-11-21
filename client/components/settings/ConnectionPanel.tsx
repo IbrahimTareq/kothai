@@ -81,9 +81,9 @@ export function ConnectionPanel({
     if (!target || busy) return
     if (pending) {
       return commit(async () => {
-        if (c) await API.checkEndpoint(c.providerId, c.baseUrl, c.apiKey)
+        const embed = c && { ...c, baseUrl: await API.checkEndpoint(c.providerId, c.baseUrl, c.apiKey) }
         await API.saveEndpoint(endpointOf(pending), pending.defaults)
-        if (c) await API.saveEndpoint(endpointOf(c), { embed: c.defaults.embed }, 'embed')
+        if (embed) await API.saveEndpoint(endpointOf(embed), { embed: embed.defaults.embed }, 'embed')
       }, 'Could not save that endpoint.')
     }
     if (!c) return
@@ -91,8 +91,7 @@ export function ConnectionPanel({
       setBusy(true)
       setErr(null)
       try {
-        await API.checkEndpoint(c.providerId, c.baseUrl, c.apiKey)
-        setPending(c)
+        setPending({ ...c, baseUrl: await API.checkEndpoint(c.providerId, c.baseUrl, c.apiKey) })
         setChoice(null)
       } catch (e) {
         setErr((e as Error).message || 'Could not reach that service.')
@@ -100,10 +99,10 @@ export function ConnectionPanel({
       return setBusy(false)
     }
     commit(async () => {
-      await API.checkEndpoint(c.providerId, c.baseUrl, c.apiKey)
+      const checked = { ...c, baseUrl: await API.checkEndpoint(c.providerId, c.baseUrl, c.apiKey) }
       // A role's own endpoint names only that role's model.
-      if (target === 'shared') await API.saveEndpoint(endpointOf(c), c.defaults)
-      else await API.saveEndpoint(endpointOf(c), { [target]: c.defaults[target] }, target)
+      if (target === 'shared') await API.saveEndpoint(endpointOf(checked), c.defaults)
+      else await API.saveEndpoint(endpointOf(checked), { [target]: c.defaults[target] }, target)
     }, 'Could not save that endpoint.')
   }
 

@@ -17,6 +17,11 @@ test('the installer parses', () => {
 // It used to word-split that report, so a data directory under a path with a
 // space (every macOS "My Drive"-style folder) or a password containing one
 // came back as a broken `docker run`, after the old container was already gone.
+// On Linux, host.docker.internal resolves only when the container is told to
+// map it; without it the Ollama tile's host fallback (server/ai/endpoints.ts)
+// could not reach an Ollama installed on the machine.
+const ADD_HOST = '--add-host=host.docker.internal:host-gateway'
+
 const installer = readFileSync(new URL('../site/public/install.sh', import.meta.url), 'utf8')
 const body = installer.match(/<<'SHIM_BODY'\n([\s\S]*?)\nSHIM_BODY\n/)?.[1]
 
@@ -72,6 +77,8 @@ test('kothai update carries mounts and env through intact, spaces and all', () =
   assert.deepEqual(pairs('-v'), ['/Users/me/My Stuff/models:/app/models', '/Users/me/My Stuff/data:/app/data'])
   assert.deepEqual(pairs('-e'), ['KOTHAI_PASSWORD=two words here', 'KOTHAI_SETUP_PROVIDER=openai'])
   assert.equal(run.at(-1), 'ghcr.io/ibrahimtareq/kothai:latest')
+  // A container made before the installer added it gets it on its next update.
+  assert.ok(run.includes(ADD_HOST), 'the recreated container must reach an Ollama on the host')
 })
 
 // The installer used to offer an on-device models option and pass
@@ -149,4 +156,10 @@ test('the installer no longer mounts a models directory or sets the provider env
   assert.ok(run)
   assert.ok(!run.some(v => v.includes('/app/models')))
   assert.ok(!run.some(v => v.startsWith('KOTHAI_AI_PROVIDER')))
+})
+
+test('the installer maps host.docker.internal, so a host Ollama is reachable on Linux', async () => {
+  const { run } = await runInstaller([])
+  assert.ok(run)
+  assert.ok(run.includes(ADD_HOST))
 })

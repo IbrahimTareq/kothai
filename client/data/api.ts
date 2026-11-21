@@ -332,9 +332,12 @@ export const API = {
   clearCaptureToken: (): Promise<CaptureTokenState> => apiDel<CaptureTokenState>('/api/capture-token'),
   // first-run: commit the chosen model names
   // Throws if the endpoint refuses the key; providerId lets it check one /models would take from anyone.
-  async checkEndpoint(providerId: string, baseUrl: string, apiKey: string): Promise<void> {
-    const r = await apiPost<{ ok: boolean; error?: string }>('/api/setup/test', { providerId, baseUrl, apiKey })
+  // Resolves to the URL that answered, the one to save (the Ollama tile has two: endpoints.ts).
+  async checkEndpoint(providerId: string, baseUrl: string, apiKey: string): Promise<string> {
+    const body = { providerId, baseUrl, apiKey }
+    const r = await apiPost<{ ok: boolean; error?: string; baseUrl?: string }>('/api/setup/test', body)
     if (!r.ok) throw new Error(r.error || 'Could not reach that service.')
+    return r.baseUrl || baseUrl
   },
   // Apply an endpoint mid-first-run, BEFORE the model picker is drawn: the
   // picker offers each role the catalogue of the endpoint that serves it.

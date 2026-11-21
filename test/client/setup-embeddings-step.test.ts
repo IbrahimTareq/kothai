@@ -45,5 +45,17 @@ test('in Settings a chat-only tile chains into the embeddings picker, as first r
   assert.match(panel, /Pick a provider for search by meaning/)
   assert.match(panel, /Skip: keyword search only/)
   assert.match(panel, /!picked\.servesEmbeddings && cfg\.endpoints\.embed\.inherited/)
-  assert.match(panel, /API\.saveEndpoint\(endpointOf\(c\), \{ embed: c\.defaults\.embed \}, 'embed'\)/)
+  assert.match(panel, /API\.saveEndpoint\(endpointOf\(embed\), \{ embed: embed\.defaults\.embed \}, 'embed'\)/)
+})
+
+// The Ollama tile names two URLs and the check reports which one answered
+// (routes/setup-test.ts). Saving the tile's own first URL regardless saved one
+// that had just failed, and a compose-profile Ollama was never connected.
+test('both first run and Settings save the URL the check reports', () => {
+  assert.match(src('data/api.ts'), /return r\.baseUrl \|\| baseUrl/)
+  for (const f of ['views/SetupWizard.tsx', 'components/settings/ConnectionPanel.tsx']) {
+    const code = src(f)
+    assert.match(code, /baseUrl: await API\.checkEndpoint\(/, f)
+    assert.doesNotMatch(code, /^\s*await API\.checkEndpoint\(/m, `${f} throws away the URL that answered`)
+  }
 })

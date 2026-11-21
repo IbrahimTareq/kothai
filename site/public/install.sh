@@ -164,7 +164,10 @@ fi
 
 mkdir -p "$DIR/data" || die "Cannot write to $DIR"
 
-set -- run -d --name "$NAME" --restart unless-stopped -p "$PORT:5173" -v "$DIR/data:/app/data"
+# host.docker.internal is the host on Docker Desktop already; on Linux only this
+# makes it so, and without it the Ollama tile could not reach a host Ollama.
+set -- run -d --name "$NAME" --restart unless-stopped -p "$PORT:5173" -v "$DIR/data:/app/data" \
+  --add-host=host.docker.internal:host-gateway
 [ -z "$ENDPOINT" ] || set -- "$@" -e "KOTHAI_AI_BASE_URL=$ENDPOINT"
 [ -z "$APIKEY" ] || set -- "$@" -e "KOTHAI_AI_API_KEY=$APIKEY"
 [ -z "$PASSWORD" ] || set -- "$@" -e "KOTHAI_PASSWORD=$PASSWORD"
@@ -256,7 +259,10 @@ case ${1:-help} in
     printf '  Pulling %s…\n' "$img"
     docker pull "$img" >/dev/null || die "Pull failed."
     docker rm -f "$NAME" >/dev/null
-    set -- run -d --name "$NAME" --restart "${restart:-unless-stopped}" -p "$p:5173"
+    # Added whether or not the old container had it, so an install made before
+    # the installer passed it can reach a host Ollama after its next update.
+    set -- run -d --name "$NAME" --restart "${restart:-unless-stopped}" -p "$p:5173" \
+      --add-host=host.docker.internal:host-gateway
     # One per line, split on newlines only and never globbed: a data directory
     # or password with a space in it used to come apart here, after the old
     # container was already removed.

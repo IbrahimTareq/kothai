@@ -33,7 +33,7 @@ docker compose exec ollama ollama pull llama3.2:3b
 docker compose exec ollama ollama pull nomic-embed-text
 ```
 
-Pick Ollama during setup (endpoint `http://ollama:11434/v1`). See [Models & inference](models.md#ollama). There is one image; `:latest`, the version tag and `:lite` all point at it.
+Pick Ollama during setup. Kothai finds it at `http://ollama:11434/v1`, or at an Ollama on the host if the profile isn't running. See [Models & inference](models.md#ollama). There is one image; `:latest`, the version tag and `:lite` all point at it.
 
 > [!IMPORTANT]
 > **There is no login until you set `KOTHAI_PASSWORD`.** Anyone who can reach the port can read and write everything. On your own machine or a home LAN that's fine and is the default. Set a password before Kothai is reachable from anywhere else (a public hostname, a VPS, a forwarded port) and put TLS in front of it. [security.md](security.md) has the threat model.

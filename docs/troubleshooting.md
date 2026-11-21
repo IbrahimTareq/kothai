@@ -18,11 +18,12 @@ curl -s localhost:5173/api/status
 
 <Accordions>
 <Accordion title="Ollama unreachable from Docker">
-`localhost` inside the Kothai container is the container itself, not your machine. Use the address that matches where Ollama runs:
+`localhost` inside the Kothai container is the container itself, not your machine. The Ollama tile tries two addresses and saves whichever answers:
 
-- Started with `docker compose --profile ollama`: `http://ollama:11434/v1`, the compose service name.
-- Running on the host: `http://host.docker.internal:11434/v1`. On Linux, add `extra_hosts: ["host.docker.internal:host-gateway"]` to the service. Ollama must also listen beyond loopback (`OLLAMA_HOST=0.0.0.0`).
-- Running Kothai without Docker: `http://localhost:11434/v1`.
+- `http://ollama:11434/v1`, the service `docker compose --profile ollama` starts.
+- `http://host.docker.internal:11434/v1`, an Ollama on the host. The installer and both compose files map this name on Linux. If you start the container with your own `docker run`, add `--add-host=host.docker.internal:host-gateway`. Ollama must also listen beyond loopback (`OLLAMA_HOST=0.0.0.0`).
+
+Running Kothai without Docker, neither address exists. Set `KOTHAI_AI_BASE_URL=http://localhost:11434/v1` instead.
 </Accordion>
 
 <Accordion title="Search is keyword-only">

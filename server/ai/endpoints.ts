@@ -38,6 +38,9 @@ export interface Endpoint {
   id: string
   label: string
   baseUrl: string
+  // Tried by the connection check when baseUrl does not answer; whichever
+  // answers is the URL saved. Only the Ollama entry has one — see there.
+  fallbackUrl?: string
   needsKey: boolean
   servesEmbeddings: boolean
   note: string
@@ -63,9 +66,15 @@ export const ENDPOINTS: Endpoint[] = [
   {
     id: 'ollama-local',
     label: 'Ollama on this machine',
-    // host.docker.internal resolves to the host from inside the container on
-    // Docker Desktop; on Linux the installer adds --add-host for it.
-    baseUrl: 'http://host.docker.internal:11434/v1',
+    // Two places an Ollama can be, tried in this order by the connection check
+    // (routes/setup-test.ts) and saved as whichever answers, so nobody types a
+    // URL: the compose profile's `ollama` service, then an Ollama on the host.
+    // Hard-wired to the host alone, the tile never reached the profile's
+    // Ollama, which publishes no port. host.docker.internal is the host from
+    // inside the container on Docker Desktop, and on Linux because the
+    // installer passes --add-host and both compose files set extra_hosts for it.
+    baseUrl: 'http://ollama:11434/v1',
+    fallbackUrl: 'http://host.docker.internal:11434/v1',
     needsKey: false,
     servesEmbeddings: true,
     note: 'Nothing leaves your machine, and you manage the models in Ollama.',

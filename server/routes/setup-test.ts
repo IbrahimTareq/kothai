@@ -38,25 +38,36 @@ export async function handleSetupTest(req: IncomingMessage, res: ServerResponse)
     return json(res, 400, { error: 'An endpoint must be an http:// or https:// URL.' })
   }
 
-  try {
-    // No retries: someone is watching this button. A rate-limited endpoint is
-    // a real answer here, not something to sit on for half a minute.
-    const out = await getJson(baseUrl, '/models', { apiKey: apiKey || null, timeoutMs: TIMEOUTS.probe, retries: 0 })
+  const entry = findEndpoint(typeof fields.providerId === 'string' ? fields.providerId : null)
+  // A tile's second URL is tried only for the tile's own first one: a URL
+  // someone typed is probed as given. See the Ollama entry in endpoints.ts.
+  const candidates = entry?.fallbackUrl && baseUrl === entry.baseUrl ? [baseUrl, entry.fallbackUrl] : [baseUrl]
+  // No retries: someone is watching this button. A rate-limited endpoint is
+  // a real answer here, not something to sit on for half a minute.
+  const probe = async (url: string) => {
+    const out = await getJson(url, '/models', { apiKey: apiKey || null, timeoutMs: TIMEOUTS.probe, retries: 0 })
     const rows = isRecord(out) && Array.isArray(out.data) ? out.data : []
-    const models = rows.map(m => (isRecord(m) ? m.id : null)).filter(Boolean)
-    const keyCheck = findEndpoint(typeof fields.providerId === 'string' ? fields.providerId : null)?.keyCheckPath
-    if (keyCheck) await getJson(baseUrl, keyCheck, { apiKey: apiKey || null, timeoutMs: TIMEOUTS.probe, retries: 0 })
-    return json(res, 200, { ok: true, models })
-  } catch (e) {
-    // e.message is already written for a person — remote-http.ts turns a 404
-    // into "check the model name", a 401 into an auth message, and so on.
-    // Except the auth one, which is written for whoever set the container's
-    // environment and told someone at the key field to check
-    // KOTHAI_AI_API_KEY.
-    if (e instanceof RemoteError && e.code === 'auth_failed') {
-      return json(res, 200, { ok: false, models: [], error: 'That key was refused. Check it was copied whole.' })
-    }
-    const message = e instanceof Error ? e.message : ''
-    return json(res, 200, { ok: false, models: [], error: message || 'Could not reach that endpoint.' })
+    if (entry?.keyCheckPath)
+      await getJson(url, entry.keyCheckPath, { apiKey: apiKey || null, timeoutMs: TIMEOUTS.probe, retries: 0 })
+    return rows.map(m => (isRecord(m) ? m.id : null)).filter(Boolean)
   }
+  let failure: unknown = null
+  for (const url of candidates) {
+    try {
+      // The URL that answered goes back, and is what the caller saves.
+      return json(res, 200, { ok: true, models: await probe(url), baseUrl: url })
+    } catch (e) {
+      failure = e
+    }
+  }
+  // The message is already written for a person — remote-http.ts turns a 404
+  // into "check the model name", a 401 into an auth message, and so on.
+  // Except the auth one, which is written for whoever set the container's
+  // environment and told someone at the key field to check
+  // KOTHAI_AI_API_KEY.
+  if (failure instanceof RemoteError && failure.code === 'auth_failed') {
+    return json(res, 200, { ok: false, models: [], error: 'That key was refused. Check it was copied whole.' })
+  }
+  const message = failure instanceof Error ? failure.message : ''
+  return json(res, 200, { ok: false, models: [], error: message || 'Could not reach that endpoint.' })
 }

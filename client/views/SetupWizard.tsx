@@ -53,10 +53,11 @@ export function SetupWizard({
   const connect = () =>
     choice &&
     attempt(async () => {
-      await API.checkEndpoint(choice.providerId, choice.baseUrl, choice.apiKey)
-      if (primary) return onConnected(primary, choice)
-      if (endpoints.find(e => e.id === choice.providerId)?.servesEmbeddings) return onConnected(choice, null)
-      setPrimary(choice)
+      // Saved at the URL that answered, which for the Ollama tile may be its second.
+      const checked = { ...choice, baseUrl: await API.checkEndpoint(choice.providerId, choice.baseUrl, choice.apiKey) }
+      if (primary) return onConnected(primary, checked)
+      if (endpoints.find(e => e.id === choice.providerId)?.servesEmbeddings) return onConnected(checked, null)
+      setPrimary(checked)
       setChoice(null)
       setBusy(false)
     })

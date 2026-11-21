@@ -2,7 +2,8 @@
 #   docker compose up -d     then open http://localhost:5173
 # Want models on this machine? Add Ollama alongside it:
 #   docker compose --profile ollama up -d
-# then pick Ollama during setup (endpoint http://ollama:11434/v1).
+# then pick Ollama during setup. The tile finds it at http://ollama:11434/v1,
+# or at an Ollama on the host if the profile is not running.
 # Full guide: docs/self-hosting.md
 services:
   kothai:
@@ -17,6 +18,10 @@ services:
     volumes:
       # Your notes, uploads and settings. THIS is the directory to back up.
       - ./data:/app/data
+    # The host, from inside the container. Docker Desktop resolves this name by
+    # itself; Linux only with this line, and without it the Ollama tile cannot
+    # reach an Ollama installed on the machine.
+    extra_hosts: ["host.docker.internal:host-gateway"]
     # Reads .env if present; safe to run without one too — the values below are
     # the built-in defaults.
     env_file:
