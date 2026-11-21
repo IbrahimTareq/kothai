@@ -31,8 +31,8 @@ import { withTrigger } from './usage.ts'
 // shapes (an in-flight patch there, a persisted note here).
 //
 // A note the endpoint refuses must not abandon the other 1,700; an endpoint
-// that is down ends the sweep (see reembedEach). `{ persist: false }` batches the writes into a single transaction at
-// the end, exactly as before.
+// that is down ends the sweep (see reembedEach). `{ persist: false }` batches
+// the writes into a single transaction at the end, exactly as before.
 export function embedBodyFor(
   note: Pick<
     NoteRecord,

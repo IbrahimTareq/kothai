@@ -4,7 +4,10 @@
 //
 // Failures marked { transient: false } (bad API key, unknown model) open the
 // circuit immediately rather than after N tries: retrying cannot fix a
-// config error, and each retry against a metered endpoint costs money.
+// config error, and each retry against a metered endpoint costs money. The
+// remote provider decides what it marks: an embed 400 is about one input, not
+// the config, so it reaches here as transient or not at all (see
+// recordFailure in providers/remote.ts).
 
 export interface CircuitOptions {
   threshold?: number

@@ -491,10 +491,11 @@ test('a model one role cannot use fails that role alone, not the whole endpoint'
 // A re-embed sweep met one note the endpoint rejected with 400 (too long, a
 // character it refuses). That 400 opened the embed role at once, every later
 // note in the sweep failed fast on the open circuit, and the library never
-// finished moving off its old vectors. One 400 is about one input; a model
-// that cannot embed at all 400s on every input, and still trips the role.
-test('one embed 400 is about that input and leaves the role open; a run of them trips it', async () => {
-  let reject = true
+// finished moving off its old vectors. Counting 400s towards the threshold
+// instead still stalled it at five refused notes in a row, which one import
+// of one content type easily produces, at the same note on every boot.
+test('once the embed model has worked, refused inputs never trip its breaker', async () => {
+  let reject = false
   let hits = 0
   routes['/embeddings'] = (_req, res) => {
     hits++
@@ -505,16 +506,33 @@ test('one embed 400 is about that input and leaves the role open; a run of them 
   const p = make({ llm: 'm', embed: 'nomic-embed-text', vision: '' })
   await p.init()
 
-  await assert.rejects(() => p.embedText('bad'))
+  assert.deepEqual(await p.embedText('good'), [0.1])
+  reject = true
+  for (let i = 0; i < 8; i++) await assert.rejects(() => p.embedText('bad'), { code: 'bad_request' })
   reject = false
   assert.deepEqual(await p.embedText('good'), [0.1], 'the next input still reaches the endpoint')
+  assert.equal(hits, 10)
+})
 
-  reject = true
-  for (let i = 0; i < 5; i++) await p.embedText('bad').catch(() => {})
-  const before = hits
+// The other half: a model that cannot embed at all (a chat model named for
+// embeddings) 400s on every input and has never worked, so it still stops
+// being called rather than be sent the whole library.
+test('an embed model that has never worked trips its breaker after a run of 400s', async () => {
+  let hits = 0
+  routes['/embeddings'] = (_req, res) => {
+    hits++
+    res.writeHead(400, { 'content-type': 'application/json' })
+    res.end(JSON.stringify({ error: 'not an embedding model' }))
+  }
+  const p = make({ llm: 'm', embed: 'llama3.2:3b', vision: '' })
+  await p.init()
+
+  await assert.rejects(() => p.embedText('a'), { code: 'bad_request' })
+  assert.equal(hits, 1, 'one 400 alone does not open it')
+  for (let i = 0; i < 4; i++) await p.embedText('a').catch(() => {})
   const e = await p.embedText('again').catch(x => x)
-  assert.ok(e instanceof FeatureDisabledError, 'a model rejecting everything still stops being called')
-  assert.equal(hits, before)
+  assert.ok(e instanceof FeatureDisabledError)
+  assert.equal(hits, 5)
 })
 
 test('validateModel accepts any name, warns on one the endpoint does not list, and reads blank as off', async () => {

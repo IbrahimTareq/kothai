@@ -9,7 +9,7 @@
 // directory, with a fake OpenAI-compatible endpoint that records every call:
 // "no /embeddings call" is only worth asserting against something that would
 // have received one.
-import { test, after } from 'node:test'
+import { test, after, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { createServer as createHttpServer } from 'node:http'
@@ -30,9 +30,12 @@ const fake = createHttpServer((req, res) => {
   req.on('data', c => (raw += c))
   req.on('end', () => {
     calls.push(req.url || '')
-    res.writeHead(200, { 'content-type': 'application/json' })
+    const input = req.url === '/embeddings' ? JSON.parse(raw).input : null
+    // An input the endpoint refuses, as some do one that is too long.
+    const refused = String(input).includes('Refused')
+    res.writeHead(refused ? 400 : 200, { 'content-type': 'application/json' })
+    if (refused) return res.end(JSON.stringify({ error: 'input rejected' }))
     if (req.url === '/embeddings') {
-      const input = JSON.parse(raw).input
       const n = Array.isArray(input) ? input.length : 1
       return res.end(JSON.stringify({ data: Array.from({ length: n }, () => ({ embedding: [0.9, 0.8, 0.7] })) }))
     }
@@ -48,6 +51,7 @@ const store = await import('../../server/data/notes.ts')
 const settings = await import('../../server/data/settings.ts')
 const ai = await import('../../server/ai/index.ts')
 const enrich = await import('../../server/ai/enrich.ts')
+const reembed = await import('../../server/ai/reembed.ts')
 const { createServer } = await import('../../server/router.ts')
 
 // The seed: three notes carrying on-device vectors, and a settings row as an
@@ -152,4 +156,33 @@ test('naming an embedding model rebuilds every vector, and only then marks the l
   }
   assert.equal(settings.getEmbedProvider(), 'remote')
   assert.deepEqual(await status(), { upgradeNeeded: false, keywordOnly: false })
+})
+
+// One import, one content type: refused notes come in runs. Five in a row
+// opened the embed breaker, the sweep stopped at the same note on every boot,
+// and the library never finished moving off its on-device vectors.
+test('a run of refused notes between good ones does not stop the sweep', async () => {
+  for (let i = 0; i < 7; i++) {
+    const n = await store.addNote({ type: 'link', title: `Refused ${i}`, content: 'x' })
+    await store.updateNote(n.id, { embedding: QVAC })
+  }
+  // Newest first, so this one is embedded before the run and the model is
+  // known to work by the time the refusals start.
+  await store.addNote({ type: 'link', title: 'Fresh good note', content: 'y' })
+  await settings.save({ embedProvider: 'local' })
+  const quiet = mock.method(console, 'error', () => {})
+
+  await reembed.reembedAll('test')
+  quiet.mock.restore()
+  assert.equal(store.count(), 11)
+  const raw = await import('../../server/data/db.ts').then(m => m.getDb())
+  for (const row of raw.prepare('SELECT data, embedding FROM notes').all()) {
+    const refused = String(row.data).includes('Refused')
+    assert.equal(
+      row.embedding === null,
+      refused,
+      refused ? 'refused notes lose their on-device vector' : 'the rest are embedded',
+    )
+  }
+  assert.equal(settings.getEmbedProvider(), 'remote')
 })

@@ -125,7 +125,9 @@ export function createRemoteProvider({ endpoints, models, onRecover }: RemotePro
     return ep
   }
 
+  let embedWorked = false // has the embed model returned a vector? See recordFailure
   function recordSuccess(role: Role, ep: Endpoint) {
+    if (role === 'embed') embedWorked = true
     ep.recordSuccess()
     roleCircuits[role].recordSuccess()
   }
@@ -134,14 +136,16 @@ export function createRemoteProvider({ endpoints, models, onRecover }: RemotePro
   // model that cannot take images, an id the endpoint does not serve. Anything
   // else says the endpoint itself is down or refusing us.
   //
-  // An embed 400 counts towards the role's threshold instead of opening it:
-  // embedding is one input per call, so a 400 there is usually about that
-  // input. Opening on the first one made a single rejected note fail every
-  // note after it in a library re-embed, which then never finished. A model
-  // that cannot embed at all 400s on every input and still trips it.
+  // Once the embed model has returned a vector, an embed 400 is about that one
+  // input and is not recorded: opening on it failed every note after a refused
+  // one in a library re-embed, and counting it still stalled the sweep at five
+  // refused notes in a row, every boot. Before that, it may be a model that
+  // cannot embed at all, so it counts towards the threshold.
   function recordFailure(role: Role, ep: Endpoint, e: RemoteError) {
+    const embedRefusal = role === 'embed' && e.code === 'bad_request'
+    if (embedRefusal && embedWorked) return
     const breaker = e.code === 'bad_request' || e.code === 'model_not_found' ? roleCircuits[role] : ep.circuit
-    const transient = e.transient || (role === 'embed' && e.code === 'bad_request')
+    const transient = e.transient || embedRefusal
     breaker.recordFailure({ transient, message: e.message, retryAfterMs: e.retryAfterMs })
   }
 
@@ -224,6 +228,7 @@ export function createRemoteProvider({ endpoints, models, onRecover }: RemotePro
     },
 
     async applySettings(patch: ModelSelection) {
+      if (patch.embed !== undefined && patch.embed !== models?.embed) embedWorked = false
       models = { ...models, ...patch }
     },
 
