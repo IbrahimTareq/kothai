@@ -39,15 +39,18 @@ interface RouteOptions {
 // role the shared entry itself, so a role given its own entry at the same URL
 // still reports as its own — the one the user can clear. No URL is no entry
 // either: embeddings borrowing a chat-only endpoint, which resolveAiConfig turns off.
+//
+// `providerId` is a catalogue id, never a credential: it is how Settings knows
+// the shared endpoint is Claude, and so not to offer it for embeddings.
 function endpointInfo(role: Role = 'llm') {
   const { roles } = getAiConfig()
-  const { baseUrl } = roles[role]
+  const { baseUrl, providerId } = roles[role]
   const inherited = role !== 'llm' && (roles[role] === roles.llm || !baseUrl)
-  if (!baseUrl) return { configured: false, host: null, inherited }
+  if (!baseUrl) return { configured: false, host: null, inherited, providerId: null }
   try {
-    return { configured: true, host: new URL(baseUrl).hostname, inherited }
+    return { configured: true, host: new URL(baseUrl).hostname, inherited, providerId }
   } catch {
-    return { configured: true, host: null, inherited }
+    return { configured: true, host: null, inherited, providerId }
   }
 }
 
@@ -78,7 +81,6 @@ export async function handleGetSettings(res: ServerResponse): Promise<void> {
   json(res, 200, {
     remote: settings.getRemote(),
     presets: await ai.listModels(),
-    capabilities: ai.capabilities(),
     endpoint: endpoints.llm,
     endpoints,
     // Which roles' model names env pins, so Settings shows them read-only. Flags, not the names.
@@ -168,7 +170,7 @@ export async function handleSetupEndpoint(
   if (!fields.endpoint) return json(res, 400, { error: 'an endpoint is required' })
   const { error } = await applyEndpointFromSetup(fields.endpoint, opts, fields.models, endpointRole(fields.role))
   if (error) return json(res, 400, { error })
-  json(res, 200, { ok: true, capabilities: ai.capabilities(), endpoint: endpointInfo() })
+  json(res, 200, { ok: true, endpoint: endpointInfo() })
 }
 
 // ---- first-run setup ------------------------------------------------------
@@ -234,7 +236,7 @@ export async function handleSaveEndpoint(
   const { error } = await applyEndpointFromSetup(fields.endpoint, opts, fields.models, endpointRole(fields.role))
   if (error) return json(res, 400, { error })
   reembedIfMoved(before, 'embedding endpoint changed')
-  json(res, 200, { ok: true, capabilities: ai.capabilities(), endpoint: endpointInfo() })
+  json(res, 200, { ok: true, endpoint: endpointInfo() })
 }
 
 // Disconnect: forget the credential, which leaves AI off — there is no
@@ -265,7 +267,7 @@ export async function handleClearEndpoint(
   }
   await ai.reconfigure(settings.getRemote(), { load: opts.load })
   reembedIfMoved(before, 'embedding endpoint changed')
-  json(res, 200, { ok: true, capabilities: ai.capabilities(), endpoint: endpointInfo() })
+  json(res, 200, { ok: true, endpoint: endpointInfo() })
 }
 
 export async function handleSaveSettings(req: IncomingMessage, res: ServerResponse): Promise<void> {

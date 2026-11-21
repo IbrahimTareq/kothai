@@ -1,5 +1,5 @@
-// The client branches its entire settings UI on capabilities, so /api/status
-// must carry it. Asserted against the real handler with a stubbed response.
+// /api/status against the real handler with a stubbed response: the fields the
+// client reads, the first-run gate, and the demo's allowances.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { initProvider, _reset } from '../../../server/ai/index.ts'
@@ -7,15 +7,6 @@ import { handleStatus, firstRunComplete } from '../../../server/routes/status.ts
 import { demoLimits } from '../../../server/routes/demo.ts'
 import * as store from '../../../server/data/notes.ts'
 import { mockRes } from '../../helpers/http.ts'
-
-test('handleStatus includes a capabilities descriptor', async () => {
-  _reset()
-  await initProvider({})
-  const { res, sent } = mockRes()
-  handleStatus(res, null)
-  assert.equal(sent.code, 200)
-  assert.deepEqual(sent.json().capabilities, { kind: 'remote' })
-})
 
 test('handleStatus still carries the fields the client already reads', async () => {
   _reset()

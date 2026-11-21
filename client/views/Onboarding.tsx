@@ -54,6 +54,16 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
     }
   }
 
+  // "Every role runs on api.anthropic.com" was false after Claude with a second
+  // provider for embeddings, or with none: say where each one actually runs.
+  const hosts = [...new Set(ROLES.map(r => cfg?.endpoints[r].host).filter(Boolean))]
+  const where =
+    hosts.length > 1
+      ? `Your roles run on ${hosts.join(' and ')}.`
+      : `Every role runs on ${hosts[0] || 'your endpoint'}.`
+  const searchOff =
+    cfg && !cfg.endpoints.embed.configured ? ' Search stays keyword-only: nothing serves embeddings.' : ''
+
   // What the installer already asked, so the wizard never asks it twice.
   const preAnswered = cfg?.setup?.providerId || null
   const needsWizard = Boolean(cfg) && !cfg!.endpoint.configured && !wizardDone
@@ -97,8 +107,8 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
           </span>
           <h1>Name your models</h1>
           <p className="onboarding-lede">
-            Every role runs on {cfg?.endpoint.host || 'your endpoint'}. Name a model it serves for each one — nothing
-            downloads, and you can change these later in Settings.
+            {where}
+            {searchOff} Name a model for each role — nothing downloads, and you can change these later in Settings.
           </p>
         </header>
 

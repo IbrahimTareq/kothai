@@ -75,10 +75,6 @@ async function remoteProvider(): Promise<Provider> {
 const PROVIDERS: [string, () => Promise<Provider>][] = [['remote', remoteProvider]]
 
 for (const [name, build] of PROVIDERS) {
-  test(`${name}: capabilities names the kind and nothing else`, async () => {
-    assert.deepEqual((await build()).capabilities(), { kind: name })
-  })
-
   test(`${name}: classify returns the full normalised shape with junk filtered`, async () => {
     const out = await (await build()).classify({
       text: 'https://example.com',

@@ -20,7 +20,6 @@ const current = (): Provider => singleton || boot({})
 // last, which is what lets init() re-point the endpoint while the facade keeps
 // holding this same object.
 export const remoteProvider = {
-  capabilities: () => current().capabilities(),
   roleEnabled: (role: Role) => current().roleEnabled(role),
   available: () => current().available(),
   validateModel: (role: Role, key: string) => current().validateModel(role, key),

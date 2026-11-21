@@ -2,7 +2,7 @@
 // endpoint saved in the browser takes effect without a container restart.
 import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { initProvider, reconfigure, capabilities, _reset } from '../../../server/ai/index.ts'
+import { initProvider, reconfigure, statusSnapshot, _reset } from '../../../server/ai/index.ts'
 import { provider } from '../../helpers/providers.ts'
 
 const fakeProvider = (name: string, log: unknown[]) =>
@@ -10,7 +10,11 @@ const fakeProvider = (name: string, log: unknown[]) =>
     init: async models => {
       log.push(['init', models])
     },
-    capabilities: () => ({ kind: name }),
+    // Named in its status, so a test can tell which provider is live.
+    statusSnapshot: () => ({
+      roles: provider().statusSnapshot().roles,
+      aggregate: { state: 'ready', progress: 100, message: name },
+    }),
   })
 
 beforeEach(() => _reset())
@@ -36,5 +40,5 @@ test('a failure leaves the previous provider live rather than half-built', async
     throw new Error('endpoint provider exploded')
   }
   await assert.rejects(() => reconfigure({}, { load: () => broken }), /exploded/)
-  assert.equal(capabilities().kind, 'before', 'the working provider must survive a failed reconfigure')
+  assert.equal(statusSnapshot().aggregate.message, 'before', 'the working provider must survive a failed reconfigure')
 })

@@ -34,7 +34,6 @@ export function handleStatus(res: ServerResponse, viewer: string | null): void {
     ...ai.statusSnapshot(),
     configured: firstRunComplete(settings.isConfigured(), settings.isPreGate()),
     count: store.allNotes().filter(visibleTo(viewer)).length,
-    capabilities: ai.capabilities(),
     ai: {
       // A library still holding on-device vectors, with first run long done
       // and no role able to run: the upgrade removed what it ran on. Without

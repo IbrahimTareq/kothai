@@ -32,7 +32,7 @@ export function ConnectionPanel({
   onChanged,
 }: {
   cfg: SettingsResponse
-  /** Both paths rewrite roles, models and capabilities, so the view is handed
+  /** Both paths rewrite roles and models, so the view is handed
    *  the server's whole new answer rather than a patch to merge. */
   onChanged: (next: SettingsResponse) => void
 }) {
@@ -110,14 +110,18 @@ export function ConnectionPanel({
 
   const host = cfg.endpoint.configured ? cfg.endpoint.host : ''
   const ownRoles = (['embed', 'vision'] as const).filter(r => !cfg.endpoints[r].inherited)
+  // Claude for everything else: "use it for embeddings" would turn them off.
+  const chatOnly = cfg.catalogue.find(e => e.id === cfg.endpoint.providerId)?.servesEmbeddings === false
   const roleItems = (['embed', 'vision'] as const).flatMap(role => {
     const open = () => {
       setTarget(role)
       setErr(null)
     }
     if (!ownRoles.includes(role)) return [{ key: role, label: PER_ROLE[role].use, onSelect: open }]
+    const change = { key: role, label: `Change the endpoint for ${PER_ROLE[role].what.toLowerCase()}`, onSelect: open }
+    if (role === 'embed' && chatOnly) return [change]
     return [
-      { key: role, label: `Change the endpoint for ${PER_ROLE[role].what.toLowerCase()}`, onSelect: open },
+      change,
       {
         key: `${role}-shared`,
         label: `Use ${host || 'the main endpoint'} for ${PER_ROLE[role].what.toLowerCase()}`,

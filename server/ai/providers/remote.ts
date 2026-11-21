@@ -103,7 +103,8 @@ export function createRemoteProvider({ endpoints, models, onRecover }: RemotePro
     if (!ep)
       throw new FeatureDisabledError(role, {
         code: `${role}_off`,
-        message: 'No inference endpoint configured — set KOTHAI_AI_BASE_URL.',
+        // The role's own variable: the shared one is what an embedding role borrowing Claude's could not use.
+        message: `No ${role} endpoint — connect one in Settings, or set KOTHAI_AI_${role === 'llm' ? '' : `${role.toUpperCase()}_`}BASE_URL.`,
       })
     if (!modelFor(role))
       throw new FeatureDisabledError(role, {
@@ -180,8 +181,6 @@ export function createRemoteProvider({ endpoints, models, onRecover }: RemotePro
   }
 
   return {
-    capabilities: () => ({ kind: 'remote' }),
-
     roleEnabled: (role: Role) => Boolean(endpointOf[role]) && Boolean(modelFor(role)),
 
     available: () => distinct().some(ep => ep.circuit.allow()),
@@ -297,8 +296,9 @@ export function createRemoteProvider({ endpoints, models, onRecover }: RemotePro
       const req = { model: modelFor('llm'), messages, reasoning_effort: 'none' }
       let raw = ''
       try {
-        // Probe json_schema outside call() so a 400 "unsupported" does not open the
-        // circuit before the plain retry. `strict`: Anthropic's endpoint 400s without it.
+        // Probe json_schema outside call() so a 400 "unsupported" does not open the circuit
+        // before the plain retry. `strict`: Anthropic's endpoint 400s without it, and
+        // refuses json_object outright.
         raw = textOf(
           await chat(
             ep,

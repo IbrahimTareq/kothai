@@ -74,10 +74,6 @@ const everyRole = (baseUrl: string, apiKey: string | null = null) => ({
 const make = (models = { llm: 'llama3.2:3b', embed: 'nomic-embed-text', vision: 'llava' }) =>
   createRemoteProvider({ endpoints: everyRole(base), models })
 
-test('capabilities reports a remote provider', () => {
-  assert.deepEqual(make().capabilities(), { kind: 'remote' })
-})
-
 test('embedText posts to /embeddings and returns the vector', async () => {
   let seen: Record<string, unknown> = {}
   routes['/embeddings'] = (_req, res, body) => {
@@ -388,6 +384,23 @@ test('no base URL at all means every role is disabled and init does not throw', 
   await p.init()
   assert.equal(p.roleEnabled('llm'), false)
   assert.equal(p.statusSnapshot().aggregate.state, 'ready', 'no endpoint is AI-free mode, not an error')
+})
+
+// An embedding role off for want of an endpoint told the user to set
+// KOTHAI_AI_BASE_URL — the shared URL, which embeddings borrowing Claude's
+// never could use, and an env var on an install connected in Settings.
+test('a role with no endpoint names its own variable, and Settings', async () => {
+  const off = { baseUrl: '', apiKey: null }
+  const p = createRemoteProvider({
+    endpoints: { llm: { baseUrl: base, apiKey: null }, embed: off, vision: off },
+    models: { llm: 'm', embed: 'e', vision: 'v' },
+  })
+  const embed = await p.embedText('x').catch(x => x)
+  assert.ok(embed instanceof FeatureDisabledError)
+  assert.match(embed.message, /KOTHAI_AI_EMBED_BASE_URL/)
+  assert.match(embed.message, /Settings/)
+  const vision = await p.describeImage({ absPath: '/nope.png' }).catch(x => x)
+  assert.match(vision.message, /KOTHAI_AI_VISION_BASE_URL/)
 })
 
 test('an unreachable endpoint reports error in the aggregate but still serves the app', async () => {

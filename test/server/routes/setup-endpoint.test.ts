@@ -20,7 +20,7 @@ const dir = () => mkdtempSync(path.join(tmpdir(), 'kothai-setup-'))
 
 // A stand-in for the provider at boot. The routes reconfigure without it, onto
 // the real remote provider pointed at ENDPOINT below.
-const load = () => provider({ capabilities: () => ({ kind: 'remote' }) })
+const load = () => provider()
 
 // Unreachable on purpose: remote.init() probes /models best-effort and
 // swallows the failure, so a refused connection settles instantly instead of
@@ -103,6 +103,18 @@ test('a Railway install is not offered an Ollama on Railway', async () => {
   }
 })
 
+// Settings offered "Use api.anthropic.com for embeddings" on a Claude install,
+// which turned embeddings off: borrowing a chat-only endpoint is no endpoint.
+// The client can only tell that from the catalogue entry the shared one is.
+test('GET /api/settings names the catalogue entry each endpoint is', async () => {
+  setAiCredentials({ baseUrl: 'https://api.anthropic.com/v1', apiKey: 'sk-ant', providerId: 'claude' })
+  await initProvider({}, { load })
+  const { res, sent } = mockRes()
+  await handleGetSettings(res)
+  assert.equal(record(record(sent.json().endpoints).llm).providerId, 'claude')
+  assert.equal(record(record(sent.json().endpoints).embed).providerId, null, 'embeddings have no endpoint at all')
+})
+
 test('GET /api/settings still never echoes a credential', async () => {
   setAiCredentials({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-secret' })
   await initProvider({}, { load })
@@ -125,17 +137,6 @@ test('applying an endpoint mid-first-run does not mark the install configured', 
   assert.equal(sent.code, 200)
   assert.deepEqual(readCredentials(d), { baseUrl: ENDPOINT, apiKey: 'sk-mid', providerId: 'openai' })
   assert.equal(settings.isConfigured(), false, 'first run must still be open')
-})
-
-test('applying an endpoint reports the capabilities the picker should draw against', async () => {
-  const d = dir()
-  await initProvider({}, { load })
-  const { res, sent } = mockRes()
-  await handleSetupEndpoint(fakeReq({ endpoint: { providerId: 'openai', baseUrl: ENDPOINT, apiKey: 'sk-mid' } }), res, {
-    dir: d,
-  })
-  const body = sent.json()
-  assert.deepEqual(body.capabilities, { kind: 'remote' })
 })
 
 test('a request with no endpoint is rejected rather than silently doing nothing', async () => {

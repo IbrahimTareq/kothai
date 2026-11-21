@@ -31,10 +31,6 @@ export interface ProviderStatus {
   aggregate: Aggregate
 }
 
-export interface Capabilities {
-  kind: string
-}
-
 // Queried off the prompt builders rather than restated: classify() forwards
 // these fields straight into them, so what a prompt needs IS
 // what the contract accepts, and a change to one is a typecheck error in the
@@ -82,7 +78,6 @@ export interface Provider {
   applySettings(patch: ModelSelection): Promise<void>
   shutdown(): Promise<void>
 
-  capabilities(): Capabilities
   available(): boolean
   roleEnabled(role: Role): boolean
   statusSnapshot(): ProviderStatus

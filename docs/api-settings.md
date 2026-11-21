@@ -15,7 +15,7 @@ Returns the current model selection and endpoints.
 <TypeTable
   type={{
     endpoints: {
-      description: 'Per role (llm, vision, embed): { configured, host, inherited }. inherited means the role uses the shared endpoint.',
+      description: 'Per role (llm, vision, embed): { configured, host, inherited, providerId }. inherited is true when the role uses the shared endpoint, and also when it has no URL at all. providerId is the catalogue entry, or null.',
       type: 'Record<role, object>',
     },
     endpoint: {

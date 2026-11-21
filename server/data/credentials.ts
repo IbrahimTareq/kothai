@@ -1,11 +1,14 @@
-// Inference credentials — the endpoint base URL and its API key.
+// Inference credentials — the shared endpoint's base URL and API key, and an
+// optional entry per role (embed, vision) that has an endpoint of its own.
 //
 // Deliberately NOT in SQLite. /api/backup is a VACUUM INTO over the whole
 // database (server/routes/backup.ts), so anything held in a table is copied
 // into every backup the user downloads. The guarantee this file exists to
 // keep is that a credential never leaves through a backup or an export; the
 // original env-only design kept the same guarantee a different way, and
-// environment variables still take precedence (see config.ts).
+// environment variables still take precedence. That precedence, and how a role
+// with no entry falls back on the shared one, live in
+// server/ai/endpoint-config.ts.
 import { readFileSync, writeFileSync, chmodSync, unlinkSync } from 'node:fs'
 import path from 'node:path'
 import { DATA_DIR, type RoleEndpoint } from '../config.ts'

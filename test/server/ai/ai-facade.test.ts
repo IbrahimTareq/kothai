@@ -4,7 +4,6 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   _reset,
-  capabilities,
   initProvider,
   statusSnapshot,
   embedText,
@@ -21,13 +20,15 @@ import { provider } from '../../helpers/providers.ts'
 
 test('a sync accessor before init fails loudly rather than returning undefined', () => {
   _reset()
-  assert.throws(() => capabilities(), /not initialised/)
+  assert.throws(() => statusSnapshot(), /not initialised/)
 })
 
+// The remote provider with no endpoint reports every role off; the test
+// fixture's default would say idle.
 test('with no fake handed in, every role is served by the remote provider', async () => {
   _reset()
   await initProvider({})
-  assert.deepEqual(capabilities(), { kind: 'remote' })
+  assert.equal(statusSnapshot().roles.llm.state, 'off')
 })
 
 test('initProvider is idempotent — a second call returns the same instance', async () => {
@@ -48,7 +49,6 @@ const ASK = { question: 'hi', contextNotes: [] }
 function fake(): Provider & { calls: Call[] } {
   const calls: Call[] = []
   const p = provider({
-    capabilities: () => ({ kind: 'remote' }),
     roleEnabled: role => {
       calls.push(['roleEnabled', role])
       return true
@@ -142,11 +142,11 @@ test('a provider that throws mid-init leaves nothing half-built for the retry to
 
   // Not initialised, so the guard still fires rather than handing out a
   // provider that never came up.
-  assert.throws(() => capabilities(), /not initialised/)
+  assert.throws(() => roleEnabled('llm'), /not initialised/)
 
   p.init = async () => {}
   await initProvider({}, { load: () => p })
-  assert.equal(capabilities().kind, 'remote')
+  assert.equal(roleEnabled('llm'), true)
 })
 
 test('the facade exposes no local hooks', async () => {

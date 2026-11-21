@@ -30,9 +30,6 @@ if (demo.DEMO) {
   await demo.resetDemo()
   setInterval(() => demo.resetDemo().catch(e => console.error('[demo] reset failed:', e)), 24 * 60 * 60 * 1000).unref()
 }
-// After the stores are open: an update can arrive and be saved within
-// milliseconds of the first poll returning.
-const telegramActive = telegram.startTelegramCapture()
 const hadTagRegistry = await tagvocab.load()
 // Before the provider starts: it reads each role's endpoint from config at
 // init, so loading the credential later would boot every role with none.
@@ -43,6 +40,11 @@ await ai.initProvider(settings.getRemote())
 // Before the first model call: the boot sweeps below are the first thing to
 // make one. Off until here, so tests and scripts never write usage rows.
 await startUsageLog()
+// After the stores are open: an update can arrive and be saved within
+// milliseconds of the first poll returning. And after the provider and the
+// usage log: a saved link is enriched at once, roleEnabled throws until
+// initProvider has run, and a model call before the log starts goes unrecorded.
+const telegramActive = telegram.startTelegramCapture()
 withTrigger('boot', () => enrich.queueMetaBackfill())
 // In the background, one file at a time: a first run on a big library takes a while.
 shrinkStoredThumbs().catch(e => console.error('[thumb] stored-thumbnail sweep failed:', e))

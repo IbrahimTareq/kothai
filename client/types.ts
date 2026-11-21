@@ -166,6 +166,8 @@ export interface EndpointInfo {
   host: string | null
   // A vision or embed role with no endpoint of its own, borrowing the shared one.
   inherited: boolean
+  // The catalogue entry it is, or null for a URL that is none (env, typed).
+  providerId: string | null
 }
 
 // One entry in the server's catalogue of known endpoints (server/ai/endpoints.ts).

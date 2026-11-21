@@ -20,13 +20,6 @@ beforeEach(async () => {
   _reset()
 })
 
-test('GET /api/settings carries capabilities so the client can pick a UI shape', async () => {
-  await initProvider({})
-  const { res, sent } = mockRes()
-  await handleGetSettings(res)
-  assert.deepEqual(sent.json().capabilities, { kind: 'remote' })
-})
-
 test('GET /api/settings keeps the fields the current client already reads', async () => {
   await initProvider({})
   const { res, sent } = mockRes()

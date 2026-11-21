@@ -31,7 +31,6 @@ const CALL = {
 // A provider whose every call records a row, the way the real ones do on
 // the wire. The step on the row is whatever the facade wrapped the call in.
 const recording = provider({
-  capabilities: () => ({ kind: 'remote' }),
   available: () => true,
   roleEnabled: () => true,
   classify: async () => {

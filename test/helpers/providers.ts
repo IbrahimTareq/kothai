@@ -14,7 +14,7 @@
 //
 // Defaults are the emptiest legal provider rather than a plausible one: a test
 // that depends on a value it did not stub should fail, not quietly pass on this
-// file's opinion. That is why `capabilities()` reports no kind.
+// file's opinion.
 import type { Provider } from '../../server/ai/providers/types.ts'
 
 export function provider(partial: Partial<Provider> = {}): Provider {
@@ -23,7 +23,6 @@ export function provider(partial: Partial<Provider> = {}): Provider {
     applySettings: async () => {},
     shutdown: async () => {},
 
-    capabilities: () => ({ kind: '' }),
     available: () => false,
     roleEnabled: () => false,
     statusSnapshot: () => ({

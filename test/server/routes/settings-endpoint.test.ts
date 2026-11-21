@@ -30,7 +30,6 @@ const fakeProvider = () =>
       calls.remoteEmbeds++
       return [1]
     },
-    capabilities: () => ({ kind: 'remote' }),
   })
 const load = fakeProvider
 const A = 'http://127.0.0.1:1/v1'
@@ -90,7 +89,6 @@ test('disconnecting removes the credential and leaves every role with no endpoin
   assert.equal(sent.code, 200)
   assert.equal(existsSync(path.join(d, 'credentials.json')), false, 'the key is gone from disk')
   assert.equal(getAiConfig().source, 'none')
-  assert.deepEqual(sent.json().capabilities, { kind: 'remote' })
 })
 
 // The endpoint's model names are deliberately left alone on disconnect: they
@@ -227,8 +225,8 @@ test('GET /api/settings reports each role, and which ones borrow the shared endp
   await handleGetSettings(res)
   const body = sent.json()
   const endpoints = record(body.endpoints)
-  assert.deepEqual(endpoints.vision, { configured: true, host: '127.0.0.1', inherited: true })
-  assert.deepEqual(endpoints.embed, { configured: true, host: '127.0.0.1', inherited: false })
+  assert.deepEqual(endpoints.vision, { configured: true, host: '127.0.0.1', inherited: true, providerId: null })
+  assert.deepEqual(endpoints.embed, { configured: true, host: '127.0.0.1', inherited: false, providerId: 'openai' })
   assert.equal(record(endpoints.llm).inherited, false)
   assert.deepEqual(body.endpoint, endpoints.llm, 'the old field is the shared entry')
   assert.deepEqual(body.envModels, { embed: true }, 'the model name itself stays out of the response')
@@ -363,5 +361,10 @@ test('switching the shared endpoint to Claude turns embeddings off rather than s
   assert.equal(getAiConfig().roles.embed.baseUrl, null)
   const { res, sent } = mockRes()
   await handleGetSettings(res)
-  assert.deepEqual(record(sent.json().endpoints).embed, { configured: false, host: null, inherited: true })
+  assert.deepEqual(record(sent.json().endpoints).embed, {
+    configured: false,
+    host: null,
+    inherited: true,
+    providerId: null,
+  })
 })

@@ -5,16 +5,15 @@
 // around each call and the streaming fallback, and holds the one seam tests
 // use to swap the provider for a fake.
 //
-// Sync accessors (capabilities, statusSnapshot, roleEnabled) throw if called
-// before initProvider(). That is safe because server/index.ts awaits
-// initProvider() before the HTTP server listens, so no request can arrive
-// first.
+// Sync accessors (statusSnapshot, roleEnabled) throw if called before
+// initProvider(). That is safe because server/index.ts awaits initProvider()
+// before the HTTP server listens and before Telegram capture starts, so no
+// request and no captured message can arrive first.
 import { remoteProvider } from './providers/remote-singleton.ts'
 import { withStep } from './usage.ts'
 import type { Role } from './roles.ts'
 import type {
   AnswerStreamArgs,
-  Capabilities,
   ModelOption,
   ModelSelection,
   Provider,
@@ -65,7 +64,6 @@ export async function reconfigure(models: ModelSelection = {}, { load = null }: 
   impl = next
 }
 
-export const capabilities = (): Capabilities => R().capabilities()
 export const statusSnapshot = (): ProviderStatus => R().statusSnapshot()
 export const listModels = (): Promise<Record<Role, ModelOption[]>> => R().listModels()
 export const available = (): boolean => R().available()
