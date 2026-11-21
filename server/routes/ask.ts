@@ -2,7 +2,6 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import * as ai from '../ai/index.ts'
 import * as store from '../data/notes.ts'
 import * as chats from '../data/chats.ts'
-import * as settings from '../data/settings.ts'
 import * as prompts from '../ai/prompts.ts'
 import type { ServerNote } from '../types.ts'
 import { json, readBody, saveImage } from '../lib/http.ts'
@@ -59,29 +58,15 @@ export async function handleAsk(req: IncomingMessage, res: ServerResponse, viewe
   const chatId = asked && visible(asked) ? asked.id : null
   if (!question && !imageData) return json(res, 400, { error: 'Ask a question.' })
 
-  const residency = settings.getResidency()
   // Feature gates: structured codes so the client can render a disabled state.
-  if (imageData && residency.vision === 'off') {
+  if (imageData && !ai.roleEnabled('vision')) {
     return json(res, 409, {
       error: 'Image questions need the vision model — enable it in Settings.',
       code: 'vision_off',
     })
   }
-  if (!imageData && residency.llm === 'off') {
+  if (!imageData && !ai.roleEnabled('llm')) {
     return json(res, 409, { error: 'Ask needs the language model — enable it in Settings.', code: 'llm_off' })
-  }
-  // A download already in flight (first boot / model switch) can take minutes —
-  // don't hold the request open for that. A local on-demand load is seconds and
-  // is awaited below via acquire(). Vision only matters for image questions —
-  // acquire() would otherwise just block on its in-flight download instead of
-  // failing fast, same as llm/embed would without this check.
-  const snap = ai.statusSnapshot()
-  if (
-    snap.roles.llm.state === 'loading' ||
-    (residency.embed !== 'off' && snap.roles.embed.state === 'loading') ||
-    (imageData && snap.roles.vision.state === 'loading')
-  ) {
-    return json(res, 503, { error: 'Models are still loading — try again in a moment.' })
   }
   if (viewer) {
     // On the demo an image question would send a stranger's upload through the
@@ -174,13 +159,12 @@ export async function handleAsk(req: IncomingMessage, res: ServerResponse, viewe
     // literal tokens, keyword loses every paraphrase — so one strong signal
     // is enough for a note to surface. With the embed role off there is no
     // query embedding and the fusion degrades to keyword-only.
-    const queryEmbedding =
-      residency.embed !== 'off'
-        ? // A question is embedded as a query, not as a document — see
-          // prompts.ts's embedInput. The two are different kinds of text and a
-          // prompt-instructed model encodes them differently.
-          await ai.embedText(queryText, { mode: 'query' })
-        : null
+    const queryEmbedding = ai.roleEnabled('embed')
+      ? // A question is embedded as a query, not as a document — see
+        // prompts.ts's embedInput. The two are different kinds of text and a
+        // prompt-instructed model encodes them differently.
+        await ai.embedText(queryText, { mode: 'query' })
+      : null
     const sources = store.hybridSearch(queryEmbedding, queryText, visible)
     // The cards can render while the prose is still arriving, so the sources
     // go out as soon as retrieval has them rather than with the answer.

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict'
 import { note } from '../../helpers/notes.ts'
 import type { NoteRecord } from '../../../server/data/notes.ts'
 import type { LinkMeta } from '../../../server/links/meta.ts'
-import type { Residency } from '../../../server/ai/roles.ts'
+import type { Role } from '../../../server/ai/roles.ts'
 import type { Classification, ClassifyArgs } from '../../../server/ai/providers/types.ts'
 
 const IG_URL = 'https://www.instagram.com/p/AAA111/'
@@ -29,7 +29,7 @@ async function fakeUpdateNote(id: string, patch: Partial<NoteRecord>) {
 let classifyImpl: (args: ClassifyArgs) => Promise<Classification>
 let embedTextImpl: (text: string) => Promise<number[]>
 let fetchLinkMetaImpl: (url: string, id: string) => Promise<LinkMeta>
-let residencyImpl: () => Residency
+let enabledImpl: () => Record<Role, boolean>
 let classifyCalls: ClassifyArgs[]
 let autoAddCalls: { id: string; tags: string[] | null | undefined }[]
 
@@ -40,7 +40,7 @@ function reset() {
   classifyImpl = async () => ({ type: 'link', category: 'General', title: 'T', summary: 'S', tags: ['topic'] })
   embedTextImpl = async () => [0, 0, 0]
   fetchLinkMetaImpl = async () => ({ siteTitle: null, siteDesc: null, siteName: null, thumb: null })
-  residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
+  enabledImpl = () => ({ llm: true, embed: true, vision: true })
 }
 reset()
 
@@ -69,6 +69,7 @@ mock.module('../../../server/data/tagvocab.ts', {
 })
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
+    roleEnabled: (role: Role) => enabledImpl()[role],
     ...realNormalise,
     classify: (args: ClassifyArgs) => {
       classifyCalls.push(args)
@@ -86,7 +87,7 @@ mock.module('../../../server/data/collections.ts', {
   },
 })
 mock.module('../../../server/data/settings.ts', {
-  namedExports: { ...realSettings, getResidency: () => residencyImpl() },
+  namedExports: { ...realSettings },
 })
 
 const enrich = await import('../../../server/ai/enrich.ts')

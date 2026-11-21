@@ -18,7 +18,7 @@ import assert from 'node:assert/strict'
 import { note } from '../../helpers/notes.ts'
 import type { NoteRecord } from '../../../server/data/notes.ts'
 import type { LinkMeta } from '../../../server/links/meta.ts'
-import type { Residency } from '../../../server/ai/roles.ts'
+import type { Role } from '../../../server/ai/roles.ts'
 import type { Classification, ClassifyArgs, DescribeImageArgs } from '../../../server/ai/providers/types.ts'
 
 const IG_URL = 'https://www.instagram.com/p/AAA111/'
@@ -57,7 +57,7 @@ let fetchLinkMetaImpl: (url: string, id: string) => Promise<LinkMeta>
 let classifyImpl: (args: ClassifyArgs) => Promise<Classification>
 let embedTextImpl: (text: string) => Promise<number[]>
 let describeImageImpl: (args: DescribeImageArgs) => Promise<string>
-let residencyImpl: () => Residency
+let enabledImpl: () => Record<Role, boolean>
 let fetchLinkMetaCalls: string[]
 let classifyCalls: string[]
 let classifyArgs: ClassifyArgs[]
@@ -79,7 +79,7 @@ function reset() {
   classifyImpl = async () => ({ type: 'link', category: 'General', title: 'T', summary: 'S', tags: [] })
   embedTextImpl = async () => [0, 0, 0]
   describeImageImpl = async () => 'default thumbnail description' // benign, distinct string a test can assert against or ignore
-  residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
+  enabledImpl = () => ({ llm: true, embed: true, vision: true })
 }
 reset()
 
@@ -114,6 +114,7 @@ mock.module('../../../server/data/tagvocab.ts', {
 })
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
+    roleEnabled: (role: Role) => enabledImpl()[role],
     ...realNormalise,
     classify: (args: ClassifyArgs) => {
       classifyCalls.push(args.text)
@@ -139,7 +140,7 @@ mock.module('../../../server/data/collections.ts', {
   },
 })
 mock.module('../../../server/data/settings.ts', {
-  namedExports: { ...realSettings, getResidency: () => residencyImpl() },
+  namedExports: { ...realSettings },
 })
 // The real one schedules minute-long timers; the boot sweep's only job is to
 // hand the note over.
@@ -235,7 +236,7 @@ test('a landed caption triggers exactly one classify, built from stored fields �
 test('thumbnail vision respects the vision residency — off means no describeImage call, caption still reclassifies', async () => {
   reset()
   const id = 'n2b'
-  residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'off' })
+  enabledImpl = () => ({ llm: true, embed: true, vision: false })
   seedNotes([{ ...note({ id, content: IG_URL, url: IG_URL, type: 'link' }), ai: {} }])
   fetchLinkMetaImpl = async () => ({
     siteTitle: 'Title',
@@ -424,7 +425,7 @@ test('an IG fetch failure leaves the chain healthy for subsequent jobs (failure 
 test('a reclassify failure leaves the note recoverable — igReclassified is NOT set, so it is retried later (MUST FIX 1a regression)', async () => {
   reset()
   const id = 'n6'
-  residencyImpl = () => ({ llm: 'ondemand', embed: 'off', vision: 'ondemand' }) // isolate to classify only
+  enabledImpl = () => ({ llm: true, embed: false, vision: true }) // isolate to classify only
   seedNotes([{ ...note({ id, content: IG_URL, url: IG_URL, type: 'link' }), ai: {} }])
   fetchLinkMetaImpl = async () => ({
     siteTitle: 'Cap',
@@ -934,7 +935,7 @@ test('a caption-less post whose thumbnail describe failed keeps classify open fo
 test('with every role off, a settled fetch still clears pending', async () => {
   reset()
   const id = 'p5'
-  residencyImpl = () => ({ llm: 'off', embed: 'off', vision: 'off' })
+  enabledImpl = () => ({ llm: false, embed: false, vision: false })
   seedNotes([{ ...note({ id, content: IG_URL, url: IG_URL, pending: true }), ai: {} }])
   fetchLinkMetaImpl = async () => ({ siteTitle: null, siteDesc: 'caption', siteName: 'Instagram', thumb: null })
   await enrich.queueEnrich(id, IG_URL)

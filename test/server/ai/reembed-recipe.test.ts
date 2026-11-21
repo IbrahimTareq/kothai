@@ -13,12 +13,12 @@ import { note } from '../../helpers/notes.ts'
 import type { NoteRecord } from '../../../server/data/notes.ts'
 import type { SettingsPatch } from '../../../server/data/settings.ts'
 import type { EmbedOptions } from '../../../server/ai/providers/types.ts'
-import type { Residency } from '../../../server/ai/roles.ts'
+import type { Role } from '../../../server/ai/roles.ts'
 
 let notes: NoteRecord[] = []
 let embedCalls: { text: string; opts: EmbedOptions | undefined }[] = []
 let embedImpl = async (text: string) => [text.length]
-let residencyImpl = (): Residency => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
+let enabledImpl = (): Record<Role, boolean> => ({ llm: true, embed: true, vision: true })
 let storedRecipe: string | null = null
 let savedPatches: SettingsPatch[] = []
 let flushes = 0
@@ -60,6 +60,7 @@ mock.module('../../../server/data/tagvocab.ts', {
 })
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
+    roleEnabled: (role: Role) => enabledImpl()[role],
     ...realNormalise,
     classify: async () => ({ type: 'link', category: 'General', title: 'T', summary: 'S', tags: [] }),
     embedText: async (text: string, opts?: EmbedOptions) => {
@@ -72,7 +73,6 @@ mock.module('../../../server/data/collections.ts', { namedExports: { ...realColl
 mock.module('../../../server/data/settings.ts', {
   namedExports: {
     ...realSettings,
-    getResidency: () => residencyImpl(),
     getEmbedRecipe: () => storedRecipe,
     save: async (patch: SettingsPatch) => {
       savedPatches.push(patch)
@@ -93,7 +93,7 @@ function reset(list: NoteRecord[] = []) {
   flushes = 0
   storedRecipe = null
   embedImpl = async (text: string) => [text.length]
-  residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
+  enabledImpl = () => ({ llm: true, embed: true, vision: true })
 }
 
 // A saved reel: everything worth embedding lives in fields the old inlined
@@ -188,7 +188,7 @@ test('a library that predates the marker entirely (null) is treated as stale and
 test('with the embed role off, nothing is queued AND the marker is left stale so the sweep still runs later', async () => {
   reset([REEL])
   storedRecipe = 'v1-older'
-  residencyImpl = () => ({ llm: 'off', embed: 'off', vision: 'off' })
+  enabledImpl = () => ({ llm: false, embed: false, vision: false })
 
   assert.equal(reembed.queueRecipeReembed(), false)
   await enrich.queueJob(() => {})
@@ -196,7 +196,7 @@ test('with the embed role off, nothing is queued AND the marker is left stale so
   assert.equal(storedRecipe, 'v1-older', 'recording the new recipe here would strand the library forever')
 
   // Role switched back on: the stale marker means the sweep is still owed.
-  residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
+  enabledImpl = () => ({ llm: true, embed: true, vision: true })
   assert.equal(reembed.queueRecipeReembed(), true)
 })
 

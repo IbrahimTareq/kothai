@@ -7,7 +7,6 @@ import * as enrich from '../ai/enrich.ts'
 import { backlogCount } from '../ai/backlog.ts'
 import { queueProgress } from '../ai/queue.ts'
 import * as store from '../data/notes.ts'
-import * as settings from '../data/settings.ts'
 import { isInstagramPost } from '../links/instagram.ts'
 import { json, readBody } from '../lib/http.ts'
 
@@ -18,7 +17,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 // `count` is what the current AI settings could still fill; `done`/`total` are
 // the queue's current run, 0 of 0 when idle (see ai/queue.ts).
 export function handleBacklog(res: ServerResponse): void {
-  json(res, 200, { count: backlogCount(store.allNotes(), settings.getResidency()), ...queueProgress() })
+  json(res, 200, { count: backlogCount(store.allNotes(), ai.roleEnabled), ...queueProgress() })
 }
 
 // Both bulk-enrichment routes refuse the same way when there is no reachable
@@ -47,7 +46,7 @@ export async function handleRetagAll(res: ServerResponse): Promise<void> {
   if (!ai.available()) {
     return providerDown(res)
   }
-  if (settings.getResidency().llm === 'off') {
+  if (!ai.roleEnabled('llm')) {
     return json(res, 409, { error: 'Re-tagging needs the language model — enable it above.', code: 'llm_off' })
   }
   json(res, 200, { ok: true, queued: await enrich.retagAll() })

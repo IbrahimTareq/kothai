@@ -5,27 +5,25 @@
 import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { mockRes } from '../../helpers/http.ts'
-import type { Residency } from '../../../server/ai/roles.ts'
+import type { Role } from '../../../server/ai/roles.ts'
 
 let retagAllImpl: () => Promise<number>
 let availableImpl: () => boolean
-let residencyImpl: () => Residency
+let enabledImpl: () => Record<Role, boolean>
 
 const realEnrich = await import('../../../server/ai/enrich.ts')
 const realAi = await import('../../../server/ai/index.ts')
-const realSettings = await import('../../../server/data/settings.ts')
 
 mock.module('../../../server/ai/enrich.ts', { namedExports: { ...realEnrich, retagAll: () => retagAllImpl() } })
-mock.module('../../../server/ai/index.ts', { namedExports: { ...realAi, available: () => availableImpl() } })
-mock.module('../../../server/data/settings.ts', {
-  namedExports: { ...realSettings, getResidency: () => residencyImpl() },
+mock.module('../../../server/ai/index.ts', {
+  namedExports: { ...realAi, available: () => availableImpl(), roleEnabled: (role: Role) => enabledImpl()[role] },
 })
 
 const { handleRetagAll } = await import('../../../server/routes/enrich.ts')
 
 function ok() {
   availableImpl = () => true
-  residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
+  enabledImpl = () => ({ llm: true, embed: true, vision: true })
   retagAllImpl = async () => 1688
 }
 
@@ -55,7 +53,7 @@ test('503 when the inference provider is unavailable, and nothing is queued', as
 
 test('409 when the language model is off — re-tagging is entirely an LLM job', async () => {
   ok()
-  residencyImpl = () => ({ llm: 'off', embed: 'always', vision: 'ondemand' })
+  enabledImpl = () => ({ llm: false, embed: true, vision: true })
   let called = false
   retagAllImpl = async () => {
     called = true

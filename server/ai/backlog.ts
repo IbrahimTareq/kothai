@@ -1,8 +1,8 @@
 // Pure helpers deciding which AI enrichment steps a note still needs under the
-// current residency map. Used to gate enrichment, count the settings backlog,
+// set of enabled roles. Used to gate enrichment, count the settings backlog,
 // and migrate pre-residency notes to `ai` markers. No I/O, no SDK.
 
-import type { Residency } from './roles.ts'
+import type { Role } from './roles.ts'
 
 // The markers a note carries once a step has run against it. `thumbVision` is
 // written but deliberately not trusted — see the note on stepsFor below.
@@ -57,7 +57,7 @@ function needsThumbVision(note: BacklogNote): boolean {
   return words.length < CAPTION_WORDS
 }
 
-// Steps a note needs: the role must be enabled (not off) and the note must not
+// Steps a note needs: the role must be enabled (have an endpoint and a model) and the note must not
 // already carry that step's marker.
 //
 // `thumbVision` is the odd one out: it is keyed on the ARTIFACT (a thumbnail
@@ -74,17 +74,17 @@ function needsThumbVision(note: BacklogNote): boolean {
 // hours, starving every note the user saved in the meantime. Routing it here
 // instead means it is counted in the Settings backlog and runs when the user
 // asks for it — which is exactly what that button is for.
-export function stepsFor(note: BacklogNote, residency: Residency): Step[] {
+export function stepsFor(note: BacklogNote, enabled: (role: Role) => boolean): Step[] {
   const done = note.ai || {}
   const steps: Step[] = []
-  if (residency.vision !== 'off' && needsThumbVision(note)) steps.push('thumbVision')
-  if (residency.llm !== 'off' && !done.classify) steps.push('classify')
-  if (residency.embed !== 'off' && !done.embed) steps.push('embed')
+  if (enabled('vision') && needsThumbVision(note)) steps.push('thumbVision')
+  if (enabled('llm') && !done.classify) steps.push('classify')
+  if (enabled('embed') && !done.embed) steps.push('embed')
   return steps
 }
 
-export function backlogCount(notes: BacklogNote[], residency: Residency): number {
-  return notes.filter(n => stepsFor(n, residency).length > 0).length
+export function backlogCount(notes: BacklogNote[], enabled: (role: Role) => boolean): number {
+  return notes.filter(n => stepsFor(n, enabled).length > 0).length
 }
 
 // One-time migration for notes saved before `ai` markers existed: infer each

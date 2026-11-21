@@ -13,11 +13,11 @@ import assert from 'node:assert/strict'
 import { note } from '../../helpers/notes.ts'
 import type { NoteRecord } from '../../../server/data/notes.ts'
 import type { SettingsPatch } from '../../../server/data/settings.ts'
-import type { Residency } from '../../../server/ai/roles.ts'
+import type { Role } from '../../../server/ai/roles.ts'
 
 let notes: NoteRecord[] = []
 let embedCalls: { text: string; markerNow: string | null }[] = []
-let residencyImpl = (): Residency => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
+let enabledImpl = (): Record<Role, boolean> => ({ llm: true, embed: true, vision: true })
 let storedProvider: string | null = null
 let savedPatches: SettingsPatch[] = []
 
@@ -56,6 +56,7 @@ mock.module('../../../server/data/tagvocab.ts', {
 })
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
+    roleEnabled: (role: Role) => enabledImpl()[role],
     ...realNormalise,
     classify: async () => ({ type: 'link', category: 'General', title: 'T', summary: 'S', tags: [] }),
     // Each call records the marker as it stands mid-sweep, so the test can see
@@ -70,7 +71,6 @@ mock.module('../../../server/data/collections.ts', { namedExports: { ...realColl
 mock.module('../../../server/data/settings.ts', {
   namedExports: {
     ...realSettings,
-    getResidency: () => residencyImpl(),
     getEmbedRecipe: () => 'recipe-current',
     getEmbedProvider: () => storedProvider,
     save: async (patch: SettingsPatch) => {
@@ -97,7 +97,7 @@ function reset(list: NoteRecord[] = [], marker: string | null = null) {
   embedCalls = []
   savedPatches = []
   storedProvider = marker
-  residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
+  enabledImpl = () => ({ llm: true, embed: true, vision: true })
 }
 
 const drain = () => enrich.queueJob(() => {})
@@ -119,7 +119,7 @@ test('a stored value is believed over any inference', () => {
 
 test('with the embed role off, nothing is queued AND no marker is written', async () => {
   reset([NOTE], null)
-  residencyImpl = () => ({ llm: 'off', embed: 'off', vision: 'off' })
+  enabledImpl = () => ({ llm: false, embed: false, vision: false })
 
   assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'local', wasRemote: true }), false)
   await drain()
@@ -128,7 +128,7 @@ test('with the embed role off, nothing is queued AND no marker is written', asyn
   assert.deepEqual(savedPatches, [], 'the role being off is not evidence of anything worth recording')
 
   // Role switched back on: the absent marker means the change is still owed.
-  residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
+  enabledImpl = () => ({ llm: true, embed: true, vision: true })
   assert.equal(reembed.queueEmbedProviderReembed({ resolved: 'local', wasRemote: true }), true)
   // Undrained, this sweep finished inside the next test and wrote its marker
   // over that test's reset — once the sweep grew a registry reseed step.

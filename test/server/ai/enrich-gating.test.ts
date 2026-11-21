@@ -6,9 +6,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { stepsFor } from '../../../server/ai/backlog.ts'
-import type { Residency } from '../../../server/ai/roles.ts'
 
-const ALL_ON: Residency = { llm: 'ondemand', embed: 'always', vision: 'ondemand' }
+const ALL_ON = () => true
 
 test('a note with classify+embed already done and manually-edited tags only needs thumbVision — classify/embed must not be in its step list', () => {
   const note = {

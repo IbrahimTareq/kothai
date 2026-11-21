@@ -101,7 +101,7 @@ async function reembedEach(reason: string) {
 // stale is the self-healing choice, the same call every AI marker in this
 // file makes.
 export function queueRecipeReembed() {
-  if (settings.getResidency().embed === 'off') return false
+  if (!inference.roleEnabled('embed')) return false
   if (settings.getEmbedRecipe() === EMBED_RECIPE) return false
   if (!store.count()) {
     settings.save({ embedRecipe: EMBED_RECIPE }).catch(() => {})
@@ -135,7 +135,7 @@ export function queueEmbedProviderReembed({ resolved, wasRemote }: { resolved: s
   // Nothing has been embedded with anything, so there is nothing to compare
   // and nothing to record — the same self-healing choice queueRecipeReembed
   // makes when the role is off.
-  if (settings.getResidency().embed === 'off') return false
+  if (!inference.roleEnabled('embed')) return false
 
   const stored = settings.getEmbedProvider()
   if (!embedProviderChanged({ stored, resolved, wasRemote })) {

@@ -8,7 +8,7 @@ import { test, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { note } from '../../helpers/notes.ts'
 import type { NoteRecord } from '../../../server/data/notes.ts'
-import type { Residency } from '../../../server/ai/roles.ts'
+import type { Role } from '../../../server/ai/roles.ts'
 
 let notes: NoteRecord[] = []
 let classifyCalls = 0
@@ -46,6 +46,7 @@ mock.module('../../../server/data/tagvocab.ts', {
 })
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
+    roleEnabled: (role: Role) => ({ llm: true, embed: true, vision: true })[role],
     ...realNormalise,
     classify: async () => {
       classifyCalls++
@@ -62,7 +63,6 @@ mock.module('../../../server/data/collections.ts', { namedExports: { ...realColl
 mock.module('../../../server/data/settings.ts', {
   namedExports: {
     ...realSettings,
-    getResidency: (): Residency => ({ llm: 'always', embed: 'always', vision: 'always' }),
   },
 })
 

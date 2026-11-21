@@ -19,6 +19,10 @@ assert.ok(CHUNKS)
 
 // What the mocked provider does on the next call. Reassigned per test.
 let answerBehaviour: (args: AnswerStreamArgs) => Promise<string>
+// Which roles have an endpoint and a model. Reset to all-on per test.
+let enabled: Record<string, boolean>
+// What hybridSearch was handed as the query embedding on the last call.
+let searchedWith: unknown
 
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
@@ -26,19 +30,20 @@ mock.module('../../../server/ai/index.ts', {
     statusSnapshot: () => ({
       roles: { llm: { state: 'ready' }, embed: { state: 'ready' }, vision: { state: 'ready' } },
     }),
+    roleEnabled: (role: string) => enabled[role],
     embedText: async () => [0.1, 0.2],
     answer: async () => ANSWER,
     answerStream: (args: AnswerStreamArgs) => answerBehaviour(args),
     describeImage: async () => 'an image',
   },
 })
-mock.module('../../../server/data/settings.ts', {
-  namedExports: { getResidency: () => ({ llm: 'ondemand', embed: 'ondemand', vision: 'ondemand' }) },
-})
 mock.module('../../../server/data/notes.ts', {
   namedExports: {
     count: () => 3,
-    hybridSearch: () => SOURCES,
+    hybridSearch: (embedding: unknown) => {
+      searchedWith = embedding
+      return SOURCES
+    },
     textSearch: () => SOURCES,
   },
 })
@@ -68,6 +73,8 @@ after(async () => {
 beforeEach(() => {
   chats._reset()
   demoLimits.ask.reset()
+  enabled = { llm: true, embed: true, vision: true }
+  searchedWith = undefined
   answerBehaviour = async ({ onToken }) => {
     for (const chunk of CHUNKS) onToken?.(chunk)
     return ANSWER
@@ -107,6 +114,15 @@ test('streams sources, then deltas, then done', async () => {
   const deltas = frames.filter(f => f.event === 'delta')
   assert.ok(deltas.length > 1, 'the answer must arrive in more than one piece')
   assert.equal(deltas.map(d => d.data.text).join(''), ANSWER, 'deltas must reconstruct the answer exactly')
+})
+
+test('with an llm endpoint and no embed model, ask answers from keyword retrieval rather than 503', async () => {
+  enabled.embed = false
+  const { res, frames } = await askStream({ question: 'what about coffee?' })
+  assert.equal(res.status, 200)
+  assert.equal(searchedWith, null, 'no embed role means no query embedding, so the fusion is keyword-only')
+  assert.deepEqual(frames[0].data.sources, SOURCES)
+  assert.equal(frames[frames.length - 1].event, 'done')
 })
 
 test('done carries a chat id that the exchange was recorded under', async () => {

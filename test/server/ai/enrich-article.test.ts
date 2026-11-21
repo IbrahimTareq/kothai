@@ -7,7 +7,7 @@ import assert from 'node:assert/strict'
 import { note } from '../../helpers/notes.ts'
 import type { NoteRecord } from '../../../server/data/notes.ts'
 import type { LinkMeta } from '../../../server/links/meta.ts'
-import type { Residency } from '../../../server/ai/roles.ts'
+import type { Role } from '../../../server/ai/roles.ts'
 import type { ClassifyArgs } from '../../../server/ai/providers/types.ts'
 
 const URL_ = 'https://example.com/bread'
@@ -55,6 +55,7 @@ mock.module('../../../server/data/tagvocab.ts', {
 })
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
+    roleEnabled: (role: Role) => ({ llm: true, embed: true, vision: true })[role],
     ...realNormalise,
     classify: async (args: ClassifyArgs) => {
       classifyCalls.push(args.text)
@@ -70,7 +71,6 @@ mock.module('../../../server/data/collections.ts', { namedExports: { ...realColl
 mock.module('../../../server/data/settings.ts', {
   namedExports: {
     ...realSettings,
-    getResidency: (): Residency => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' }),
   },
 })
 

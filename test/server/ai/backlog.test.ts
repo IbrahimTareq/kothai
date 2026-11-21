@@ -1,12 +1,12 @@
 // Unit tests for server/ai/backlog.ts — which enrichment steps a note still
-// needs under a residency map, and the legacy ai-marker migration.
+// needs for the roles that are enabled, and the legacy ai-marker migration.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { stepsFor, backlogCount, deriveAiMarkers } from '../../../server/ai/backlog.ts'
-import type { Residency } from '../../../server/ai/roles.ts'
+import type { Role } from '../../../server/ai/roles.ts'
 
-const ALL_ON: Residency = { llm: 'ondemand', embed: 'always', vision: 'ondemand' }
-const ALL_OFF: Residency = { llm: 'off', embed: 'off', vision: 'off' }
+const ALL_ON = (_role: Role) => true
+const ALL_OFF = (_role: Role) => false
 
 test('stepsFor: a bare note with everything on needs classify + embed', () => {
   assert.deepEqual(stepsFor({ ai: {} }, ALL_ON), ['classify', 'embed'])
@@ -16,9 +16,19 @@ test('stepsFor: completed markers remove steps', () => {
   assert.deepEqual(stepsFor({ ai: { classify: true, embed: true } }, ALL_ON), [])
 })
 
+test('stepsFor: a disabled embed role contributes no embed step and keeps classify', () => {
+  assert.deepEqual(
+    stepsFor({ ai: {} }, r => r !== 'embed'),
+    ['classify'],
+  )
+})
+
 test('stepsFor: off roles contribute no steps', () => {
   assert.deepEqual(stepsFor({ ai: {} }, ALL_OFF), [])
-  assert.deepEqual(stepsFor({ ai: {} }, { ...ALL_ON, llm: 'off' }), ['embed'])
+  assert.deepEqual(
+    stepsFor({ ai: {} }, r => r !== 'llm'),
+    ['embed'],
+  )
 })
 
 test('backlogCount: counts notes with at least one needed step', () => {

@@ -18,10 +18,8 @@ import type { LinkMeta } from '../links/meta.ts'
 import { applyMeta } from '../links/meta-fields.ts'
 import { queueThumbRetry } from '../links/thumb-retry.ts'
 import * as collections from '../data/collections.ts'
-import * as settings from '../data/settings.ts'
 import { stepsFor } from './backlog.ts'
 import type { AiMarkers, BacklogNote } from './backlog.ts'
-import type { Residency } from './roles.ts'
 import { DESCRIBE_THUMB_PROMPT, EMBED_RECIPE } from './prompts.ts'
 import { UPLOAD_DIR } from '../config.ts'
 import {
@@ -179,8 +177,8 @@ async function runMetaJob({ noteId, url }: MetaJob) {
 // anywhere. For those the marker is simply wrong, and only the artifact tells
 // the truth. The marker is still written, because it is what the enrichment
 // backlog and deriveAiMarkers read elsewhere. See stepsFor's matching note.
-async function describeThumb(note: BacklogNote, residency: Residency, ai: AiMarkers): Promise<string> {
-  if (!note.thumb || !stepsFor(note, residency).includes('thumbVision')) return ''
+async function describeThumb(note: BacklogNote, ai: AiMarkers): Promise<string> {
+  if (!note.thumb || !stepsFor(note, inference.roleEnabled).includes('thumbVision')) return ''
   try {
     const absPath = path.join(UPLOAD_DIR, path.basename(note.thumb))
     const description = await inference.describeImage({ absPath, prompt: DESCRIBE_THUMB_PROMPT })
@@ -217,9 +215,8 @@ async function describeThumb(note: BacklogNote, residency: Residency, ai: AiMark
 //
 // `vision: false` is the boot sweep's: see its comment in queueMetaBackfill.
 async function reclassifyWithCaption(id: string, { vision = true } = {}) {
-  const residency = settings.getResidency()
-  const runClassify = residency.llm !== 'off'
-  const runEmbed = residency.embed !== 'off'
+  const runClassify = inference.roleEnabled('llm')
+  const runEmbed = inference.roleEnabled('embed')
   if (!runClassify && !runEmbed) return // both roles off — nothing to (re)run
 
   const existing = store.getNote(id)
@@ -230,7 +227,7 @@ async function reclassifyWithCaption(id: string, { vision = true } = {}) {
   // described here (the thumbnail queueIgMeta fetched is on disk by now); an
   // import's single enrichNote pass describes its own. Whichever reaches a
   // note first wins, and the marker makes the other a no-op.
-  const thumbDescription = vision ? await describeThumb(existing, residency, ai) : ''
+  const thumbDescription = vision ? await describeThumb(existing, ai) : ''
 
   // Built from stored fields (content + the siteTitle/siteDesc queueIgMeta
   // just patched in) plus the thumbnail description above — no network call
@@ -412,17 +409,16 @@ export function queueMetaBackfill() {
   // title, tags and embedding, and one vision pass per note at boot is the
   // hours-long stall stepsFor's comment refuses. That work stays in the
   // Settings backlog.
-  const residency = settings.getResidency()
   for (const n of store.allNotes()) {
     if (!n.pending) continue
-    if (stepsFor(n, residency).some(s => s !== 'thumbVision')) queueEnrich(n.id, n.content)
+    if (stepsFor(n, inference.roleEnabled).some(s => s !== 'thumbVision')) queueEnrich(n.id, n.content)
     else void store.updateNote(n.id, { pending: false }, { persist: false })
   }
   // One write for however many notes were cleared, as retagAll does.
   store.flush().catch(e => console.error('[enrich] clearing stale pending failed:', e instanceof Error ? e.message : e))
 }
 
-// Enrich one note under the current residency: each step runs only if its
+// Enrich one note under the currently enabled roles: each step runs only if its
 // role is enabled AND the note doesn't already carry that step's marker —
 // `steps` (from stepsFor) is the single source of truth for "what's actually
 // missing," computed once against the note's state as of the start of this
@@ -434,9 +430,8 @@ export function queueMetaBackfill() {
 // just-saved path and a later backlog resweep with the same function.
 // Link metadata needs no model and always runs regardless of `steps`.
 async function enrichNote(id: string, url: string) {
-  const residency = settings.getResidency()
   const existing = store.getNote(id)
-  const steps = stepsFor(existing || {}, residency)
+  const steps = stepsFor(existing || {}, inference.roleEnabled)
   const ai: AiMarkers = {}
 
   // Link/video metadata (oEmbed / OpenGraph), fetched once and cached locally.
@@ -508,12 +503,12 @@ async function enrichNote(id: string, url: string) {
   const thumb = linkMeta?.thumb || existing?.thumb
   const captioned: BacklogNote = { ...existing, thumb }
   for (const k of ['siteTitle', 'siteDesc', 'article'] as const) captioned[k] = linkMeta?.[k] || captioned[k]
-  const thumbDescription = thumb ? await describeThumb(captioned, residency, ai) : ''
+  const thumbDescription = thumb ? await describeThumb(captioned, ai) : ''
 
   // YouTube captions — the actual content of a saved video, and the one
   // platform that publishes a transcript for the asking (no download, no
   // speech-to-text; see meta.ts). Not a model step, so it is gated on its own
-  // `ai.captions` marker rather than on residency: a video's transcript is
+  // `ai.captions` marker rather than on whether a role is enabled: a video's transcript is
   // worth having for textSearch and the answer prompt even with every model
   // role off. `done` distinguishes "this video has no captions" (final —
   // record it and never ask again) from "not right now" (leave the marker
@@ -559,11 +554,11 @@ async function enrichNote(id: string, url: string) {
     // offer 'embed', and the transcript would sit on disk contributing
     // nothing to retrieval — the exact asymmetry this whole change set
     // exists to remove.
-    if (residency.embed !== 'off' && !steps.includes('embed')) steps.push('embed')
+    if (inference.roleEnabled('embed') && !steps.includes('embed')) steps.push('embed')
   }
   // Same reasoning for a thumbnail description arriving on a note that was
   // classified and embedded before this step reached it.
-  if (thumbDescription && residency.embed !== 'off' && !steps.includes('embed')) steps.push('embed')
+  if (thumbDescription && inference.roleEnabled('embed') && !steps.includes('embed')) steps.push('embed')
   if (linkMeta) {
     applyMeta(patch, linkMeta)
     // `author` → `account` (different names, so not part of applyMeta).
@@ -583,7 +578,7 @@ async function enrichNote(id: string, url: string) {
   // A later caption still reclassifies it.
   if (isIgUrl && richText === url && steps.includes('classify')) {
     if (!existing?.ai?.tagsEdited) patch.tags = tags.withAccountTag(existing?.tags ?? [], existing?.account)
-    if (!(thumb && residency.vision !== 'off')) ai.classify = true
+    if (!(thumb && inference.roleEnabled('vision'))) ai.classify = true
   } else if (richText && steps.includes('classify')) {
     try {
       const knownTags = tags.buildVocabulary(store.allNotes())
@@ -657,15 +652,14 @@ async function enrichNote(id: string, url: string) {
   }
 }
 
-// Queue every note that is missing a step the current residency can perform.
+// Queue every note that is missing a step the enabled roles can perform.
 // Returns how many were queued (surfaced by the settings backlog endpoint).
 export function queueBacklog() {
   // A provider whose circuit is open cannot do useful work — enqueueing here
   // would burn the whole backlog against a dead (and possibly metered)
   // endpoint. Returning 0 lets the route tell the user why nothing happened.
   if (!inference.available()) return 0
-  const residency = settings.getResidency()
-  const todo = store.allNotes().filter(n => stepsFor(n, residency).length > 0)
+  const todo = store.allNotes().filter(n => stepsFor(n, inference.roleEnabled).length > 0)
   for (const n of todo) queueEnrich(n.id, n.content)
   return todo.length
 }

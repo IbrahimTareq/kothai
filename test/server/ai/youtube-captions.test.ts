@@ -13,7 +13,7 @@ import type { TranscriptResponse } from 'youtube-transcript'
 import { note } from '../../helpers/notes.ts'
 import type { NoteRecord } from '../../../server/data/notes.ts'
 import type { LinkMeta } from '../../../server/links/meta.ts'
-import type { Residency } from '../../../server/ai/roles.ts'
+import type { Role } from '../../../server/ai/roles.ts'
 import type { ClassifyArgs } from '../../../server/ai/providers/types.ts'
 
 const WATCH = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
@@ -144,7 +144,7 @@ const realNormalise = await import('../../../server/ai/normalise.ts')
 const realCollections = await import('../../../server/data/collections.ts')
 const realSettings = await import('../../../server/data/settings.ts')
 
-let residencyImpl = (): Residency => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
+let enabledImpl = (): Record<Role, boolean> => ({ llm: true, embed: true, vision: true })
 
 mock.module('../../../server/links/meta.ts', {
   namedExports: {
@@ -176,6 +176,7 @@ mock.module('../../../server/data/tagvocab.ts', {
 })
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
+    roleEnabled: (role: Role) => enabledImpl()[role],
     ...realNormalise,
     classify: async (args: ClassifyArgs) => {
       classifyCalls.push(args.text)
@@ -189,7 +190,7 @@ mock.module('../../../server/ai/index.ts', {
 })
 mock.module('../../../server/data/collections.ts', { namedExports: { ...realCollections, autoAdd: async () => {} } })
 mock.module('../../../server/data/settings.ts', {
-  namedExports: { ...realSettings, getResidency: () => residencyImpl() },
+  namedExports: { ...realSettings },
 })
 
 const enrich = await import('../../../server/ai/enrich.ts')
@@ -264,10 +265,10 @@ test('a transcript landing on an ALREADY-embedded note forces a re-embed — oth
 
 test('with the embed role off, the transcript is still fetched and stored — it is not a model step', async () => {
   seed({ ai: { classify: true, embed: true } })
-  residencyImpl = () => ({ llm: 'off', embed: 'off', vision: 'off' })
+  enabledImpl = () => ({ llm: false, embed: false, vision: false })
   transcriptImpl = async () => [seg('still worth storing')]
   await enrich.queueEnrich('y1', WATCH)
-  residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
+  enabledImpl = () => ({ llm: true, embed: true, vision: true })
 
   assert.equal(embedCalls.length, 0)
   assert.ok(notes[0].article)

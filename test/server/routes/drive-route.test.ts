@@ -4,7 +4,7 @@
 //
 // A real listening server, a real on-disk library, and test/helpers/google.ts
 // standing in for Google.
-import { test, after } from 'node:test'
+import { test, after, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtempSync, rmSync } from 'node:fs'
 import os from 'node:os'
@@ -17,6 +17,10 @@ process.env.KOTHAI_DATA_DIR = DATA_DIR
 process.env.KOTHAI_GOOGLE_CLIENT_ID = 'client.apps.googleusercontent.com'
 process.env.KOTHAI_GOOGLE_CLIENT_SECRET = 'client-secret'
 
+// The AI facade throws until the provider boots; a restore only asks whether
+// the embed role is on, to decide if the tag vocabulary is worth rebuilding.
+const realAi = await import('../../../server/ai/index.ts')
+mock.module('../../../server/ai/index.ts', { namedExports: { ...realAi, roleEnabled: () => false } })
 const store = await import('../../../server/data/notes.ts')
 const collections = await import('../../../server/data/collections.ts')
 const chats = await import('../../../server/data/chats.ts')

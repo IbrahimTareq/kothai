@@ -71,7 +71,7 @@ const providerReembedding = reembed.queueEmbedProviderReembed({
 // configured install boots its always-roles immediately; on-demand roles
 // load lazily on first use.
 if (settings.isConfigured()) {
-  if (!hadTagRegistry && settings.getResidency().embed !== 'off') {
+  if (!hadTagRegistry && ai.roleEnabled('embed')) {
     withTrigger('boot', () =>
       enrich.queueJob(async () => {
         await tagvocab.rebuildFromNotes(store.allNotes())

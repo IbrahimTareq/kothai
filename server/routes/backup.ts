@@ -17,6 +17,7 @@ import * as collections from '../data/collections.ts'
 import * as chats from '../data/chats.ts'
 import * as tagvocab from '../data/tagvocab.ts'
 import * as settings from '../data/settings.ts'
+import * as ai from '../ai/index.ts'
 import * as enrich from '../ai/enrich.ts'
 import * as reembed from '../ai/reembed.ts'
 import { withTrigger } from '../ai/usage.ts'
@@ -272,7 +273,7 @@ async function swapIn(stagedDb: string, stagedUploads: string | null) {
     await settings.save({ embedRecipe: null })
     reembed.queueRecipeReembed()
   }
-  if (settings.getResidency().embed !== 'off') {
+  if (ai.roleEnabled('embed')) {
     withTrigger('reembed', () => enrich.queueJob(() => tagvocab.rebuildFromNotes(store.allNotes())))
   }
   return { notes: store.count(), collections: collections.all().length, chats: chats.all().length }

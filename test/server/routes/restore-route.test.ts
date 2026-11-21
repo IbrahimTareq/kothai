@@ -53,6 +53,10 @@ mock.module('../../../server/ai/reembed.ts', {
   },
 })
 
+// The AI facade throws until the provider boots; a restore only asks whether
+// the embed role is on, to decide if the tag vocabulary is worth rebuilding.
+const realAi = await import('../../../server/ai/index.ts')
+mock.module('../../../server/ai/index.ts', { namedExports: { ...realAi, roleEnabled: () => false } })
 const store = await import('../../../server/data/notes.ts')
 const collections = await import('../../../server/data/collections.ts')
 const chats = await import('../../../server/data/chats.ts')

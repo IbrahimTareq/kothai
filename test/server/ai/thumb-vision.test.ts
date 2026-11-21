@@ -12,7 +12,7 @@ import assert from 'node:assert/strict'
 import { note } from '../../helpers/notes.ts'
 import type { NoteRecord } from '../../../server/data/notes.ts'
 import type { LinkMeta } from '../../../server/links/meta.ts'
-import type { Residency } from '../../../server/ai/roles.ts'
+import type { Role } from '../../../server/ai/roles.ts'
 import type { ClassifyArgs, DescribeImageArgs } from '../../../server/ai/providers/types.ts'
 
 const TIKTOK = 'https://www.tiktok.com/@chef/video/7300000000000000000'
@@ -29,7 +29,7 @@ let linkMetaImpl = async (): Promise<LinkMeta> => ({
   thumb: '/uploads/meta-t1.jpg',
   article: null,
 })
-let residencyImpl = (): Residency => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
+let enabledImpl = (): Record<Role, boolean> => ({ llm: true, embed: true, vision: true })
 
 const realMeta = await import('../../../server/links/meta.ts')
 const realStore = await import('../../../server/data/notes.ts')
@@ -60,6 +60,7 @@ mock.module('../../../server/data/tagvocab.ts', {
 })
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
+    roleEnabled: (role: Role) => enabledImpl()[role],
     ...realNormalise,
     classify: async (args: ClassifyArgs) => {
       classifyCalls.push(args.text)
@@ -77,7 +78,7 @@ mock.module('../../../server/ai/index.ts', {
 })
 mock.module('../../../server/data/collections.ts', { namedExports: { ...realCollections, autoAdd: async () => {} } })
 mock.module('../../../server/data/settings.ts', {
-  namedExports: { ...realSettings, getResidency: () => residencyImpl() },
+  namedExports: { ...realSettings },
 })
 
 const enrich = await import('../../../server/ai/enrich.ts')
@@ -123,9 +124,9 @@ test('the prompt asks for burned-in text to be transcribed — the best retrieva
 
 test('vision residency off skips the describe call entirely, and the rest of enrichment still runs', async () => {
   seed()
-  residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'off' })
+  enabledImpl = () => ({ llm: true, embed: true, vision: false })
   await run()
-  residencyImpl = () => ({ llm: 'ondemand', embed: 'always', vision: 'ondemand' })
+  enabledImpl = () => ({ llm: true, embed: true, vision: true })
 
   assert.equal(describeCalls.length, 0)
   assert.equal(notes[0].thumbDescription, undefined)
@@ -248,7 +249,7 @@ const STRANDED: NoteRecord = {
   // Exactly the shape ~1,280 notes of the live library are in.
   ai: { classify: true, embed: true, thumbVision: true, igReclassified: true },
 }
-const ON: Residency = { llm: 'ondemand', embed: 'always', vision: 'ondemand' }
+const ON = () => true
 
 test('the backlog offers thumbVision for a note whose marker claims done but whose description is gone', () => {
   assert.ok(stepsFor(STRANDED, ON).includes('thumbVision'))
@@ -258,7 +259,7 @@ test('the backlog offers thumbVision for a note whose marker claims done but who
 test('the backlog leaves alone a note that has its description, one with no thumbnail, and any note when vision is off', () => {
   assert.ok(!stepsFor({ ...STRANDED, thumbDescription: 'already there' }, ON).includes('thumbVision'))
   assert.ok(!stepsFor({ ...STRANDED, thumb: null }, ON).includes('thumbVision'))
-  assert.ok(!stepsFor(STRANDED, { ...ON, vision: 'off' }).includes('thumbVision'))
+  assert.ok(!stepsFor(STRANDED, r => r !== 'vision').includes('thumbVision'))
 })
 
 test('running the backlog on a stranded note recovers the description and re-embeds it', async () => {

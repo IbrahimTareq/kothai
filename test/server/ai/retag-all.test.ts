@@ -15,7 +15,7 @@ import assert from 'node:assert/strict'
 import { note } from '../../helpers/notes.ts'
 import type { NoteRecord } from '../../../server/data/notes.ts'
 import type { LinkMeta } from '../../../server/links/meta.ts'
-import type { Residency } from '../../../server/ai/roles.ts'
+import type { Role } from '../../../server/ai/roles.ts'
 import type { ClassifyArgs } from '../../../server/ai/providers/types.ts'
 
 let notes: NoteRecord[] = []
@@ -69,6 +69,7 @@ mock.module('../../../server/data/tagvocab.ts', {
 })
 mock.module('../../../server/ai/index.ts', {
   namedExports: {
+    roleEnabled: (role: Role) => ({ llm: true, embed: true, vision: false })[role],
     ...realNormalise,
     available: () => availableImpl(),
     classify: async (args: ClassifyArgs) => {
@@ -91,7 +92,6 @@ mock.module('../../../server/data/collections.ts', { namedExports: { ...realColl
 mock.module('../../../server/data/settings.ts', {
   namedExports: {
     ...realSettings,
-    getResidency: (): Residency => ({ llm: 'ondemand', embed: 'always', vision: 'off' }),
   },
 })
 
@@ -126,12 +126,12 @@ const STALE: NoteRecord = {
   ai: { classify: true, embed: true },
 }
 
-const RESIDENCY: Residency = { llm: 'ondemand', embed: 'always', vision: 'off' }
+const ENABLED = (role: Role) => role !== 'vision'
 
 test('a note the backlog would skip is re-classified and re-embedded', async () => {
   await reset([STALE])
   const { backlogCount } = await import('../../../server/ai/backlog.ts')
-  assert.equal(backlogCount(notes, RESIDENCY), 0, 'precondition: the backlog offers nothing')
+  assert.equal(backlogCount(notes, ENABLED), 0, 'precondition: the backlog offers nothing')
 
   const queued = await enrich.retagAll()
   await enrich.queueJob(() => {})

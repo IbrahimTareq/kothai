@@ -16,7 +16,7 @@
 // only an endpoint has a circuit to recover (see circuit.ts), and a facade
 // export for one caller would cost the export budget a statement.
 import * as store from '../data/notes.ts'
-import * as settings from '../data/settings.ts'
+import * as ai from './index.ts'
 import { stepsFor } from './backlog.ts'
 import { queueEnrich } from './enrich.ts'
 import { withTrigger } from './usage.ts'
@@ -28,10 +28,9 @@ import { remoteProvider } from './providers/remote-singleton.ts'
 const queued = new Set<string>()
 
 remoteProvider.onRecover(() => {
-  const residency = settings.getResidency()
   const todo = store
     .allNotes()
-    .filter(n => !n.pending && !queued.has(n.id) && stepsFor(n, residency).some(s => s !== 'thumbVision'))
+    .filter(n => !n.pending && !queued.has(n.id) && stepsFor(n, ai.roleEnabled).some(s => s !== 'thumbVision'))
   for (const n of todo) {
     queued.add(n.id)
     withTrigger('recovery', () => queueEnrich(n.id, n.content)).finally(() => queued.delete(n.id))

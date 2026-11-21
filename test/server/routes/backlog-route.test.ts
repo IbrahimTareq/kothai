@@ -6,11 +6,11 @@ import { mockRes } from '../../helpers/http.ts'
 import { note } from '../../helpers/notes.ts'
 
 const realNotes = await import('../../../server/data/notes.ts')
-const realSettings = await import('../../../server/data/settings.ts')
+const realAi = await import('../../../server/ai/index.ts')
 
 mock.module('../../../server/data/notes.ts', { namedExports: { ...realNotes, allNotes: () => [note()] } })
-mock.module('../../../server/data/settings.ts', {
-  namedExports: { ...realSettings, getResidency: () => ({ llm: 'ondemand', embed: 'always', vision: 'off' }) },
+mock.module('../../../server/ai/index.ts', {
+  namedExports: { ...realAi, roleEnabled: (role: string) => role !== 'vision' },
 })
 mock.module('../../../server/ai/queue.ts', {
   namedExports: { queueJob: async () => {}, queueProgress: () => ({ done: 2, total: 5 }) },
