@@ -1,6 +1,6 @@
 # Quick start
 
-One container, no database server, no account. Run the models on your own hardware and you don't need an API key either. Point it at a hosted endpoint instead and the inference leaves your machine, as does anything you send through [Telegram capture](telegram.md) once you connect it.
+One container, no database server, no account. Run Ollama on your own hardware and you don't need an API key either. Point it at a hosted endpoint instead and the inference leaves your machine, as does anything you send through [Telegram capture](telegram.md) once you connect it.
 
 ```bash
 curl -fsSL https://getkothai.com/install.sh | sh
@@ -14,7 +14,6 @@ Everything below is what the script does, if you'd rather do it yourself.
 docker run -d --name kothai \
   -p 5173:5173 \
   -v ./data:/app/data \
-  -v ./models:/app/models \
   --restart unless-stopped \
   ghcr.io/ibrahimtareq/kothai:latest
 ```
@@ -25,6 +24,16 @@ Or with compose. This is the same container plus the options you'll probably wan
 curl -O https://raw.githubusercontent.com/IbrahimTareq/kothai/main/docker-compose.yml
 docker compose up -d
 ```
+
+To run models on this machine too, add the Ollama profile. It starts Ollama beside Kothai on the same network:
+
+```bash
+docker compose --profile ollama up -d
+docker compose exec ollama ollama pull llama3.2:3b
+docker compose exec ollama ollama pull nomic-embed-text
+```
+
+Pick Ollama during setup (endpoint `http://ollama:11434/v1`). See [Models & inference](models.md#ollama). There is one image; `:latest`, the version tag and `:lite` all point at it.
 
 > [!IMPORTANT]
 > **There is no login until you set `KOTHAI_PASSWORD`.** Anyone who can reach the port can read and write everything. On your own machine or a home LAN that's fine and is the default. Set a password before Kothai is reachable from anywhere else (a public hostname, a VPS, a forwarded port) and put TLS in front of it. [security.md](security.md) has the threat model.

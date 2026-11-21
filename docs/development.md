@@ -14,8 +14,6 @@ git config --local core.hooksPath .githooks   # commit-msg runs commitlint
 
 Node **22** is pinned in [`.nvmrc`](../.nvmrc) and matched by CI and the Dockerfile.
 
-`pnpm install` is the slow step. `@qvac/sdk` ships large native prebuilds for every OS and arch.
-
 ## Commands
 
 | | |
@@ -57,7 +55,7 @@ Plain `node:test`, about five seconds, no browser and no running server.
 ```bash
 pnpm test                                     # everything
 node --test test/server/ai/roles.test.ts      # one file
-node --test --test-name-pattern="residency"   # by name
+node --test --test-name-pattern="embed"   # by name
 ```
 
 `test/` mirrors the source tree exactly:
@@ -67,7 +65,7 @@ test/
 ├─ client/          pure client modules: layout, router, markdown, source, pager
 └─ server/
    ├─ ai/           facade, enrich chain, prompts, normalise, backlog, circuit
-   │  └─ providers/ local, remote, and the shared contract test
+   │  └─ providers/ the remote provider and its contract test
    ├─ data/         db columns, embedding blobs, migration, query, RRF
    ├─ import/       Instagram parsing
    ├─ lib/          auth, ssrf, zip, tags, http

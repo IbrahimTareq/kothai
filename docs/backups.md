@@ -107,4 +107,4 @@ docker compose pull
 docker compose up -d
 ```
 
-Your data and downloaded models are untouched.
+Your data is untouched.

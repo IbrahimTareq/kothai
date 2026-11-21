@@ -8,7 +8,7 @@ The container ships a healthcheck:
 docker inspect -f '{{.State.Health.Status}}' kothai
 ```
 
-It reports **liveness, not model readiness**. The container is `healthy` as soon as the HTTP server answers, including while models are still downloading. For model state, use the API:
+It reports **liveness, not model readiness**. The container is `healthy` as soon as the HTTP server answers, whether or not an AI endpoint is reachable. For AI state, use the API:
 
 ```bash
 curl -s localhost:5173/api/status
@@ -17,20 +17,20 @@ curl -s localhost:5173/api/status
 ## Common issues
 
 <Accordions>
-<Accordion title="Container exits immediately on a Raspberry Pi or under emulation">
-Older images crashed at startup on ARM CPUs without SVE instructions, which includes the Raspberry Pi. Pull a current image (`docker compose pull`).
+<Accordion title="Ollama unreachable from Docker">
+`localhost` inside the Kothai container is the container itself, not your machine. Use the address that matches where Ollama runs:
+
+- Started with `docker compose --profile ollama`: `http://ollama:11434/v1`, the compose service name.
+- Running on the host: `http://host.docker.internal:11434/v1`. On Linux, add `extra_hosts: ["host.docker.internal:host-gateway"]` to the service. Ollama must also listen beyond loopback (`OLLAMA_HOST=0.0.0.0`).
+- Running Kothai without Docker: `http://localhost:11434/v1`.
 </Accordion>
 
-<Accordion title="Killed, or the container restarts during model loading">
-Out of memory. Check with `docker inspect -f '{{.State.OOMKilled}}' kothai`. In Settings, switch the language model to **Off** for immediate relief, then pick smaller models or turn off image captioning.
-</Accordion>
-
-<Accordion title="First boot takes a very long time">
-Expected. It's fetching 3+ GB for the default setup, less if you picked lighter models. Watch it with `docker compose logs -f`. The UI works throughout.
+<Accordion title="Search is keyword-only">
+No embedding endpoint is working. Claude can't embed, so with Claude for chat, add an embeddings provider. After an upgrade from on-device models, connect one in Settings and Kothai re-embeds your library once.
 </Accordion>
 
 <Accordion title="Permission denied writing to data">
-The entrypoint repairs ownership at startup, but only when it starts as root. If you pass `--user`, make sure that user owns `./data` and `./models` on the host.
+The entrypoint repairs ownership at startup, but only when it starts as root. If you pass `--user`, make sure that user owns `./data` on the host.
 </Accordion>
 
 <Accordion title="Port already in use">
