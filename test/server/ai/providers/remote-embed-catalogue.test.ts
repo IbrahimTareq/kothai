@@ -36,6 +36,11 @@ const json =
     res.writeHead(200, { 'content-type': 'application/json' })
     res.end(JSON.stringify(body))
   }
+// The same endpoint, and the same catalogue entry, for every role.
+const everyRole = (baseUrl: string, embeddingsPath = '') => {
+  const one = { baseUrl, apiKey: null, embeddingsPath }
+  return { llm: one, embed: one, vision: one }
+}
 const ids = (list: string[]) => ({ data: list.map(id => ({ id })) })
 
 beforeEach(() => {
@@ -46,7 +51,7 @@ beforeEach(() => {
 })
 
 test('without an embeddings path, every role shares the one catalogue', async () => {
-  const p = createRemoteProvider({ baseUrl: base, apiKey: null, models: {} })
+  const p = createRemoteProvider({ endpoints: everyRole(base), models: {} })
   await p.init()
   const out = await p.listModels()
   assert.deepEqual(
@@ -60,7 +65,7 @@ test('without an embeddings path, every role shares the one catalogue', async ()
 })
 
 test('with one, the embedding role gets its own list and the others do not', async () => {
-  const p = createRemoteProvider({ baseUrl: base, apiKey: null, models: {}, embeddingsPath: '/embeddings/models' })
+  const p = createRemoteProvider({ endpoints: everyRole(base, '/embeddings/models'), models: {} })
   await p.init()
   const out = await p.listModels()
   assert.deepEqual(
@@ -78,13 +83,13 @@ test('with one, the embedding role gets its own list and the others do not', asy
 })
 
 test('a valid embedding id is not warned about just for missing the chat list', async () => {
-  const p = createRemoteProvider({ baseUrl: base, apiKey: null, models: {}, embeddingsPath: '/embeddings/models' })
+  const p = createRemoteProvider({ endpoints: everyRole(base, '/embeddings/models'), models: {} })
   await p.init()
   assert.deepEqual(p.validateModel('embed', 'vec-small'), { ok: true })
 })
 
 test('an embedding id in neither list still only warns, never rejects', async () => {
-  const p = createRemoteProvider({ baseUrl: base, apiKey: null, models: {}, embeddingsPath: '/embeddings/models' })
+  const p = createRemoteProvider({ endpoints: everyRole(base, '/embeddings/models'), models: {} })
   await p.init()
   const r = p.validateModel('embed', 'something-else')
   assert.equal(r.ok, true)
@@ -93,7 +98,7 @@ test('an embedding id in neither list still only warns, never rejects', async ()
 })
 
 test('a chat id is still checked against the chat list', async () => {
-  const p = createRemoteProvider({ baseUrl: base, apiKey: null, models: {}, embeddingsPath: '/embeddings/models' })
+  const p = createRemoteProvider({ endpoints: everyRole(base, '/embeddings/models'), models: {} })
   await p.init()
   assert.deepEqual(p.validateModel('llm', 'chat-a'), { ok: true })
   const embedInChat = p.validateModel('llm', 'vec-small')
@@ -109,7 +114,7 @@ test('a failing embeddings probe does not take the provider down with it', async
     res.writeHead(500)
     res.end('nope')
   }
-  const p = createRemoteProvider({ baseUrl: base, apiKey: null, models: {}, embeddingsPath: '/embeddings/models' })
+  const p = createRemoteProvider({ endpoints: everyRole(base, '/embeddings/models'), models: {} })
   await p.init()
   const out = await p.listModels()
   assert.deepEqual(
@@ -126,10 +131,8 @@ test('a failing embeddings probe does not take the provider down with it', async
 
 test('the endpoint being down entirely is still one failure, not two', async () => {
   const p = createRemoteProvider({
-    baseUrl: 'http://127.0.0.1:1/v1',
-    apiKey: null,
+    endpoints: everyRole('http://127.0.0.1:1/v1', '/embeddings/models'),
     models: { llm: 'x' },
-    embeddingsPath: '/embeddings/models',
   })
   await p.init()
   assert.equal(p.statusSnapshot().roles.llm.state, 'error')

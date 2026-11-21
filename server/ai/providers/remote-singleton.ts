@@ -4,6 +4,7 @@
 // and never touch this one.
 import { getAiConfig } from '../../config.ts'
 import { findEndpoint } from '../endpoints.ts'
+import type { RoleEndpoint } from '../endpoint-config.ts'
 import type { Role } from '../roles.ts'
 import { createRemoteProvider } from './remote.ts'
 import type { ModelSelection, Provider, ProviderConfig } from './types.ts'
@@ -47,15 +48,20 @@ export const remoteProvider = {
 function boot(models: ModelSelection): Provider {
   // Read at boot, not at import: this is what makes re-pointing the endpoint a
   // matter of calling init() again rather than restarting the container.
-  const { baseUrl, apiKey, providerId } = getAiConfig()
-  singleton = createRemoteProvider({
-    // '' is this provider's spelling of "no endpoint configured" — see
-    // RemoteProviderOptions.
+  const { roles, envModels } = getAiConfig()
+  // '' is this provider's spelling of "no endpoint configured" — see
+  // RemoteEndpoint. Per-provider quirks live in the catalogue, not in this
+  // transport.
+  const endpoint = ({ baseUrl, apiKey, providerId }: RoleEndpoint) => ({
     baseUrl: baseUrl || '',
     apiKey,
-    // Per-provider quirks live in the catalogue, not in this transport.
     embeddingsPath: findEndpoint(providerId)?.embeddingsPath || '',
-    models: { llm: models.llm || '', embed: models.embed || '', vision: models.vision || '' },
+  })
+  // A model named by env wins over the one saved in settings.
+  const model = (role: Role) => envModels[role] ?? (models[role] || '')
+  singleton = createRemoteProvider({
+    endpoints: { llm: endpoint(roles.llm), embed: endpoint(roles.embed), vision: endpoint(roles.vision) },
+    models: { llm: model('llm'), embed: model('embed'), vision: model('vision') },
     onRecover: () => recover(),
   })
   return singleton

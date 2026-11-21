@@ -1,6 +1,7 @@
 // Unit tests for the remote provider's request shaping and role gating,
 // against a real throwaway http server.
 import { test, after, beforeEach, mock } from 'node:test'
+import type { TestContext } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import type { IncomingMessage, ServerResponse } from 'node:http'
@@ -62,8 +63,16 @@ beforeEach(() => {
   routes = { '/models': (_req, res) => okJson(res, { data: [{ id: 'llama3.2:3b' }, { id: 'nomic-embed-text' }] }) }
 })
 
+// One endpoint serving every role: what an install configured before roles
+// could have endpoints of their own still is, and must behave exactly as it did.
+const everyRole = (baseUrl: string, apiKey: string | null = null) => ({
+  llm: { baseUrl, apiKey },
+  embed: { baseUrl, apiKey },
+  vision: { baseUrl, apiKey },
+})
+
 const make = (models = { llm: 'llama3.2:3b', embed: 'nomic-embed-text', vision: 'llava' }) =>
-  createRemoteProvider({ baseUrl: base, apiKey: null, models })
+  createRemoteProvider({ endpoints: everyRole(base), models })
 
 test('capabilities reports a remote provider that neither manages residency nor downloads weights', () => {
   assert.deepEqual(make().capabilities(), { kind: 'remote', managesResidency: false, downloadsWeights: false })
@@ -218,8 +227,7 @@ test('classify opens the circuit on a genuine failure, not just on the plain-pro
   // classify() is the backlog's dominant call, so if failures here never
   // reach the circuit, a dead endpoint never halts the enrich queue.
   const dead = createRemoteProvider({
-    baseUrl: 'http://127.0.0.1:1',
-    apiKey: null,
+    endpoints: everyRole('http://127.0.0.1:1'),
     models: { llm: 'm', embed: 'e', vision: 'v' },
   })
   await dead.init()
@@ -362,7 +370,7 @@ test('an answer whose content is not a string reads as no text', async () => {
 })
 
 test('a role with no model name configured is disabled, not attempted', async () => {
-  const p = createRemoteProvider({ baseUrl: base, apiKey: null, models: { llm: 'm', embed: '', vision: '' } })
+  const p = createRemoteProvider({ endpoints: everyRole(base), models: { llm: 'm', embed: '', vision: '' } })
   await p.init()
   assert.equal(p.roleEnabled('embed'), false)
   assert.equal(p.roleEnabled('llm'), true)
@@ -376,7 +384,7 @@ test('a role with no model name configured is disabled, not attempted', async ()
 test('no base URL at all means every role is disabled and init does not throw', async () => {
   // '' not null: remote.ts documents '' as the one falsy spelling for "no
   // endpoint configured", so every read of it stays a plain truthiness check.
-  const p = createRemoteProvider({ baseUrl: '', apiKey: null, models: { llm: 'm', embed: 'e', vision: 'v' } })
+  const p = createRemoteProvider({ endpoints: everyRole(''), models: { llm: 'm', embed: 'e', vision: 'v' } })
   await p.init()
   assert.equal(p.roleEnabled('llm'), false)
   assert.equal(p.statusSnapshot().aggregate.state, 'ready', 'no endpoint is AI-free mode, not an error')
@@ -384,8 +392,7 @@ test('no base URL at all means every role is disabled and init does not throw', 
 
 test('an unreachable endpoint reports error in the aggregate but still serves the app', async () => {
   const p = createRemoteProvider({
-    baseUrl: 'http://127.0.0.1:1',
-    apiKey: null,
+    endpoints: everyRole('http://127.0.0.1:1'),
     models: { llm: 'm', embed: 'e', vision: 'v' },
   })
   await p.init()
@@ -424,8 +431,7 @@ test('the first success after the circuit opened reports the recovery', async t 
   }
   let recovered = 0
   const p = createRemoteProvider({
-    baseUrl: base,
-    apiKey: null,
+    endpoints: everyRole(base),
     models: { llm: 'm', embed: 'e', vision: 'v' },
     onRecover: () => recovered++,
   })
@@ -542,4 +548,93 @@ test('an endpoint that had no models at boot is re-probed rather than cached as 
   )
   await p.listModels()
   assert.equal(hits, 3, 'a filled catalogue is served from cache')
+})
+
+// ---- roles on endpoints of their own -------------------------------------
+
+// A second throwaway endpoint, for the tests that send one role elsewhere. It
+// keeps every request's path and Authorization header, which is all they ask.
+async function otherEndpoint(t: TestContext, reply: (res: ServerResponse) => void) {
+  const seen: { url: string; authorization: string | undefined }[] = []
+  const s = createServer((req, res) => {
+    seen.push({ url: req.url || '', authorization: req.headers.authorization })
+    req.resume()
+    req.on('end', () => reply(res))
+  })
+  const url = `http://127.0.0.1:${await listenOnLoopback(s)}`
+  t.after(() => s.close())
+  return { url, seen }
+}
+
+const MODELS = { llm: 'llama3.2:3b', embed: 'nomic-embed-text', vision: 'llava' }
+const classifyReply = chatReply(JSON.stringify({ type: 'link', category: 'C', title: 'T', summary: 'S', tags: ['x'] }))
+
+test('embed calls go to the embed endpoint', async t => {
+  const e = await otherEndpoint(t, res => okJson(res, { data: [{ embedding: [1] }] }))
+  const hitsOnA: string[] = []
+  routes['/embeddings'] = (req, res) => {
+    hitsOnA.push(req.url || '')
+    okJson(res, { data: [{ embedding: [0] }] })
+  }
+  routes['/chat/completions'] = (req, res) => {
+    hitsOnA.push(req.url || '')
+    okJson(res, classifyReply)
+  }
+  const p = createRemoteProvider({
+    endpoints: { ...everyRole(base), embed: { baseUrl: e.url, apiKey: null } },
+    models: MODELS,
+  })
+  await p.init()
+  assert.deepEqual(await p.embedText('x'), [1])
+  assert.ok(
+    e.seen.some(r => r.url === '/embeddings'),
+    'the embed endpoint was asked',
+  )
+  assert.deepEqual(hitsOnA, [], 'the llm endpoint was not')
+  await p.classify({ text: 'hi', now: 'now' })
+  assert.deepEqual(hitsOnA, ['/chat/completions'])
+})
+
+test('a failing embed endpoint does not stop classify', async t => {
+  const e = await otherEndpoint(t, res => {
+    res.writeHead(503, { 'content-type': 'application/json' })
+    res.end('{}')
+  })
+  routes['/chat/completions'] = (_req, res) => okJson(res, classifyReply)
+  const p = createRemoteProvider({
+    endpoints: { ...everyRole(base), embed: { baseUrl: e.url, apiKey: null } },
+    models: MODELS,
+  })
+  await p.init()
+  for (let i = 0; i < 6; i++) await p.embedText('x').catch(() => {})
+  const out = await p.classify({ text: 'hi', now: 'now' })
+  assert.deepEqual(out.tags, ['x'])
+  const status = p.statusSnapshot()
+  assert.equal(status.roles.embed.state, 'error')
+  assert.equal(status.roles.llm.state, 'ready')
+})
+
+test('roles sharing an endpoint share one probe', async () => {
+  let probes = 0
+  routes['/models'] = (_req, res) => {
+    probes++
+    okJson(res, { data: [{ id: 'llama3.2:3b' }] })
+  }
+  await make().init()
+  assert.equal(probes, 1)
+})
+
+test('an embed endpoint with no key sends no Authorization header', async t => {
+  const e = await otherEndpoint(t, res => okJson(res, { data: [{ embedding: [1] }] }))
+  const p = createRemoteProvider({
+    endpoints: { ...everyRole(base, 'llm-secret'), embed: { baseUrl: e.url, apiKey: null } },
+    models: MODELS,
+  })
+  await p.init()
+  await p.embedText('x')
+  assert.ok(e.seen.length > 0)
+  assert.ok(
+    e.seen.every(r => r.authorization === undefined),
+    'the llm key must not reach the embed endpoint',
+  )
 })

@@ -151,7 +151,7 @@ export function isRedditShare(url: string): boolean {
 // the oEmbed lookup key). Returns null when it does not resolve to a post — a
 // share link to a subreddit or a profile, or a dead id — so the caller can fall
 // back to the URL it already had.
-export async function resolveRedditShare(url: string): Promise<string | null> {
+async function resolveRedditShare(url: string): Promise<string | null> {
   try {
     const res = await get(url, 'text/html,*/*')
     const u = new URL(res.url)

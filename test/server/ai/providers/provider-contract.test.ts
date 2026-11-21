@@ -104,8 +104,11 @@ async function localProvider(): Promise<Provider> {
 async function remoteProvider(): Promise<Provider> {
   const { createRemoteProvider } = await import('../../../../server/ai/providers/remote.ts')
   const p = createRemoteProvider({
-    baseUrl: base,
-    apiKey: null,
+    endpoints: {
+      llm: { baseUrl: base, apiKey: null },
+      embed: { baseUrl: base, apiKey: null },
+      vision: { baseUrl: base, apiKey: null },
+    },
     models: { llm: 'test-model', embed: 'test-model', vision: 'test-model' },
   })
   await p.init()
