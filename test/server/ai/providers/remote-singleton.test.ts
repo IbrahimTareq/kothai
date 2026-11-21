@@ -40,3 +40,13 @@ test('boot sends embed to its own endpoint with the env model', async () => {
   )
   assert.equal(record(seen[0].body).model, 'env-embed')
 })
+
+test('a settings save leaves an env-named model alone and moves the rest', async () => {
+  await remoteProvider.init({ remote: { llm: 'm', embed: 'settings-embed', vision: '' } })
+  await remoteProvider.applySettings({ embed: 'other', llm: 'new' })
+  assert.equal(remoteProvider.statusSnapshot().roles.embed.model, 'env-embed')
+  assert.equal(remoteProvider.statusSnapshot().roles.llm.model, 'new')
+  seen.length = 0
+  await remoteProvider.embedText('x')
+  assert.equal(record(seen[0].body).model, 'env-embed')
+})

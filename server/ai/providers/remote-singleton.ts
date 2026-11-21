@@ -26,7 +26,7 @@ export const remoteProvider = {
   validateModel: (role: Role, key: string) => current().validateModel(role, key),
   statusSnapshot: () => current().statusSnapshot(),
   listModels: (...a: Parameters<Provider['listModels']>) => current().listModels(...a),
-  applySettings: (...a: Parameters<Provider['applySettings']>) => current().applySettings(...a),
+  applySettings: (patch: ModelSelection) => current().applySettings(withEnvModels(patch)),
   classify: (...a: Parameters<Provider['classify']>) => current().classify(...a),
   embedText: (...a: Parameters<Provider['embedText']>) => current().embedText(...a),
   describeImage: (...a: Parameters<Provider['describeImage']>) => current().describeImage(...a),
@@ -48,7 +48,7 @@ export const remoteProvider = {
 function boot(models: ModelSelection): Provider {
   // Read at boot, not at import: this is what makes re-pointing the endpoint a
   // matter of calling init() again rather than restarting the container.
-  const { roles, envModels } = getAiConfig()
+  const { roles } = getAiConfig()
   // '' is this provider's spelling of "no endpoint configured" — see
   // RemoteEndpoint. Per-provider quirks live in the catalogue, not in this
   // transport.
@@ -57,12 +57,21 @@ function boot(models: ModelSelection): Provider {
     apiKey,
     embeddingsPath: findEndpoint(providerId)?.embeddingsPath || '',
   })
-  // A model named by env wins over the one saved in settings.
-  const model = (role: Role) => envModels[role] ?? (models[role] || '')
+  const pinned = withEnvModels(models)
+  const model = (role: Role) => pinned[role] || ''
   singleton = createRemoteProvider({
     endpoints: { llm: endpoint(roles.llm), embed: endpoint(roles.embed), vision: endpoint(roles.vision) },
     models: { llm: model('llm'), embed: model('embed'), vision: model('vision') },
     onRecover: () => recover(),
   })
   return singleton
+}
+
+// A model named by env wins over the one saved in settings, at boot and on
+// every settings save alike. Applied only at boot, the settings route's
+// applySettings(whole stored selection) put the stored embed model back over
+// KOTHAI_AI_EMBED_MODEL when the user changed only llm: library vectors stayed
+// on the env model while queries used the stored one, and nothing re-embedded.
+function withEnvModels(models: ModelSelection): ModelSelection {
+  return { ...models, ...getAiConfig().envModels }
 }
