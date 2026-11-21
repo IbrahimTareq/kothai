@@ -8,14 +8,25 @@
 // environment variables still take precedence (see config.ts).
 import { readFileSync, writeFileSync, chmodSync, unlinkSync } from 'node:fs'
 import path from 'node:path'
-import { DATA_DIR } from '../config.ts'
+import { DATA_DIR, type RoleEndpoint } from '../config.ts'
 
 const FILE = 'credentials.json'
 
-interface Credentials {
-  baseUrl: string | null
-  apiKey: string | null
-  providerId: string | null
+type CredentialRole = 'embed' | 'vision'
+
+interface Credentials extends RoleEndpoint {
+  roles?: Partial<Record<CredentialRole, RoleEndpoint>>
+}
+
+const str = (v: unknown): string | null => (typeof v === 'string' && v ? v : null)
+
+// A role entry is held to the same standard as the shared one; anything that
+// is not an object with a usable URL or key is dropped, not repaired.
+function readEndpoint(v: unknown): RoleEndpoint | null {
+  if (!v || typeof v !== 'object') return null
+  const o = v as Record<string, unknown>
+  const ep = { baseUrl: str(o.baseUrl), apiKey: str(o.apiKey), providerId: str(o.providerId) }
+  return ep.baseUrl || ep.apiKey ? ep : null
 }
 
 // Missing, unreadable or malformed all read as "nothing configured" rather
@@ -24,14 +35,20 @@ interface Credentials {
 export function readCredentials(dir: string = DATA_DIR): Credentials | null {
   try {
     const parsed: Record<string, unknown> = JSON.parse(readFileSync(path.join(dir, FILE), 'utf8'))
-    const baseUrl = typeof parsed.baseUrl === 'string' && parsed.baseUrl ? parsed.baseUrl : null
-    const apiKey = typeof parsed.apiKey === 'string' && parsed.apiKey ? parsed.apiKey : null
-    // Which catalogue entry this endpoint came from. Not a credential — it is
-    // here because it is the one place that already knows which provider is
-    // connected, and the provider needs it to look up quirks like a separate
-    // embeddings catalogue (server/ai/endpoints.ts).
-    const providerId = typeof parsed.providerId === 'string' && parsed.providerId ? parsed.providerId : null
-    return baseUrl || apiKey ? { baseUrl, apiKey, providerId } : null
+    const { baseUrl, apiKey, providerId } = readEndpoint(parsed) ?? { baseUrl: null, apiKey: null, providerId: null }
+    const roles: NonNullable<Credentials['roles']> = {}
+    const rawRoles = parsed.roles && typeof parsed.roles === 'object' ? (parsed.roles as Record<string, unknown>) : {}
+    for (const role of ['embed', 'vision'] as const) {
+      const ep = readEndpoint(rawRoles[role])
+      if (ep) roles[role] = ep
+    }
+    const hasRoles = Object.keys(roles).length > 0
+    if (!baseUrl && !apiKey && !hasRoles) return null
+    // providerId is not a credential — it is here because this file is the one
+    // place that already knows which provider is connected, and the provider
+    // needs it to look up quirks like a separate embeddings catalogue
+    // (server/ai/endpoints.ts).
+    return hasRoles ? { baseUrl, apiKey, providerId, roles } : { baseUrl, apiKey, providerId }
   } catch {
     return null
   }
@@ -40,15 +57,40 @@ export function readCredentials(dir: string = DATA_DIR): Credentials | null {
 // Throws on failure, deliberately: a key that appears to save and is gone
 // after the next restart is worse than an error the user can see now.
 export function writeCredentials(
-  { baseUrl = null, apiKey = null, providerId = null }: Partial<Credentials>,
+  { baseUrl = null, apiKey = null, providerId = null, roles }: Partial<Credentials>,
   dir: string = DATA_DIR,
 ): Credentials {
   const file = path.join(dir, FILE)
-  writeFileSync(file, JSON.stringify({ baseUrl, apiKey, providerId }, null, 2), { mode: 0o600 })
+  // Saving the shared endpoint must not wipe a vision or embed override the
+  // caller never mentioned; only an explicit roles object replaces them.
+  const kept = roles ?? readCredentials(dir)?.roles
+  roles = kept && Object.keys(kept).length ? kept : undefined
+  writeFileSync(file, JSON.stringify({ baseUrl, apiKey, providerId, roles }, null, 2), { mode: 0o600 })
   // writeFileSync's `mode` applies only when it creates the file, so an
   // existing permissive file would keep its old permissions without this.
   chmodSync(file, 0o600)
-  return { baseUrl, apiKey, providerId }
+  return roles ? { baseUrl, apiKey, providerId, roles } : { baseUrl, apiKey, providerId }
+}
+
+// Merges into the existing file so a role edit never touches the shared entry
+// or the other role. null removes the role's entry.
+export function writeRoleCredentials(
+  role: CredentialRole,
+  ep: RoleEndpoint | null,
+  dir: string = DATA_DIR,
+): Credentials {
+  const current = readCredentials(dir)
+  const { [role]: _dropped, ...others } = current?.roles ?? {}
+  const roles = ep ? { ...others, [role]: ep } : others
+  return writeCredentials(
+    {
+      baseUrl: current?.baseUrl ?? null,
+      apiKey: current?.apiKey ?? null,
+      providerId: current?.providerId ?? null,
+      roles,
+    },
+    dir,
+  )
 }
 
 export function clearCredentials(dir: string = DATA_DIR): void {

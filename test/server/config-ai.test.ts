@@ -3,10 +3,11 @@
 // changes behaviour when it upgrades.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { resolveAiConfig } from '../../server/config.ts'
+import { resolveAiConfig } from '../../server/ai/endpoint-config.ts'
 
 test('nothing configured anywhere is the local provider', () => {
-  assert.deepEqual(resolveAiConfig({}, null), { baseUrl: null, apiKey: null, providerId: null, provider: 'local' })
+  const c = resolveAiConfig({}, null)
+  assert.deepEqual([c.baseUrl, c.apiKey, c.providerId, c.provider, c.source], [null, null, null, 'local', 'none'])
 })
 
 test('env alone works exactly as it did before the credential file existed', () => {
@@ -48,4 +49,76 @@ test('an unknown provider value degrades to local rather than throwing', () => {
 
 test('a trailing slash is stripped whichever source the URL came from', () => {
   assert.equal(resolveAiConfig({}, { baseUrl: 'https://x.example/v1///' }).baseUrl, 'https://x.example/v1')
+})
+
+const NONE = { baseUrl: null, apiKey: null, providerId: null }
+
+test('a role env URL without its own key gets no key', () => {
+  const c = resolveAiConfig(
+    { KOTHAI_AI_BASE_URL: 'https://a', KOTHAI_AI_API_KEY: 'k1', KOTHAI_AI_EMBED_BASE_URL: 'https://e' },
+    null,
+  )
+  assert.deepEqual(c.roles.embed, { baseUrl: 'https://e', apiKey: null, providerId: null })
+  assert.deepEqual(c.roles.llm, { baseUrl: 'https://a', apiKey: 'k1', providerId: null })
+})
+
+test('a role without its own env URL falls back to the llm env pair', () => {
+  const c = resolveAiConfig({ KOTHAI_AI_BASE_URL: 'https://a', KOTHAI_AI_API_KEY: 'k1' }, null)
+  assert.deepEqual(c.roles.vision, { baseUrl: 'https://a', apiKey: 'k1', providerId: null })
+  assert.deepEqual(c.roles.embed, c.roles.vision)
+})
+
+test('a role env URL takes its own env key', () => {
+  const c = resolveAiConfig(
+    { KOTHAI_AI_BASE_URL: 'https://a', KOTHAI_AI_VISION_BASE_URL: 'https://v/', KOTHAI_AI_VISION_API_KEY: 'vk' },
+    null,
+  )
+  assert.deepEqual(c.roles.vision, { baseUrl: 'https://v', apiKey: 'vk', providerId: null })
+})
+
+test('env mode ignores the credential file entirely', () => {
+  const c = resolveAiConfig(
+    { KOTHAI_AI_EMBED_BASE_URL: 'https://e' },
+    {
+      baseUrl: 'https://f',
+      apiKey: 'fk',
+      roles: { vision: { baseUrl: 'https://v', apiKey: 'vk', providerId: null } },
+    },
+  )
+  assert.equal(c.roles.llm.baseUrl, null)
+  assert.equal(c.roles.vision.baseUrl, null)
+  assert.equal(c.roles.vision.apiKey, null, 'no stored key may be reachable in env mode')
+  assert.equal(c.roles.embed.apiKey, null)
+  assert.equal(c.source, 'env')
+})
+
+test('file roles override the shared entry', () => {
+  const embed = { baseUrl: 'https://e/', apiKey: 'ek', providerId: 'ollama' }
+  const c = resolveAiConfig({}, { baseUrl: 'https://f', apiKey: 'fk', providerId: 'openai', roles: { embed } })
+  assert.deepEqual(c.roles.embed, { baseUrl: 'https://e', apiKey: 'ek', providerId: 'ollama' })
+  assert.deepEqual(c.roles.vision, { baseUrl: 'https://f', apiKey: 'fk', providerId: 'openai' })
+  assert.equal(c.source, 'file')
+})
+
+test('an old single-endpoint file resolves every role to it', () => {
+  const c = resolveAiConfig({}, { baseUrl: 'https://f/', apiKey: 'fk', providerId: 'openai' })
+  const ep = { baseUrl: 'https://f', apiKey: 'fk', providerId: 'openai' }
+  assert.deepEqual(c.roles, { llm: ep, vision: ep, embed: ep })
+  assert.deepEqual([c.baseUrl, c.apiKey, c.providerId], ['https://f', 'fk', 'openai'])
+})
+
+test('a file with only a role entry leaves the other roles unconfigured', () => {
+  const c = resolveAiConfig({}, { roles: { embed: { baseUrl: 'https://e', apiKey: null, providerId: null } } })
+  assert.deepEqual(c.roles.llm, NONE)
+  assert.equal(c.roles.embed.baseUrl, 'https://e')
+  assert.equal(c.source, 'file')
+})
+
+test('model env vars land in envModels', () => {
+  assert.deepEqual(resolveAiConfig({ KOTHAI_AI_EMBED_MODEL: 'nomic' }, null).envModels, { embed: 'nomic' })
+  assert.deepEqual(resolveAiConfig({}, null).envModels, {})
+})
+
+test('a model env var alone does not make the source env', () => {
+  assert.equal(resolveAiConfig({ KOTHAI_AI_LLM_MODEL: 'm' }, null).source, 'none')
 })

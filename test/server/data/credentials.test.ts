@@ -6,7 +6,12 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, writeFileSync, statSync, chmodSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { readCredentials, writeCredentials, clearCredentials } from '../../../server/data/credentials.ts'
+import {
+  readCredentials,
+  writeCredentials,
+  writeRoleCredentials,
+  clearCredentials,
+} from '../../../server/data/credentials.ts'
 
 const dir = () => mkdtempSync(path.join(tmpdir(), 'kothai-creds-'))
 
@@ -53,4 +58,55 @@ test('clear removes the file and is safe to call twice', () => {
   clearCredentials(d)
   clearCredentials(d)
   assert.equal(readCredentials(d), null)
+})
+
+test('a role entry round-trips at 0600 and leaves the shared entry alone', () => {
+  const d = dir()
+  writeCredentials({ baseUrl: 'https://s/v1', apiKey: 'sk' }, d)
+  const ep = { baseUrl: 'https://e/v1', apiKey: 'ek', providerId: 'ollama' }
+  writeRoleCredentials('embed', ep, d)
+  assert.deepEqual(readCredentials(d), {
+    baseUrl: 'https://s/v1',
+    apiKey: 'sk',
+    providerId: null,
+    roles: { embed: ep },
+  })
+  assert.equal(statSync(path.join(d, 'credentials.json')).mode & 0o777, 0o600)
+})
+
+test('a role entry can be written with no shared entry', () => {
+  const d = dir()
+  const ep = { baseUrl: 'https://v/v1', apiKey: null, providerId: null }
+  writeRoleCredentials('vision', ep, d)
+  assert.deepEqual(readCredentials(d)?.roles, { vision: ep })
+})
+
+test('writing null removes only that role', () => {
+  const d = dir()
+  const ep = { baseUrl: 'https://e/v1', apiKey: 'ek', providerId: null }
+  writeRoleCredentials('embed', ep, d)
+  writeRoleCredentials('vision', { ...ep, baseUrl: 'https://v/v1' }, d)
+  writeRoleCredentials('embed', null, d)
+  assert.deepEqual(readCredentials(d)?.roles, { vision: { ...ep, baseUrl: 'https://v/v1' } })
+})
+
+test('a malformed role entry is dropped and the shared entry survives', () => {
+  const d = dir()
+  writeFileSync(
+    path.join(d, 'credentials.json'),
+    JSON.stringify({ baseUrl: 'https://s/v1', apiKey: 'sk', roles: { embed: 42, vision: { baseUrl: 7 } } }),
+  )
+  const c = readCredentials(d)
+  assert.equal(c?.baseUrl, 'https://s/v1')
+  assert.equal(c?.roles?.embed, undefined)
+  assert.equal(c?.roles?.vision, undefined)
+})
+
+test('saving the shared endpoint keeps role entries already stored', () => {
+  const d = dir()
+  const ep = { baseUrl: 'https://e/v1', apiKey: 'ek', providerId: null }
+  writeRoleCredentials('embed', ep, d)
+  writeCredentials({ baseUrl: 'https://s/v1', apiKey: 'sk', providerId: null }, d)
+  assert.deepEqual(readCredentials(d)?.roles, { embed: ep })
+  assert.equal(readCredentials(d)?.baseUrl, 'https://s/v1')
 })

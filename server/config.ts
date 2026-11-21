@@ -7,6 +7,7 @@
 // lot of generic names; PORT keeps its bare name since every platform sets it.
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { resolveAiConfig, type AiConfig, type AiCredentials } from './ai/endpoint-config.ts'
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -84,44 +85,9 @@ export const PASSWORD: string | null = config.PASSWORD
 // ---- inference endpoint ---------------------------------------------------
 // Resolved on demand rather than frozen at import, because the app can now be
 // given an endpoint at runtime (server/data/credentials.ts) and must act on it
-// without a container restart.
-//
-// Precedence is env -> credential file -> nothing, and env wins as a PAIR: if
-// KOTHAI_AI_BASE_URL is set, the key must come from the environment too. Mixing
-// a stored key into an operator-supplied URL would send a credential somewhere
-// its owner never pointed it.
-//
-// Every field is nullable on the way in: the file may hold a URL with no key
-// (a local Ollama needs none), and readCredentials() itself returns null when
-// there is no file at all.
-interface AiCredentials {
-  baseUrl?: string | null
-  apiKey?: string | null
-  providerId?: string | null
-}
-
-interface AiConfig {
-  baseUrl: string | null
-  apiKey: string | null
-  providerId: string | null
-  provider: 'local' | 'remote'
-}
-
-export function resolveAiConfig(env: NodeJS.ProcessEnv = process.env, creds: AiCredentials | null = null): AiConfig {
-  const strip = (u: string): string => u.replace(/\/+$/, '')
-  // providerId only ever comes from the file: an operator setting an endpoint
-  // by environment variable is naming a URL, not picking a catalogue entry.
-  const source = env.KOTHAI_AI_BASE_URL
-    ? { baseUrl: strip(env.KOTHAI_AI_BASE_URL), apiKey: env.KOTHAI_AI_API_KEY || null, providerId: null }
-    : creds?.baseUrl
-      ? { baseUrl: strip(creds.baseUrl), apiKey: creds.apiKey || null, providerId: creds.providerId || null }
-      : { baseUrl: null, apiKey: null, providerId: null }
-  // An endpoint from either source implies remote. KOTHAI_AI_PROVIDER=remote
-  // with no URL stays remote too — that is the lite image's default, and it
-  // produces the "set a base URL" state rather than a crash.
-  const provider = env.KOTHAI_AI_PROVIDER === 'remote' || source.baseUrl ? 'remote' : 'local'
-  return { ...source, provider }
-}
+// without a container restart. Precedence and the env-wins-as-a-whole rule are
+// documented where they are implemented, in server/ai/endpoint-config.ts.
+export type { RoleEndpoint } from './ai/endpoint-config.ts'
 
 // The credential file, loaded once at boot and refreshed whenever it is
 // written. Kept here rather than read from disk on every access so that

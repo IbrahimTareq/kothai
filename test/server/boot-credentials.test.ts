@@ -5,7 +5,8 @@ import assert from 'node:assert/strict'
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { setAiCredentials, getAiConfig, resolveAiConfig } from '../../server/config.ts'
+import { setAiCredentials, getAiConfig } from '../../server/config.ts'
+import { resolveAiConfig } from '../../server/ai/endpoint-config.ts'
 import { writeCredentials, readCredentials } from '../../server/data/credentials.ts'
 
 beforeEach(() => setAiCredentials(null))
