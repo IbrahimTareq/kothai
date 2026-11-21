@@ -11,6 +11,15 @@ import assert from 'node:assert/strict'
 import { note } from '../../helpers/notes.ts'
 import type { NoteRecord } from '../../../server/data/notes.ts'
 import type { Role } from '../../../server/ai/roles.ts'
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+
+// Before any server module loads: config.ts freezes DATA_DIR at import. The
+// recovery handler now asks reembed whether a sweep is owed, which reaches the
+// settings store; with no data dir of its own this file opened the checkout's
+// real data/kothai.db and reset its settings row.
+process.env.KOTHAI_DATA_DIR = mkdtempSync(path.join(tmpdir(), 'kothai-recovery-'))
 
 let notes: NoteRecord[] = []
 let classifyCalls = 0
@@ -61,9 +70,15 @@ mock.module('../../../server/ai/index.ts', {
   },
 })
 mock.module('../../../server/data/collections.ts', { namedExports: { ...realCollections, autoAdd: async () => {} } })
+const { EMBED_RECIPE } = await import('../../../server/ai/prompts.ts')
+// The markers current, so a recovery here owes no sweep (reembed-provider.test.ts
+// covers the one that does), and no write reaches a settings store at all.
 mock.module('../../../server/data/settings.ts', {
   namedExports: {
     ...realSettings,
+    getEmbedRecipe: () => EMBED_RECIPE,
+    getEmbedProvider: () => 'remote',
+    save: async () => ({}),
   },
 })
 
