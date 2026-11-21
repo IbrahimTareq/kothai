@@ -66,7 +66,7 @@ docker compose exec ollama ollama pull llama3.2:3b
 docker compose exec ollama ollama pull nomic-embed-text
 ```
 
-Then pick Ollama during setup. The endpoint is `http://ollama:11434/v1`, the service name, because Kothai reaches it over the compose network. The installer's `--local` flag does the same. Ollama runs on CPU as it stands; for an NVIDIA GPU add a device reservation, per Ollama's Docker docs. If Kothai can't reach it, see [Troubleshooting](troubleshooting.md).
+Then pick Ollama during setup. The endpoint is `http://ollama:11434/v1`, the service name, because Kothai reaches it over the compose network. The installer's `--local` flag no longer installs anything: it exits and points here. Install Ollama yourself, or use the compose profile above, and pick it during setup. Ollama runs on CPU as it stands; for an NVIDIA GPU add a device reservation, per Ollama's Docker docs. If Kothai can't reach it, see [Troubleshooting](troubleshooting.md).
 
 On Railway, use a hosted endpoint. Railway has no GPUs, and a model on its shared CPU takes close to a minute to tag a single note, and captioning images there is impractical. If you want nothing to leave your own machines, self-host Kothai and run Ollama on your own hardware instead.
 
