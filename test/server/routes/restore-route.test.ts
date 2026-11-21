@@ -46,9 +46,8 @@ const realReembed = await import('../../../server/ai/reembed.ts')
 mock.module('../../../server/ai/reembed.ts', {
   namedExports: {
     ...realReembed,
-    queueRecipeReembed: () => {
+    libraryReplaced: async () => {
       reembedRequests++
-      return true
     },
   },
 })
@@ -309,7 +308,7 @@ test('vectors built by a different embedding model are marked stale and a re-emb
   assert.equal(reembedRequests, 1)
 })
 
-test('vectors built by the same embedding setup are kept, with no re-embed', async () => {
+test('vectors built by the same embedding setup are kept, and the marker is left for reembed to judge', async () => {
   await emptyLibrary()
   await settings.save({ embed: 'embed-same', embedRecipe: 'recipe-1' })
   await store.addNote({ content: 'https://embedded.example', embedding: [0.1, 0.2, 0.3] })
@@ -319,7 +318,9 @@ test('vectors built by the same embedding setup are kept, with no re-embed', asy
 
   assert.equal((await restore(backup)).status, 200)
   assert.equal(settings.getEmbedRecipe(), 'recipe-1')
-  assert.equal(reembedRequests, 0)
+  // Still told: matching markers mid-sweep are stale ones (reembed.libraryReplaced
+  // decides, and its own tests cover it).
+  assert.equal(reembedRequests, 1)
   const row = (await getDb()).prepare('SELECT embedding FROM notes').get()
   assert.ok(row?.embedding, 'the restored note keeps its vector')
 })

@@ -61,7 +61,24 @@ export function reembedAll(reason = 'settings') {
   return withTrigger('reembed', () => reembedEach(reason))
 }
 
+// A sweep is running: set for the whole of one, whoever queued it. While it
+// runs, the markers are stale by design, and only it may move them.
+let running = false
+// The library was replaced under the running sweep (a restore), so the notes it
+// holds are not the library any more and it must not mark them current.
+let superseded = false
+
 async function reembedEach(reason: string) {
+  running = true
+  try {
+    return await sweep(reason)
+  } finally {
+    running = false
+    superseded = false
+  }
+}
+
+async function sweep(reason: string) {
   const notes = store.allNotes()
   console.log(`[enrich] re-embedding ${notes.length} notes (${reason})…`)
   // A note the endpoint refuses (400) is that note's failure; anything else
@@ -109,10 +126,11 @@ async function reembedEach(reason: string) {
   // re-embedded the whole library again through a possibly paid endpoint.
   // After the flush, so an interrupted sweep is retried on the next boot.
   //
-  // Not when another sweep was asked for while this one ran: a restore
-  // replaced the library under it, so these markers would describe notes it
-  // never saw. That sweep marks the library, and rebuilds the registry.
-  if (owed) {
+  // Not when a restore replaced the library while this one ran: these markers
+  // would describe notes it never saw, and the restored ones kept the backup's
+  // on-device vectors under a current marker. The sweep libraryReplaced queued
+  // marks the library, and rebuilds the registry.
+  if (superseded) {
     console.log('[enrich] re-embedding superseded by a sweep queued meanwhile')
     return notes.length
   }
@@ -177,8 +195,27 @@ function queueSweep(reason: string) {
 // only a reboot or a reconnect retried it. The provider check runs only when
 // the recipe one queued nothing: the recipe sweep records both markers, and an
 // unfinished one leaves both stale, which queued the whole library twice.
+//
+// A no-op while a sweep runs: its markers are stale until it ends, and it moves
+// or leaves them itself. Asked anyway, every circuit recovery (an Ask call can
+// open and close the llm breaker mid-sweep) queued a second full re-embed
+// through a possibly paid endpoint.
 export function queueOwedReembed(): boolean {
+  if (running) return false
   return queueRecipeReembed() || queueEmbedProviderReembed()
+}
+
+// A restore replaced every note. It is owed a sweep unless its vectors are
+// already current and nothing is running: backup.ts compares the backup's
+// markers with the LIVE ones, which mid-sweep are stale, so a backup from
+// before the upgrade "matched", nothing was queued, and the running sweep,
+// holding the old notes, marked the restored library current. The only thing
+// that supersedes a running sweep.
+export async function libraryReplaced(): Promise<void> {
+  if (!running && vectorsCurrent()) return
+  superseded = running
+  await settings.save({ embedRecipe: null })
+  queueRecipeReembed()
 }
 
 // Are the stored vectors the endpoint's, built under this recipe? Only then
@@ -197,7 +234,7 @@ export function vectorsCurrent(): boolean {
 // Queue a full re-embed when the stored vectors did not come from an endpoint.
 // Same guards as queueRecipeReembed, in the same order: the role being off
 // comes first, and an empty library just records the new value.
-export function queueEmbedProviderReembed() {
+function queueEmbedProviderReembed() {
   // Nothing has been embedded with anything, so there is nothing to compare
   // and nothing to record — the same self-healing choice queueRecipeReembed
   // makes when the role is off.

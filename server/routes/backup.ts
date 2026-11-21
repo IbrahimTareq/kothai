@@ -266,13 +266,13 @@ async function swapIn(stagedDb: string, stagedUploads: string | null) {
   // Not restored: the tag registry is derived from note tags (see tagvocab.ts),
   // and rebuilding it with this install's model is what keeps it comparable.
   await tagvocab.clearAll()
-  if (!vectorsMatch) {
-    // Marked stale rather than re-embedded here. queueRecipeReembed already
-    // knows whether that can run now (not with the embed role off) and, if not,
-    // leaves the marker for a later boot to act on.
-    await settings.save({ embedRecipe: null })
-    reembed.queueRecipeReembed()
-  }
+  // Marked stale rather than re-embedded here. libraryReplaced decides whether
+  // a sweep is owed even when the markers matched (one may be running on the
+  // library just replaced), and queueRecipeReembed knows whether one can run
+  // now (not with the embed role off) and, if not, leaves the marker for a
+  // later boot to act on.
+  if (!vectorsMatch) await settings.save({ embedRecipe: null })
+  await reembed.libraryReplaced()
   if (ai.roleEnabled('embed')) {
     withTrigger('reembed', () => enrich.queueJob(() => tagvocab.rebuildFromNotes(store.allNotes())))
   }

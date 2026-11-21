@@ -150,7 +150,7 @@ test('with the embed role off, nothing is queued AND no marker is written', asyn
   reset([NOTE], 'local')
   enabledImpl = () => ({ llm: false, embed: false, vision: false })
 
-  assert.equal(reembed.queueEmbedProviderReembed(), false)
+  assert.equal(reembed.queueOwedReembed(), false)
   await drain()
   assert.equal(embedCalls.length, 0)
   assert.equal(storedProvider, 'local', 'recording a provider the role never embedded with would strand the library')
@@ -158,7 +158,7 @@ test('with the embed role off, nothing is queued AND no marker is written', asyn
 
   // Role switched back on: the old marker means the change is still owed.
   enabledImpl = () => ({ llm: true, embed: true, vision: true })
-  assert.equal(reembed.queueEmbedProviderReembed(), true)
+  assert.equal(reembed.queueOwedReembed(), true)
   // Undrained, this sweep finished inside the next test and wrote its marker
   // over that test's reset — once the sweep grew a registry reseed step.
   await drain()
@@ -167,7 +167,7 @@ test('with the embed role off, nothing is queued AND no marker is written', asyn
 test('vectors already from an endpoint queue nothing and leave the marker alone', async () => {
   reset([NOTE], 'remote')
 
-  assert.equal(reembed.queueEmbedProviderReembed(), false)
+  assert.equal(reembed.queueOwedReembed(), false)
   await drain()
   assert.equal(embedCalls.length, 0)
   assert.equal(storedProvider, 'remote')
@@ -177,7 +177,7 @@ test('vectors already from an endpoint queue nothing and leave the marker alone'
 test('an empty library records the endpoint without sweeping', async () => {
   reset([], 'local')
 
-  assert.equal(reembed.queueEmbedProviderReembed(), false)
+  assert.equal(reembed.queueOwedReembed(), false)
   await drain()
   assert.equal(embedCalls.length, 0)
   assert.equal(storedProvider, 'remote', 'a fresh install must not be told it owes a re-embed on every boot')
@@ -186,7 +186,7 @@ test('an empty library records the endpoint without sweeping', async () => {
 test('a library of on-device vectors is re-embedded, and the marker moves only afterwards', async () => {
   reset([NOTE, { ...NOTE, id: 'n2' }], 'local')
 
-  assert.equal(reembed.queueEmbedProviderReembed(), true)
+  assert.equal(reembed.queueOwedReembed(), true)
   assert.equal(storedProvider, 'local', 'the marker must not move before the job has even run')
   await drain()
 
@@ -208,7 +208,7 @@ test('a Settings-triggered re-embed marks the vectors remote, so the next boot q
   assert.equal(storedProvider, 'remote')
 
   embedCalls = []
-  assert.equal(reembed.queueEmbedProviderReembed(), false, 'the boot after finds nothing owed')
+  assert.equal(reembed.queueOwedReembed(), false, 'the boot after finds nothing owed')
   await drain()
   assert.equal(embedCalls.length, 0)
 })
@@ -252,7 +252,7 @@ test('an endpoint going down mid-sweep stops it and leaves the markers, so the n
   // Cleared, not kept: a library already 'remote' whose model changed has no
   // other marker saying it still owes a sweep.
   assert.ok(savedPatches.some(p => p.embedRecipe === null))
-  assert.equal(reembed.queueEmbedProviderReembed(), true)
+  assert.equal(reembed.queueOwedReembed(), true)
   failWith = () => null
   await drain()
 })
@@ -345,11 +345,12 @@ test('a restore during a running sweep gets a sweep of its own, and the stale on
       // marked stale, and a sweep asked for.
       notes = [{ ...restored }]
       storedRecipe = null
-      restoredQueued = reembed.queueRecipeReembed()
+      restoredQueued = true
+      void reembed.libraryReplaced()
     }
     return null
   }
-  assert.equal(reembed.queueEmbedProviderReembed(), true)
+  assert.equal(reembed.queueOwedReembed(), true)
   await drain()
   await drain()
   assert.equal(restoredQueued, true)
@@ -360,4 +361,54 @@ test('a restore during a running sweep gets a sweep of its own, and the stale on
   assert.notDeepEqual(notes[0].embedding, [0.1, 0.2])
   assert.equal(sweeps(), 1, 'only the sweep that saw the restored library marks it')
   assert.equal(reembed.vectorsCurrent(), true)
+})
+
+// backup.ts compares the backup's markers with the live ones, and mid-sweep the
+// live ones are stale: a backup from before the upgrade "matched", nothing was
+// asked for, and the running sweep marked the restored library current.
+test('a restore whose markers match the stale live ones still gets its own sweep', async () => {
+  const restored = { ...NOTE, id: 'restored', title: 'Pre-upgrade backup', embedding: [0.3, 0.4] }
+  reset([NOTE, { ...NOTE, id: 'n2', title: 'Second' }], 'local')
+  let restoredAt = -1
+  failWith = () => {
+    if (restoredAt < 0) {
+      restoredAt = embedCalls.length
+      notes = [{ ...restored }] // markers untouched: the backup's were 'local' too
+      void reembed.libraryReplaced()
+    }
+    return null
+  }
+  assert.equal(reembed.queueOwedReembed(), true)
+  await drain()
+  await drain()
+  assert.ok(
+    embedCalls.some(c => c.text === reembed.embedBodyFor(restored)),
+    'every restored note is re-embedded',
+  )
+  assert.notDeepEqual(notes[0].embedding, [0.3, 0.4])
+  assert.equal(sweeps(), 1, 'the sweep holding the old notes marks nothing')
+  assert.equal(reembed.vectorsCurrent(), true)
+})
+
+// Every breaker shares onRecover, so an Ask call can open and close the llm
+// circuit while the embed sweep runs. Each recovery queued another full sweep,
+// and the running one then declined to mark: the library went through a
+// possibly paid endpoint twice.
+test('a recovery or a first-run finish during a running sweep queues nothing', async () => {
+  reset([ENRICHED, { ...ENRICHED, id: 'n2', title: 'Second' }], 'local')
+  let asked: boolean | null = null
+  failWith = () => {
+    if (asked === null) {
+      recover()
+      asked = reembed.queueOwedReembed()
+    }
+    return null
+  }
+  assert.equal(reembed.queueOwedReembed(), true)
+  await drain()
+  await drain()
+  assert.equal(asked, false)
+  assert.equal(embedCalls.length, 2, 'one sweep over two notes, not two')
+  assert.equal(sweeps(), 1, 'the markers move once')
+  assert.equal(storedProvider, 'remote')
 })
