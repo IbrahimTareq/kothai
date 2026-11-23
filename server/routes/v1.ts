@@ -8,6 +8,7 @@ import { json } from '../lib/http.ts'
 // carries no packages/ source, so the import would crash the server on boot.
 // test/server/routes/v1-info.test.ts pins this to the package's API_VERSION.
 const API_VERSION = 1
+const MIN_CLIENT_VERSION = 1
 
 // package.json ships in the runtime image; read once, not per request.
 const SERVER_VERSION: string = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).version
@@ -15,7 +16,7 @@ const SERVER_VERSION: string = JSON.parse(readFileSync(new URL('../../package.js
 export function handleInfo(res: ServerResponse): void {
   const info: Info = {
     apiVersion: API_VERSION,
-    minClientVersion: 1,
+    minClientVersion: MIN_CLIENT_VERSION,
     serverVersion: SERVER_VERSION,
     signIn: PASSWORD ? ['password'] : ['none'],
     cloud: false,
