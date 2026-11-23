@@ -33,3 +33,10 @@ site/out/
 site/next-env.d.ts
 site/AGENTS.md
 site/CLAUDE.md
+
+# Expo prototype: its own npm install, and native folders that `expo prebuild`
+# regenerates from app.json (Continuous Native Generation)
+apps/mobile/node_modules/
+apps/mobile/ios/
+apps/mobile/android/
+apps/mobile/.expo/
