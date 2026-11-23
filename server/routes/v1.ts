@@ -1,11 +1,13 @@
-import type { ServerResponse } from 'node:http'
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import { readFileSync } from 'node:fs'
-import type { Changes, Info, NotesPage, Space, SpacesList } from '@kothai/api'
+import type { Changes, Info, NotesPage, SaveResponse, Space, SpacesList } from '@kothai/api'
 import { PASSWORD } from '../config.ts'
 import * as store from '../data/notes.ts'
 import * as collections from '../data/collections.ts'
-import { json } from '../lib/http.ts'
-import { visibleTo } from './demo.ts'
+import * as ai from '../ai/index.ts'
+import { saveCapture } from '../capture.ts'
+import { json, readBody } from '../lib/http.ts'
+import { demoLimits, visibleTo } from './demo.ts'
 import { card } from './notes.ts'
 import { decodeCursor, encodeCursor } from './v1-cursor.ts'
 
@@ -139,4 +141,21 @@ export function handleChanges(res: ServerResponse, url: URL, viewer: string | nu
     ...(since.spacesRev !== spacesRev ? { spaces: visibleSpaces(viewer) } : {}),
   }
   json(res, 200, body)
+}
+
+// The share extension's save: /api/save with a note alongside the link. Same
+// refusals as /api/save, in the same words, so a client can share one error path.
+export async function handleSaveV1(req: IncomingMessage, res: ServerResponse, viewer: string | null): Promise<void> {
+  const body = await readBody(req)
+  const { url, note } = typeof body === 'object' && body !== null ? (body as Record<string, unknown>) : {}
+  const link = typeof url === 'string' ? url.trim() : ''
+  if (!ai.isLikelyUrl(link)) {
+    return json(res, 400, { error: 'Kothai saves links: paste one starting with https://', code: 'links_only' })
+  }
+  if (viewer && !demoLimits.save.take(viewer)) {
+    return json(res, 429, { error: 'That’s all the demo saves in a day. Try again tomorrow.', code: 'demo_limit' })
+  }
+  const saved = await saveCapture({ url: link, visitor: viewer, mindNote: typeof note === 'string' ? note : undefined })
+  const out: SaveResponse = { note: card(saved) }
+  json(res, 200, out)
 }

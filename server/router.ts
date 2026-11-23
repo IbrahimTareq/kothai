@@ -37,7 +37,7 @@ import {
   handleDeleteCollection,
 } from './routes/collections.ts'
 import { handleStatus } from './routes/status.ts'
-import { handleChanges, handleInfo, handleNotesPage, handleSpaces } from './routes/v1.ts'
+import { handleChanges, handleInfo, handleNotesPage, handleSaveV1, handleSpaces } from './routes/v1.ts'
 import {
   handleGetSettings,
   handleSaveSettings,
@@ -79,6 +79,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     const viewer = DEMO ? visitorOf(req, res) : null
 
     if (req.method === 'POST' && p === '/api/save') return await handleSave(req, res, viewer)
+    if (req.method === 'POST' && p === '/api/v1/save') return await handleSaveV1(req, res, viewer)
     // Work these routes set off is labelled with what triggered it, for the
     // Settings usage panel (ai/usage.ts). The label rides into every job they
     // queue, so a re-tag's model calls are counted as a re-tag even when the

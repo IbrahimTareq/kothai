@@ -13,9 +13,12 @@ import type { PublicNote } from './data/notes.ts'
 export async function saveCapture({
   url,
   visitor = null,
+  mindNote,
 }: {
   url: string
   visitor?: string | null
+  // The share extension's note. Clipped as a mindNote edit is (routes/notes.ts).
+  mindNote?: string
 }): Promise<PublicNote> {
   const note = await store.addNote({
     type: ai.heuristicType(url),
@@ -23,6 +26,7 @@ export async function saveCapture({
     content: url,
     url,
     pending: true,
+    ...(mindNote ? { mindNote: mindNote.slice(0, 4000) } : {}),
     ...(visitor ? { visitor } : {}),
   })
   // Both lanes, as the importer does (routes/import.ts). With only the serial

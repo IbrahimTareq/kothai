@@ -140,16 +140,19 @@ export async function authGate(
   }
 
   if (hasSession(req, password)) return false
-  // The capture token opens this one route and no other. A token pasted into
+  // The capture token opens these two routes and no others. A token pasted into
   // a Shortcut or a script can leak, and a leak should cost junk links in the
   // library, not the library itself — so it cannot read, export, wipe, or
-  // reach /api/capture-token to mint its own replacement. One fixed route, not
-  // an allowlist: a list is what goes stale when a route is added. No throttle
+  // reach /api/capture-token to mint its own replacement. Two because the same
+  // save exists twice: /api/save for Shortcuts and scripts already in the wild,
+  // /api/v1/save for the share extension. A fixed pair, not an allowlist: a list
+  // is what goes stale when a route is added, and nothing else under /api/v1
+  // may join it. No throttle
   // either: 256 random bits cannot be guessed, and a throttle keyed on the
   // shared proxy address would only let a stranger lock the owner out.
   if (
     req.method === 'POST' &&
-    pathname === '/api/save' &&
+    (pathname === '/api/save' || pathname === '/api/v1/save') &&
     bearerMatches(req.headers.authorization, readCaptureTokenHash())
   )
     return false

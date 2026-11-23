@@ -73,6 +73,26 @@ test('the token opens POST /api/save and nothing else', async () => {
   }
 })
 
+// The share extension saves through /api/v1/save. Two fixed paths, so the gate
+// still cannot grow by someone adding a route to a list.
+test('the token opens POST /api/v1/save, but not the rest of /api/v1', async () => {
+  const { token } = (await jsonBody(await tokenRoute('POST'))) as { token: string }
+  const auth = { ...JSON_TYPE, Authorization: `Bearer ${token}` }
+  const save = await fetch(`${BASE}/api/v1/save`, {
+    method: 'POST',
+    headers: auth,
+    body: JSON.stringify({ url: 'nope' }),
+  })
+  assert.equal(save.status, 400)
+  assert.equal((await jsonBody(save)).code, 'links_only')
+
+  for (const p of ['notes', 'changes', 'spaces']) {
+    assert.equal((await fetch(`${BASE}/api/v1/${p}`, { headers: auth })).status, 401, p)
+  }
+  // Method matters: the token is for POSTing a link, not for anything else here.
+  assert.equal((await fetch(`${BASE}/api/v1/save`, { method: 'GET', headers: auth })).status, 401)
+})
+
 test('a wrong token is refused', async () => {
   const { token } = (await jsonBody(await tokenRoute('POST'))) as { token: string }
   assert.equal((await saveWith(`${token}x`)).status, 401)
