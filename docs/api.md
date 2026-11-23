@@ -77,7 +77,7 @@ Needs no session, so an app can learn how to sign in before it does. It carries 
 
 ### Auth and errors
 
-Every route below `info` needs a session (the cookie from `/api/login`); with no `KOTHAI_PASSWORD` set there is nothing to sign in to, and every route is open. The capture token, sent as `Authorization: Bearer <token>`, opens `POST /api/v1/save` and nothing else. A request without access gets `401`.
+Every route below `info` needs a session (the cookie from `/api/login`); with no `KOTHAI_PASSWORD` set there is nothing to sign in to, and every route is open. When a password is set, the capture token, sent as `Authorization: Bearer <token>`, opens `POST /api/v1/save` and nothing else. A request without access gets `401`.
 
 Every failure is `{ "error": "<message>", "code": "<code>" }` (`ApiError`). Branch on `code`, never on the message.
 
@@ -86,7 +86,12 @@ Every failure is `{ "error": "<message>", "code": "<code>" }` (`ApiError`). Bran
 | 400 | `bad_cursor` | `cursor` or `since` is not a cursor this server issued |
 | 400 | `links_only` | `save` was given something that is not a link |
 | 401 | `auth_required` | No session, and no capture token on `save` |
+| 403 | `demo` | A demo install: every `/api/v1` route except `info` is refused, `save` included |
+| 415 | `content_type_required` | A `POST` that is not `application/json` (checked before the session, so it can precede a `401`) |
 | 429 | `demo_limit` | A demo visitor used the day's saves |
+| 500 | none | A `POST` body that is not valid JSON answers `{ "error": "invalid JSON body" }` with no `code` |
+
+A body over 25 MB gets no status at all: the server destroys the connection before it can answer, so a client sees a dropped connection, not a `413`. `createClient` reports a dropped connection, or any error body without a `code`, as `code: 'network'`.
 
 ### `GET /api/v1/notes`
 

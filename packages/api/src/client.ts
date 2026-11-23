@@ -27,9 +27,12 @@ export function createClient(opts: { baseUrl: string; token?: string; fetch?: ty
     const headers: Record<string, string> = {}
     if (opts.token) headers.authorization = `Bearer ${opts.token}`
     if (body !== undefined) headers['content-type'] = 'application/json'
+    // toString(), not qs.size: older React Native URLSearchParams polyfills lack
+    // size, and `undefined` would silently drop every query string.
+    const q = qs.toString()
     let res: Response
     try {
-      res = await (opts.fetch ?? fetch)(`${base}${path}${qs.size ? `?${qs}` : ''}`, {
+      res = await (opts.fetch ?? fetch)(`${base}${path}${q ? `?${q}` : ''}`, {
         method: body === undefined ? 'GET' : 'POST',
         headers,
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),

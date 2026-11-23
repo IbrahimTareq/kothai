@@ -81,3 +81,14 @@ test('a fetch that rejects throws with code network', async () => {
   assert.ok(err instanceof ApiRequestError)
   assert.equal(err.code, 'network')
 })
+
+test('an error body without a code keeps the status and reports code network', async () => {
+  const { fetch } = fake(500, { error: 'invalid JSON body' })
+  const err = await createClient({ baseUrl: 'http://h', fetch })
+    .save({ url: 'x' })
+    .catch(e => e)
+  assert.ok(err instanceof ApiRequestError)
+  assert.equal(err.status, 500)
+  assert.equal(err.code, 'network')
+  assert.equal(err.message, 'invalid JSON body')
+})
