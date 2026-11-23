@@ -54,3 +54,23 @@ Requests and responses use `application/json` unless noted otherwise. The one ex
     Data imports
   </Card>
 </Cards>
+
+## v1
+
+The versioned contract for the mobile app, under `/api/v1`. The shared types live in `packages/api`.
+
+### `GET /api/v1/info`
+
+Needs no session, so an app can learn how to sign in before it does. It carries no counts or library data.
+
+```json
+{
+  "apiVersion": 1,
+  "minClientVersion": 1,
+  "serverVersion": "1.4.0",
+  "signIn": ["password"],
+  "cloud": false
+}
+```
+
+`signIn` is `["password"]` when the server has `KOTHAI_PASSWORD` set, otherwise `["none"]`.

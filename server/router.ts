@@ -37,6 +37,7 @@ import {
   handleDeleteCollection,
 } from './routes/collections.ts'
 import { handleStatus } from './routes/status.ts'
+import { handleInfo } from './routes/v1.ts'
 import {
   handleGetSettings,
   handleSaveSettings,
@@ -59,6 +60,12 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     // Deliberately says nothing about the install; /api/status, which reports
     // model config and note counts, stays behind the gate.
     if (req.method === 'GET' && p === '/api/health') return json(res, 200, { ok: true })
+    // The second thing in front of the gate. A mobile app must learn the sign-in
+    // method (password or none) before it can sign in, so a 401 here would leave
+    // it unable to ask how to authenticate at all. Safe to expose because it only
+    // carries version and sign-in facts — never counts or anything about the
+    // library; /api/v1/notes and the rest stay behind the gate.
+    if (req.method === 'GET' && p === '/api/v1/info') return handleInfo(res)
     // Guards every route below AND the static/uploads fallthrough, which is why
     // it lives here rather than being repeated per handler. No-op when
     // KOTHAI_PASSWORD is unset.

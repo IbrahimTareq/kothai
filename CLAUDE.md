@@ -23,9 +23,9 @@ misuse that only fails on 22 — switch first.
   `handleX` export in `server/routes/`, wired there. Never register from inside
   a handler module.
 - The auth gate sits above every route in `router.ts`, so handlers never check
-  auth themselves. Only `/api/health` sits in front of it, and it must stay
-  silent about the install — the container healthcheck carries no credentials,
-  and a 401 there restart-loops the container forever.
+  auth themselves. Only `/api/health` and `/api/v1/info` sit in front of it
+  (docs/superpowers/specs/2026-11-19-cloud-architecture-design.md, point 4);
+  both stay silent about the install, and a 401 on health restart-loops it.
 - `server/lib/` is the security floor: auth, SSRF, and every guard untrusted
   input passes through (zip caps, canvas limits, model-cache paths). A change
   there needs a test that fails without it; code that guards nothing lives
