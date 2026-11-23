@@ -1,5 +1,4 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { readFileSync } from 'node:fs'
 import type { Changes, Info, NotesPage, SaveResponse, Space, SpacesList } from '@kothai/api'
 import { PASSWORD } from '../config.ts'
 import * as store from '../data/notes.ts'
@@ -17,14 +16,12 @@ import { decodeCursor, encodeCursor } from './v1-cursor.ts'
 const API_VERSION = 1
 const MIN_CLIENT_VERSION = 1
 
-// package.json ships in the runtime image; read once, not per request.
-const SERVER_VERSION: string = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).version
-
+// No build version here: this route answers strangers before the gate, and the
+// install's exact version is fingerprinting they do not need.
 export function handleInfo(res: ServerResponse): void {
   const info: Info = {
     apiVersion: API_VERSION,
     minClientVersion: MIN_CLIENT_VERSION,
-    serverVersion: SERVER_VERSION,
     signIn: PASSWORD ? ['password'] : ['none'],
     cloud: false,
   }
@@ -61,7 +58,15 @@ export function handleNotesPage(res: ServerResponse, url: URL, viewer: string | 
     return
   }
   const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(p.get('limit') || '', 10) || DEFAULT_LIMIT))
-  const members = p.get('space') ? new Set(collections.get(p.get('space') as string)?.itemIds || []) : null
+  // A stale cached space id must read as gone, and on the demo another visitor's
+  // space answers like a missing one, so neither is an empty page.
+  const spaceId = p.get('space')
+  const space = spaceId ? collections.get(spaceId) : null
+  if (spaceId && (!space || !visibleTo(viewer)(space))) {
+    json(res, 404, { error: 'space not found', code: 'not_found' })
+    return
+  }
+  const members = space ? new Set(space.itemIds) : null
   // Unavailable notes are hidden as the board hides them (query.applyFilters).
   const rows = store
     .allNotes()
@@ -146,7 +151,10 @@ export function handleChanges(res: ServerResponse, url: URL, viewer: string | nu
 // The share extension's save: /api/save with a note alongside the link. Same
 // refusals as /api/save, in the same words, so a client can share one error path.
 export async function handleSaveV1(req: IncomingMessage, res: ServerResponse, viewer: string | null): Promise<void> {
-  const body = await readBody(req)
+  // Only the parse failure is caught: an oversized body destroys the socket
+  // before any answer could be written, so there is nothing to send for it.
+  const body = await readBody(req).catch(() => undefined)
+  if (body === undefined) return json(res, 400, { error: 'invalid JSON body', code: 'bad_json' })
   const { url, note } = typeof body === 'object' && body !== null ? (body as Record<string, unknown>) : {}
   const link = typeof url === 'string' ? url.trim() : ''
   if (!ai.isLikelyUrl(link)) {

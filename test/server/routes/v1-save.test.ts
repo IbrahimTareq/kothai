@@ -21,6 +21,13 @@ async function save(body: unknown, viewer: string | null = null) {
   return sent
 }
 
+test('a body that is not JSON is 400 bad_json, not an uncoded 500', async () => {
+  const { res, sent } = mockRes()
+  await handleSaveV1(mockReq({ method: 'POST', body: '{nope' }), res, null)
+  assert.equal(sent.code, 400)
+  assert.equal(sent.json().code, 'bad_json')
+})
+
 test('saves a link and its note', async () => {
   store._reset()
   const sent = await save({ url: 'https://example.com/a', note: 'read this on the train' })

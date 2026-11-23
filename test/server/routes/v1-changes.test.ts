@@ -94,7 +94,8 @@ test('spaces is present only when a space changed since the cursor', async () =>
 test('a malformed since is 400 bad_cursor', async () => {
   await fresh()
   const partial = encodeCursor({ boot: 'x', rev: 'nope' })
-  for (const since of ['%%%', Buffer.from('7').toString('base64url'), partial]) {
+  const fractional = encodeCursor({ boot: 'x', rev: 1.5, spacesRev: 0 })
+  for (const since of ['%%%', Buffer.from('7').toString('base64url'), partial, fractional]) {
     const sent = changes(since)
     assert.equal(sent.code, 400)
     assert.equal(sent.json().code, 'bad_cursor')

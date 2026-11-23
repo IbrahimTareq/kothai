@@ -11,7 +11,7 @@ const { createServer } = await import('../../../server/router.ts')
 
 import test, { after } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync, readFileSync } from 'node:fs'
+import { mkdtempSync, rmSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { API_VERSION, type Info } from '@kothai/api'
@@ -33,12 +33,11 @@ test('info answers without a session when a password is set', async () => {
   assert.equal(body.apiVersion, API_VERSION)
   assert.equal(body.minClientVersion, 1)
   assert.equal(body.cloud, false)
-  assert.equal(body.serverVersion, JSON.parse(readFileSync('package.json', 'utf8')).version)
 })
 
 test('info never carries counts', async () => {
   const body = (await (await fetch(`${BASE}/api/v1/info`)).json()) as object
-  assert.deepEqual(Object.keys(body).sort(), ['apiVersion', 'cloud', 'minClientVersion', 'serverVersion', 'signIn'])
+  assert.deepEqual(Object.keys(body).sort(), ['apiVersion', 'cloud', 'minClientVersion', 'signIn'])
 })
 
 test('the auth gate still answers 401 for /api/v1/notes without a session', async () => {

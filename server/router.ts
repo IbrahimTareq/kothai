@@ -63,7 +63,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     // The second thing in front of the gate. A mobile app must learn the sign-in
     // method (password or none) before it can sign in, so a 401 here would leave
     // it unable to ask how to authenticate at all. Safe to expose because it only
-    // carries version and sign-in facts — never counts or anything about the
+    // carries API-version and sign-in facts — never counts, nor the server build or anything about the
     // library; /api/v1/notes and the rest stay behind the gate.
     if (req.method === 'GET' && p === '/api/v1/info') return handleInfo(res)
     // Guards every route below AND the static/uploads fallthrough, which is why
@@ -144,6 +144,11 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     if (req.method === 'GET' && p === '/api/v1/notes') return handleNotesPage(res, url, viewer)
     if (req.method === 'GET' && p === '/api/v1/spaces') return handleSpaces(res, viewer)
     if (req.method === 'GET' && p === '/api/v1/changes') return handleChanges(res, url, viewer)
+    // Below the v1 routes and the gate: a path under /api/v1 that no route
+    // claims must not fall through to the SPA (GET answered 200 HTML, POST a
+    // code-less 405), or a newer app calling a route this server predates cannot
+    // tell "server too old" from a broken proxy.
+    if (p.startsWith('/api/v1/')) return json(res, 404, { error: 'not found', code: 'not_found' })
     if (p === '/api/collections') {
       if (req.method === 'GET') return handleCollections(res, viewer)
       if (req.method === 'POST') return await handleCreateCollection(req, res, viewer)
@@ -175,7 +180,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     json(res, 405, { error: 'method not allowed' })
   } catch (err) {
     console.error('[server] error:', err)
-    json(res, 500, { error: (err instanceof Error && err.message) || 'internal error' })
+    json(res, 500, { error: (err instanceof Error && err.message) || 'internal error', code: 'internal' })
   }
 }
 

@@ -12,7 +12,6 @@ export interface ApiError {
 export interface Info {
   apiVersion: number
   minClientVersion: number
-  serverVersion: string
   signIn: ('password' | 'none')[]
   cloud: boolean
 }

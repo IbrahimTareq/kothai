@@ -76,6 +76,28 @@ test('limit is capped at 200; a malformed cursor is 400 bad_cursor', async () =>
   }
 })
 
+test('a cursor whose fields are not strings is 400 bad_cursor', async () => {
+  await seed(1)
+  const sent = page(`?cursor=${encodeCursor({ createdAt: {}, id: [] })}`)
+  assert.equal(sent.code, 400)
+  assert.equal(sent.json().code, 'bad_cursor')
+})
+
+test('an unknown space is 404 not_found, not an empty page', async () => {
+  await seed(2)
+  const sent = page('?space=nope')
+  assert.equal(sent.code, 404)
+  assert.equal(sent.json().code, 'not_found')
+})
+
+test('another visitor’s space answers like a missing one', async () => {
+  await seed(2)
+  const space = await collections.create({ name: 'S', visitor: 'b' })
+  await collections.addItems(space.id, ['n1'])
+  assert.equal(page(`?space=${space.id}`, 'a').code, 404)
+  assert.deepEqual(ids(page(`?space=${space.id}`, 'b').json()), ['n1'])
+})
+
 test('unavailable notes are not listed', async () => {
   await seed(3)
   await store.updateNote('n2', { unavailable: true })
