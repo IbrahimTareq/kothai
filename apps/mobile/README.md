@@ -17,13 +17,18 @@ Needs Node 22, Xcode and CocoaPods.
 ```sh
 cd apps/mobile
 npm install
-npx expo prebuild --platform ios --clean   # regenerates ios/ (and the share extension) from app.json
-npx expo run:ios                   # builds the dev client, launches it, starts Metro
+LANG=en_US.UTF-8 npx expo prebuild --platform ios --clean   # regenerates ios/ (and the share extension) from app.json
+npx expo run:ios                   # builds and installs the dev client
+npx expo start --dev-client        # Metro
+xcrun simctl launch <udid> app.kothai.mobile
 ```
 
-CocoaPods crashes with `Unicode Normalization not appropriate for ASCII-8BIT`
-when the shell has no UTF-8 locale: `export LANG=en_US.UTF-8` first. With more
-than one simulator booted, pick one: `npx expo run:ios --device "<name or UDID>"`.
+`npx expo run:ios` builds and installs, but has exited 1 at `Simulator app did
+not open fast enough` every time here, so launch the installed app with
+`simctl` and start Metro yourself. CocoaPods crashes with `Unicode
+Normalization not appropriate for ASCII-8BIT` when the shell has no UTF-8
+locale, hence `LANG`. With more than one simulator booted, pick one:
+`npx expo run:ios --device "<name or UDID>"`.
 
 ## A scratch server
 
@@ -37,6 +42,6 @@ In the app, enter `http://localhost:5199` (the simulator reaches the Mac at
 `localhost`) and tap "Check server". A server with no `KOTHAI_PASSWORD` reports
 sign-in `none`.
 
-If `run:ios` ends with `Simulator app did not open fast enough`, the build is
-already installed: run `npx expo start --dev-client` and open Kothai on the
-simulator, then pick the server in the dev launcher.
+The scratch SSE endpoint on `localhost:5198` is a throwaway script: any POST
+gets 20 `event: delta` / `data: {"text":"tick n"}` events 100 ms apart, then
+the response closes.

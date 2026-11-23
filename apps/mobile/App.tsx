@@ -44,7 +44,8 @@ export default function App() {
   useEffect(() => {
     if (!hasShareIntent) return
     const link = linkFrom(shareIntent)
-    // Clearing the intent is what stops a later re-render saving this share twice.
+    // Clearing the intent, native store included, is what stops a re-save: the hook
+    // re-reads the share from the app group every time the app returns to the foreground.
     resetShareIntent()
     setShared(link)
     if (link) saveShared(link)
@@ -146,44 +147,44 @@ export default function App() {
       contentInsetAdjustmentBehavior="automatic"
       keyboardShouldPersistTaps="handled"
     >
-        <Text style={styles.title}>Kothai</Text>
-        <Text>Server URL</Text>
-        <TextInput
-          style={styles.input}
-          value={url}
-          onChangeText={setUrl}
-          placeholder="http://localhost:5199"
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="url"
-        />
-        <Text>Capture token</Text>
-        <TextInput
-          style={styles.input}
-          value={token}
-          onChangeText={setToken}
-          autoCapitalize="none"
-          autoCorrect={false}
-          secureTextEntry
-        />
-        <Button title="Save" onPress={save} />
-        <Button title="Check server" onPress={check} />
-        <Text testID="status">{message}</Text>
-        {shareMessage ? <Text testID="share-status">{shareMessage}</Text> : null}
-        {canRetry && shared ? <Button title="Retry" onPress={() => saveShared(shared)} /> : null}
-        <Text style={styles.title}>Ask test</Text>
-        <TextInput style={styles.input} value={question} onChangeText={setQuestion} />
-        <View style={styles.row}>
-          <Switch value={useScratch} onValueChange={setUseScratch} />
-          <Text>{useScratch ? `Scratch SSE ${SCRATCH_SSE}` : 'Server /api/ask'}</Text>
-        </View>
-        <Button title="Ask" onPress={ask} />
-        <Text testID="ask-status">{askStatus}</Text>
-        {chunks.map((c, i) => (
-          <Text key={i} style={styles.chunk}>
-            {`+${c.ms}ms ${c.text.trim()}`}
-          </Text>
-        ))}
+      <Text style={styles.title}>Kothai</Text>
+      <Text>Server URL</Text>
+      <TextInput
+        style={styles.input}
+        value={url}
+        onChangeText={setUrl}
+        placeholder="http://localhost:5199"
+        autoCapitalize="none"
+        autoCorrect={false}
+        keyboardType="url"
+      />
+      <Text>Capture token</Text>
+      <TextInput
+        style={styles.input}
+        value={token}
+        onChangeText={setToken}
+        autoCapitalize="none"
+        autoCorrect={false}
+        secureTextEntry
+      />
+      <Button title="Save" onPress={save} />
+      <Button title="Check server" onPress={check} />
+      <Text testID="status">{message}</Text>
+      {shareMessage ? <Text testID="share-status">{shareMessage}</Text> : null}
+      {canRetry && shared ? <Button title="Retry" onPress={() => saveShared(shared)} /> : null}
+      <Text style={styles.title}>Ask test</Text>
+      <TextInput style={styles.input} value={question} onChangeText={setQuestion} />
+      <View style={styles.row}>
+        <Switch value={useScratch} onValueChange={setUseScratch} />
+        <Text>{useScratch ? `Scratch SSE ${SCRATCH_SSE}` : 'Server /api/ask'}</Text>
+      </View>
+      <Button title="Ask" onPress={ask} />
+      <Text testID="ask-status">{askStatus}</Text>
+      {chunks.map((c, i) => (
+        <Text key={i} style={styles.chunk}>
+          {`+${c.ms}ms ${c.text.trim()}`}
+        </Text>
+      ))}
       <StatusBar style="auto" />
     </ScrollView>
   )

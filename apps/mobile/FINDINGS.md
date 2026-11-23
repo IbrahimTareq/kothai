@@ -14,7 +14,7 @@ simulator on 2026-11-23.
 
 ## 1. Share capture on iOS
 
-**Status:** confirmed on the simulator (see Device result).
+**Status:** confirmed on the simulator against a no-password server; the capture-token path proven under Node only.
 
 **Supporting evidence (build inspection and Node):**
 - The build carries the extension. `Kothai.app/PlugIns/ShareExtension.appex`
@@ -76,6 +76,10 @@ The scratch SSE target is hard-wired to `http://localhost:5198/`, which only
 the simulator reaches (it shares the Mac's network stack). A physical device
 would need the Mac's LAN address.
 
+The abort-on-second-Ask / unmount path (commit 0e08547) came after the device
+check and is proven under Node only; its behaviour through `expo/fetch` on the
+simulator is unobserved.
+
 ## 3. The iOS 26 share-extension bug
 
 The spec cites a report of iOS 26 share extensions failing to open the app.
@@ -101,6 +105,9 @@ URL reached state.
 
 ## What the capture phase must change
 
+- **Typecheck in CI.** Nothing typechecks `apps/mobile` from the root gates, so a
+  `packages/api` change can break the app silently. Wire `tsc --noEmit` for
+  `apps/mobile` into CI when the app gets a test harness.
 - **Outbox.** A failed share shows an error and Retry, and only one share is
   tracked at a time (ruling E2). The capture phase needs a persistent outbox
   (`expo-sqlite`) drained on launch and on connectivity, so a share made
