@@ -1,6 +1,6 @@
 import type { ServerResponse } from 'node:http'
 import { readFileSync } from 'node:fs'
-import type { Info, NotesPage, SpacesList } from '@kothai/api'
+import type { Changes, Info, NotesPage, Space, SpacesList } from '@kothai/api'
 import { PASSWORD } from '../config.ts'
 import * as store from '../data/notes.ts'
 import * as collections from '../data/collections.ts'
@@ -79,15 +79,63 @@ export function handleNotesPage(res: ServerResponse, url: URL, viewer: string | 
 
 // Counts come from collections.all(visibleTo(viewer)), the same call behind
 // /api/collections, so the two never disagree about what a visitor can see.
+const visibleSpaces = (viewer: string | null): Space[] =>
+  collections.all(visibleTo(viewer)).map(c => ({
+    id: c.id,
+    name: c.name,
+    ...(c.parentId ? { parentId: c.parentId } : {}),
+    count: c.count,
+    createdAt: c.createdAt,
+  }))
+
 export function handleSpaces(res: ServerResponse, viewer: string | null): void {
-  const body: SpacesList = {
-    spaces: collections.all(visibleTo(viewer)).map(c => ({
-      id: c.id,
-      name: c.name,
-      ...(c.parentId ? { parentId: c.parentId } : {}),
-      count: c.count,
-      createdAt: c.createdAt,
-    })),
+  const body: SpacesList = { spaces: visibleSpaces(viewer) }
+  json(res, 200, body)
+}
+
+interface ChangesCursor {
+  boot: string
+  rev: number
+  spacesRev: number
+}
+
+function isChangesCursor(c: Partial<ChangesCursor> | null): c is ChangesCursor {
+  return typeof c?.boot === 'string' && Number.isInteger(c.rev) && Number.isInteger(c.spacesRev)
+}
+
+// The offline cache's sync feed; /api/notes/delta's twin (see its comment). A
+// cursor from another boot (rev restarts at 0, so its numbers mean nothing) or
+// older than the tombstone window (deletions may be missing) answers resync,
+// since the client cannot trust a partial answer. No `since` is also a resync:
+// that is how a client gets its first cursor.
+export function handleChanges(res: ServerResponse, url: URL, viewer: string | null): void {
+  const raw = url.searchParams.get('since')
+  const { rev, bootId } = store.revState()
+  const spacesRev = collections.spacesRevState()
+  const cursor = encodeCursor({ boot: bootId, rev, spacesRev } satisfies ChangesCursor)
+  const resync: Changes = { resync: true, cursor }
+  if (raw === null) {
+    json(res, 200, resync)
+    return
+  }
+  const since = decodeCursor<Partial<ChangesCursor>>(raw)
+  if (!isChangesCursor(since)) {
+    json(res, 400, { error: 'bad cursor', code: 'bad_cursor' })
+    return
+  }
+  if (since.boot !== bootId || !store.deltaOk(since.rev)) {
+    json(res, 200, resync)
+    return
+  }
+  const body: Changes = {
+    cursor,
+    // Deletions go out unfiltered: a tombstone is only a random id, and a client
+    // drops one it never held.
+    notes: store.changedSince(since.rev).filter(visibleTo(viewer)).map(card),
+    deleted: store.deletedSince(since.rev),
+    // The full list, not a diff: counts and covers shift with membership, so a
+    // per-space delta would be as large as the list for a typical library.
+    ...(since.spacesRev !== spacesRev ? { spaces: visibleSpaces(viewer) } : {}),
   }
   json(res, 200, body)
 }

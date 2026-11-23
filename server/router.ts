@@ -37,7 +37,7 @@ import {
   handleDeleteCollection,
 } from './routes/collections.ts'
 import { handleStatus } from './routes/status.ts'
-import { handleInfo, handleNotesPage, handleSpaces } from './routes/v1.ts'
+import { handleChanges, handleInfo, handleNotesPage, handleSpaces } from './routes/v1.ts'
 import {
   handleGetSettings,
   handleSaveSettings,
@@ -142,6 +142,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     if (req.method === 'POST' && p === '/api/enrich/prioritize') return await handlePrioritize(req, res)
     if (req.method === 'GET' && p === '/api/v1/notes') return handleNotesPage(res, url, viewer)
     if (req.method === 'GET' && p === '/api/v1/spaces') return handleSpaces(res, viewer)
+    if (req.method === 'GET' && p === '/api/v1/changes') return handleChanges(res, url, viewer)
     if (p === '/api/collections') {
       if (req.method === 'GET') return handleCollections(res, viewer)
       if (req.method === 'POST') return await handleCreateCollection(req, res, viewer)

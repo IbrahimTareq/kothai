@@ -303,3 +303,35 @@ test('the lift on remove is written to the database, not only held in memory', a
   await collections.load({ reload: true })
   assert.equal(space(japan.id).parentId, travel.id)
 })
+
+test('spacesRevState moves on every mutation and and a read does not', async () => {
+  collections._reset()
+  const at = () => collections.spacesRevState()
+  const r0 = at()
+  collections.all()
+  assert.equal(at(), r0, 'a read never bumps')
+  const c = await collections.create({ name: 'A' })
+  const steps: Array<[string, () => Promise<unknown>]> = [
+    ['update', () => collections.update(c.id, { name: 'B' })],
+    ['addItem', () => collections.addItem(c.id, 'n1')],
+    ['addItems', () => collections.addItems(c.id, ['n2'])],
+    ['removeItem', () => collections.removeItem(c.id, 'n1')],
+    [
+      'autoAdd',
+      async () => {
+        await collections.update(c.id, { tags: ['t'] })
+        return collections.autoAdd('n3', ['t'])
+      },
+    ],
+    ['deleteItemEverywhere', () => collections.deleteItemEverywhere('n3')],
+    ['remove', () => collections.remove(c.id)],
+    ['clearAll', () => collections.clearAll()],
+  ]
+  let last = at()
+  assert.ok(last > r0, 'create bumps')
+  for (const [name, run] of steps) {
+    await run()
+    assert.ok(at() > last, `${name} bumps`)
+    last = at()
+  }
+})
