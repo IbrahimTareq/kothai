@@ -15,6 +15,7 @@ import {
 import type { TranscriptResponse } from 'youtube-transcript'
 import { MAX_HTML, decodeEntities, get, isSafeFetchUrl, isTransient, saveThumb } from './fetch.ts'
 import { fetchInstagramMeta, isInstagramPost } from './instagram.ts'
+import { tiktokPost } from './tiktok.ts'
 
 const MAX_ARTICLE = 8000 // chars of extracted body text persisted per note
 const MIN_ARTICLE = 200 // below this it's a paywall/cookie-wall stub, not content
@@ -40,10 +41,10 @@ function titleTag(html: string): string | null {
 // genuinely somebody else's maintenance burden, so it is the one place a
 // dependency earns its keep in an otherwise dependency-free server. The
 // hand-rolled table this replaces covered exactly two providers (YouTube and
-// Vimeo); the registry brings TikTok — whose oEmbed hands back the video
-// caption as `title` plus a thumbnail, the two things a saved TikTok
-// otherwise has no way of getting — along with Reddit, Bluesky, Spotify,
-// SoundCloud, Flickr and the rest.
+// Vimeo); the registry brings Reddit, Bluesky, Spotify, SoundCloud, Flickr
+// and the rest. TikTok is in it too, but its oEmbed has answered with no
+// title, author or thumbnail since 2026-11-19; tiktok.ts reads those off the
+// video page instead.
 //
 // Only PROVIDER DISCOVERY is delegated. The package's own extract() does its
 // own fetching, which would route around safeFetch and the SSRF guard, so
@@ -350,10 +351,9 @@ export async function fetchLinkMeta(rawUrl: string, noteId: string): Promise<Lin
       // creator handle is an IDENTITY: enrich promotes it to the note's
       // `account`, which drives the account tag and lets a library be
       // filtered by creator. Instagram gets this from its export; every other
-      // platform can only learn it here. TikTok in particular carries the
-      // handle in NEITHER its export nor the URL it redirects to (that
-      // redirect lands on a literal "@/"), so without this a TikTok note has
-      // no author anywhere, forever.
+      // platform can only learn it here or, for TikTok, off its video page
+      // (tiktok.ts): its export and the "@/" URL its redirects land on carry
+      // no handle, so without one of the two a TikTok note has no author.
       const authorName = str(d.author_name)
       meta.author = authorName?.trim() || null
       oembedDesc = authorName ? `by ${authorName}` : null
@@ -370,10 +370,12 @@ export async function fetchLinkMeta(rawUrl: string, noteId: string): Promise<Lin
   try {
     const res = await get(url, 'text/html,*/*')
     const html = (await res.text()).slice(0, MAX_HTML)
-    if (!meta.siteTitle) meta.siteTitle = metaTag(html, 'og:title') || metaTag(html, 'twitter:title') || titleTag(html)
+    const tiktok = tiktokPost(html)
+    meta.siteTitle ||= tiktok.caption || metaTag(html, 'og:title') || metaTag(html, 'twitter:title') || titleTag(html)
+    meta.author ||= tiktok.author
     if (!meta.siteName) meta.siteName = metaTag(html, 'og:site_name')
     meta.siteDesc = mergeSiteDesc(metaTag(html, 'og:description') || metaTag(html, 'description'), oembedDesc)
-    thumbUrl = thumbUrl || metaTag(html, 'og:image') || metaTag(html, 'twitter:image')
+    thumbUrl = thumbUrl || tiktok.cover || metaTag(html, 'og:image') || metaTag(html, 'twitter:image')
 
     // Only parse when the body is actually HTML — a PDF or JSON response can
     // reach here (nothing upstream constrains the URL to a web page), and
