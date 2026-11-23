@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "concurrently -k -n server,vite -c blue,magenta \"node server/index.ts\" \"vite\"",
-    "dev:site": "pnpm --dir site install --frozen-lockfile && pnpm --dir site dev",
+    "dev:site": "pnpm --dir site install --ignore-workspace --frozen-lockfile && pnpm --dir site dev",
     "build": "biome check . && node scripts/lint-tokens.ts && pnpm run typecheck && pnpm run build:client",
     "build:client": "vite build",
     "start": "npm run build && node server/index.ts",
@@ -33,8 +33,8 @@
     "url": "https://github.com/IbrahimTareq/kothai/issues"
   },
   "dependencies": {
-    "@kothai/api": "workspace:*",
     "@extractus/oembed-extractor": "^6.0.0",
+    "@kothai/api": "workspace:*",
     "@mozilla/readability": "^0.6.0",
     "@xyflow/react": "^12.11.3",
     "linkedom": "^0.18.13",

@@ -1,6 +1,9 @@
 # packages/* only. client/ stays where it is, and site/ is deliberately NOT a
 # member: it is a separate package with its own lockfile, and `pnpm dev:site`
 # installs it by hand. Listing it here would make root `pnpm install` pull in
-# Next and Fumadocs.
+# Next and Fumadocs. Because the root workspace file sits above site/, every
+# install inside site/ must pass --ignore-workspace (package.json dev:site,
+# pages.yml) or pnpm installs the root project instead and site/ gets no
+# node_modules.
 packages:
   - 'packages/*'

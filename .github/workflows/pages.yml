@@ -54,7 +54,7 @@ jobs:
           cache-dependency-path: site/pnpm-lock.yaml
 
       - name: Install
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --ignore-workspace --frozen-lockfile
         working-directory: site
 
       # Fails on a dead internal link, which is the whole reason this also runs
