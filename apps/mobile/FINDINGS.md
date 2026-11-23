@@ -16,7 +16,7 @@ simulator on 2026-11-23.
 
 **Status:** confirmed on the simulator (see Device result).
 
-**Evidence so far:**
+**Supporting evidence (build inspection and Node):**
 - The build carries the extension. `Kothai.app/PlugIns/ShareExtension.appex`
   is in the built and the installed app, bundle id
   `app.kothai.mobile.share-extension`, extension point
@@ -46,7 +46,7 @@ password, so the capture token was not exercised on device (it was under Node).
 **Status:** stream reading and accumulation proved under Node 22;
 `expo/fetch`'s incremental delivery confirmed on the simulator (see Device result).
 
-**Evidence so far:**
+**Supporting evidence (Node and the `expo/fetch` source):**
 - `stream.ts` (`streamAsk`) posts `{ question }` with
   `Accept: text/event-stream`, reads `response.body.getReader()` and reports
   each chunk raw with milliseconds since the request. Run under Node 22 with
@@ -55,7 +55,8 @@ password, so the capture token was not exercised on device (it was under Node).
   the first. So the reader delivers chunks as they come, not at the end.
 - Against a scratch Kothai with no AI configured, `/api/ask` answers
   `409 {"code":"llm_off"}` as plain JSON before any stream opens; the panel
-  shows it as one chunk and "Done, HTTP 409". That is why the scratch SSE
+  shows it as one chunk and "Done, HTTP 409" (since relabelled "Error, HTTP
+  409": any non-2xx now reads as an error). That is why the scratch SSE
   endpoint exists (ruling E3): Kothai's own event shape (`sources`, `delta`,
   `done`, `error`) was not streamed in this prototype.
 - `expo/fetch` source (`expo/build/winter/fetch/FetchResponse.js`) builds
@@ -70,6 +71,10 @@ SSE, the panel showed "Asking…" while events arrived at +115, +215, +316, +419
 +517, +619, +719, +819 ms … (about 100 ms apart), then "Done, HTTP 200". With
 the toggle off, `/api/ask` on the no-AI scratch server answered 409 `llm_off` at
 +22 ms, as under Node.
+
+The scratch SSE target is hard-wired to `http://localhost:5198/`, which only
+the simulator reaches (it shares the Mac's network stack). A physical device
+would need the Mac's LAN address.
 
 ## 3. The iOS 26 share-extension bug
 
@@ -107,10 +112,13 @@ URL reached state.
   with it is 401, and Ask needs a session cookie. The app needs a bearer
   session from sign-in for reads and Ask; the Ask test here only works
   against a no-password server.
-- **Extension naming.** The share sheet shows the plugin default "Kothai -
-  Share Extension". `iosShareExtensionName` also sets the Xcode target name
-  with non-alphanumerics stripped, so plain "Kothai" collides with the main
-  target; use something like "Save to Kothai".
+- **Extension naming.** On the iOS 26.2 simulator the share sheet showed
+  **Kothai** with the app icon, even though the extension's
+  `CFBundleDisplayName` is the plugin default "Kothai - Share Extension". No
+  rename is needed for the sheet. If one is ever wanted,
+  `iosShareExtensionName` also sets the Xcode target name with
+  non-alphanumerics stripped, so plain "Kothai" would collide with the main
+  target.
 - **App group on a real team.** `group.app.kothai.mobile` must be registered
   on an Apple developer team before a device build. The simulator does not
   check.

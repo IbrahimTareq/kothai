@@ -2,7 +2,7 @@ import { fetch as expoFetch } from 'expo/fetch'
 import * as SecureStore from 'expo-secure-store'
 import { useShareIntent } from 'expo-share-intent'
 import { StatusBar } from 'expo-status-bar'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
 import { checkServer, type ServerStatus } from './check'
 import { linkFrom, saveLink } from './share'
@@ -39,6 +39,7 @@ export default function App() {
   const [useScratch, setUseScratch] = useState(false)
   const [chunks, setChunks] = useState<Chunk[]>([])
   const [askStatus, setAskStatus] = useState('')
+  const askRun = useRef<AbortController | null>(null)
 
   useEffect(() => {
     if (!hasShareIntent) return
@@ -113,16 +114,28 @@ export default function App() {
   // No token: Ask needs a session, which a capture token cannot give, so this
   // runs against a scratch server with no password (plan ruling E3).
   async function ask() {
+    askRun.current?.abort()
+    const run = new AbortController()
+    askRun.current = run
     setChunks([])
     setAskStatus('Asking…')
     const target = useScratch ? SCRATCH_SSE : `${url.trim().replace(/\/+$/, '')}/api/ask`
     try {
-      const status = await streamAsk(target, question, expoFetch, (c) => setChunks((prev) => [...prev, c]))
-      setAskStatus(`Done, HTTP ${status}`)
+      const { status, ok } = await streamAsk(
+        target,
+        question,
+        expoFetch,
+        (c) => setChunks((prev) => [...prev, c]),
+        run.signal,
+      )
+      setAskStatus(ok ? `Done, HTTP ${status}` : `Error, HTTP ${status}`)
     } catch (e) {
-      setAskStatus(`Ask failed: ${String(e)}`)
+      // An aborted run was replaced or unmounted; the status line is not its own.
+      if (!run.signal.aborted) setAskStatus(`Ask failed: ${String(e)}`)
     }
   }
+
+  useEffect(() => () => askRun.current?.abort(), [])
 
   return (
     // contentInsetAdjustmentBehavior keeps the screen clear of the notch:
