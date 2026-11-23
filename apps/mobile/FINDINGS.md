@@ -9,14 +9,12 @@ Machine: Xcode 27.1, Expo SDK 58, React Native 0.88.1, expo-share-intent 9.
 Simulator: iPhone 17 Pro on **iOS 26.2** (`D6C75DFA-…`). An iPhone 18 Pro on
 iOS 27.0 is also booted; it was not used.
 
-Anything marked *to be confirmed on device by the controller* was not observed
-on the simulator while this was written: nobody had tapped the share sheet or
-the app yet. The controller fills those lines in.
+The device results below were observed by tapping through the app on the
+simulator on 2026-11-23.
 
 ## 1. Share capture on iOS
 
-**Status:** *to be confirmed on device by the controller* (Safari → share
-sheet → "Kothai - Share Extension" → note appears on the scratch server).
+**Status:** confirmed on the simulator (see Device result).
 
 **Evidence so far:**
 - The build carries the extension. `Kothai.app/PlugIns/ShareExtension.appex`
@@ -36,14 +34,17 @@ sheet → "Kothai - Share Extension" → note appears on the scratch server).
   app does the network call with `expo/fetch`. The extension itself makes no
   request.
 
-**Device result:** _(controller)_
+**Device result (2026-11-23, iPhone 17 Pro simulator, iOS 26.2):** works. Safari on
+`https://example.com/` → Share → the sheet lists **Kothai** (the label shows as
+"Kothai", not "Kothai - Share Extension") → tap → Kothai comes to the front and
+shows "Saved: https://example.com/". The scratch server's `/api/v1/notes` then
+lists `https://example.com/` titled "Example Domain". The scratch server had no
+password, so the capture token was not exercised on device (it was under Node).
 
 ## 2. SSE through `expo/fetch`
 
 **Status:** stream reading and accumulation proved under Node 22;
-`expo/fetch`'s incremental delivery on the device is *to be confirmed on
-device by the controller* (Ask test panel, toggle on "Scratch SSE", tap Ask,
-watch the `+ms` stamps).
+`expo/fetch`'s incremental delivery confirmed on the simulator (see Device result).
 
 **Evidence so far:**
 - `stream.ts` (`streamAsk`) posts `{ question }` with
@@ -64,15 +65,17 @@ watch the `+ms` stamps).
   body arrives as one chunk. Read the body straight after the response
   resolves, as `streamAsk` does.
 
-**Device result:** _(controller: paste the stamps, and say whether they were
-~100 ms apart or bunched at the end)_
+**Device result (same simulator):** incremental. With the toggle on Scratch
+SSE, the panel showed "Asking…" while events arrived at +115, +215, +316, +419,
++517, +619, +719, +819 ms … (about 100 ms apart), then "Done, HTTP 200". With
+the toggle off, `/api/ask` on the no-AI scratch server answered 409 `llm_off` at
++22 ms, as under Node.
 
 ## 3. The iOS 26 share-extension bug
 
 The spec cites a report of iOS 26 share extensions failing to open the app.
 
-**Status:** *to be confirmed on device by the controller*, on **iOS 26.2
-(simulator)**. Not yet known whether it was seen.
+**Status:** not seen on **iOS 26.2 (simulator)**; a physical device is still unchecked.
 
 **What to watch:** expo-share-intent's `ShareViewController.redirectToHostApp`
 opens the app by walking the responder chain to `UIApplication` and calling
@@ -82,7 +85,14 @@ does not come to the front, and no "Saving …" line appears. If so, note
 whether opening Kothai by hand afterwards picks the share up from the app
 group, which would make the bug an annoyance rather than a lost share.
 
-**Device result:** _(controller: seen / not seen, on iOS 26.2 simulator)_
+**Device result:** not seen on the iOS 26.2 simulator: the share sheet closed and
+Kothai came to the front with the share on the first try. Not yet checked on a
+physical iOS 26 device, where the reports come from.
+
+One oddity while testing: the very first "Check server" after typing the URL
+answered `404 network`; the next tap, unchanged, answered "Connected. API 1,
+sign-in: none". Not reproduced; possibly the first tap fired before the typed
+URL reached state.
 
 ## What the capture phase must change
 
