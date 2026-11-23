@@ -3,12 +3,16 @@ import * as SecureStore from 'expo-secure-store'
 import { useShareIntent } from 'expo-share-intent'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect, useState } from 'react'
-import { Button, ScrollView, StyleSheet, Text, TextInput } from 'react-native'
+import { Button, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
 import { checkServer, type ServerStatus } from './check'
 import { linkFrom, saveLink } from './share'
+import { type Chunk, streamAsk } from './stream'
 
 const URL_KEY = 'serverUrl'
 const TOKEN_KEY = 'captureToken'
+// The scratch SSE script (plan ruling E3): 20 events 100 ms apart, for when the
+// scratch Kothai has AI off and /api/ask answers 409 instead of streaming.
+const SCRATCH_SSE = 'http://localhost:5198/'
 
 function describe(s: ServerStatus): string {
   switch (s.kind) {
@@ -31,6 +35,10 @@ export default function App() {
   const [shared, setShared] = useState<string | null>(null)
   const [shareMessage, setShareMessage] = useState('')
   const [canRetry, setCanRetry] = useState(false)
+  const [question, setQuestion] = useState('What have I saved?')
+  const [useScratch, setUseScratch] = useState(false)
+  const [chunks, setChunks] = useState<Chunk[]>([])
+  const [askStatus, setAskStatus] = useState('')
 
   useEffect(() => {
     if (!hasShareIntent) return
@@ -102,6 +110,20 @@ export default function App() {
     }
   }
 
+  // No token: Ask needs a session, which a capture token cannot give, so this
+  // runs against a scratch server with no password (plan ruling E3).
+  async function ask() {
+    setChunks([])
+    setAskStatus('Asking…')
+    const target = useScratch ? SCRATCH_SSE : `${url.trim().replace(/\/+$/, '')}/api/ask`
+    try {
+      const status = await streamAsk(target, question, expoFetch, (c) => setChunks((prev) => [...prev, c]))
+      setAskStatus(`Done, HTTP ${status}`)
+    } catch (e) {
+      setAskStatus(`Ask failed: ${String(e)}`)
+    }
+  }
+
   return (
     // contentInsetAdjustmentBehavior keeps the screen clear of the notch:
     // React Native's SafeAreaView is deprecated and logs a warning on every load.
@@ -136,6 +158,19 @@ export default function App() {
         <Text testID="status">{message}</Text>
         {shareMessage ? <Text testID="share-status">{shareMessage}</Text> : null}
         {canRetry && shared ? <Button title="Retry" onPress={() => saveShared(shared)} /> : null}
+        <Text style={styles.title}>Ask test</Text>
+        <TextInput style={styles.input} value={question} onChangeText={setQuestion} />
+        <View style={styles.row}>
+          <Switch value={useScratch} onValueChange={setUseScratch} />
+          <Text>{useScratch ? `Scratch SSE ${SCRATCH_SSE}` : 'Server /api/ask'}</Text>
+        </View>
+        <Button title="Ask" onPress={ask} />
+        <Text testID="ask-status">{askStatus}</Text>
+        {chunks.map((c, i) => (
+          <Text key={i} style={styles.chunk}>
+            {`+${c.ms}ms ${c.text.trim()}`}
+          </Text>
+        ))}
       <StatusBar style="auto" />
     </ScrollView>
   )
@@ -146,4 +181,6 @@ const styles = StyleSheet.create({
   body: { padding: 20, gap: 8 },
   title: { fontSize: 24, fontWeight: '600', marginBottom: 8 },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, padding: 10 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  chunk: { fontFamily: 'Menlo', fontSize: 12 },
 })

@@ -4,6 +4,9 @@ An Expo dev build with one screen: server URL and capture token (kept in
 `expo-secure-store`) and a "Check server" button that calls `/api/v1/info`.
 A link shared to Kothai from another app (iOS share extension, Android
 `text/*` intent, through `expo-share-intent`) is saved with `/api/v1/save`.
+An "Ask test" panel posts a question to the server's `/api/ask` (or, with the
+toggle on, to a scratch SSE endpoint on `localhost:5198`) and lists each
+streamed chunk with its arrival time. Results are in `FINDINGS.md`.
 One share at a time: there is no outbox yet, so a second share arriving while
 the first is still saving replaces its status line and Retry target.
 Not part of the root pnpm workspace: it installs on its own with npm, and
