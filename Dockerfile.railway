@@ -7,10 +7,12 @@ FROM node:${NODE_VERSION}-bookworm-slim AS client
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN corepack enable
 WORKDIR /app
-COPY package.json pnpm-lock.yaml .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY packages/api/package.json ./packages/api/package.json
 RUN pnpm install --frozen-lockfile
 COPY tsconfig.json vite.config.ts index.html ./
 COPY client ./client
+COPY packages/api/src ./packages/api/src
 COPY public ./public
 RUN pnpm run build:client
 
@@ -18,7 +20,8 @@ FROM node:${NODE_VERSION}-bookworm-slim AS runtime
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN corepack enable
 WORKDIR /app
-COPY package.json pnpm-lock.yaml .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY packages/api/package.json ./packages/api/package.json
 RUN pnpm install --prod --frozen-lockfile
 COPY server ./server
 COPY docker/entrypoint.ts ./docker/entrypoint.ts

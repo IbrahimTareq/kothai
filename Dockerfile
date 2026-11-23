@@ -25,11 +25,15 @@ RUN corepack enable
 WORKDIR /app
 # .npmrc carries node-linker=hoisted, which gives pnpm an npm-style flat
 # node_modules.
-COPY package.json pnpm-lock.yaml .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY packages/api/package.json ./packages/api/package.json
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store,sharing=locked \
     pnpm install --frozen-lockfile --store-dir=/pnpm/store
 COPY tsconfig.json vite.config.ts index.html ./
 COPY client ./client
+# @kothai/api is a workspace link whose source Vite bundles; the runtime stage
+# needs only its package.json, since the server imports it as types alone.
+COPY packages/api/src ./packages/api/src
 COPY public ./public
 # build:client is the bundler alone; `pnpm run build` is the full gate (biome,
 # token lint, both typechecks) and must never run here. It has broken the image
@@ -51,7 +55,8 @@ WORKDIR /app
 # Runtime deps only (--prod) — react/vite/typescript were build-time only and
 # are already baked into ./dist. No native deps, so this stage is also
 # arch-independent: nothing here can SIGILL on a Pi.
-COPY package.json pnpm-lock.yaml .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY packages/api/package.json ./packages/api/package.json
 # The store cache mount keeps rebuilds cheap: a lockfile edit invalidates the
 # plain layer cache wholesale, but the downloaded tarballs survive here.
 # sharing=locked serializes the two arches of a multi-platform build so they

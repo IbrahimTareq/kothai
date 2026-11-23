@@ -36,5 +36,5 @@
   // test/client went entirely unchecked until 2026-09-17: `include` named only
   // `client`, so nothing — not tsc, not Vite, not the test run — ever read a
   // type in these 18 files, and 54 errors had piled up behind that gap.
-  "include": ["client", "test/client"]
+  "include": ["client", "test/client", "packages/**/*.ts"]
 }

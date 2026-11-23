@@ -33,6 +33,7 @@
     "url": "https://github.com/IbrahimTareq/kothai/issues"
   },
   "dependencies": {
+    "@kothai/api": "workspace:*",
     "@extractus/oembed-extractor": "^6.0.0",
     "@mozilla/readability": "^0.6.0",
     "@xyflow/react": "^12.11.3",

@@ -125,7 +125,7 @@ export function nextBaseline(
 // until someone staged another session's deletion. A deleted file has no
 // shape; leaving it out also keeps it out of the export total.
 export const sourceFiles = (root: string = ROOT) =>
-  execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', 'client', 'server'], {
+  execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', 'client', 'server', 'packages'], {
     cwd: root,
     encoding: 'utf8',
   })
