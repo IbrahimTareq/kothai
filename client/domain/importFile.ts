@@ -19,8 +19,10 @@
 export const MAX_IMPORT_BYTES = 45 * 1024 * 1024
 
 // Mirrors server/routes/import.ts's MAX_UPLOADS so a too-large selection is
-// refused here rather than after base64-ing every file.
-export const MAX_IMPORT_FILES = 20
+// refused here rather than after base64-ing every file. An Omnivore export is
+// one metadata_*.json per ~100 articles plus a markdown file per highlighted
+// article, so a big library unzipped by hand is hundreds of files.
+export const MAX_IMPORT_FILES = 1000
 
 // One entry per platform Kothai can import from. `id` MUST match the server
 // importer's exported `name` (server/import/*.js) — it's sent as `source` so
@@ -32,6 +34,7 @@ export type ImportSource = {
   accept: string // the file picker's `accept` attribute
   extensions: RegExp // the same rule enforced in code, for dropped files
   extensionsLabel: string // how to name those extensions in an error
+  tooBig: string // what to do about a file past MAX_IMPORT_BYTES; differs because each export unpacks differently
 }
 
 export const IMPORT_SOURCES: ImportSource[] = [
@@ -41,6 +44,7 @@ export const IMPORT_SOURCES: ImportSource[] = [
     accept: '.zip,.json',
     extensions: /\.(zip|json)$/i,
     extensionsLabel: '.zip or .json',
+    tooBig: 'That export is too big — unzip it and import just saved_posts.json instead.',
   },
   {
     id: 'tiktok',
@@ -48,6 +52,39 @@ export const IMPORT_SOURCES: ImportSource[] = [
     accept: '.zip,.json',
     extensions: /\.(zip|json)$/i,
     extensionsLabel: '.zip or .json',
+    tooBig: 'That export is too big — unzip it and import just user_data_tiktok.json instead.',
+  },
+  {
+    id: 'pocket',
+    label: 'Pocket',
+    accept: '.zip,.csv',
+    extensions: /\.(zip|csv)$/i,
+    extensionsLabel: '.zip or .csv',
+    tooBig: 'That export is too big — unzip it and import just the part_*.csv files instead.',
+  },
+  {
+    id: 'raindrop',
+    label: 'Raindrop',
+    accept: '.csv',
+    extensions: /\.csv$/i,
+    extensionsLabel: '.csv',
+    tooBig: 'That export is too big — export one collection at a time instead.',
+  },
+  {
+    id: 'omnivore',
+    label: 'Omnivore',
+    accept: '.zip,.json,.md',
+    extensions: /\.(zip|json|md)$/i,
+    extensionsLabel: '.zip, .json or .md',
+    tooBig: 'That ZIP is too big — unzip it and choose the metadata_*.json files (and highlights/*.md) instead.',
+  },
+  {
+    id: 'mymind',
+    label: 'mymind',
+    accept: '.csv',
+    extensions: /\.csv$/i,
+    extensionsLabel: '.csv',
+    tooBig: 'That file is too big — cards.csv is the only file Kothai reads, so check you chose that one.',
   },
 ]
 
@@ -60,7 +97,7 @@ export function validateImportFile(name: string, size: number, source: ImportSou
   // never going to import.
   if (!source.extensions.test(name)) return `That is not an export file — drop a ${source.extensionsLabel}.`
   if (size <= 0) return 'That file is empty.'
-  if (size > MAX_IMPORT_BYTES) return 'That export is too big — unzip it and import just saved_posts.json instead.'
+  if (size > MAX_IMPORT_BYTES) return source.tooBig
   return null
 }
 
@@ -83,9 +120,7 @@ export function validateImportFiles(
     total += f.size
   }
   if (total > MAX_IMPORT_BYTES) {
-    return files.length === 1
-      ? 'That export is too big — unzip it and import just saved_posts.json instead.'
-      : 'Those files are too big to import together — try them one at a time.'
+    return files.length === 1 ? source.tooBig : 'Those files are too big to import together — try them one at a time.'
   }
   return null
 }

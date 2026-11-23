@@ -1,7 +1,8 @@
 // The Import section of Settings: one row per platform Kothai can import
 // from. Sources are separate rows rather than a single "drop your export"
-// box because the platforms genuinely differ — Instagram exports JSON
-// files, TikTok one big user_data.json — so each
+// box because the platforms genuinely differ — Instagram exports JSON files,
+// TikTok one big user_data.json, Pocket, Raindrop and mymind a CSV, Omnivore a
+// ZIP of JSON and markdown — so each
 // needs its own accepted file types, its own "here's where the export button
 // lives" instructions, and its own parser on the server. A shared target
 // would have to accept the union of all of them and then guess.
@@ -35,6 +36,26 @@ const INSTRUCTIONS: Record<string, ReactNode> = {
       <code>user_data_tiktok.json</code> or the ZIP. Only your <b>favourites</b> come across — the videos you bookmarked
       — not likes or watch history. TikTok's export names your collections but doesn't say which videos are in them, so
       favourites arrive as one list.
+    </>
+  ),
+  pocket: (
+    <>
+      Pocket shut down in 2025. If you downloaded your export, drop the ZIP or <code>part_000000.csv</code> (and any
+      further <code>part_*.csv</code>). Archived items come across like unread ones, and your tags are kept.
+    </>
+  ),
+  raindrop: <>Settings → Backups → Export as CSV, then drop the file. Your folders become spaces, and tags are kept.</>,
+  omnivore: (
+    <>
+      Drop the export ZIP, or — for a large library — unzip it and choose all the <code>metadata_*.json</code> files,
+      plus the <code>highlights/*.md</code> files if you want your highlights. Up to 1000 files at a time. Labels become
+      tags.
+    </>
+  ),
+  mymind: (
+    <>
+      Account → Export my mind, then drop <code>cards.csv</code>. Only cards with a link come across for now — notes and
+      images without one are skipped, and you'll be told how many.
     </>
   ),
 }

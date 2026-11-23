@@ -1,6 +1,6 @@
 // Importer registry. Each importer exports { name, sniff(files), parse(files),
-// deriveNote(item) } over a Map<entryName, Buffer> of uploaded files. Instagram
-// and TikTok today; another importer slots in here without touching the
+// deriveNote(item) } over a Map<entryName, Buffer> of uploaded files. Instagram,
+// TikTok, Pocket, Raindrop, Omnivore and mymind today; another importer slots in here without touching the
 // route, and the client's per-source Import sections address
 // them by `name`.
 import type { NoteRecord } from '../data/notes.ts'

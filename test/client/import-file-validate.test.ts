@@ -91,3 +91,34 @@ test('every source id has a matching accept attribute and extension rule', () =>
     }
   }
 })
+
+// --- Pocket, Raindrop, Omnivore, mymind -------------------------------------
+
+const source = (id: string) => IMPORT_SOURCES.find(s => s.id === id)!
+
+test('each newer source accepts exactly its own extensions', () => {
+  const cases: Record<string, { ok: string[]; bad: string[] }> = {
+    pocket: { ok: ['export.zip', 'part_000000.csv'], bad: ['a.json', 'a.md'] },
+    raindrop: { ok: ['Export.CSV'], bad: ['a.zip', 'a.json'] },
+    omnivore: { ok: ['export.zip', 'metadata_0.json', 'highlights/a.md'], bad: ['a.csv'] },
+    mymind: { ok: ['cards.csv'], bad: ['a.zip', 'a.json'] },
+  }
+  for (const [id, { ok, bad }] of Object.entries(cases)) {
+    for (const name of ok) assert.equal(validateImportFile(name, 100, source(id)), null, `${id} accepts ${name}`)
+    for (const name of bad) assert.ok(validateImportFile(name, 100, source(id)), `${id} rejects ${name}`)
+  }
+})
+
+test('an Omnivore library of 1000 files is accepted and 1001 is refused', () => {
+  const files = (n: number) => Array.from({ length: n }, (_, i) => ({ name: `metadata_${i}.json`, size: 10 }))
+  assert.equal(validateImportFiles(files(1000), source('omnivore')), null)
+  assert.match(validateImportFiles(files(1001), source('omnivore')) as string, /Too many files/)
+})
+
+test("an oversized file gets its own source's advice", () => {
+  const big = { name: 'export.zip', size: MAX_IMPORT_BYTES + 1 }
+  const omnivore = 'That ZIP is too big — unzip it and choose the metadata_*.json files (and highlights/*.md) instead.'
+  assert.equal(validateImportFile(big.name, big.size, source('omnivore')), omnivore)
+  assert.equal(validateImportFiles([big], source('omnivore')), omnivore)
+  assert.match(validateImportFile(big.name, big.size, source('instagram')) as string, /import just saved_posts\.json/)
+})
