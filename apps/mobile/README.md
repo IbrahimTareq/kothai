@@ -2,6 +2,8 @@
 
 An Expo dev build with one screen: server URL and capture token (kept in
 `expo-secure-store`) and a "Check server" button that calls `/api/v1/info`.
+A link shared to Kothai from another app (iOS share extension, Android
+`text/*` intent, through `expo-share-intent`) is saved with `/api/v1/save`.
 Not part of the root pnpm workspace: it installs on its own with npm, and
 `ios/` / `android/` are generated, never committed.
 
@@ -10,7 +12,7 @@ Needs Node 22, Xcode and CocoaPods.
 ```sh
 cd apps/mobile
 npm install
-npx expo prebuild --platform ios   # regenerates ios/ from app.json
+npx expo prebuild --platform ios --clean   # regenerates ios/ (and the share extension) from app.json
 npx expo run:ios                   # builds the dev client, launches it, starts Metro
 ```
 

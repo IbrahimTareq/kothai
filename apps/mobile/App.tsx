@@ -1,9 +1,11 @@
 import { fetch as expoFetch } from 'expo/fetch'
 import * as SecureStore from 'expo-secure-store'
+import { useShareIntent } from 'expo-share-intent'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect, useState } from 'react'
 import { Button, ScrollView, StyleSheet, Text, TextInput } from 'react-native'
 import { checkServer, type ServerStatus } from './check'
+import { linkFrom, saveLink } from './share'
 
 const URL_KEY = 'serverUrl'
 const TOKEN_KEY = 'captureToken'
@@ -25,6 +27,46 @@ export default function App() {
   const [url, setUrl] = useState('')
   const [token, setToken] = useState('')
   const [message, setMessage] = useState('')
+  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent()
+  const [shared, setShared] = useState<string | null>(null)
+  const [shareMessage, setShareMessage] = useState('')
+  const [canRetry, setCanRetry] = useState(false)
+
+  useEffect(() => {
+    if (!hasShareIntent) return
+    const link = linkFrom(shareIntent)
+    resetShareIntent()
+    setShared(link)
+    if (link) saveShared(link)
+    else {
+      setCanRetry(false)
+      setShareMessage('Kothai saves links')
+    }
+  }, [hasShareIntent])
+
+  // Reads the settings from SecureStore, not from state: a share can cold-start
+  // the app before the load effect above has filled the fields in.
+  async function saveShared(link: string) {
+    setCanRetry(false)
+    setShareMessage(`Saving ${link}…`)
+    try {
+      const [baseUrl, token] = await Promise.all([SecureStore.getItemAsync(URL_KEY), SecureStore.getItemAsync(TOKEN_KEY)])
+      if (!baseUrl) {
+        setShareMessage('Set the server URL and capture token first, then Retry.')
+        setCanRetry(true)
+        return
+      }
+      const outcome = await saveLink(link, { baseUrl, token: token || undefined }, expoFetch)
+      if (outcome.kind === 'saved') setShareMessage(`Saved: ${outcome.title}`)
+      else {
+        setShareMessage(`Not saved (${outcome.code}): ${outcome.message}`)
+        setCanRetry(true)
+      }
+    } catch (e) {
+      setShareMessage(`Not saved: ${String(e)}`)
+      setCanRetry(true)
+    }
+  }
 
   useEffect(() => {
     Promise.all([SecureStore.getItemAsync(URL_KEY), SecureStore.getItemAsync(TOKEN_KEY)])
@@ -86,6 +128,8 @@ export default function App() {
         <Button title="Save" onPress={save} />
         <Button title="Check server" onPress={check} />
         <Text testID="status">{message}</Text>
+        {shareMessage ? <Text testID="share-status">{shareMessage}</Text> : null}
+        {canRetry && shared ? <Button title="Retry" onPress={() => saveShared(shared)} /> : null}
       <StatusBar style="auto" />
     </ScrollView>
   )
