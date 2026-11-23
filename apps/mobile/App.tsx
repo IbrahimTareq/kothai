@@ -27,7 +27,7 @@ export default function App() {
   const [url, setUrl] = useState('')
   const [token, setToken] = useState('')
   const [message, setMessage] = useState('')
-  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent()
+  const { hasShareIntent, shareIntent, resetShareIntent, error: shareError } = useShareIntent()
   const [shared, setShared] = useState<string | null>(null)
   const [shareMessage, setShareMessage] = useState('')
   const [canRetry, setCanRetry] = useState(false)
@@ -35,6 +35,7 @@ export default function App() {
   useEffect(() => {
     if (!hasShareIntent) return
     const link = linkFrom(shareIntent)
+    // Clearing the intent is what stops a later re-render saving this share twice.
     resetShareIntent()
     setShared(link)
     if (link) saveShared(link)
@@ -43,6 +44,11 @@ export default function App() {
       setShareMessage('Kothai saves links')
     }
   }, [hasShareIntent])
+
+  // A share the native module could not read never sets hasShareIntent.
+  useEffect(() => {
+    if (shareError) setShareMessage(`Could not read the share: ${shareError}`)
+  }, [shareError])
 
   // Reads the settings from SecureStore, not from state: a share can cold-start
   // the app before the load effect above has filled the fields in.

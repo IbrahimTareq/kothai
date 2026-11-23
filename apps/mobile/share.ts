@@ -4,9 +4,26 @@ export type SaveOutcome = { kind: 'saved'; title: string } | { kind: 'failed'; c
 
 // The share sheet hands over a URL, or text that may hold one ("Look at this:
 // https://…"). Kothai saves links only, so anything else is refused before any
-// request is made.
+// request is made. webUrl goes through the same http(s) check as text: another
+// app can share a javascript: or data: URL, and it would otherwise be saved.
 export function linkFrom(share: { webUrl?: string | null; text?: string | null }): string | null {
-  return share.webUrl || share.text?.match(/https?:\/\/[^\s<>"')\]]+/i)?.[0] || null
+  return httpLink(share.webUrl) ?? httpLink(share.text)
+}
+
+function httpLink(s: string | null | undefined): string | null {
+  const match = s?.match(/https?:\/\/[^\s<>"'\]]+/i)?.[0]
+  if (!match) return null
+  let url = match
+  // Prose wraps links: "See https://a.com/x." and "(see https://a.com)" saved
+  // the trailing "." and ")". A ")" stays only when it closes a "(" inside the
+  // URL, as in Wikipedia's /wiki/Foo_(bar).
+  for (;;) {
+    const trimmed = url.replace(/[.,;:!?]+$/, '')
+    const unbalanced = trimmed.endsWith(')') && trimmed.split('(').length < trimmed.split(')').length
+    const next = unbalanced ? trimmed.slice(0, -1) : trimmed
+    if (next === url) return url
+    url = next
+  }
 }
 
 // No outbox yet (plan ruling E2): a failure is shown with a Retry button.
