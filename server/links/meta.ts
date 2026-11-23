@@ -370,12 +370,14 @@ export async function fetchLinkMeta(rawUrl: string, noteId: string): Promise<Lin
   try {
     const res = await get(url, 'text/html,*/*')
     const html = (await res.text()).slice(0, MAX_HTML)
-    const tiktok = tiktokPost(html)
-    meta.siteTitle ||= tiktok.caption || metaTag(html, 'og:title') || metaTag(html, 'twitter:title') || titleTag(html)
-    meta.author ||= tiktok.author
+    const tt = tiktokPost(url, html) // null off TikTok; see tiktok.ts for why its <title> is never read
+    meta.siteTitle ||=
+      tt?.siteTitle || metaTag(html, 'og:title') || metaTag(html, 'twitter:title') || (tt ? null : titleTag(html))
+    meta.author ||= tt?.author ?? null
     if (!meta.siteName) meta.siteName = metaTag(html, 'og:site_name')
-    meta.siteDesc = mergeSiteDesc(metaTag(html, 'og:description') || metaTag(html, 'description'), oembedDesc)
-    thumbUrl = thumbUrl || tiktok.cover || metaTag(html, 'og:image') || metaTag(html, 'twitter:image')
+    const desc = metaTag(html, 'og:description') || metaTag(html, 'description') || tt?.siteDesc
+    meta.siteDesc = mergeSiteDesc(desc ?? null, oembedDesc)
+    thumbUrl = thumbUrl || tt?.cover || metaTag(html, 'og:image') || metaTag(html, 'twitter:image')
 
     // Only parse when the body is actually HTML — a PDF or JSON response can
     // reach here (nothing upstream constrains the URL to a web page), and
