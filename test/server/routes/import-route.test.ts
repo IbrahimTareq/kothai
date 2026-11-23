@@ -1303,3 +1303,27 @@ test('an imported note is stamped with no arrival time — nothing reads one', a
   assert.ok(first, 'the importer must have added a note')
   assert.equal('importedAt' in first.note, false)
 })
+
+test('a Raindrop import files its folders into Spaces, and a re-import does not duplicate them', async () => {
+  reset()
+  const csv = [
+    'id,title,note,excerpt,url,folder,tags,created,cover,highlights,favorite',
+    '1,A,,,https://example.org/a,Design / Artists,,2026-09-20T10:15:00.000Z,,,false',
+    '2,B,,,https://example.org/b,Unsorted,,2026-09-20T10:15:00.000Z,,,false',
+  ].join('\n')
+  const payload = { name: 'Raindrop.csv', data: Buffer.from(csv).toString('base64') }
+  const { res, sent } = mockRes()
+  await handleImport(fakeReq(payload), res)
+
+  assert.equal(sent.json().importer, 'raindrop')
+  assert.equal(sent.json().imported, 2)
+  assert.deepEqual(
+    spaces.map(s => s.name),
+    ['Design / Artists'],
+  )
+  assert.equal(spaces[0].itemIds.length, 1)
+
+  await handleImport(fakeReq(payload), mockRes().res)
+  assert.equal(spaces.length, 1, 're-import must not mint a second Space')
+  assert.equal(spaces[0].itemIds.length, 1)
+})

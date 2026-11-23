@@ -6,10 +6,11 @@
 import type { NoteRecord } from '../data/notes.ts'
 import * as instagram from './instagram.ts'
 import * as pocket from './pocket.ts'
+import * as raindrop from './raindrop.ts'
 import * as tiktok from './tiktok.ts'
 
 // The contract the header above describes in prose, written down — because
-// `[instagram, tiktok, pocket]` on its own types the registry as a UNION of the two
+// `[instagram, tiktok, pocket, raindrop]` on its own types the registry as a UNION of the two
 // module namespaces, and a union of call signatures is only callable with the
 // INTERSECTION of its parameter types. deriveNote's per-importer item type
 // makes that intersection uninhabitable (`savedAt` is `number` in one and
@@ -43,7 +44,7 @@ export interface Importer {
   deriveNote(item: ImportItem): Partial<NoteRecord>
 }
 
-const IMPORTERS: Importer[] = [instagram, tiktok, pocket]
+const IMPORTERS: Importer[] = [instagram, tiktok, pocket, raindrop]
 
 // Exact-name lookup, used when the upload names its source (each Import
 // sub-section in Settings knows which platform it is). Selecting by name
