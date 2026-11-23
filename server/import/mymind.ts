@@ -70,12 +70,17 @@ export function parse(files: Map<string, Buffer>) {
     linklessNotes > 0 && plural(linklessNotes, 'note'),
     linklessImages > 0 && plural(linklessImages, 'image'),
   ].filter(Boolean)
-  if (linkless.length > 0) warnings.push(`${linkless.join(' and ')} from mymind have no link and weren't imported.`)
-  if (unusableUrl > 0) {
+  if (linkless.length > 0) {
+    // The verb agrees with the total, so "1 note and 1 image" is plural.
+    const one = linklessNotes + linklessImages === 1
     warnings.push(
-      unusableUrl === 1
-        ? '1 link was skipped because it was not an http(s) URL'
-        : `${unusableUrl} links were skipped because they were not http(s) URLs`,
+      `${linkless.join(' and ')} from mymind ${one ? "has no link and wasn't" : "have no link and weren't"} imported.`,
+    )
+  }
+  if (unusableUrl > 0) {
+    const one = unusableUrl === 1
+    warnings.push(
+      `${plural(unusableUrl, 'link')} ${one ? 'was' : 'were'} skipped because ${one ? 'it was' : 'they were'} not http(s) ${one ? 'URL' : 'URLs'}`,
     )
   }
   if (capped) warnings.push('item cap reached; the rest of the export was skipped')

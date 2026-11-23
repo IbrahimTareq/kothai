@@ -39,10 +39,12 @@ test('parse: the warning pluralises each part and omits a zero part; unknown typ
   const row = (type: string) => `x,${type},T,,,,,${DATE}`
   const notes = parse(files({ 'cards.csv': [HEADER, row('Note'), row('Note'), row('Note')].join('\n') }))
   assert.deepEqual(notes.warnings, ["3 notes from mymind have no link and weren't imported."])
-  const mixed = parse(files({ 'cards.csv': [HEADER, row('Image'), row('Image'), row('Audio')].join('\n') }))
-  assert.deepEqual(mixed.warnings, ["1 note and 2 images from mymind have no link and weren't imported."])
+  const imagesAndAudio = parse(files({ 'cards.csv': [HEADER, row('Image'), row('Image'), row('Audio')].join('\n') }))
+  assert.deepEqual(imagesAndAudio.warnings, ["1 note and 2 images from mymind have no link and weren't imported."])
+  const lone = parse(files({ 'cards.csv': [HEADER, row('Note')].join('\n') }))
+  assert.deepEqual(lone.warnings, ["1 note from mymind has no link and wasn't imported."])
   const images = parse(files({ 'cards.csv': [HEADER, row('Image')].join('\n') }))
-  assert.deepEqual(images.warnings, ["1 image from mymind have no link and weren't imported."])
+  assert.deepEqual(images.warnings, ["1 image from mymind has no link and wasn't imported."])
 })
 
 test('parse: a non-http link is a separate refused-link warning, not a no-link card', () => {
