@@ -13,6 +13,16 @@ export type ServerStatus =
 export async function checkServer(baseUrl: string, fetch: typeof globalThis.fetch): Promise<ServerStatus> {
   try {
     const info = await createClient({ baseUrl, fetch }).info()
+    // The client only casts the JSON. Any other server answering 200 with JSON
+    // (another app, a proxy) would otherwise read as "ok" with no fields, and
+    // the screen crashed joining an undefined signIn.
+    if (
+      typeof info?.apiVersion !== 'number' ||
+      typeof info.minClientVersion !== 'number' ||
+      !Array.isArray(info.signIn) ||
+      !info.signIn.every((m) => typeof m === 'string')
+    )
+      return { kind: 'unreachable', detail: 'not a Kothai server' }
     if (info.minClientVersion > API_VERSION)
       return { kind: 'update-app', detail: `server needs app API ${info.minClientVersion}, this app speaks ${API_VERSION}` }
     if (info.apiVersion < API_VERSION)

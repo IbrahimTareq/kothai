@@ -47,7 +47,11 @@ export default function App() {
 
   async function check() {
     setMessage('Checking…')
-    setMessage(describe(await checkServer(url.trim(), expoFetch)))
+    try {
+      setMessage(describe(await checkServer(url.trim(), expoFetch)))
+    } catch (e) {
+      setMessage(`Check failed: ${String(e)}`)
+    }
   }
 
   return (
