@@ -147,9 +147,9 @@ export async function authGate(
   // save exists twice: /api/save for Shortcuts and scripts already in the wild,
   // /api/v1/save for the share extension. A fixed pair, not an allowlist: a list
   // is what goes stale when a route is added, and nothing else under /api/v1
-  // may join it. No throttle
-  // either: 256 random bits cannot be guessed, and a throttle keyed on the
-  // shared proxy address would only let a stranger lock the owner out.
+  // may join it. No throttle either: 256 random bits cannot be guessed, and a
+  // throttle keyed on the shared proxy address would only let a stranger lock
+  // the owner out.
   if (
     req.method === 'POST' &&
     (pathname === '/api/save' || pathname === '/api/v1/save') &&
