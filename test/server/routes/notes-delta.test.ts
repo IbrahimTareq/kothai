@@ -26,6 +26,20 @@ test('rev bumps on add/update/delete and changedSince reports patches', async ()
   assert.deepEqual(store.deletedSince(r1), [b.id])
 })
 
+test('removeMany leaves tombstones, so a cache that already saw the notes drops them', async () => {
+  store._reset()
+  const a = await store.addNote({ type: 'link', content: 'a' }, { persist: false })
+  const b = await store.addNote({ type: 'link', content: 'b' }, { persist: false })
+  const keep = await store.addNote({ type: 'link', content: 'keep' }, { persist: false })
+  const before = store.revState().rev
+  await store.removeMany([a.id, b.id, 'never-existed'])
+  assert.deepEqual(store.deletedSince(before).sort(), [a.id, b.id].sort())
+  assert.deepEqual(
+    store.allNotes().map(n => n.id),
+    [keep.id],
+  )
+})
+
 test('batched { persist:false } writes still bump rev', async () => {
   store._reset()
   const { rev: r0 } = store.revState()

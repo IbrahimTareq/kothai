@@ -11,6 +11,7 @@ import { UPLOAD_DIR } from '../config.ts'
 import type { AiMarkers } from '../ai/backlog.ts'
 import type { ServerNote } from '../types.ts'
 import { getDb, _resetDb } from './db.ts'
+import { addTombstone, clearTombstones } from './tombstones.ts'
 import type { NoteRow } from './db.ts'
 import { encodeEmbedding, decodeEmbedding, cosine } from './embedding.ts'
 import { upgradeLegacyNote } from './legacy-notes.ts'
@@ -69,9 +70,6 @@ let loaded = false
 // starts a new bootId and clients resync their loaded pages.
 let rev = 0
 const bootId = randomUUID()
-let tombstones: { id: string; rev: number }[] = [] // [{ id, rev }] for deletions, newest last
-let tombstoneFloor = 0 // highest rev discarded from the tombstone window
-let TOMBSTONE_CAP = 1000
 
 function bump(record: NoteRecord): void {
   rev++
@@ -84,17 +82,7 @@ export function revState(): { rev: number; bootId: string } {
 export function changedSince(since: number): PublicNote[] {
   return notes.filter(n => (n._rev || 0) > since).map(stripEmbedding)
 }
-export function deletedSince(since: number): string[] {
-  return tombstones.filter(t => t.rev > since).map(t => t.id)
-}
-// False when `since` predates trimmed tombstones — deletions may be missing,
-// so the client must refetch instead of applying a delta.
-export function deltaOk(since: number): boolean {
-  return since >= tombstoneFloor
-}
-export function _setTombstoneCap(n: number): void {
-  TOMBSTONE_CAP = n
-} // test-only
+export { deletedSince, deltaOk, _setTombstoneCap } from './tombstones.ts'
 
 // Writes queued by a { persist: false } call, run as one transaction on the
 // next flush() — see addNote's doc comment for why batching matters. Each
@@ -265,7 +253,15 @@ export async function flush(): Promise<void> {
 export async function removeMany(ids: string[]): Promise<void> {
   const idSet = new Set(ids)
   if (!idSet.size) return
+  const gone = notes.filter(n => idSet.has(n.id))
   notes = notes.filter(n => !idSet.has(n.id))
+  // Their adds may already have gone out through /api/v1/changes; without a
+  // tombstone a durable mobile cache keeps them as ghosts.
+  for (const { id } of gone) tombstone(id)
+}
+
+function tombstone(id: string): void {
+  addTombstone(id, ++rev)
 }
 
 export async function deleteNote(id: string): Promise<boolean> {
@@ -274,11 +270,7 @@ export async function deleteNote(id: string): Promise<boolean> {
   const changed = notes.length !== before
   if (changed) {
     ;(await getDb()).prepare('DELETE FROM notes WHERE id = ?').run(id)
-    rev++
-    tombstones.push({ id, rev })
-    // `?.` only because Array.shift() is declared possibly-undefined for an
-    // empty array; the loop condition is what rules that out here.
-    while (tombstones.length > TOMBSTONE_CAP) tombstoneFloor = tombstones.shift()?.rev ?? tombstoneFloor
+    tombstone(id)
   }
   return changed
 }
@@ -300,9 +292,7 @@ export async function clearAll(): Promise<number> {
 // than read tombstones, and queued writes go with the library they were for.
 function replaced(): void {
   pendingWrites = []
-  rev++
-  tombstoneFloor = rev
-  tombstones = []
+  clearTombstones(++rev)
 }
 
 // Deletes the uploaded image files that pasted/dropped notes referenced. Kept
@@ -660,8 +650,7 @@ export function _reset({ loaded: isLoaded = true, keepDb = false }: { loaded?: b
   pendingWrites = []
   loaded = isLoaded
   rev = 0
-  tombstones = []
-  tombstoneFloor = 0
+  clearTombstones(0)
 }
 
 // The searchable text of one note, lowercased — the same field list the
