@@ -304,7 +304,7 @@ test('the lift on remove is written to the database, not only held in memory', a
   assert.equal(space(japan.id).parentId, travel.id)
 })
 
-test('spacesRevState moves on every mutation and and a read does not', async () => {
+test('spacesRevState moves on every mutation and a read does not', async () => {
   collections._reset()
   const at = () => collections.spacesRevState()
   const r0 = at()

@@ -29,12 +29,12 @@ const rowData = (v: SQLOutputValue): CollectionRow['data'] => String(v)
 let collections: Collection[] = []
 let loaded = false
 
-// Bumped by every mutation below, so /api/v1/changes can tell a client whether
-// its cached space list is stale without diffing it. In memory, like the note
-// store's rev: a restart changes the boot id in the cursor and forces a resync,
-// so this never has to survive one. Restore (load reload) and wipe (clearAll)
-// replace spaces wholesale and bump it too — a miss there leaves the app
-// showing spaces that no longer exist.
+// Invariant: every persisted write bumps this. The bump lives in the row
+// writers (insertRow/updateRow/deleteRow) and the three bulk replacers (load,
+// clearAll, _reset), never in the individual mutators, so a new mutator cannot
+// forget it — a miss leaves /api/v1/changes withholding the space list and the
+// app showing spaces that no longer exist. In memory, like the note store's
+// rev: a restart changes the boot id in the cursor and forces a resync.
 let spacesRev = 0
 export function spacesRevState(): number {
   return spacesRev
@@ -53,14 +53,17 @@ export async function load({ reload = false } = {}) {
 
 function insertRow(db: DatabaseSync, c: Collection) {
   db.prepare('INSERT INTO collections (id, data) VALUES (?, ?)').run(c.id, JSON.stringify(c))
+  spacesRev++
 }
 
 function updateRow(db: DatabaseSync, c: Collection) {
   db.prepare('UPDATE collections SET data = ? WHERE id = ?').run(JSON.stringify(c), c.id)
+  spacesRev++
 }
 
 async function deleteRow(id: string) {
   ;(await getDb()).prepare('DELETE FROM collections WHERE id = ?').run(id)
+  spacesRev++
 }
 
 // test-only: clean in-memory slate against a fresh in-memory database.
@@ -148,7 +151,6 @@ function pruneCanvas(c: Collection, itemId: string) {
 // Add all current tag-matching notes to a smart collection (in-memory; caller
 // persists). Respects removedIds. `notes` is an array of at least { id, tags }.
 export function backfill(c: Collection, notes: TaggedNote[]) {
-  spacesRev++
   for (const n of notes) {
     if (c.removedIds.includes(n.id)) continue
     if (matchesRule(n.tags, c.tags)) attach(c, n.id)
@@ -168,7 +170,6 @@ export async function create({ name, tags = [], visitor, parentId }: NewCollecti
     parentId,
   }
   collections.unshift(c)
-  spacesRev++
   if (c.tags.length) backfill(c, notes)
   insertRow(await getDb(), c)
   return withCovers(c)
@@ -180,7 +181,6 @@ export async function create({ name, tags = [], visitor, parentId }: NewCollecti
 export async function update(id: string, patch: CollectionPatch, notes: TaggedNote[] = []) {
   const c = find(id)
   if (!c) return null
-  spacesRev++
   if (typeof patch.name === 'string') c.name = patch.name
   // '' clears it: undefined is a key JSON.stringify leaves out of the row.
   if (typeof patch.description === 'string') c.description = patch.description || undefined
@@ -207,7 +207,6 @@ export async function update(id: string, patch: CollectionPatch, notes: TaggedNo
 export async function remove(id: string) {
   const gone = find(id)
   if (!gone) return false
-  spacesRev++
   const db = await getDb()
   for (const c of collections) {
     if (c.parentId !== id) continue
@@ -224,7 +223,6 @@ export async function remove(id: string) {
 export async function addItem(id: string, itemId: string) {
   const c = find(id)
   if (!c) return null
-  spacesRev++
   attach(c, itemId)
   updateRow(await getDb(), c)
   return withCovers(c)
@@ -254,7 +252,6 @@ export async function addItems(id: string, itemIds: string[]) {
     if (c.itemIds.length + c.removedIds.length !== before) changed = true
   }
   // A no-op re-import (every id already filed) must not cost a row write.
-  if (changed) spacesRev++
   if (changed) updateRow(await getDb(), c)
   return withCovers(c)
 }
@@ -263,7 +260,6 @@ export async function addItems(id: string, itemIds: string[]) {
 export async function removeItem(id: string, itemId: string) {
   const c = find(id)
   if (!c) return null
-  spacesRev++
   c.itemIds = c.itemIds.filter(x => x !== itemId)
   if (!c.removedIds.includes(itemId)) c.removedIds.push(itemId)
   pruneCanvas(c, itemId)
@@ -285,7 +281,6 @@ export async function autoAdd(itemId: string, itemTags: string[] | null | undefi
     }
   }
   if (touched.length) {
-    spacesRev++
     const db = await getDb()
     for (const c of touched) updateRow(db, c)
   }
@@ -303,7 +298,6 @@ export async function deleteItemEverywhere(itemId: string) {
     if (pruned || c.itemIds.length !== bi || c.removedIds.length !== br) touched.push(c)
   }
   if (touched.length) {
-    spacesRev++
     const db = await getDb()
     for (const c of touched) updateRow(db, c)
   }

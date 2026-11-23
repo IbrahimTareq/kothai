@@ -77,8 +77,9 @@ export function handleNotesPage(res: ServerResponse, url: URL, viewer: string | 
   json(res, 200, body)
 }
 
-// Counts come from collections.all(visibleTo(viewer)), the same call behind
-// /api/collections, so the two never disagree about what a visitor can see.
+// The visible space list, shared by /api/v1/spaces and the change feed. Counts
+// come from collections.all(visibleTo(viewer)), the same call behind
+// /api/collections, so none of them disagree about what a visitor can see.
 const visibleSpaces = (viewer: string | null): Space[] =>
   collections.all(visibleTo(viewer)).map(c => ({
     id: c.id,

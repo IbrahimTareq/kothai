@@ -36,7 +36,7 @@
     "exports": 16
   },
   "server/data/collections.ts": {
-    "lines": 310,
+    "lines": 304,
     "exports": 14
   },
   "server/data/notes.ts": {
