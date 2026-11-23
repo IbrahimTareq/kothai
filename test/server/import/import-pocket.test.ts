@@ -71,10 +71,17 @@ test('parse: non-http and empty links are refused and counted', () => {
     }),
   )
   assert.equal(items.length, 0)
-  assert.ok(
-    warnings.some(w => w.includes('2')),
-    JSON.stringify(warnings),
-  )
+  assert.deepEqual(warnings, ['2 links were skipped because they were not http(s) URLs'])
+  const one = parse(files({ 'part_000000.csv': 'title,url,time_added,tags,status\nF,ftp://example.net/,1,,unread' }))
+  assert.deepEqual(one.warnings, ['1 link was skipped because it was not an http(s) URL'])
+})
+
+test('parse: a file that ends inside an unclosed quote says so', () => {
+  const csv = 'title,url,time_added,tags,status\nA,https://a.example/,1,,unread\n"B,https://b.example/,1,,unread'
+  const { warnings } = parse(files({ 'part_000000.csv': csv }))
+  assert.deepEqual(warnings, [
+    'part_000000.csv ends inside an unclosed quote, so its last rows may have been read as one',
+  ])
 })
 
 test("parse: a CSV that is not Pocket's adds a warning instead of throwing", () => {

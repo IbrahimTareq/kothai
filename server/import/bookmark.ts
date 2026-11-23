@@ -7,6 +7,20 @@ import { clip, clipText } from './untrusted.ts'
 
 const MAX_NOTE_LEN = 4000
 
+// One wording for all four importers: written four times, they disagreed
+// ("1 links were skipped", "it was not http(s) URL").
+export const CAP_WARNING = 'item cap reached; the rest of the export was skipped'
+
+export const refusedLinksWarning = (n: number) =>
+  n === 1
+    ? '1 link was skipped because it was not an http(s) URL'
+    : `${n} links were skipped because they were not http(s) URLs`
+
+// readCsv reads an unclosed quote to end of file, so the rows after it are one
+// cell; without this the user saw only "fewer items" and no reason.
+export const unterminatedWarning = (key: string) =>
+  `${key} ends inside an unclosed quote, so its last rows may have been read as one`
+
 export interface BookmarkItem {
   url: string
   title: string

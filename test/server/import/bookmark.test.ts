@@ -9,6 +9,10 @@ test('usableUrl: http(s) only, capped, trimmed', () => {
   assert.equal(usableUrl(`https://a.com/${'x'.repeat(2040)}`), null)
   assert.equal(usableUrl(' https://a.com/x '), 'https://a.com/x')
   assert.equal(usableUrl(42), null)
+  // Nothing after the scheme: canonicalUrl returns null, and the route counted
+  // it as "already saved".
+  assert.equal(usableUrl('https://'), null)
+  assert.equal(usableUrl('http:// '), null)
 })
 
 test('clipText: keeps newlines, collapses spaces, strips control characters, slices', () => {

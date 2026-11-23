@@ -54,6 +54,15 @@ test('parse: a non-http link is a separate refused-link warning, not a no-link c
   const { items, warnings } = parse(files({ 'cards.csv': csv }))
   assert.equal(items.length, 0)
   assert.deepEqual(warnings, ['2 links were skipped because they were not http(s) URLs'])
+  const one = parse(files({ 'cards.csv': [HEADER, `a,Article,A,ftp://example.net/,,,,${DATE}`].join('\n') }))
+  assert.deepEqual(one.warnings, ['1 link was skipped because it was not an http(s) URL'])
+})
+
+test('parse: a file that ends inside an unclosed quote says so', () => {
+  const csv = `${HEADER}\na,Article,A,https://example.com/a,,"never closed,,${DATE}`
+  assert.deepEqual(parse(files({ 'cards.csv': csv })).warnings, [
+    'cards.csv ends inside an unclosed quote, so its last rows may have been read as one',
+  ])
 })
 
 test('parse: a cards.csv with the wrong header warns instead of throwing', () => {

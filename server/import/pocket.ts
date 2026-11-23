@@ -6,7 +6,13 @@
 // Archived rows (`status`) import like unread ones: archiving in Pocket meant
 // "done reading", not "discard". Pocket's ril_export.html is not read; the CSV
 // carries the same links.
-import { type BookmarkItem, deriveBookmarkNote } from './bookmark.ts'
+import {
+  type BookmarkItem,
+  CAP_WARNING,
+  deriveBookmarkNote,
+  refusedLinksWarning,
+  unterminatedWarning,
+} from './bookmark.ts'
 import { csvHeader, readCsv } from './csv.ts'
 import { clip, importDate, importTags, usableUrl } from './untrusted.ts'
 
@@ -34,11 +40,12 @@ export function parse(files: Map<string, Buffer>) {
 
   for (const [key, buf] of files) {
     if (!PART_FILE.test(key) && !hasPocketHeader(csvHeader(buf))) continue
-    const { header, rows, truncated } = readCsv(buf)
+    const { header, rows, truncated, unterminated } = readCsv(buf)
     if (!hasPocketHeader(header)) {
       warnings.push(`${key} is not a Pocket export (expected title, url and time_added columns)`)
       continue
     }
+    if (unterminated) warnings.push(unterminatedWarning(key))
     capped = capped || truncated
     for (const row of rows) {
       const url = usableUrl(row.url)
@@ -57,8 +64,8 @@ export function parse(files: Map<string, Buffer>) {
     }
   }
 
-  if (unusableUrl > 0) warnings.push(`${unusableUrl} links were skipped because they were not http(s) URLs`)
-  if (capped) warnings.push('item cap reached; the rest of the export was skipped')
+  if (unusableUrl > 0) warnings.push(refusedLinksWarning(unusableUrl))
+  if (capped) warnings.push(CAP_WARNING)
   return { items, collections: [], warnings }
 }
 

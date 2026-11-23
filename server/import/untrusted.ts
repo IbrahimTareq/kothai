@@ -43,16 +43,19 @@ export function clip(str: unknown): string {
 const MAX_URL_LEN = 2048
 const MAX_TAGS = 20
 const MAX_TAG_LEN = 60
-// Dates past this are junk (a unit mix-up or a hostile value); new Date() also
-// throws RangeError beyond ~8.64e15 ms, which would 500 the whole import.
+// Dates past this are junk (a unit mix-up or a hostile value); toISOString()
+// also throws RangeError beyond ~8.64e15 ms, which would 500 the whole import.
 const MAX_DATE_SECONDS = Date.UTC(2100, 0, 1) / 1000
 
 // http(s) only: the value ends up in an `<a href>`, so `javascript:` must never
 // get through; the length cap keeps a megabyte "URL" out of every note field.
+// It must also parse with a host: a bare `https://` canonicalised to nothing,
+// and the route counted it as already saved.
 export function usableUrl(v: unknown): string | null {
   if (typeof v !== 'string') return null
   const url = v.trim()
-  return /^https?:\/\//i.test(url) && url.length <= MAX_URL_LEN ? url : null
+  if (!/^https?:\/\//i.test(url) || url.length > MAX_URL_LEN) return null
+  return URL.canParse(url) && new URL(url).hostname ? url : null
 }
 
 // For free text (notes, highlights) where line breaks carry meaning, unlike

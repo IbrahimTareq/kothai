@@ -6,7 +6,13 @@
 // Links only. A Note or Image card has no url, and an item here is keyed by its
 // url, so those cards are counted in a warning instead of being imported; the
 // user is told what was left behind rather than finding it missing later.
-import { type BookmarkItem, deriveBookmarkNote } from './bookmark.ts'
+import {
+  type BookmarkItem,
+  CAP_WARNING,
+  deriveBookmarkNote,
+  refusedLinksWarning,
+  unterminatedWarning,
+} from './bookmark.ts'
 import { csvHeader, readCsv } from './csv.ts'
 import { clip, clipText, importDate, importTags, usableUrl } from './untrusted.ts'
 
@@ -39,11 +45,12 @@ export function parse(files: Map<string, Buffer>) {
 
   for (const [key, buf] of files) {
     if (!CARDS_FILE.test(key) && !hasMymindHeader(csvHeader(buf))) continue
-    const { header, rows, truncated } = readCsv(buf)
+    const { header, rows, truncated, unterminated } = readCsv(buf)
     if (!hasMymindHeader(header)) {
       warnings.push(`${key} is not a mymind export (expected type, url, content and note columns)`)
       continue
     }
+    if (unterminated) warnings.push(unterminatedWarning(key))
     capped = capped || truncated
     for (const row of rows) {
       if (!row.url?.trim()) {
@@ -77,13 +84,8 @@ export function parse(files: Map<string, Buffer>) {
       `${linkless.join(' and ')} from mymind ${one ? "has no link and wasn't" : "have no link and weren't"} imported.`,
     )
   }
-  if (unusableUrl > 0) {
-    const one = unusableUrl === 1
-    warnings.push(
-      `${plural(unusableUrl, 'link')} ${one ? 'was' : 'were'} skipped because ${one ? 'it was' : 'they were'} not http(s) ${one ? 'URL' : 'URLs'}`,
-    )
-  }
-  if (capped) warnings.push('item cap reached; the rest of the export was skipped')
+  if (unusableUrl > 0) warnings.push(refusedLinksWarning(unusableUrl))
+  if (capped) warnings.push(CAP_WARNING)
   return { items, collections: [], warnings }
 }
 

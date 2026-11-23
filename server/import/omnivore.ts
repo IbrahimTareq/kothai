@@ -8,7 +8,7 @@
 // `highlights/<slug>.md`. Content is the saved page itself, which Kothai
 // re-fetches anyway, so it is ignored. A highlights file joins its item by
 // slug and becomes the note.
-import { type BookmarkItem, deriveBookmarkNote } from './bookmark.ts'
+import { type BookmarkItem, CAP_WARNING, deriveBookmarkNote, refusedLinksWarning } from './bookmark.ts'
 import { clip, clipText, importDate, importTags, isRecord, tryJson, usableUrl } from './untrusted.ts'
 
 export const name = 'omnivore'
@@ -34,7 +34,8 @@ export function sniff(files: Map<string, Buffer>): boolean {
   return false
 }
 
-// Same bound as csv.ts's MAX_ROWS, so every bookmark importer stops at one size.
+// The same number as csv.ts's MAX_ROWS, but not the same bound: this caps the
+// whole export, while the CSV importers cap each file at that many rows.
 const MAX_ITEMS = 100_000
 
 // The route prefixes each upload with `<index>/` and ZIP entries keep their
@@ -89,14 +90,8 @@ export function parse(files: Map<string, Buffer>, maxItems = MAX_ITEMS) {
     }
   }
 
-  if (unusableUrl > 0) {
-    warnings.push(
-      unusableUrl === 1
-        ? '1 link was skipped because it was not an http(s) URL'
-        : `${unusableUrl} links were skipped because they were not http(s) URLs`,
-    )
-  }
-  if (capped) warnings.push('item cap reached; the rest of the export was skipped')
+  if (unusableUrl > 0) warnings.push(refusedLinksWarning(unusableUrl))
+  if (capped) warnings.push(CAP_WARNING)
   return { items, collections: [], warnings }
 }
 

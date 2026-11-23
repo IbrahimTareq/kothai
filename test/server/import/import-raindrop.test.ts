@@ -13,7 +13,7 @@ const HEADER = 'id,title,note,excerpt,url,folder,tags,created,cover,highlights,f
 test("sniff: Raindrop's header matches; Pocket's and mymind's do not", () => {
   assert.equal(sniff(files({ 'Raindrop.csv': `${HEADER}\n` })), true)
   assert.equal(sniff(files({ 'a.csv': 'title,url,time_added,cursor,tags,status\n' })), false)
-  assert.equal(sniff(files({ 'a.csv': 'url,title,note,tags,created,type\n' })), false)
+  assert.equal(sniff(files({ 'a.csv': 'id,type,title,url,content,note,tags,created\n' })), false)
 })
 
 test('parse: tags in one quoted comma cell, ISO date with ms, note and highlights into the note', () => {
@@ -63,6 +63,19 @@ test('parse: non-http links are counted in a warning; empty urls are not', () =>
   assert.deepEqual(one.warnings, ['1 link was skipped because it was not an http(s) URL'])
   const two = parse(files({ 'r.csv': [HEADER, row('ftp://example.net/'), row('javascript:alert(1)')].join('\n') }))
   assert.deepEqual(two.warnings, ['2 links were skipped because they were not http(s) URLs'])
+})
+
+test('parse: a long note cannot crowd the highlights out of the 4000-character note', () => {
+  const csv = `${HEADER}\n1,A,${'n'.repeat(5000)},,https://example.org/a,,,2026-09-20T10:15:00.000Z,,the quote,false`
+  const note = deriveNote(parse(files({ 'r.csv': csv })).items[0]!).mindNote ?? ''
+  assert.ok(note.endsWith('\n\nthe quote'), note.slice(-40))
+})
+
+test('parse: a file that ends inside an unclosed quote says so', () => {
+  const csv = `${HEADER}\n1,A,"never closed,,https://example.org/a,,,2026-09-20T10:15:00.000Z,,,false`
+  assert.deepEqual(parse(files({ 'r.csv': csv })).warnings, [
+    'r.csv ends inside an unclosed quote, so its last rows may have been read as one',
+  ])
 })
 
 test("parse: a CSV that is not Raindrop's adds a warning instead of throwing", () => {

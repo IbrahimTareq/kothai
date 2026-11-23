@@ -62,7 +62,8 @@ export async function fileIntoSpaces(
   const unresolved = new Set<string>() // canonical urls naming a post we don't have — reported, not silently dropped
   for (const entry of parsedCollections) {
     // A future importer mis-shaping an entry must not throw into the
-    // generic 500, same guard as items/parsedCollections above.
+    // generic 500, same guard as server/routes/import.ts applies to items and
+    // parsedCollections before they reach here.
     const name = entry && typeof entry.name === 'string' ? entry.name : null
     if (!name) continue
     const urls = Array.isArray(entry?.urls) ? entry.urls : []
