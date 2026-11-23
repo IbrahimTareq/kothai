@@ -32,7 +32,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 // identical to the one the client already holds, and applyDelta (client/data/
 // pager.ts) leaves it alone; with the stamp on it, every one would differ,
 // be replaced, and re-render for a field the UI never reads.
-function card(n: PublicNote): ServerNote {
+export function card(n: PublicNote): ServerNote {
   const {
     ai,
     article,
