@@ -1146,11 +1146,20 @@ test('multi-file: a ZIP and a loose JSON in one request are merged', async () =>
 test('multi-file: too many files is refused before anything is decoded', async () => {
   reset()
   const { res, sent } = mockRes()
-  const files = Array.from({ length: 21 }, () => ({ name: 'saved_posts.json', data: b64(savedPostsPayload([])) }))
+  const files = Array.from({ length: 1001 }, () => ({ name: 'saved_posts.json', data: b64(savedPostsPayload([])) }))
   await handleImport(fakeReq({ source: 'instagram', files }), res)
   assert.equal(sent.code, 400)
   assert.match(text(sent.json().error), /Too many files/)
   assert.equal(notes.length, 0)
+})
+
+test('an import of 120 loose files is accepted past the old cap of 20', async () => {
+  reset()
+  const { res, sent } = mockRes()
+  const files = Array.from({ length: 120 }, (_, i) => ({ name: `f${i}.json`, data: b64({}) }))
+  await handleImport(fakeReq({ files }), res)
+  assert.equal(sent.code, 400)
+  assert.match(text(sent.json().error), /Not a recognized export/)
 })
 
 // --- TikTok ---------------------------------------------------------------

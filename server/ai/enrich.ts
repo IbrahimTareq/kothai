@@ -195,6 +195,22 @@ async function describeThumb(note: BacklogNote, ai: AiMarkers): Promise<string> 
   }
 }
 
+// The note's full context, so a pass that did not re-classify still embeds the
+// existing title/summary/tags. mindNote is the user's own words: left out, an
+// imported annotation was invisible to search. EMBED_RECIPE stays unbumped.
+function embedInput(patch: Partial<NoteRecord>, existing: NoteRecord | null | undefined, richText: string): string {
+  const text = [
+    patch.title ?? existing?.title,
+    patch.summary ?? existing?.summary,
+    richText,
+    (patch.tags ?? existing?.tags ?? []).join(' '),
+    existing?.mindNote,
+  ]
+    .filter(Boolean)
+    .join('\n')
+  return text || richText
+}
+
 // Re-runs classify + embed for a labelled note once its Instagram caption has
 // landed (see queueIgMeta below), from the note's OWN stored fields: it never
 // fetches, so it cannot re-trigger itself. Not a re-queued enrichNote pass:
@@ -293,15 +309,7 @@ async function reclassifyWithCaption(id: string, { vision = true } = {}) {
 
   if (runEmbed) {
     try {
-      const toEmbed = [
-        patch.title ?? existing.title,
-        patch.summary ?? existing.summary,
-        richText,
-        (patch.tags ?? existing.tags ?? []).join(' '),
-      ]
-        .filter(Boolean)
-        .join('\n')
-      patch.embedding = await inference.embedText(toEmbed || richText)
+      patch.embedding = await inference.embedText(embedInput(patch, existing, richText))
       ai.embed = true
       madeProgress = true
     } catch (e) {
@@ -625,15 +633,7 @@ async function enrichNote(id: string, url: string) {
       // classify may not have run this pass (already done, or its role is
       // off) — fall back to the note's existing title/summary/tags so the
       // embedding still reflects full context, not just the raw richText.
-      const toEmbed = [
-        patch.title ?? existing?.title,
-        patch.summary ?? existing?.summary,
-        richText,
-        (patch.tags ?? existing?.tags ?? []).join(' '),
-      ]
-        .filter(Boolean)
-        .join('\n')
-      patch.embedding = await inference.embedText(toEmbed || richText)
+      patch.embedding = await inference.embedText(embedInput(patch, existing, richText))
       ai.embed = true
       ai.embedRecipe = EMBED_RECIPE
     } catch (e) {

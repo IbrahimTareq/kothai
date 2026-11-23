@@ -89,3 +89,12 @@ test('extracted article reaches classify, embed and the stored note', async () =
   assert.ok(stored)
   assert.equal(stored.article, ARTICLE, 'article was not persisted onto the note')
 })
+
+test('a mind note reaches the embed input', async () => {
+  notes = [{ ...note({ id: 'n2', content: URL_, url: URL_, type: 'link' }), mindNote: 'remember the figs', ai: {} }]
+  embedCalls = []
+
+  await enrich.queueEnrich('n2', URL_)
+
+  assert.match(embedCalls[0], /remember the figs/, 'mindNote missing from embed input')
+})
