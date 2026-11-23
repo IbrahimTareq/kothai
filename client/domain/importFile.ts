@@ -20,7 +20,7 @@ export const MAX_IMPORT_BYTES = 45 * 1024 * 1024
 
 // Mirrors server/routes/import.ts's MAX_UPLOADS so a too-large selection is
 // refused here rather than after base64-ing every file. An Omnivore export is
-// one metadata_*.json per ~100 articles plus a markdown file per highlighted
+// one metadata_*.json per 20 articles plus a markdown file per highlighted
 // article, so a big library unzipped by hand is hundreds of files.
 export const MAX_IMPORT_FILES = 1000
 

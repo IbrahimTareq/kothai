@@ -1,7 +1,7 @@
 // The Import section of Settings: one row per platform Kothai can import
 // from. Sources are separate rows rather than a single "drop your export"
 // box because the platforms genuinely differ — Instagram exports JSON files,
-// TikTok one big user_data.json, Pocket, Raindrop and mymind a CSV, Omnivore a
+// TikTok one big user_data_tiktok.json, Pocket, Raindrop and mymind a CSV, Omnivore a
 // ZIP of JSON and markdown — so each
 // needs its own accepted file types, its own "here's where the export button
 // lives" instructions, and its own parser on the server. A shared target
@@ -224,14 +224,15 @@ function readAsDataUrl(file: File) {
 // export); otherwise it must still say what happened (skips, failures).
 // A collections-only import legitimately imports nothing while still
 // updating spaces, so that case gets its own sentence rather than claiming
-// the export was empty.
+// the export was empty. "Item", not "post": the same sentence reports a
+// bookmark import, where "Imported 2 posts" read wrong.
 function summarizeImport(r: ImportResult) {
   if (r.imported === 0 && r.skipped === 0 && r.failed === 0) {
     return r.collections > 0
-      ? `No new posts, ${r.collections} space${r.collections === 1 ? '' : 's'} updated.`
-      : 'That export had no saved posts to import.'
+      ? `No new items, ${r.collections} space${r.collections === 1 ? '' : 's'} updated.`
+      : 'That export had nothing to import.'
   }
-  const parts: string[] = [`Imported ${r.imported} post${r.imported === 1 ? '' : 's'}`]
+  const parts: string[] = [`Imported ${r.imported} item${r.imported === 1 ? '' : 's'}`]
   if (r.skipped > 0) parts.push(`skipped ${r.skipped} already saved`)
   if (r.collections > 0) parts.push(`${r.collections} space${r.collections === 1 ? '' : 's'} updated`)
   let s = parts.join(', ')

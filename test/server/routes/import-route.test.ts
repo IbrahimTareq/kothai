@@ -828,7 +828,7 @@ test('a failed per-item addNote is counted as failed, not silently dropped or co
   assert.equal(sent.json().imported, 1)
   assert.equal(sent.json().skipped, 0)
   assert.equal(sent.json().failed, 1)
-  assert.ok(texts(sent.json().warnings).some(w => /1 post/.test(w)))
+  assert.ok(texts(sent.json().warnings).some(w => w === '1 item(s) could not be saved due to an internal error.'))
 })
 
 // MUST FIX 3 / MUST FIX F3 (review round): a failed flush must not leave
@@ -1034,7 +1034,9 @@ test('collections-only: members with no saved post are reported, not silently dr
   assert.equal(sent.json().imported, 0)
   assert.equal(sent.json().collections, 0, 'nothing resolved, so no Space was touched')
   assert.ok(
-    texts(sent.json().warnings).some(w => /2 post\(s\) in these collections aren't saved yet/.test(w)),
+    texts(sent.json().warnings).includes(
+      "2 item(s) in these collections aren't saved yet — import saved_posts.json too.",
+    ),
     `expected an unresolved-members warning, got ${JSON.stringify(texts(sent.json().warnings))}`,
   )
 })
@@ -1060,7 +1062,7 @@ test('collections: a post in two collections counts once in the unresolved warni
     res,
   )
   assert.ok(
-    texts(sent.json().warnings).some(w => /^1 post\(s\)/.test(w)),
+    texts(sent.json().warnings).some(w => /^1 item\(s\)/.test(w)),
     JSON.stringify(texts(sent.json().warnings)),
   )
 })
@@ -1159,7 +1161,11 @@ test('an import of 120 loose files is accepted past the old cap of 20', async ()
   const files = Array.from({ length: 120 }, (_, i) => ({ name: `f${i}.json`, data: b64({}) }))
   await handleImport(fakeReq({ files }), res)
   assert.equal(sent.code, 400)
-  assert.match(text(sent.json().error), /Not a recognized export/)
+  // Not "Expected an Instagram data export": five other sources sniff too.
+  assert.equal(
+    text(sent.json().error),
+    'Not a recognized export. Expected one of: instagram, tiktok, pocket, raindrop, omnivore, mymind.',
+  )
 })
 
 // --- TikTok ---------------------------------------------------------------

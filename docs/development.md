@@ -67,7 +67,7 @@ test/
    ├─ ai/           facade, enrich chain, prompts, normalise, backlog, circuit
    │  └─ providers/ the remote provider and its contract test
    ├─ data/         db columns, embedding blobs, migration, query, RRF
-   ├─ import/       Instagram parsing
+   ├─ import/       importers (Instagram, TikTok, Pocket, Raindrop, Omnivore, mymind)
    ├─ lib/          auth, ssrf, zip, tags, http
    └─ routes/       each route's handler
 ```

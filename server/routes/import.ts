@@ -135,7 +135,7 @@ async function runImport(req: IncomingMessage, res: ServerResponse): Promise<voi
     importer = findImporter(files)
     if (!importer) {
       return json(res, 400, {
-        error: 'Not a recognized export. Expected an Instagram data export (ZIP or saved_posts.json).',
+        error: `Not a recognized export. Expected one of: ${importerNames().join(', ')}.`,
       })
     }
   }
@@ -270,12 +270,16 @@ async function runImport(req: IncomingMessage, res: ServerResponse): Promise<voi
     ? await fileIntoSpaces(parsedCollections, urlIndex, importer.label)
     : { touched: 0, unresolved: 0 }
 
-  if (failed > 0) warnings.push(`${failed} post(s) could not be saved due to an internal error.`)
+  // "item", not "post": a bookmark import's entries are links, not posts.
+  if (failed > 0) warnings.push(`${failed} item(s) could not be saved due to an internal error.`)
   // The specific dead end this import used to hit silently: drop only
   // saved_collections.json and you'd get Spaces containing nothing, with no
-  // hint that the posts file was the missing half.
+  // hint that the posts file was the missing half. The file hint is
+  // Instagram's alone — Raindrop reaches this too (an item that failed to
+  // save), and has no saved_posts.json to point at.
   if (unresolvedMembers > 0) {
-    warnings.push(`${unresolvedMembers} post(s) in these collections aren't saved yet — import saved_posts.json too.`)
+    const hint = importer.name === 'instagram' ? ' — import saved_posts.json too' : ''
+    warnings.push(`${unresolvedMembers} item(s) in these collections aren't saved yet${hint}.`)
   }
 
   // `warnings` (parser + the one pushed above) always rides along — a
