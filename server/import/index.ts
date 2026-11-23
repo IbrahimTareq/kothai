@@ -5,6 +5,7 @@
 // them by `name`.
 import type { NoteRecord } from '../data/notes.ts'
 import * as instagram from './instagram.ts'
+import * as mymind from './mymind.ts'
 import * as omnivore from './omnivore.ts'
 import * as pocket from './pocket.ts'
 import * as raindrop from './raindrop.ts'
@@ -45,7 +46,7 @@ export interface Importer {
   deriveNote(item: ImportItem): Partial<NoteRecord>
 }
 
-const IMPORTERS: Importer[] = [instagram, tiktok, pocket, raindrop, omnivore]
+const IMPORTERS: Importer[] = [instagram, tiktok, pocket, raindrop, omnivore, mymind]
 
 // Exact-name lookup, used when the upload names its source (each Import
 // sub-section in Settings knows which platform it is). Selecting by name
