@@ -39,3 +39,62 @@ export function clip(str: unknown): string {
   if (typeof str !== 'string') return ''
   return str.replace(/\s+/g, ' ').trim().slice(0, MAX_FIELD_LEN)
 }
+
+const MAX_URL_LEN = 2048
+const MAX_TAGS = 20
+const MAX_TAG_LEN = 60
+// Dates past this are junk (a unit mix-up or a hostile value); new Date() also
+// throws RangeError beyond ~8.64e15 ms, which would 500 the whole import.
+const MAX_DATE_SECONDS = Date.UTC(2100, 0, 1) / 1000
+
+// http(s) only: the value ends up in an `<a href>`, so `javascript:` must never
+// get through; the length cap keeps a megabyte "URL" out of every note field.
+export function usableUrl(v: unknown): string | null {
+  if (typeof v !== 'string') return null
+  const url = v.trim()
+  return /^https?:\/\//i.test(url) && url.length <= MAX_URL_LEN ? url : null
+}
+
+// For free text (notes, highlights) where line breaks carry meaning, unlike
+// clip(). Control characters are stripped because the text reaches an LLM
+// prompt and the UI.
+export function clipText(v: unknown, max: number): string {
+  if (typeof v !== 'string') return ''
+  return (
+    v
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: stripping them is the point
+      .replace(/[\u0000-\u0008\u000B-\u001F]/g, '')
+      .replace(/[ \t]+/g, ' ')
+      .replace(/ ?\n ?/g, '\n')
+      .trim()
+      .slice(0, max)
+  )
+}
+
+// A tag list from an export: the user's own words, so keep them, but bound the
+// count and length — one row must not be able to mint thousands of tags.
+export function importTags(v: unknown, sep: string | RegExp): string[] {
+  const parts = typeof v === 'string' ? v.split(sep) : Array.isArray(v) ? v : []
+  const tags = new Set<string>()
+  for (const p of parts) {
+    if (typeof p !== 'string') continue
+    const tag = p.replace(/\s+/g, ' ').trim().toLowerCase().slice(0, MAX_TAG_LEN).trim()
+    if (tag) tags.add(tag)
+    if (tags.size >= MAX_TAGS) break
+  }
+  return [...tags]
+}
+
+// Unix seconds from whatever the export used: seconds, milliseconds, a numeric
+// string, or ISO text. 0 means "unknown" and the caller falls back to now.
+export function importDate(v: unknown): number {
+  let n: number
+  if (typeof v === 'number') n = v
+  else if (typeof v === 'string' && v.trim() !== '') {
+    n = /^\d+(\.\d+)?$/.test(v.trim()) ? Number(v) : Date.parse(v) / 1000
+  } else return 0
+  if (!Number.isFinite(n) || n <= 0) return 0
+  // Past 1e11 a value cannot be seconds (that is the year 5138).
+  const seconds = n > 1e11 ? n / 1000 : n
+  return Math.floor(seconds) <= MAX_DATE_SECONDS ? Math.floor(seconds) : 0
+}

@@ -3,7 +3,7 @@
 // and TikTok today; another importer slots in here without touching the
 // route, and the client's per-source Import sections address
 // them by `name`.
-import type { ServerNote } from '../types.ts'
+import type { NoteRecord } from '../data/notes.ts'
 import * as instagram from './instagram.ts'
 import * as tiktok from './tiktok.ts'
 
@@ -21,8 +21,11 @@ import * as tiktok from './tiktok.ts'
 // these are the widened shapes the registry hands across the boundary.
 interface ImportItem {
   url: string
-  poster: string
+  poster?: string
   savedAt: number | string
+  title?: string
+  tags?: string[]
+  note?: string
 }
 export interface ParsedExport {
   items: ImportItem[]
@@ -36,7 +39,7 @@ export interface Importer {
   expects: string
   sniff(files: Map<string, Buffer>): boolean
   parse(files: Map<string, Buffer>): ParsedExport
-  deriveNote(item: ImportItem): Partial<ServerNote>
+  deriveNote(item: ImportItem): Partial<NoteRecord>
 }
 
 const IMPORTERS: Importer[] = [instagram, tiktok]
