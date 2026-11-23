@@ -88,6 +88,21 @@ test('parse: a metadata file that is not a JSON array adds a warning instead of 
   ])
 })
 
+test('parse: a renamed file that sniff accepts is parsed, not silently dropped', () => {
+  const f = files({ 'export.json': meta('a', 'b') })
+  assert.equal(sniff(f), true)
+  assert.equal(parse(f).items.length, 2)
+})
+
+test('parse: the item cap is shared across files and warns', () => {
+  const { items, warnings } = parse(
+    files({ 'metadata_0_to_2.json': meta('a', 'b'), 'metadata_2_to_4.json': meta('c', 'd') }),
+    3,
+  )
+  assert.equal(items.length, 3)
+  assert.deepEqual(warnings, ['item cap reached; the rest of the export was skipped'])
+})
+
 test('parse: archived items import like any other', () => {
   const json = JSON.stringify([entry('a', { state: 'Archived' })])
   assert.equal(parse(files({ 'metadata_0_to_1.json': json })).items.length, 1)

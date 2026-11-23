@@ -23,13 +23,19 @@ const SAVED_AT_MARKER = Buffer.from('"savedAt"')
 
 const MAX_HIGHLIGHT_LEN = 4000
 
+// One predicate for sniff and parse: when they disagreed, a renamed export.json
+// was claimed by Omnivore and then parsed to zero items with no warning.
+const isMetadataFile = (key: string, buf: Buffer) =>
+  METADATA_FILE.test(key) ||
+  (key.toLowerCase().endsWith('.json') && buf.includes(SLUG_MARKER) && buf.includes(SAVED_AT_MARKER))
+
 export function sniff(files: Map<string, Buffer>): boolean {
-  for (const [key, buf] of files) {
-    if (METADATA_FILE.test(key)) return true
-    if (key.toLowerCase().endsWith('.json') && buf.includes(SLUG_MARKER) && buf.includes(SAVED_AT_MARKER)) return true
-  }
+  for (const [key, buf] of files) if (isMetadataFile(key, buf)) return true
   return false
 }
+
+// Same bound as csv.ts's MAX_ROWS, so every bookmark importer stops at one size.
+const MAX_ITEMS = 100_000
 
 // The route prefixes each upload with `<index>/` and ZIP entries keep their
 // inner path, so the same highlight is `0/highlights/x.md` or a loose `3/x.md`.
@@ -37,6 +43,8 @@ const highlightsBySlug = (files: Map<string, Buffer>) => {
   const bySlug = new Map<string, string>()
   for (const [key, buf] of files) {
     if (!key.toLowerCase().endsWith('.md')) continue
+    // Two .md files sharing a basename: the last wins. Slugs are unique per
+    // export, so only a hand-merged upload collides, and either text is the user's own.
     const slug = key.slice(key.lastIndexOf('/') + 1, -'.md'.length)
     // Bound the decode: a hostile .md must not cost a full-size string before clipText.
     bySlug.set(slug, clipText(buf.subarray(0, MAX_HIGHLIGHT_LEN * 4).toString('utf8'), MAX_HIGHLIGHT_LEN))
@@ -44,20 +52,26 @@ const highlightsBySlug = (files: Map<string, Buffer>) => {
   return bySlug
 }
 
-export function parse(files: Map<string, Buffer>) {
+export function parse(files: Map<string, Buffer>, maxItems = MAX_ITEMS) {
   const items: BookmarkItem[] = []
   const warnings: string[] = []
   const highlights = highlightsBySlug(files)
   let unusableUrl = 0
+  let capped = false
 
   for (const [key, buf] of files) {
-    if (!METADATA_FILE.test(key)) continue
+    if (capped) break
+    if (!isMetadataFile(key, buf)) continue
     const rows = tryJson(buf)
     if (!Array.isArray(rows)) {
       warnings.push(`${key} is not an Omnivore metadata file (expected a JSON array)`)
       continue
     }
     for (const row of rows) {
+      if (items.length >= maxItems) {
+        capped = true
+        break
+      }
       if (!isRecord(row)) continue
       const url = usableUrl(row.url)
       if (!url) {
@@ -82,6 +96,7 @@ export function parse(files: Map<string, Buffer>) {
         : `${unusableUrl} links were skipped because they were not http(s) URLs`,
     )
   }
+  if (capped) warnings.push('item cap reached; the rest of the export was skipped')
   return { items, collections: [], warnings }
 }
 
