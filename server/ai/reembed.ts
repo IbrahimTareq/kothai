@@ -29,7 +29,9 @@ import { withTrigger } from './usage.ts'
 // library's vectors to less than the original enrichment had produced.
 //
 // It mirrors it, though, rather than sharing it — the two read different
-// shapes (an in-flight patch there, a persisted note here).
+// shapes (an in-flight patch there, a persisted note here). That cost mindNote
+// once: embedInput gained it and this did not, so every re-embed dropped
+// imported notes and highlights from the vectors.
 //
 // A note the endpoint refuses must not abandon the other 1,700; an endpoint
 // that is down ends the sweep (see reembedEach). `{ persist: false }` batches
@@ -37,7 +39,7 @@ import { withTrigger } from './usage.ts'
 export function embedBodyFor(
   note: Pick<
     NoteRecord,
-    'title' | 'summary' | 'content' | 'siteTitle' | 'siteDesc' | 'article' | 'thumbDescription' | 'tags'
+    'title' | 'summary' | 'content' | 'siteTitle' | 'siteDesc' | 'article' | 'thumbDescription' | 'tags' | 'mindNote'
   >,
 ) {
   return [
@@ -49,6 +51,7 @@ export function embedBodyFor(
     note.article,
     note.thumbDescription,
     (note.tags || []).join(' '),
+    note.mindNote,
   ]
     .filter(Boolean)
     .join('\n')

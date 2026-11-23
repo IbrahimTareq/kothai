@@ -32,9 +32,19 @@ export interface BookmarkItem {
 
 export function deriveBookmarkNote(item: BookmarkItem): Partial<NoteRecord> {
   const note = clipText(item.note, MAX_NOTE_LEN)
+  const title = clip(item.title)
   return {
     type: heuristicType(item.url),
-    title: clip(item.title) || deriveTitle(item.url),
+    title: title || deriveTitle(item.url),
+    // The export's title is often all that survives: Pocket libraries are
+    // years old and many links are dead. enrichNote's classify read only the
+    // URL plus fetched meta, so on a dead link it replaced this title (and
+    // invented tags) from the URL alone. As siteTitle it reaches classify's
+    // text, since enrichNote reads siteTitle from the fetch or else the note.
+    // A live fetch still overwrites it (applyMeta keeps only truthy fields);
+    // a note saved by hand holds no siteTitle before its first fetch, so its
+    // classify text is unchanged.
+    ...(title && { siteTitle: title }),
     content: item.url, // enrich reads `content` as the note's text
     url: item.url,
     tags: item.tags,

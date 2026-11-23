@@ -132,6 +132,16 @@ test('embedBodyFor reads every field enrichment embeds, not the short legacy lis
   }
 })
 
+// enrichNote's embedInput appends mindNote; leaving it out here meant a model
+// swap or recipe bump re-embedded every imported note without its annotation.
+test('embedBodyFor ends with the mind note, and a note without one is unchanged', () => {
+  assert.equal(
+    reembed.embedBodyFor({ ...REEL, mindNote: 'remember the figs' }),
+    `${reembed.embedBodyFor(REEL)}\nremember the figs`,
+  )
+  assert.ok(!reembed.embedBodyFor(REEL).includes('undefined'))
+})
+
 test('reembedAll embeds every note once, writes once, and records the new recipe', async () => {
   reset([REEL, { ...REEL, id: 'r2' }, { ...REEL, id: 'r3' }])
   const n = await reembed.reembedAll('test')

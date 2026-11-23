@@ -301,7 +301,7 @@ async function reclassifyWithCaption(id: string, { vision = true } = {}) {
   // minutes to tens of minutes — long enough to matter. The caption still
   // improves title/summary/category/embedding either way; only the tags
   // array itself is left alone. This MUST run before the embed block below:
-  // toEmbed falls back to `patch.tags ?? existing.tags`, so deleting
+  // embedInput falls back to `patch.tags ?? existing.tags`, so deleting
   // patch.tags after embedText already ran would still bake the discarded
   // AI tags into the embedding — corrupting semantic search for exactly the
   // notes a user cared enough to hand-curate.
@@ -509,10 +509,9 @@ async function enrichNote(id: string, url: string) {
     }
   }
 
-  // Thumbnail vision, for any note that has a cover frame — the link meta
-  // fetched just above downloads one for most links, and a resweep sees the
-  // one already on disk from an earlier pass. Whether it is worth describing
-  // turns on the caption, which on a first save this pass has only just fetched.
+  // Thumbnail vision, for any note that has a cover frame — the link meta fetched just above downloads one for most
+  // links, and a resweep sees the one already on disk from an earlier pass. Whether it is worth describing turns on
+  // the caption, which on a first save this pass has only just fetched.
   const thumb = linkMeta?.thumb || existing?.thumb
   const captioned: BacklogNote = { ...existing, thumb }
   for (const k of ['siteTitle', 'siteDesc', 'article'] as const) captioned[k] = linkMeta?.[k] || captioned[k]
@@ -535,7 +534,8 @@ async function enrichNote(id: string, url: string) {
   }
 
   const thumbText = thumbDescription || existing?.thumbDescription
-  const richText = [url, linkMeta?.siteTitle, linkMeta?.siteDesc, linkMeta?.article, captions, thumbText]
+  // `captioned`, not linkMeta: a dead imported link's export title survives only there (see deriveBookmarkNote).
+  const richText = [url, captioned.siteTitle, captioned.siteDesc, captioned.article, captions, thumbText]
     .filter(Boolean)
     .join('\n\n')
 
