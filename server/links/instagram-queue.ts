@@ -83,8 +83,14 @@ export function metaRetryEligible(n: Pick<NoteRecord, 'metaFetched' | 'metaTries
 // metadata actually landed. One retried pass unsticks them. siteTitle is not
 // evidence of a fetch: this lane never writes one (see fetchInstagramMeta),
 // and a post in a bookmark export arrives with the export's title seeded
-// there (deriveBookmarkNote), which hid it from this check.
-export function isStuckInstagramNote(n: Pick<NoteRecord, 'url' | 'metaFetched' | 'thumb' | 'siteDesc'>) {
+// there (deriveBookmarkNote), which hid it from this check. Such a note counts
+// only until its first unstick sets metaTries: a login wall or removed post
+// answers 200 with nothing in it, so without that cap every boot would reset
+// and refetch it at 2.5s each, as it already does for title-less notes.
+export function isStuckInstagramNote(
+  n: Pick<NoteRecord, 'url' | 'metaFetched' | 'thumb' | 'siteTitle' | 'siteDesc' | 'metaTries'>,
+) {
+  if (n.siteTitle && n.metaTries) return false
   return !!(n.url && isInstagramPost(n.url) && n.metaFetched && !n.thumb && !n.siteDesc)
 }
 

@@ -89,3 +89,14 @@ test('an Instagram post inside a bookmark export is queued for its fetch at boot
 test('an Instagram bookmark stuck by the old failure policy is recognised despite its seeded title', () => {
   assert.equal(enrich.isStuckInstagramNote({ ...imported('b3', IG), metaFetched: true }), true)
 })
+
+test('a resweep refetches an Instagram bookmark whose fetch landed nothing, despite its seeded title', async () => {
+  notes = [{ ...imported('b4', IG), metaFetched: true, pending: false }]
+  enrich._igQueueState.pause()
+  try {
+    await enrich.queueEnrich('b4', IG)
+    assert.deepEqual(enrich._igQueueState.ids(), ['b4'])
+  } finally {
+    enrich._igQueueState.clear()
+  }
+})

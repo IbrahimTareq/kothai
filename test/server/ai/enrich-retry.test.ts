@@ -38,6 +38,15 @@ test('isStuckInstagramNote: fetched flag but nothing actually landed', () => {
   assert.ok(!isStuckInstagramNote({ url, metaFetched: false }))
 })
 
+// A seeded import title is no fetch evidence, but a post behind a login wall
+// answers 200 with nothing in it: uncapped, every boot would refetch it.
+test('isStuckInstagramNote: a seeded-title post is stuck only until its first unstick', () => {
+  const url = 'https://www.instagram.com/reel/X/'
+  assert.ok(isStuckInstagramNote({ url, metaFetched: true, siteTitle: 'From the export' }))
+  assert.ok(!isStuckInstagramNote({ url, metaFetched: true, siteTitle: 'From the export', metaTries: 1 }))
+  assert.ok(isStuckInstagramNote({ url, metaFetched: true, metaTries: 1 }), 'title-less notes keep the old behaviour')
+})
+
 // store.allNotes() iterates newest-first (addNote unshifts); queueMetaBackfill
 // must queue Instagram jobs in that same order so the boot backfill matches
 // the default view — the most recently saved reel gets its thumbnail first.

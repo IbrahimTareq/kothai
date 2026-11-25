@@ -37,8 +37,9 @@ import { queueLinkMeta } from '../links/meta-lane.ts'
 import { vectorsCurrent } from './reembed.ts'
 
 // The Instagram lane moved to ../links/instagram-queue.ts, the fast metadata
-// lane to ../links/meta-lane.ts, and the job chain to ./queue.ts. Re-exported here because the routes and their tests address them
-// through this module, and where a queue lives is not their business.
+// lane to ../links/meta-lane.ts, and the job chain to ./queue.ts. Re-exported
+// here because the routes and their tests address them through this module,
+// and where a queue lives is not their business.
 export {
   queueIgMeta,
   queueIgSlides,
@@ -380,13 +381,13 @@ async function enrichNote(id: string, url: string) {
   // metaFetched alone isn't enough to skip the re-fetch, though: a FAILED
   // fetch now leaves metaFetched falsy (tracked instead via metaTries/
   // metaNextTry — see the meta retry policy above), so `!existing?.metaFetched`
-  // already fires directly for a still-failing note; the `|| !(siteTitle ||
-  // siteDesc)` half is just a caption-check fallback for the edge case where
-  // metaFetched is true but nothing landed (i.e. a note isStuckInstagramNote
-  // hasn't unstuck yet). A 429/soft-ban is common mid-bulk-import, exactly
-  // when this fires. A resweep is user-initiated (a role toggle), not
-  // boot-time, so retrying here doesn't reintroduce the startup-hammering
-  // this design avoids.
+  // already fires directly for a still-failing note; the `|| !siteDesc` half
+  // is just a caption-check fallback for the edge case where metaFetched is
+  // true but nothing landed (a note isStuckInstagramNote hasn't unstuck yet;
+  // a seeded import siteTitle is no caption, see there). A 429/soft-ban is
+  // common mid-bulk-import, exactly when this fires. A resweep is
+  // user-initiated (a role toggle), not boot-time, so retrying here doesn't
+  // reintroduce the startup-hammering this design avoids.
   const isIgUrl = isInstagramPost(url)
   let linkMeta: Partial<LinkMeta> | null = isIgUrl
     ? { siteTitle: existing?.siteTitle ?? null, siteDesc: existing?.siteDesc ?? null }
@@ -401,7 +402,7 @@ async function enrichNote(id: string, url: string) {
     if (metaRetryEligible(existing)) queueIgMeta(id, url)
     if (!existing.metaFetched && !existing.metaTries) return
   } else if (isIgUrl) {
-    if (!existing?.metaFetched || !(existing?.siteTitle || existing?.siteDesc)) queueIgMeta(id, url)
+    if (!existing?.metaFetched || !existing?.siteDesc) queueIgMeta(id, url)
   } else if (existing?.metaFetched && (existing.siteTitle || existing.siteDesc || existing.thumb)) {
     // The fast lane (../links/meta-lane.ts) already fetched this note's metadata. Reuse it
     // rather than paying for a second identical request — and reuse it as a
