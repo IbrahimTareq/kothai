@@ -248,7 +248,10 @@ export function queueMetaBackfill() {
     // else landed, and still needs to reach the Instagram branch below to be
     // unstuck. The non-IG generic branch re-adds its own !n.metaFetched gate
     // — its unconditional "tried once, done forever" behavior is unchanged.
-    if (n.url && !n.siteTitle) {
+    // Nor does it check !n.siteTitle, as it did: deriveBookmarkNote seeds one
+    // from the export, so a bookmark a restart caught mid-import was skipped,
+    // and with both model roles off it never got its link metadata at all.
+    if (n.url) {
       // Same off-chain reasoning as queueIgMeta above: a boot with many
       // stale Instagram notes (e.g. the process died mid-import before their
       // Instagram meta queue job landed) must not stall backfill for every other note.
@@ -314,7 +317,7 @@ export function queueMetaBackfill() {
     }
     // Captions arrived after these notes were saved, so they carry no
     // `ai.captions` marker and none of the gates above would reach them: a
-    // YouTube note that already has its oEmbed title fails the `!n.siteTitle`
+    // YouTube note that already has its oEmbed title fails the `!n.metaFetched`
     // check, and stepsFor never offers a step that needs no model. One
     // enrichNote pass per video, self-limiting — the marker (set on success
     // OR on a definitive "this video has no captions") stops the next boot
@@ -457,7 +460,7 @@ async function enrichNote(id: string, url: string) {
   // pass does (fetch is fast, classify is slow), so if this patch carried
   // `metaFetched: false`, store.updateNote's shallow-merge Object.assign
   // would clobber the `true` queueIgMeta already wrote back to `false`. That
-  // re-opens queueMetaBackfill's `!n.siteTitle && !n.metaFetched` gate on
+  // re-opens queueMetaBackfill's metaRetryEligible gate on
   // every boot for any IG note whose fetch found nothing (the common case in
   // a bulk import) — re-fetching the whole set at 2.5s each on every
   // restart, exactly the boot-time hammering this design exists to avoid.

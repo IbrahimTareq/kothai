@@ -80,9 +80,12 @@ export function metaRetryEligible(n: Pick<NoteRecord, 'metaFetched' | 'metaTries
 }
 
 // Notes stuck by the OLD failure policy: marked fetched, but no piece of
-// metadata actually landed. One retried pass unsticks them.
-export function isStuckInstagramNote(n: Pick<NoteRecord, 'url' | 'metaFetched' | 'thumb' | 'siteTitle' | 'siteDesc'>) {
-  return !!(n.url && isInstagramPost(n.url) && n.metaFetched && !n.thumb && !n.siteTitle && !n.siteDesc)
+// metadata actually landed. One retried pass unsticks them. siteTitle is not
+// evidence of a fetch: this lane never writes one (see fetchInstagramMeta),
+// and a post in a bookmark export arrives with the export's title seeded
+// there (deriveBookmarkNote), which hid it from this check.
+export function isStuckInstagramNote(n: Pick<NoteRecord, 'url' | 'metaFetched' | 'thumb' | 'siteDesc'>) {
+  return !!(n.url && isInstagramPost(n.url) && n.metaFetched && !n.thumb && !n.siteDesc)
 }
 
 async function runIgJob({ noteId, url }: IgJob) {

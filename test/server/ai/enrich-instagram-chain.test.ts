@@ -478,8 +478,8 @@ test('boot sweep: a note whose caption landed but whose reclassify never ran get
   // siteTitle/siteDesc/metaFetched, but the process died before the
   // queued reclassify job ran. ai.classify is already true from the
   // original URL-only pass, so queueBacklog's stepsFor gate would skip it —
-  // queueMetaBackfill's normal `!n.siteTitle && !n.metaFetched` gate would
-  // too (siteTitle is present). Only the dedicated sweep catches this.
+  // queueMetaBackfill's fetch gate would too (metaFetched is set and a
+  // caption landed). Only the dedicated sweep catches this.
   seedNotes([
     {
       ...note({
@@ -508,9 +508,9 @@ test('boot sweep: a note whose caption landed but whose reclassify never ran get
 
 // The note above has a siteTitle, which almost no real Instagram post does:
 // the caption lands in siteDesc alone (9 of ~1,670 on a real install carried
-// a siteTitle). Such a note enters the `!n.siteTitle` block, whose Instagram
-// arm used to `continue` past every sweep below it — 191 notes sat with a
-// caption they had never been classified on.
+// a siteTitle). Such a note entered the backfill's old `!n.siteTitle` block,
+// whose Instagram arm used to `continue` past every sweep below it — 191
+// notes sat with a caption they had never been classified on.
 const CAPTION_ONLY: NoteRecord = {
   ...note({
     id: 'n7b',
