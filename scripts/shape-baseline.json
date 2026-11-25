@@ -24,8 +24,8 @@
     "exports": 1
   },
   "server/ai/enrich.ts": {
-    "lines": 719,
-    "exports": 7
+    "lines": 636,
+    "exports": 6
   },
   "server/ai/index.ts": {
     "lines": 98,

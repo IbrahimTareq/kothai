@@ -3,8 +3,9 @@
 //
 // Split out of enrich.ts, where it sat as ~160 lines and six pieces of mutable
 // module state in the middle of the enrichment pipeline. It is not a variation
-// on the other two lanes in that file — the serial enrichChain and the
-// bounded-concurrency meta lane — it is a third discipline with its own rules:
+// on the other two lanes that sat beside it there — the serial job chain
+// (../ai/queue.ts) and the bounded-concurrency meta lane (./meta-lane.ts) — it
+// is a third discipline with its own rules:
 // one request at a time behind a >=2.5s throttle, an explicit deque so the
 // notes actually on screen can jump the line, and a retry policy for a host
 // that soft-bans. Those rules are the whole reason this code exists, and they
